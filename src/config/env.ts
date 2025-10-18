@@ -8,7 +8,7 @@ dotenv.config();
 export const env = cleanEnv(process.env, {
   // Server Configuration
   NODE_ENV: str({ choices: ['development', 'production', 'test'], default: 'development' }),
-  PORT: num({ default: 3000 }),
+  PORT: num({ default: 8080 }), // App Platform 使用 8080，本地开发可以设置为 3000
 
   // Database Configuration
   DB_HOST: str({ default: 'localhost' }),

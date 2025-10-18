@@ -24,25 +24,42 @@ const colors = {
 
 winston.addColors(colors);
 
-const format = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-  winston.format.colorize({ all: true }),
-  winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
+// 控制台格式（简化，确保输出）
+const consoleFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'HH:mm:ss' }),
+  winston.format.colorize({ all: false, level: true }),
+  winston.format.printf(({ timestamp, level, message }) => {
+    return `[${timestamp}] ${level}: ${message}`;
+  })
 );
 
-const transports = [
-  new winston.transports.Console(),
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-  }),
-  new winston.transports.File({ filename: 'logs/all.log' }),
-];
+// 文件格式（无颜色）
+const fileFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.printf(({ timestamp, level, message }) => {
+    return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+  })
+);
 
 export const logger = winston.createLogger({
   level: level(),
   levels,
-  format,
-  transports,
+  transports: [
+    // 控制台输出
+    new winston.transports.Console({
+      format: consoleFormat,
+    }),
+    // 错误日志文件
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      format: fileFormat,
+    }),
+    // 所有日志文件
+    new winston.transports.File({
+      filename: 'logs/all.log',
+      format: fileFormat,
+    }),
+  ],
 });
 
