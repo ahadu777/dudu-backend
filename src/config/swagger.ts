@@ -1,6 +1,37 @@
 import { Application } from 'express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import { env } from './env';
+
+// 动态生成服务器地址
+const getServers = () => {
+  const servers = [];
+  
+  // 生产环境：使用实际域名或相对路径
+  if (env.NODE_ENV === 'production') {
+    // 如果设置了 APP_URL 环境变量，使用它
+    if (process.env.APP_URL) {
+      servers.push({
+        url: process.env.APP_URL,
+        description: 'Production server',
+      });
+    } else {
+      // 否则使用相对路径（推荐）
+      servers.push({
+        url: '/',
+        description: 'Current server',
+      });
+    }
+  } else {
+    // 开发环境：使用 localhost
+    servers.push({
+      url: `http://localhost:${env.PORT}`,
+      description: 'Development server',
+    });
+  }
+  
+  return servers;
+};
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -14,12 +45,7 @@ const options: swaggerJsdoc.Options = {
         email: 'support@example.com',
       },
     },
-    servers: [
-      {
-        url: `http://localhost:${process.env.PORT || 3000}`,
-        description: 'Development server',
-      },
-    ],
+    servers: getServers(),
     components: {
       securitySchemes: {
         bearerAuth: {

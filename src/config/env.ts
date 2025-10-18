@@ -19,6 +19,7 @@ export const env = cleanEnv(process.env, {
 
   // API Configuration
   API_PREFIX: str({ default: '/api/v1' }),
+  APP_URL: str({ default: '' }), // 生产环境的完整 URL（可选）
 
   // Swagger Configuration
   SWAGGER_ENABLED: bool({ default: true }),
