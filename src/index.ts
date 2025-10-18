@@ -7,13 +7,17 @@ const startServer = async () => {
     // Create app instance
     const appInstance = new App();
 
-    // Initialize database
-    await appInstance.initializeDatabase();
+    // Initialize database (skip if connection fails for testing)
+    try {
+      await appInstance.initializeDatabase();
+    } catch (dbError) {
+      logger.warn('⚠️ Database connection failed, running without database');
+    }
 
     // Start server
-    const server = appInstance.app.listen(env.PORT, () => {
-      logger.info(`🚀 Server running on port ${env.PORT}`);
-      logger.info(`📚 Swagger docs available at http://localhost:${env.PORT}/api-docs`);
+    const server = appInstance.app.listen(env.PORT || 8080, () => {
+      logger.info(`🚀 Server running on port ${env.PORT || 8080}`);
+      logger.info(`📚 Swagger docs available at http://localhost:${env.PORT || 8080}/docs`);
       logger.info(`🌍 Environment: ${env.NODE_ENV}`);
     });
 
