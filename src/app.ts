@@ -13,6 +13,15 @@ import { reqIdMiddleware } from './middlewares/reqId';
 import { logger } from './utils/logger';
 import routes from './routes';
 
+// Module routers
+import catalogRouter from './modules/catalog/router';
+import ordersRouter from './modules/orders/router';
+import paymentsRouter from './modules/payments/router';
+import ticketsRouter from './modules/tickets/router';
+import operatorsRouter from './modules/operators/router';
+import redeemRouter from './modules/redeem/router';
+import reportsRouter from './modules/reports/router';
+
 class App {
   public app: Application;
 
@@ -81,21 +90,15 @@ class App {
       this.app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: true }));
     }
 
-    // Stub endpoints for future development
-    this.app.get('/catalog', (_req, res) => res.json({ products: [] }));
-    this.app.post('/orders', (_req, res) =>
-      res.json({ order_id: 1, status: 'PENDING_PAYMENT', amounts: { subtotal: 0, discount: 0, total: 0 } })
-    );
-    this.app.post('/orders/:id/pay', (_req, res) => res.json({ method: 'mock', payload: {} }));
-    this.app.post('/payments/notify', (_req, res) => res.json({ ok: true, processed: false }));
-    this.app.get('/my/tickets', (_req, res) => res.json({ tickets: [] }));
-    this.app.post('/tickets/:code/qr-token', (_req, res) => res.json({ token: 'mock.jwt', expires_in: 60 }));
-    this.app.post('/operators/login', (_req, res) => res.json({ operator_token: 'mock-operator-token' }));
-    this.app.post('/validators/sessions', (_req, res) => res.json({ session_id: 'sess-123', expires_in: 3600 }));
-    this.app.post('/tickets/scan', (_req, res) =>
-      res.json({ result: 'success', ticket_status: 'active', entitlements: [], ts: new Date().toISOString() })
-    );
-    this.app.get('/reports/redemptions', (_req, res) => res.json({ events: [] }));
+    // Mount module routers
+    this.app.use('/catalog', catalogRouter);
+    this.app.use('/orders', ordersRouter);
+    this.app.use('/payments', paymentsRouter);
+    this.app.use('/my', ticketsRouter);
+    this.app.use('/tickets', redeemRouter);
+    this.app.use('/operators', operatorsRouter);
+    this.app.use('/validators', operatorsRouter);
+    this.app.use('/reports', reportsRouter);
 
     // API routes
     this.app.use(env.API_PREFIX, routes);

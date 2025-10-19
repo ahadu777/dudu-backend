@@ -1,0 +1,42 @@
+stories:
+  - id: US-001
+    title: Buy package and redeem via QR
+    status: Approved
+    cards:
+      - catalog-endpoint
+      - order-create
+      - payment-webhook
+      - tickets-issuance
+      - my-tickets
+      - qr-token
+      - tickets-scan
+  - id: US-002
+    title: Operator scan & redemption
+    status: Approved
+    cards:
+      - operators-login
+      - validators-sessions
+      - tickets-scan
+  - id: US-003
+    title: Buyer views tickets & QR
+    status: Approved
+    cards:
+      - my-tickets
+      - qr-token
+  - id: US-004
+    title: Payment notify → issue tickets (sync)
+    status: Approved
+    cards:
+      - payment-webhook
+      - tickets-issuance
+  - id: US-005
+    title: Reporting — redemptions list
+    status: Approved
+    cards:
+      - reports-redemptions
+  - id: US-006
+    title: Operator auth & session lifecycle
+    status: Approved
+    cards:
+      - operators-login
+      - validators-sessions

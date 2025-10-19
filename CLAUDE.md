@@ -1,7 +1,59 @@
 # Claude Code Development Guidelines
 
+## Quick Reference - What Actually Works
+
+### The NEW Magic Formula (with Stories)
+```
+Story (Business) → Cards (Technical) → Code → Build → Test → Done
+```
+
+### How We Work Now
+1. **You paste story content** (or point to file)
+2. **I update codebase** (stories + cards)
+3. **I implement cards** (our proven workflow)
+4. **We track coverage** (two scripts)
+
+### Essential Commands (Use These Exact Sequences)
+```bash
+# 1. Check progress (TWO ways now)
+node scripts/progress-report.js     # Card status
+node scripts/story-coverage.mjs     # Story → Card coverage
+
+# 2. Build and restart
+npm run build
+pkill -f "node dist/index.js" 2>/dev/null
+PORT=8080 npm start &
+sleep 3
+
+# 3. Test
+curl http://localhost:8080/healthz
+```
+
 ## Project Overview
-Modern TypeScript Express API with push notification capabilities, designed for AI-driven development and DigitalOcean deployment.
+Ticketing system with multi-team ownership using card-based development. Mock data first, database later.
+
+## Role Responsibilities (RACI)
+
+### My Role as Coder AI
+**Currently:**
+- ✅ Implement from cards
+- ✅ Update status/frontmatter
+- ✅ Test implementation
+- ✅ Propose minor fixes
+
+**Future (with full SSoT):**
+- ✅ Create cards from stories
+- ✅ Maintain full cycle
+- ✅ Evolve specs based on implementation
+
+### Spec AI
+- Creates card content from stories
+- Owns API contracts and invariants
+
+### You (PM/Product)
+- Define stories
+- Set priorities
+- Decide readiness lane
 
 ## Stack
 - **Runtime**: Node.js 18+ with TypeScript
@@ -16,13 +68,11 @@ Modern TypeScript Express API with push notification capabilities, designed for 
 - `GET /docs` - Swagger UI documentation
 - `GET /openapi.json` - OpenAPI specification
 
-## Development Commands
+## Development Commands (What We Actually Use)
 ```bash
-npm run dev      # Start development server with hot reload
-npm run build    # Compile TypeScript
-npm start        # Run production server
-npm run lint     # Run ESLint
-npm run format   # Format code with Prettier
+npm run build    # ALWAYS run before restart
+npm start        # Run server (PORT=8080)
+node scripts/progress-report.js  # Check status
 ```
 
 ## Testing Endpoints
@@ -73,6 +123,13 @@ The project is configured for DigitalOcean deployment:
 
 ## AI Development Workflow
 
+### Card-Based Development Process
+1. **Read the card** from `/docs/cards/<slug>.md`
+2. **Update status** to "In Progress" in frontmatter
+3. **Implement with mock data** using `mockDataStore`
+4. **Test the implementation** thoroughly
+5. **Update status** to "Done" when complete
+
 ### When Adding New Features
 1. Check existing patterns in similar files
 2. Follow TypeScript strict mode conventions
@@ -111,13 +168,21 @@ The project is configured for DigitalOcean deployment:
 
 ## Common Tasks
 
+### Working with Cards (Primary Workflow)
+1. **Check progress**: `node scripts/progress-report.js`
+2. **Read card**: Check `/docs/cards/<slug>.md` for requirements
+3. **Update status**: Change frontmatter status field
+4. **Implement**: Follow card specifications exactly
+5. **Test**: Verify with curl commands
+6. **Complete**: Mark status as "Done"
+
 ### Adding a New Endpoint
-1. Define in OpenAPI specification
-2. Create route in `/src/routes`
-3. Implement controller in `/src/controllers`
-4. Add business logic in `/src/services`
-5. Create DTOs for validation
-6. Update tests
+1. Define in OpenAPI specification (if needed)
+2. Create module in `/src/modules/<name>/`
+3. Implement router with handlers
+4. Add service logic if complex
+5. Use mockDataStore for data operations
+6. Test with curl commands
 
 ### Database Migrations
 1. Create entity in `/src/models`
@@ -130,10 +195,52 @@ The project is configured for DigitalOcean deployment:
 - Monitor Docker logs in production
 - Use Swagger UI for API testing
 
-## Notes for Claude
-- Always check existing code patterns before implementing new features
-- The database connection is optional for local development
-- Port 8080 is the standard for this project
-- All endpoints should be documented in OpenAPI
-- Follow TypeScript strict mode requirements
-- Use the existing middleware pattern for new cross-cutting concerns
+## Notes for Claude - READ THIS FIRST
+
+### What's Actually Done (Tested & Working)
+1. **GET /catalog** - Returns active products
+2. **POST /orders** - Idempotent order creation
+3. **POST /payments/notify** - Payment processing with sync ticket issuance
+4. **Ticket Service** - Internal module for ticket generation
+
+### The Proven Workflow
+1. **Stories in** `/docs/stories/` (business requirements)
+2. **Index in** `/docs/stories/_index.yaml` (maps stories → cards)
+3. **Cards in** `/docs/cards/<slug>.md` (technical specs)
+4. **Implementation:**
+   - Update card status to "In Progress"
+   - Code in `/src/modules/<name>/`
+   - Use `mockDataStore` for all data
+   - Build, restart, test with curl
+   - Update card to "Done"
+
+### Critical Success Patterns
+- **Idempotency**: Check existing before creating
+- **Synchronous calls**: Direct service calls, not events
+- **Error handling**: Use `ERR` constants from `/src/core/errors/codes`
+- **Logging**: JSON structured with `logger.info(event, data)`
+- **Mock data**: Products 101-104 active, 105 inactive
+
+### Common Issues & Fixes
+- **Port in use**: `pkill -f "node dist/index.js"`
+- **Not seeing changes**: Did you `npm run build`?
+- **Server not starting**: Check port 8080, kill old processes
+
+### Single Source of Truth Structure
+```
+docs/
+  stories/                 # Business requirements (SSoT)
+    _index.yaml           # Master mapping
+    US-001-*.md          # User stories
+  cards/                  # Technical specs
+    *.md                 # Implementation cards
+scripts/
+  progress-report.js      # Card status
+  story-coverage.mjs     # Story coverage
+```
+
+### Other Docs (Reference Only)
+- `WORKFLOW.md` - Detailed workflow steps
+- `DEFINITION_OF_DONE.md` - What "done" means
+- `AI_HANDOFF.md` - Implementation examples
+- `CONTRIBUTING.md` - RACI matrix (should have been here!)
