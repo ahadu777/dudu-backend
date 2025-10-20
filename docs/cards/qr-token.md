@@ -4,7 +4,7 @@ slug: qr-token
 team: "B - Tickets"
 oas_paths: ["/tickets/{code}/qr-token"]
 migrations: []
-status: "Ready"
+status: "Done"
 readiness: "prototype"
 branch: ""
 pr: ""

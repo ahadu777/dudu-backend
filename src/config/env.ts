@@ -27,5 +27,8 @@ export const env = cleanEnv(process.env, {
   // JWT Configuration (可选)
   JWT_SECRET: str({ default: 'your-secret-key-change-in-production' }),
   JWT_EXPIRES_IN: str({ default: '7d' }),
+
+  // QR Token Configuration
+  QR_SIGNER_SECRET: str({ default: 'qr-signing-secret-change-in-production' }),
 });
 

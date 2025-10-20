@@ -255,13 +255,9 @@ const fetchMyTickets = async (userToken: string): Promise<{ tickets: Ticket[] }>
 #### **2. Generate QR Token**
 ```typescript
 // POST /tickets/{code}/qr-token
-interface QRTokenRequest {
-  expires_in?: number; // Optional, defaults to 300 seconds
-}
-
 interface QRTokenResponse {
-  token: string;
-  expires_in: number;
+  token: string;      // JWT token containing {tid, code_hash, exp, jti}
+  expires_in: number; // Always 60 seconds (fixed TTL)
 }
 
 const generateQRToken = async (ticketCode: string, userToken: string): Promise<QRTokenResponse> => {
@@ -270,9 +266,15 @@ const generateQRToken = async (ticketCode: string, userToken: string): Promise<Q
     headers: {
       'Authorization': `Bearer ${userToken}`,
       'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ expires_in: 300 })
+    }
+    // No body required - TTL is fixed at 60 seconds
   });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to generate QR token');
+  }
+
   return response.json();
 };
 ```
@@ -408,14 +410,15 @@ const QRCodeModal = ({ ticket, token, onClose }) => {
 
         <div className="qr-content">
           <div className="qr-code">
-            {/* Use a QR code library like qrcode-react */}
+            {/* Use qrcode.js library for rendering */}
             <QRCodeSVG value={token} size={200} />
           </div>
 
           <div className="qr-info">
             <p><strong>Ticket:</strong> {ticket.ticket_code}</p>
-            <p><strong>Valid for 5 minutes</strong></p>
+            <p><strong>Valid for 60 seconds</strong></p>
             <p>Show this code to the operator for scanning</p>
+            <small>Token auto-expires for security</small>
           </div>
         </div>
       </div>
@@ -423,6 +426,147 @@ const QRCodeModal = ({ ticket, token, onClose }) => {
   );
 };
 ```
+
+### **QR Code Rendering Implementation**
+
+For visual QR code rendering, install a QR code library:
+
+```bash
+npm install qrcode.js qrcode-react
+# or
+npm install qrcode
+```
+
+**Complete Implementation:**
+
+```typescript
+import { QRCodeSVG } from 'qrcode-react';
+
+// QR Token Manager with automatic refresh
+class QRTokenManager {
+  private token: string | null = null;
+  private expiryTime: number = 0;
+  private refreshTimer: NodeJS.Timeout | null = null;
+
+  async getValidToken(ticketCode: string, userToken: string): Promise<string> {
+    const now = Date.now();
+
+    // Check if current token is still valid (with 10s buffer)
+    if (this.token && now < this.expiryTime - 10000) {
+      return this.token;
+    }
+
+    // Generate new token
+    const response = await generateQRToken(ticketCode, userToken);
+    this.token = response.token;
+    this.expiryTime = now + (response.expires_in * 1000);
+
+    return this.token;
+  }
+
+  startAutoRefresh(ticketCode: string, userToken: string, onUpdate: (token: string) => void) {
+    this.refreshTimer = setInterval(async () => {
+      try {
+        const newToken = await this.getValidToken(ticketCode, userToken);
+        onUpdate(newToken);
+      } catch (error) {
+        console.error('Failed to refresh QR token:', error);
+      }
+    }, 45000); // Refresh every 45 seconds
+  }
+
+  stopAutoRefresh() {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+  }
+}
+
+// Enhanced QR Code Modal with auto-refresh
+const QRCodeModal = ({ ticket, userToken, onClose }) => {
+  const [currentToken, setCurrentToken] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const tokenManager = useRef(new QRTokenManager());
+
+  useEffect(() => {
+    let mounted = true;
+
+    const initializeQR = async () => {
+      try {
+        const token = await tokenManager.current.getValidToken(ticket.ticket_code, userToken);
+        if (mounted) {
+          setCurrentToken(token);
+          setIsLoading(false);
+
+          // Start auto-refresh
+          tokenManager.current.startAutoRefresh(
+            ticket.ticket_code,
+            userToken,
+            setCurrentToken
+          );
+        }
+      } catch (error) {
+        console.error('Failed to generate QR code:', error);
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    initializeQR();
+
+    return () => {
+      mounted = false;
+      tokenManager.current.stopAutoRefresh();
+    };
+  }, [ticket.ticket_code, userToken]);
+
+  if (isLoading) {
+    return (
+      <div className="modal-overlay">
+        <div className="qr-modal">
+          <p>Generating QR code...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="qr-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>QR Code: {ticket.product_name}</h3>
+          <button onClick={onClose} className="close-button">×</button>
+        </div>
+
+        <div className="qr-content">
+          <div className="qr-code">
+            <QRCodeSVG
+              value={currentToken}
+              size={200}
+              level="M"
+              includeMargin={true}
+            />
+          </div>
+
+          <div className="qr-info">
+            <p><strong>Ticket:</strong> {ticket.ticket_code}</p>
+            <p><strong>Valid for 60 seconds</strong></p>
+            <p>QR code refreshes automatically</p>
+            <small>Show this code to the operator for scanning</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+**Key Implementation Notes:**
+
+1. **Security**: JWT tokens expire in 60 seconds
+2. **Auto-refresh**: QR codes refresh every 45 seconds automatically
+3. **Error handling**: Graceful fallbacks for network failures
+4. **User experience**: Loading states and clear instructions
 
 ---
 
