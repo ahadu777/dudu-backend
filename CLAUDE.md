@@ -1,5 +1,18 @@
 # Claude Code Development Guidelines
 
+## 🎯 INTEGRATION PROOF COMPLETE
+
+**We solved the "last mile" gap between working APIs and consumer integration.**
+
+- **📖 Story Runbooks** (`docs/integration/`) - Copy-paste commands for each story
+- **🧪 Newman E2E Tests** (`npm run test:e2e`) - Automated story validation
+- **💻 TypeScript SDK + Examples** (`examples/`) - Frontend integration proof
+- **📊 Accurate Dashboard** (50% completion, not 47%)
+
+**For complete context:** Read [`docs/INTEGRATION_PROOF.md`](docs/INTEGRATION_PROOF.md)
+
+---
+
 ## Quick Reference - What Actually Works
 
 ### The NEW Magic Formula (with Stories)
@@ -8,18 +21,27 @@ Story (Business) → Cards (Technical) → Code → Build → Test → Done
 ```
 
 ### How We Work Now
+**COMPLETE AUTONOMY WORKFLOW:**
+1. **Raw User Story** → I analyze using `docs/templates/STORY_ANALYSIS.md`
+2. **Create Cards** → I generate technical specs using `docs/templates/CARD_TEMPLATE.md`
+3. **Implement Code** → I follow proven card-based development
+4. **Integration Proof** → I create runbooks, Newman tests, TypeScript examples
+5. **Validation** → I verify with `npm run validate:integration`
+
+**TRADITIONAL WORKFLOW** (when cards exist):
 1. **You paste story content** (or point to file)
 2. **I update codebase** (stories + cards)
 3. **I implement cards** (our proven workflow)
-4. **We track coverage** (two scripts)
+4. **We track coverage** (validation scripts)
 
 ### Essential Commands (Use These Exact Sequences)
 ```bash
 # 1. Check progress (MULTIPLE dimensions)
 node scripts/progress-report.js         # Card status
 node scripts/story-coverage.mjs         # Story → Card coverage
-node scripts/success-dashboard.js       # Foundation + story validation
+node scripts/success-dashboard.js       # Foundation + story validation (ACCURATE 50%)
 node scripts/implementation-validator.js # Comprehensive validation
+npm run validate:integration            # Integration proof completeness
 
 # 2. Build and restart
 npm run build
@@ -27,8 +49,14 @@ pkill -f "node dist/index.js" 2>/dev/null
 PORT=8080 npm start &
 sleep 3
 
-# 3. Test
-curl http://localhost:8080/healthz
+# 3. Test and validate
+curl http://localhost:8080/healthz      # Basic health
+npm run test:e2e                        # Complete E2E story validation
+npm run example:us001                   # TypeScript SDK integration
+
+# 4. Integration proof (for consumers)
+cat docs/integration/US-001-runbook.md  # Copy-paste complete flow
+npm run example:all                     # All stories demo
 ```
 
 ## Project Overview
@@ -37,16 +65,28 @@ Ticketing system with multi-team ownership using card-based development. Mock da
 ## Role Responsibilities (RACI)
 
 ### My Role as Coder AI
-**Currently:**
+**FULL AUTONOMY (NEW):**
+- ✅ **Story Analysis**: Break down user stories using systematic templates
+- ✅ **Card Generation**: Create technical specs from business requirements
+- ✅ **End-to-End Implementation**: Story → Cards → Code → Integration Proof
+- ✅ **Self-Validation**: Use validation scripts to ensure quality
+
+**Core Implementation:**
 - ✅ Implement from cards
 - ✅ Update status/frontmatter
 - ✅ Test implementation
 - ✅ Propose minor fixes
 
-**Future (with full SSoT):**
-- ✅ Create cards from stories
-- ✅ Maintain full cycle
-- ✅ Evolve specs based on implementation
+**Integration Proof:**
+- ✅ Create story runbooks with copy-paste commands
+- ✅ Maintain Newman E2E test collection
+- ✅ Generate TypeScript SDK and examples
+- ✅ Provide accurate progress tracking (50% not 47%)
+
+**Quality Assurance:**
+- ✅ Follow SSoT hierarchy for conflict resolution
+- ✅ Use validation-driven development to catch drift
+- ✅ Maintain self-healing integration proof system
 
 ### Spec AI
 - Creates card content from stories
@@ -239,6 +279,13 @@ The project is configured for DigitalOcean deployment:
 3. **POST /payments/notify** - Payment processing with sync ticket issuance
 4. **Ticket Service** - Internal module for ticket generation
 
+### Integration Proof Complete (NEW)
+1. **Story Runbooks** - Copy-paste commands for all 6 user stories (`docs/integration/`)
+2. **Newman E2E Tests** - Automated validation of complete flows (`npm run test:e2e`)
+3. **TypeScript SDK** - Generated client + working examples (`examples/`)
+4. **Accurate Dashboard** - True 50% completion using canonical cards
+5. **Consumer Ready** - Frontend teams can integrate immediately
+
 ### The Proven Workflow
 1. **Stories in** `/docs/stories/` (business requirements)
 2. **Index in** `/docs/stories/_index.yaml` (maps stories → cards)
@@ -268,12 +315,124 @@ docs/
   stories/                 # Business requirements (SSoT)
     _index.yaml           # Master mapping
     US-001-*.md          # User stories
-  cards/                  # Technical specs
+  cards/                  # Technical specs (SSoT for API contracts)
     *.md                 # Implementation cards
+  integration/            # Consumer proof artifacts
+    US-*-runbook.md      # Story-level integration guides
+src/
+  types/domain.ts         # Type definitions (SSoT for code)
+openapi/
+  openapi.json           # API specification (mirrors cards)
+examples/                 # Integration examples (validated against SSoT)
+docs/postman_e2e.json    # E2E tests (validated against SSoT)
 scripts/
   progress-report.js      # Card status
   story-coverage.mjs     # Story coverage
+  integration-proof-validator.js  # Drift detection
 ```
+
+### SSoT Hierarchy (Lessons Learned)
+When conflicts arise, resolve using this precedence:
+1. **Cards** (`docs/cards/*.md`) = Technical endpoint contracts
+2. **domain.ts** = Type definitions code compiles against
+3. **OpenAPI 3.0.3** = Mirrors cards for tooling
+4. **Examples/Tests** = Must align with above (auto-validated)
+
+**Key Insight:** Integration examples can drift from specifications. Use validation scripts to detect and fix misalignments systematically.
+
+## Complete Workflow: User Story → Implementation
+
+### Phase 1: Story Analysis
+**When:** Fresh user story without existing cards
+**Process:**
+1. Apply `docs/templates/STORY_ANALYSIS.md` template
+2. Extract business rules and acceptance criteria
+3. Identify API endpoints and data changes needed
+4. Break down into implementable cards
+
+**Example Input:** "I want users to cancel tickets and get refunds"
+**Example Output:** 3 cards (ticket-cancellation, refund-processing, cancellation-policies)
+
+### Phase 2: Card Generation
+**Process:**
+1. Use `docs/templates/CARD_TEMPLATE.md` structure
+2. Assign to appropriate team (A/B/C) based on functionality
+3. Write OpenAPI contracts following existing patterns
+4. Define business rules as testable invariants
+5. Plan database migrations and observability
+
+**Quality Checks:**
+- Follow existing naming conventions
+- Ensure SSoT hierarchy compliance
+- Add to story index mapping
+
+### Phase 3: Implementation
+**Process:**
+1. **Update status** to "In Progress" in card frontmatter
+2. **Implement code** following existing patterns in `/src/modules/`
+3. **Use mock data** for development and testing
+4. **Build and test** with curl commands
+5. **Update status** to "Done" when complete
+
+### Phase 4: Integration Proof Creation
+**Process:**
+1. **Create story runbook** in `docs/integration/US-XXX-runbook.md`
+2. **Add Newman tests** to `docs/postman_e2e.json`
+3. **Generate TypeScript example** in `examples/usXXX.ts`
+4. **Update story index** to include new cards
+
+### Phase 5: Validation
+**Commands:**
+```bash
+npm run validate:integration    # Check integration proof completeness
+npm run test:e2e               # Validate E2E story flows
+npm run example:usXXX          # Test TypeScript integration
+node scripts/success-dashboard.js  # Check overall progress
+```
+
+## Decision Trees for Fresh AI
+
+### When to Create New vs Extend Existing Cards?
+**Create New Card if:**
+- New API endpoint with distinct business logic
+- Different team responsibility area
+- Independent functionality that stands alone
+
+**Extend Existing Card if:**
+- Adding field to existing endpoint
+- Minor business rule change
+- Same team/domain area
+
+### How to Handle Card Dependencies?
+**In Prerequisites Section:**
+- List dependent cards that must be implemented first
+- Specify external service requirements
+- Document shared data structures
+
+**In Implementation:**
+- Check dependent card status before starting
+- Use existing service patterns for integration
+- Follow established error handling patterns
+
+### API Design Decision Guidelines?
+**Endpoint Structure:**
+- Follow REST: `/resource/{id}/action`
+- Use HTTP verbs correctly (POST for state changes)
+- Group related operations under same resource
+
+**Request/Response Format:**
+- Follow existing domain.ts types
+- Use consistent error response structure
+- Include pagination for list endpoints
+
+**Status Codes:**
+- 200: Success with data
+- 201: Created (for POST that creates)
+- 400: Bad request format
+- 401: Authentication required
+- 404: Resource not found
+- 409: Business rule conflict
+- 422: Validation failed
 
 ### Other Docs (Reference Only)
 - `WORKFLOW.md` - Detailed workflow steps

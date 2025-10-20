@@ -1,10 +1,29 @@
 ---
 id: US-001
-title: Buy a package and redeem via QR across multiple functions
+title: Buy package & redeem via QR
+version: v0.4.1
+last_updated: 2025-10-20T00:00:00+08:00
+api_ssot: openapi/openapi-3.0.3.json
+types_ssot: src/types/domain.ts
 owner: Product
 status: Approved
 priority: High
-last_update: 2025-10-19T23:24:28+0800
+cards:
+  - catalog-endpoint
+  - order-create
+  - payment-webhook
+  - tickets-issuance
+  - my-tickets
+  - qr-token
+  - operators-login
+  - validators-sessions
+  - tickets-scan
+  - reports-redemptions
+notes:
+  - Catalog uses products[].id/name (not product_id/product_name)
+  - QR token returns { token, expires_in } → send as body.qr_token to /tickets/scan
+  - /operators/login responds { operator_token } (operator_id lives in JWT claims if needed)
+  - /tickets/scan returns entitlements[]; check remaining_uses there (no top-level remaining_uses)
 ---
 
 ## Business goal

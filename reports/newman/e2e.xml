@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="E2E buy→scan→report" tests="13" time="0.108">
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 1. Health Check" id="bfa060f9-c105-4302-ad07-8b410eeed35f" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="0" errors="0" time="0.027">
+    <testcase name="Health check passes" time="0.027" classname="Us001CompleteBuyAndRedeemFlow1HealthCheck"/>
+  </testsuite>
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 2. Get Catalog" id="996492d1-1a9d-4f48-9f90-69357478d0a7" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.016">
+    <testcase name="Catalog returns products" time="0.016" classname="Us001CompleteBuyAndRedeemFlow2GetCatalog">
+      <failure type="AssertionFailure" message="expected 'active' to deeply equal 'ACTIVE'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 2. Get Catalog.]]>
+        <![CDATA[Test description: Catalog returns products.]]>
+        <![CDATA[Error message: expected 'active' to deeply equal 'ACTIVE'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 'active' to deeply equal 'ACTIVE'
+   at Object.eval sandbox-script.js:1:2).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 3. Create Order" id="e865d0bf-8270-4d97-a62f-852a29ad8f91" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.010">
+    <testcase name="Order created successfully" time="0.010" classname="Us001CompleteBuyAndRedeemFlow3CreateOrder">
+      <failure type="AssertionFailure" message="expected response to have status code 201 but got 200">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 3. Create Order.]]>
+        <![CDATA[Test description: Order created successfully.]]>
+        <![CDATA[Error message: expected response to have status code 201 but got 200.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 200
+   at Object.eval sandbox-script.js:1:3).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 4. Payment Notification" id="71add76a-0446-492f-935f-a3b11ab4a468" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.002">
+    <testcase name="Payment processed and tickets issued" time="0.002" classname="Us001CompleteBuyAndRedeemFlow4PaymentNotification">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 500">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 4. Payment Notification.]]>
+        <![CDATA[Test description: Payment processed and tickets issued.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 500.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 500
+   at Object.eval sandbox-script.js:1:4).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 5. Get My Tickets" id="c3609837-1f5f-4fe1-903f-e3a5ecef149f" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.002">
+    <testcase name="User has tickets with entitlements" time="0.002" classname="Us001CompleteBuyAndRedeemFlow5GetMyTickets">
+      <failure type="AssertionFailure" message="expected undefined not to be undefined">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 5. Get My Tickets.]]>
+        <![CDATA[Test description: User has tickets with entitlements.]]>
+        <![CDATA[Error message: expected undefined not to be undefined.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined not to be undefined
+   at Object.eval sandbox-script.js:1:5).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 6. Generate QR Token" id="8c191524-579b-49e2-9776-c2544598dd95" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.002">
+    <testcase name="QR token generated successfully" time="0.002" classname="Us001CompleteBuyAndRedeemFlow6GenerateQrToken">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 6. Generate QR Token.]]>
+        <![CDATA[Test description: QR token generated successfully.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
+   at Object.eval sandbox-script.js:1:6).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-002 &amp; US-006: Operator Flow / 1. Operator Login" id="bfdee3d4-2af4-4c81-9aa4-4efd2a513945" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="Operator authenticated successfully" time="0.003" classname="Us002AmpUs006OperatorFlow1OperatorLogin"/>
+  </testsuite>
+  <testsuite name="US-002 &amp; US-006: Operator Flow / 2. Create Validator Session" id="8c1a5ef1-a640-477a-a623-f1f7b44a493f" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.006">
+    <testcase name="Validator session created" time="0.006" classname="Us002AmpUs006OperatorFlow2CreateValidatorSession">
+      <failure type="AssertionFailure" message="expected response to have status code 201 but got 200">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-002 & US-006: Operator Flow / 2. Create Validator Session.]]>
+        <![CDATA[Test description: Validator session created.]]>
+        <![CDATA[Error message: expected response to have status code 201 but got 200.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 200
+   at Object.eval sandbox-script.js:1:8).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-002 &amp; US-006: Operator Flow / 3. Scan and Redeem Ticket" id="fc579af1-1750-41f4-8ffe-1686af2dcff5" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="Ticket scanned and redeemed successfully" time="0.003" classname="Us002AmpUs006OperatorFlow3ScanAndRedeemTicket"/>
+  </testsuite>
+  <testsuite name="US-002 &amp; US-006: Operator Flow / 4. Replay Protection Test" id="54048e55-89da-476d-92aa-981e9b9642a3" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.004">
+    <testcase name="Replay protection works" time="0.004" classname="Us002AmpUs006OperatorFlow4ReplayProtectionTest">
+      <failure type="AssertionFailure" message="expected response to have status code 409 but got 200">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-002 & US-006: Operator Flow / 4. Replay Protection Test.]]>
+        <![CDATA[Test description: Replay protection works.]]>
+        <![CDATA[Error message: expected response to have status code 409 but got 200.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 409 but got 200
+   at Object.eval sandbox-script.js:1:10).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-005: Reporting / 1. Get Redemptions Report" id="4056b111-94fe-4d6d-b8ea-d87a145def81" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.003">
+    <testcase name="Redemptions report generated" time="0.003" classname="Us005Reporting1GetRedemptionsReport">
+      <failure type="AssertionFailure" message="expected undefined to be an array">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-005: Reporting / 1. Get Redemptions Report.]]>
+        <![CDATA[Test description: Redemptions report generated.]]>
+        <![CDATA[Error message: expected undefined to be an array.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be an array
+   at Object.eval sandbox-script.js:1:11).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-005: Reporting / 2. Filter by Location" id="d5b36583-d172-4727-b740-360573f3fff4" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.006">
+    <testcase name="Location filter works" time="0.006" classname="Us005Reporting2FilterByLocation">
+      <failure type="AssertionFailure" message="expected undefined to be an array">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-005: Reporting / 2. Filter by Location.]]>
+        <![CDATA[Test description: Location filter works.]]>
+        <![CDATA[Error message: expected undefined to be an array.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be an array
+   at Object.eval sandbox-script.js:1:12).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Final Validation / Verify Updated Ticket State" id="1f320940-1493-4416-8c9b-8da0b38345a0" timestamp="2025-10-20T15:13:51.439Z" tests="1" failures="1" errors="0" time="0.024">
+    <testcase name="Ticket usage updated correctly" time="0.024" classname="FinalValidationVerifyUpdatedTicketState">
+      <failure type="AssertionFailure" message="expected undefined not to be undefined">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: add9b87e-744a-46f8-9304-3714c5f0d566.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: Final Validation / Verify Updated Ticket State.]]>
+        <![CDATA[Test description: Ticket usage updated correctly.]]>
+        <![CDATA[Error message: expected undefined not to be undefined.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined not to be undefined
+   at Object.eval sandbox-script.js:1:13).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+</testsuites>

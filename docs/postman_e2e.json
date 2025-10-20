@@ -1,12 +1,13 @@
 {
   "info": {
-    "name": "E2E buy\u2192scan\u2192report",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "name": "E2E buy→scan→report",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Complete end-to-end testing of all user stories"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080"
+      "value": "{{baseUrl}}"
     },
     {
       "key": "userToken",
@@ -34,12 +35,556 @@
     },
     {
       "key": "from",
-      "value": "2025-10-19T00:00:00+08:00"
+      "value": "{{from}}"
     },
     {
       "key": "to",
-      "value": "2025-10-20T00:00:00+08:00"
+      "value": "{{to}}"
+    },
+    {
+      "key": "timestamp",
+      "value": ""
     }
   ],
-  "item": []
+  "item": [
+    {
+      "name": "US-001: Complete Buy and Redeem Flow",
+      "item": [
+        {
+          "name": "1. Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Health check passes', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/healthz",
+              "host": ["{{baseUrl}}"],
+              "path": ["healthz"]
+            }
+          }
+        },
+        {
+          "name": "2. Get Catalog",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Catalog returns products', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.products).to.be.an('array');",
+                  "    pm.expect(response.products.length).to.be.at.least(1);",
+                  "    ",
+                  "    // Verify product 101 exists",
+                  "    const product101 = response.products.find(p => p.id === 101);",
+                  "    pm.expect(product101).to.not.be.undefined;",
+                  "    pm.expect(product101.status).to.eql('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog"]
+            }
+          }
+        },
+        {
+          "name": "3. Create Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('timestamp', Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Order created successfully', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.order_id).to.be.a('number');",
+                  "    pm.expect(response.status).to.eql('PENDING');",
+                  "    ",
+                  "    // Store order_id for next requests",
+                  "    pm.collectionVariables.set('order_id', response.order_id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 101,\n      \"qty\": 1\n    }\n  ],\n  \"channel_id\": 1,\n  \"out_trade_no\": \"e2e-test-{{timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "4. Payment Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Payment processed and tickets issued', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('processed');",
+                  "    pm.expect(response.order_status).to.eql('PAID');",
+                  "    pm.expect(response.tickets_issued).to.be.an('array');",
+                  "    pm.expect(response.tickets_issued.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": {{order_id}},\n  \"payment_status\": \"SUCCESS\",\n  \"paid_at\": \"2025-10-20T15:12:00Z\",\n  \"signature\": \"valid-mock-signature\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/notify",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "notify"]
+            }
+          }
+        },
+        {
+          "name": "5. Get My Tickets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User has tickets with entitlements', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.tickets).to.be.an('array');",
+                  "    pm.expect(response.tickets.length).to.be.at.least(1);",
+                  "    ",
+                  "    // Find ticket from our order",
+                  "    const orderTicket = response.tickets.find(t => t.order_id === pm.collectionVariables.get('order_id'));",
+                  "    pm.expect(orderTicket).to.not.be.undefined;",
+                  "    pm.expect(orderTicket.entitlements).to.be.an('array');",
+                  "    pm.expect(orderTicket.entitlements.length).to.be.at.least(1);",
+                  "    ",
+                  "    // Store ticket_code for QR generation",
+                  "    pm.collectionVariables.set('ticket_code', orderTicket.ticket_code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/my/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["my", "tickets"]
+            }
+          }
+        },
+        {
+          "name": "6. Generate QR Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('QR token generated successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.token).to.be.a('string');",
+                  "    pm.expect(response.token.length).to.be.above(50);",
+                  "    pm.expect(response.expires_in).to.be.a('number');",
+                  "    ",
+                  "    // Store QR token for scanning",
+                  "    pm.collectionVariables.set('qr_token', response.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticket_code}}/qr-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticket_code}}", "qr-token"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "US-002 & US-006: Operator Flow",
+      "item": [
+        {
+          "name": "1. Operator Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Operator authenticated successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.operator_token).to.be.a('string');",
+                  "    // Note: operator_id is in JWT claims, not response body",
+                  "    ",
+                  "    // Store operator token",
+                  "    pm.collectionVariables.set('operator_token', response.operator_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{operator_username}}\",\n  \"password\": \"{{operator_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/operators/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["operators", "login"]
+            }
+          }
+        },
+        {
+          "name": "2. Create Validator Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Validator session created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.session_id).to.be.a('string');",
+                  "    pm.expect(response.device_id).to.eql('gate-01');",
+                  "    pm.expect(response.location_id).to.eql(52);",
+                  "    ",
+                  "    // Store session ID",
+                  "    pm.collectionVariables.set('session_id', response.session_id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operator_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"location_id\": {{location_id}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/validators/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["validators", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "3. Scan and Redeem Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ticket scanned and redeemed successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.eql('success');",
+                  "    pm.expect(response.entitlements).to.be.an('array');",
+                  "    // Check remaining uses in entitlements array",
+                  "    const ferryEnt = response.entitlements.find(e => e.function_code === 'ferry');",
+                  "    pm.expect(ferryEnt.remaining_uses).to.be.a('number');",
+                  "    pm.expect(ferryEnt.remaining_uses).to.be.at.least(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_id\": \"{{session_id}}\",\n  \"location_id\": {{location_id}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "scan"]
+            }
+          }
+        },
+        {
+          "name": "4. Replay Protection Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Replay protection works', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error_code).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_id\": \"{{session_id}}\",\n  \"location_id\": {{location_id}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "scan"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "US-005: Reporting",
+      "item": [
+        {
+          "name": "1. Get Redemptions Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Redemptions report generated', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.redemptions).to.be.an('array');",
+                  "    ",
+                  "    // Should have at least our redemption",
+                  "    pm.expect(response.redemptions.length).to.be.at.least(1);",
+                  "    ",
+                  "    // Check redemption structure",
+                  "    const redemption = response.redemptions[0];",
+                  "    pm.expect(redemption.ticket_code).to.be.a('string');",
+                  "    pm.expect(redemption.function_code).to.be.a('string');",
+                  "    pm.expect(redemption.location_id).to.be.a('number');",
+                  "    pm.expect(redemption.timestamp).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operator_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/redemptions?from={{from}}&to={{to}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "redemptions"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{from}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{to}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Filter by Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Location filter works', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.redemptions).to.be.an('array');",
+                  "    ",
+                  "    // All redemptions should be from location 52",
+                  "    response.redemptions.forEach(redemption => {",
+                  "        pm.expect(redemption.location_id).to.eql(52);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operator_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/redemptions?from={{from}}&to={{to}}&location_id={{location_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "redemptions"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{from}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{to}}"
+                },
+                {
+                  "key": "location_id",
+                  "value": "{{location_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Final Validation",
+      "item": [
+        {
+          "name": "Verify Updated Ticket State",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ticket usage updated correctly', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    ",
+                  "    // Find our ticket",
+                  "    const ticket = response.tickets.find(t => t.ticket_code === pm.collectionVariables.get('ticket_code'));",
+                  "    pm.expect(ticket).to.not.be.undefined;",
+                  "    ",
+                  "    // Check ferry entitlement was decremented",
+                  "    const ferryEntitlement = ticket.entitlements.find(e => e.function_code === 'ferry');",
+                  "    pm.expect(ferryEntitlement).to.not.be.undefined;",
+                  "    // Note: remaining_uses should be decremented, not used_count incremented",
+                  "    pm.expect(ferryEntitlement.remaining_uses).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/my/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["my", "tickets"]
+            }
+          }
+        }
+      ]
+    }
+  ]
 }

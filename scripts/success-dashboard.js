@@ -7,6 +7,7 @@
 
 const { exec } = require('child_process');
 const util = require('util');
+const fs = require('fs');
 const execAsync = util.promisify(exec);
 
 const BASE_URL = 'http://localhost:8080';
@@ -111,23 +112,39 @@ async function testCardEvolution() {
   console.log('\n📊 CARD EVOLUTION TRACKING');
 
   try {
-    const { stdout } = await execAsync('node scripts/story-coverage.mjs');
+    // Use canonical 10-card list from the feedback for accurate calculation
+    const canonicalCards = [
+      'catalog-endpoint', 'order-create', 'payment-webhook', 'tickets-issuance',
+      'my-tickets', 'qr-token', 'tickets-scan', 'operators-login',
+      'validators-sessions', 'reports-redemptions'
+    ];
 
-    // Count status distribution
-    const lines = stdout.split('\n');
-    const statusCounts = {
-      'Done': 0,
-      'Ready': 0,
-      'In Progress': 0,
-      'Missing': 0
-    };
+    let doneCount = 0;
+    const statusCounts = { 'Done': 0, 'Ready': 0, 'In Progress': 0, 'Missing': 0 };
 
-    lines.forEach(line => {
-      if (line.includes('Done')) statusCounts['Done']++;
-      else if (line.includes('Ready')) statusCounts['Ready']++;
-      else if (line.includes('In Progress')) statusCounts['In Progress']++;
-      else if (line.includes('Missing')) statusCounts['Missing']++;
-    });
+    for (const cardSlug of canonicalCards) {
+      try {
+        const cardPath = `docs/cards/${cardSlug}.md`;
+        const cardContent = fs.readFileSync(cardPath, 'utf8');
+
+        // Extract status from frontmatter
+        const statusMatch = cardContent.match(/status:\s*["']?([^"'\n]+)["']?/i);
+        const status = statusMatch ? statusMatch[1].trim() : 'Missing';
+
+        if (status.toLowerCase() === 'done') {
+          doneCount++;
+          statusCounts['Done']++;
+        } else if (status.toLowerCase() === 'ready') {
+          statusCounts['Ready']++;
+        } else if (status.toLowerCase().includes('progress')) {
+          statusCounts['In Progress']++;
+        } else {
+          statusCounts['Missing']++;
+        }
+      } catch (error) {
+        statusCounts['Missing']++;
+      }
+    }
 
     console.log('📈 Progress Summary:');
     console.log(`   ✅ Done: ${statusCounts['Done']} cards`);
@@ -135,8 +152,7 @@ async function testCardEvolution() {
     console.log(`   ⚠️  In Progress: ${statusCounts['In Progress']} cards`);
     console.log(`   ❌ Missing: ${statusCounts['Missing']} cards`);
 
-    const totalCards = Object.values(statusCounts).reduce((a, b) => a + b, 0);
-    const completionRate = Math.round((statusCounts['Done'] / totalCards) * 100);
+    const completionRate = Math.round((doneCount / canonicalCards.length) * 100);
     console.log(`   📊 Completion: ${completionRate}%`);
 
     return completionRate;

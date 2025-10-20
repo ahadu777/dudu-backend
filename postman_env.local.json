@@ -1,0 +1,60 @@
+{
+  "id": "local-environment",
+  "name": "Local Development",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "userToken",
+      "value": "user123",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "operator_username",
+      "value": "alice",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "operator_password",
+      "value": "secret123",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "from",
+      "value": "2025-10-19T00:00:00+08:00",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "to",
+      "value": "2025-10-20T23:59:59+08:00",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "product_id",
+      "value": "101",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "location_id",
+      "value": "52",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "device_id",
+      "value": "gate-01",
+      "enabled": true,
+      "type": "default"
+    }
+  ]
+}
