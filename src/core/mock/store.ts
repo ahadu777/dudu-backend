@@ -440,6 +440,131 @@ export class MockStore {
     return results;
   }
 
+  // Cancellation operations
+  cancelTicket(ticketCode: TicketCode, reason?: string): boolean {
+    const ticket = this.tickets.get(ticketCode);
+    if (!ticket) return false;
+
+    // Check if ticket can be cancelled
+    if (ticket.status === TicketStatus.REDEEMED ||
+        ticket.status === TicketStatus.EXPIRED ||
+        ticket.status === TicketStatus.VOID) {
+      return false;
+    }
+
+    // Update ticket to VOID status
+    ticket.status = TicketStatus.VOID;
+    ticket.cancelled_at = new Date().toISOString();
+    ticket.cancellation_reason = reason || null;
+
+    return true;
+  }
+
+  calculateRefundAmount(ticketCode: TicketCode): number {
+    const ticket = this.tickets.get(ticketCode);
+    if (!ticket) return 0;
+
+    const order = this.ordersByOrderId.get(ticket.order_id);
+    if (!order || !order.amounts) return 0;
+
+    // Calculate refund based on remaining entitlements
+    const totalEntitlements = ticket.entitlements.reduce((sum, e) => {
+      const product = this.products.get(ticket.product_id);
+      const productFunction = product?.functions.find(f => f.function_code === e.function_code);
+      return sum + (productFunction?.quantity || 0);
+    }, 0);
+
+    const remainingEntitlements = ticket.entitlements.reduce((sum, e) => sum + e.remaining_uses, 0);
+
+    if (totalEntitlements === 0) return 0;
+
+    const usagePercentage = (totalEntitlements - remainingEntitlements) / totalEntitlements;
+    const itemPrice = order.amounts.total / order.items.length; // Simple division for prototype
+
+    // Apply refund policy
+    let refundPercentage = 0;
+    if (usagePercentage === 0) {
+      refundPercentage = 1.0; // 100% refund
+    } else if (usagePercentage <= 0.5) {
+      refundPercentage = 0.5; // 50% refund
+    } else if (usagePercentage < 1.0) {
+      refundPercentage = 0.25; // 25% refund
+    } else {
+      refundPercentage = 0; // No refund
+    }
+
+    return Math.round(itemPrice * refundPercentage * 100) / 100; // Round to 2 decimal places
+  }
+
+  // Refund operations (for refund-processing card)
+  private refunds: Map<string, any> = new Map();
+  private nextRefundId = 1;
+
+  createRefund(orderOrderId: number, amount: number, reason: string, ticketId?: number): any {
+    const refundId = `REF-${this.nextRefundId++}`;
+    const refund = {
+      refund_id: refundId,
+      order_id: orderOrderId,
+      ticket_id: ticketId || null,
+      amount,
+      status: 'pending',
+      reason,
+      gateway_response: null,
+      created_at: new Date().toISOString(),
+      completed_at: null
+    };
+
+    this.refunds.set(refundId, refund);
+    return refund;
+  }
+
+  updateRefundStatus(refundId: string, status: string, gatewayResponse?: any): boolean {
+    const refund = this.refunds.get(refundId);
+    if (!refund) return false;
+
+    refund.status = status;
+    if (gatewayResponse) {
+      refund.gateway_response = gatewayResponse;
+    }
+    if (status === 'success' || status === 'failed') {
+      refund.completed_at = new Date().toISOString();
+    }
+
+    return true;
+  }
+
+  getRefundsByUserId(userId: number): any[] {
+    const userOrders = Array.from(this.ordersByOrderId.values())
+      .filter(o => o.user_id === userId)
+      .map(o => o.order_id);
+
+    return Array.from(this.refunds.values())
+      .filter(r => userOrders.includes(r.order_id));
+  }
+
+  updateOrderRefundStatus(orderId: number, refundAmount: number): boolean {
+    const order = this.ordersByOrderId.get(orderId);
+    if (!order) return false;
+
+    order.refund_amount = (order.refund_amount || 0) + refundAmount;
+
+    if (order.amounts) {
+      if (order.refund_amount >= order.amounts.total) {
+        order.refund_status = 'full';
+        order.status = OrderStatus.REFUNDED;
+      } else if (order.refund_amount > 0) {
+        order.refund_status = 'partial';
+        order.status = OrderStatus.PARTIALLY_REFUNDED;
+      }
+    }
+
+    // Update both maps
+    const key = `${order.user_id}-${order.out_trade_no}`;
+    this.orders.set(key, order);
+
+    return true;
+  }
+
   // Utility methods
   reset(): void {
     this.products.clear();
@@ -450,8 +575,10 @@ export class MockStore {
     this.sessions.clear();
     this.redemptions = [];
     this.jtiCache.clear();
+    this.refunds.clear();
     this.nextOrderId = 1000;
     this.nextTicketId = 1;
+    this.nextRefundId = 1;
 
     this.initializeSeedData();
   }

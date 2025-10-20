@@ -40,3 +40,10 @@ stories:
     cards:
       - operators-login
       - validators-sessions
+  - id: US-007
+    title: Ticket cancellation and refund
+    status: Approved
+    cards:
+      - ticket-cancellation
+      - refund-processing
+      - cancellation-policies

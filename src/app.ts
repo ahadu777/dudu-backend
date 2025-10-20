@@ -21,6 +21,8 @@ import ticketsRouter from './modules/tickets/router';
 import operatorsRouter from './modules/operators/router';
 import redeemRouter from './modules/redeem/router';
 import reportsRouter from './modules/reports/router';
+import refundsRouter from './modules/refunds/router';
+import policiesRouter from './modules/policies/router';
 
 class App {
   public app: Application;
@@ -95,10 +97,16 @@ class App {
     this.app.use('/orders', ordersRouter);
     this.app.use('/payments', paymentsRouter);
     this.app.use('/my', ticketsRouter);
-    this.app.use('/tickets', redeemRouter);
+    this.app.use('/tickets', ticketsRouter);   // for /tickets/{code}/cancel
+    this.app.use('/tickets', redeemRouter);    // for redemption endpoints
     this.app.use('/operators', operatorsRouter);
     this.app.use('/validators', operatorsRouter);
     this.app.use('/reports', reportsRouter);
+
+    // Cancellation and refund routes
+    this.app.use('/payments', refundsRouter);  // for /payments/refund
+    this.app.use('/', refundsRouter);          // for /my/refunds
+    this.app.use('/', policiesRouter);         // for /cancellation-policies
 
     // API routes
     this.app.use(env.API_PREFIX, routes);

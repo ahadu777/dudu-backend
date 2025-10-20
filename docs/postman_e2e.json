@@ -585,6 +585,307 @@
           }
         }
       ]
+    },
+    {
+      "name": "US-007: Ticket Cancellation and Refund",
+      "item": [
+        {
+          "name": "1. Get Cancellation Policies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns policies and examples', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.policies).to.be.an('array');",
+                  "  pm.expect(response.examples).to.be.an('array');",
+                  "  pm.expect(response.policies.length).to.be.at.least(1);",
+                  "});",
+                  "",
+                  "pm.test('Has redemption-based policy', () => {",
+                  "  const response = pm.response.json();",
+                  "  const redemptionPolicy = response.policies.find(p => p.rule_type === 'redemption_based');",
+                  "  pm.expect(redemptionPolicy).to.exist;",
+                  "  pm.expect(redemptionPolicy.refund_percentage).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cancellation-policies",
+              "host": ["{{baseUrl}}"],
+              "path": ["cancellation-policies"]
+            }
+          }
+        },
+        {
+          "name": "2. Get User Tickets for Cancellation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has tickets to cancel', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.tickets).to.be.an('array');",
+                  "  pm.expect(response.tickets.length).to.be.at.least(1);",
+                  "});",
+                  "",
+                  "pm.test('Store active ticket for cancellation', () => {",
+                  "  const response = pm.response.json();",
+                  "  const activeTicket = response.tickets.find(t => t.status === 'active' || t.status === 'assigned');",
+                  "  if (activeTicket) {",
+                  "    pm.collectionVariables.set('cancellation_ticket_code', activeTicket.ticket_code);",
+                  "    pm.environment.set('cancellation_ticket_code', activeTicket.ticket_code);",
+                  "  } else {",
+                  "    // Fallback to first ticket if no active ones",
+                  "    pm.collectionVariables.set('cancellation_ticket_code', response.tickets[0].ticket_code);",
+                  "    pm.environment.set('cancellation_ticket_code', response.tickets[0].ticket_code);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/my/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["my", "tickets"]
+            }
+          }
+        },
+        {
+          "name": "3. Cancel Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Ticket cancelled successfully', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.ticket_status).to.equal('void');",
+                  "  pm.expect(response.refund_amount).to.be.a('number');",
+                  "  pm.expect(response.refund_id).to.be.a('string');",
+                  "  pm.expect(response.cancelled_at).to.be.a('string');",
+                  "});",
+                  "",
+                  "pm.test('Store refund details', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.collectionVariables.set('refund_id', response.refund_id);",
+                  "  pm.collectionVariables.set('refund_amount', response.refund_amount);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"reason\\\": \\\"E2E test cancellation\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{cancellation_ticket_code}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{cancellation_ticket_code}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "4. Test Idempotency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Idempotent response', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.ticket_status).to.equal('void');",
+                  "  pm.expect(response.refund_id).to.include('ALREADY_CANCELLED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"reason\\\": \\\"E2E test cancellation retry\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{cancellation_ticket_code}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{cancellation_ticket_code}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "5. Check Refund History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns refunds array', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.refunds).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/my/refunds",
+              "host": ["{{baseUrl}}"],
+              "path": ["my", "refunds"]
+            }
+          }
+        },
+        {
+          "name": "6. Test Unauthorized Cancellation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 (not found/unauthorized)', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error response structure', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.code).to.exist;",
+                  "  pm.expect(response.message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer user456"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"reason\\\": \\\"Should fail - not my ticket\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{cancellation_ticket_code}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{cancellation_ticket_code}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "7. Test Missing Authentication",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 (unauthorized)', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Error response structure', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.code).to.exist;",
+                  "  pm.expect(response.message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"reason\\\": \\\"Should fail - no auth\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{cancellation_ticket_code}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{cancellation_ticket_code}}", "cancel"]
+            }
+          }
+        }
+      ]
     }
   ]
 }
