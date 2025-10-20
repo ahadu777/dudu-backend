@@ -1,0 +1,31 @@
+
+// src/types/domain.ts
+export type ISODate = string;
+export type TicketCode = string;
+export type OperatorToken = string;
+export type SessionId = string;
+
+export enum OrderStatus { CREATED='CREATED', PENDING_PAYMENT='PENDING_PAYMENT', PAID='PAID', CANCELLED='CANCELLED', REFUNDED='REFUNDED' }
+export enum TicketStatus { MINTED='minted', ASSIGNED='assigned', ACTIVE='active', PARTIALLY_REDEEMED='partially_redeemed', REDEEMED='redeemed', EXPIRED='expired', VOID='void' }
+export enum ScanResult { SUCCESS='success', REJECT='reject' }
+export enum ErrorCode { IDEMPOTENCY_CONFLICT='IDEMPOTENCY_CONFLICT', TOKEN_EXPIRED='TOKEN_EXPIRED', WRONG_FUNCTION='WRONG_FUNCTION', NO_REMAINING='NO_REMAINING', TICKET_INVALID='TICKET_INVALID', UNAUTHORIZED='UNAUTHORIZED', FORBIDDEN='FORBIDDEN', NOT_FOUND='NOT_FOUND' }
+
+export interface FunctionSpec { function_code: string; label: string; quantity: number; }
+export interface Product { id: number; sku: string; name: string; status: 'draft'|'active'|'archived'; sale_start_at?: ISODate|null; sale_end_at?: ISODate|null; functions: FunctionSpec[]; }
+export interface CatalogResponse { products: Product[]; }
+export interface OrderItemRequest { product_id: number; qty: number; }
+export interface Order { order_id: number; user_id: number; status: OrderStatus; items: OrderItemRequest[]; channel_id: number; out_trade_no: string; amounts?: { subtotal: number; discount: number; total: number; }; created_at: ISODate; paid_at?: ISODate|null; }
+export interface TicketEntitlement { function_code: string; label: string; remaining_uses: number; }
+export interface Ticket { ticket_code: TicketCode; product_id: number; product_name: string; status: TicketStatus; expires_at?: ISODate|null; entitlements: TicketEntitlement[]; user_id: number; order_id: number; }
+export interface QRTokenResponse { token: string; expires_in: number; }
+export interface Operator { operator_id: number; username: string; password_hash: string; roles: string[]; }
+export interface ValidatorSession { session_id: SessionId; operator_id: number; device_id: string; location_id?: number|null; created_at: ISODate; expires_at: ISODate; }
+export interface RedemptionEvent { ticket_id: number; function_code: string; operator_id: number; session_id: SessionId; location_id?: number|null; jti?: string|null; result: ScanResult; reason?: string|null; ts: ISODate; }
+export interface ApiError { code: ErrorCode|string; message: string; }
+export const TicketTransitions: Record<TicketStatus, TicketStatus[]> = {
+  [TicketStatus.MINTED]: [TicketStatus.ASSIGNED, TicketStatus.VOID],
+  [TicketStatus.ASSIGNED]: [TicketStatus.ACTIVE, TicketStatus.VOID, TicketStatus.EXPIRED],
+  [TicketStatus.ACTIVE]: [TicketStatus.PARTIALLY_REDEEMED, TicketStatus.REDEEMED, TicketStatus.EXPIRED, TicketStatus.VOID],
+  [TicketStatus.PARTIALLY_REDEEMED]: [TicketStatus.REDEEMED, TicketStatus.EXPIRED, TicketStatus.VOID],
+  [TicketStatus.REDEEMED]: [], [TicketStatus.EXPIRED]: [], [TicketStatus.VOID]: []
+};

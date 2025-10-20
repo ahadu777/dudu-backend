@@ -1,0 +1,32 @@
+{
+  "products": [
+    {
+      "id": 101,
+      "sku": "PASS-3IN1",
+      "name": "3-in-1 Transport Pass",
+      "status": "active",
+      "sale_start_at": null,
+      "sale_end_at": null,
+      "sellable_cap": 1000,
+      "reserved_count": 0,
+      "sold_count": 0,
+      "functions": [
+        {
+          "function_code": "bus",
+          "label": "Bus Ride",
+          "quantity": 2
+        },
+        {
+          "function_code": "ferry",
+          "label": "Ferry Ride",
+          "quantity": 1
+        },
+        {
+          "function_code": "metro",
+          "label": "Metro Entry",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}

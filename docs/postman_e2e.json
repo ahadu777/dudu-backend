@@ -1,0 +1,45 @@
+{
+  "info": {
+    "name": "E2E buy\u2192scan\u2192report",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "userToken",
+      "value": "{{userToken}}"
+    },
+    {
+      "key": "operator_token",
+      "value": ""
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "order_id",
+      "value": ""
+    },
+    {
+      "key": "ticket_code",
+      "value": ""
+    },
+    {
+      "key": "qr_token",
+      "value": ""
+    },
+    {
+      "key": "from",
+      "value": "2025-10-19T00:00:00+08:00"
+    },
+    {
+      "key": "to",
+      "value": "2025-10-20T00:00:00+08:00"
+    }
+  ],
+  "item": []
+}

@@ -1,27 +1,17 @@
 import { Router } from 'express';
-import { mockDataStore } from '../../core/mock/data';
+import { mockStore } from '../../core/mock/store.js';
+import { logger } from '../../utils/logger.js';
+import { CatalogResponse } from '../../types/domain.js';
 
 const router = Router();
 
-// Simple logging for observability
-const logger = {
-  info: (event: string, data?: any) => {
-    console.log(JSON.stringify({
-      event,
-      ...data,
-      timestamp: new Date().toISOString()
-    }));
-  }
-};
-
-// Metrics tracking (mock implementation)
+// Simple metrics (until we have a proper metrics service)
 const metrics = {
   increment: (metric: string) => {
-    // In production, this would send to metrics service
-    console.log(`[METRIC] ${metric} +1`);
+    logger.info('metric.increment', { metric });
   },
   recordLatency: (metric: string, ms: number) => {
-    console.log(`[METRIC] ${metric} = ${ms}ms`);
+    logger.info('metric.latency', { metric, latency_ms: ms });
   }
 };
 
@@ -30,29 +20,17 @@ router.get('/', (_req, res) => {
   const startTime = Date.now();
 
   try {
-    // Query active products (mock DB query)
-    const products = mockDataStore.getActiveProducts();
+    // Get active products from unified store
+    const products = mockStore.getProducts();
 
-    // Transform to match card requirements
-    // Group by product and build functions array
-    const catalog = products
-      .sort((a, b) => a.id - b.id) // Stable sort by id ASC
-      .map(product => ({
-        id: product.id,
-        sku: product.sku,
-        name: product.name,
-        status: 'active', // Only active products returned
-        sale_start_at: new Date(Date.now() - 86400000).toISOString(), // Mock: started yesterday
-        sale_end_at: new Date(Date.now() + 86400000 * 30).toISOString(), // Mock: ends in 30 days
-        functions: product.functions.map(f => ({
-          function_code: f.function_code,
-          label: f.function_name,
-          quantity: f.max_uses === -1 ? 999 : f.max_uses // -1 means unlimited
-        }))
-      }));
+    // Transform to match CatalogResponse type
+    const response: CatalogResponse = {
+      products: products
+        .sort((a, b) => a.id - b.id) // Stable sort by id ASC
+    };
 
     // Log catalog.list with count
-    logger.info('catalog.list', { count: catalog.length });
+    logger.info('catalog.list', { count: response.products.length });
 
     // Record metrics
     metrics.increment('catalog.list.count');
@@ -60,14 +38,12 @@ router.get('/', (_req, res) => {
     metrics.recordLatency('catalog.list.latency_ms', latency);
 
     // Return response matching OAS contract
-    res.status(200).json({
-      products: catalog
-    });
+    res.status(200).json(response);
 
   } catch (error) {
-    logger.info('catalog.error', { error: String(error) });
+    logger.error('catalog.error', { error: String(error) });
     res.status(500).json({
-      error: 'Internal server error',
+      code: 'INTERNAL_ERROR',
       message: 'Failed to fetch catalog'
     });
   }

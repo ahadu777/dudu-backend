@@ -15,9 +15,11 @@ Story (Business) → Cards (Technical) → Code → Build → Test → Done
 
 ### Essential Commands (Use These Exact Sequences)
 ```bash
-# 1. Check progress (TWO ways now)
-node scripts/progress-report.js     # Card status
-node scripts/story-coverage.mjs     # Story → Card coverage
+# 1. Check progress (MULTIPLE dimensions)
+node scripts/progress-report.js         # Card status
+node scripts/story-coverage.mjs         # Story → Card coverage
+node scripts/success-dashboard.js       # Foundation + story validation
+node scripts/implementation-validator.js # Comprehensive validation
 
 # 2. Build and restart
 npm run build
@@ -123,12 +125,46 @@ The project is configured for DigitalOcean deployment:
 
 ## AI Development Workflow
 
+### Definition of Ready (DoR) - Before We Code
+**Card Must Have:**
+- [ ] Complete API contract (OAS fragment)
+- [ ] Clear acceptance criteria
+- [ ] Dependencies identified and available
+- [ ] Domain types defined in `domain.ts`
+- [ ] Mock data structure agreed
+
+**System Must Have:**
+- [ ] All dependent cards implemented
+- [ ] Mock store supports required operations
+- [ ] Error codes in catalog
+- [ ] State transitions defined
+
+### Definition of Done (DoD) - Completion Criteria
+**Implementation:**
+- [ ] Matches card spec exactly
+- [ ] Uses domain.ts types (no ad-hoc types)
+- [ ] Error responses follow catalog format
+- [ ] State transitions validated
+- [ ] Logging with proper event names
+
+**Quality:**
+- [ ] TypeScript compiles without errors
+- [ ] Endpoints respond correctly (curl test)
+- [ ] Idempotency works where specified
+- [ ] Mock data persists correctly
+
+**Documentation:**
+- [ ] Card status updated to "Done"
+- [ ] Branch/PR info in frontmatter
+- [ ] Newman report path updated
+
 ### Card-Based Development Process
-1. **Read the card** from `/docs/cards/<slug>.md`
+1. **Verify DoR** - Check all prerequisites
 2. **Update status** to "In Progress" in frontmatter
-3. **Implement with mock data** using `mockDataStore`
+3. **Implement with mock data** using unified store
 4. **Test the implementation** thoroughly
-5. **Update status** to "Done" when complete
+5. **Verify DoD** - Check all criteria met
+6. **Update status** to "Done" when complete
 
 ### When Adding New Features
 1. Check existing patterns in similar files
