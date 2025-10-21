@@ -12,7 +12,13 @@ import {
   TicketCode,
   SessionId,
   ScanResult,
-  PromotionDetail
+  PromotionDetail,
+  UserProfile,
+  UserSettings,
+  ActivityEntry,
+  NotificationSettings,
+  PrivacySettings,
+  DisplayPreferences
 } from '../../types/domain.js';
 import { logger } from '../../utils/logger.js';
 
@@ -29,6 +35,8 @@ export class MockStore {
   private sessions: Map<SessionId, ValidatorSession>;
   private redemptions: Array<RedemptionEvent>;
   private jtiCache: Set<string>;  // for replay prevention
+  private users: Map<number, UserProfile>;  // key: user_id
+  private userActivity: Array<ActivityEntry>;  // activity log
 
   private nextOrderId = 1000;
   private nextTicketId = 1;
@@ -42,6 +50,8 @@ export class MockStore {
     this.sessions = new Map();
     this.redemptions = [];
     this.jtiCache = new Set();
+    this.users = new Map();
+    this.userActivity = [];
 
     this.initializeSeedData();
   }
@@ -262,6 +272,61 @@ export class MockStore {
       user_id: 123,
       ticket_count: 2
     });
+
+    // Seed user profiles
+    this.users.set(123, {
+      user_id: '123',
+      name: 'John Doe',
+      email: 'john.doe@example.com',
+      preferences: {
+        language: 'en',
+        timezone: 'UTC',
+        notification_email: true
+      },
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z'
+    });
+
+    this.users.set(456, {
+      user_id: '456',
+      name: 'Jane Smith',
+      email: 'jane.smith@example.com',
+      preferences: {
+        language: 'es',
+        timezone: 'America/New_York',
+        notification_email: false
+      },
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z'
+    });
+
+    // Seed activity log entries
+    this.userActivity.push(
+      {
+        activity_id: 'act_001',
+        type: 'profile',
+        action: 'profile_created',
+        description: 'User profile was created',
+        timestamp: '2025-01-01T00:00:00Z',
+        metadata: {
+          ip_address: '192.168.1.1',
+          user_agent: 'Mozilla/5.0'
+        },
+        severity: 'info'
+      },
+      {
+        activity_id: 'act_002',
+        type: 'login',
+        action: 'login_success',
+        description: 'User logged in successfully',
+        timestamp: '2025-01-02T08:30:00Z',
+        metadata: {
+          ip_address: '192.168.1.1',
+          user_agent: 'Mozilla/5.0'
+        },
+        severity: 'info'
+      }
+    );
   }
 
   // Product operations
@@ -635,6 +700,163 @@ export class MockStore {
     return true;
   }
 
+  // User Profile operations
+  getUserProfile(userId: number): UserProfile | undefined {
+    return this.users.get(userId);
+  }
+
+  updateUserProfile(userId: number, updates: Partial<UserProfile>): UserProfile | undefined {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    const updatedUser: UserProfile = {
+      ...user,
+      ...updates,
+      user_id: user.user_id, // Preserve user_id
+      created_at: user.created_at, // Preserve created_at
+      updated_at: new Date().toISOString()
+    };
+
+    this.users.set(userId, updatedUser);
+
+    // Log activity
+    this.logActivity(userId, {
+      type: 'profile',
+      action: 'profile_updated',
+      description: 'User profile was updated',
+      metadata: { changes: updates }
+    });
+
+    return updatedUser;
+  }
+
+  getUserSettings(userId: number): UserSettings | undefined {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    // Default settings structure based on user preferences
+    const defaultNotificationSettings: NotificationSettings = {
+      email_notifications: user.preferences.notification_email ?? true,
+      sms_notifications: false,
+      push_notifications: true,
+      order_updates: true,
+      promotional_emails: false
+    };
+
+    const defaultPrivacySettings: PrivacySettings = {
+      profile_visibility: 'private',
+      show_purchase_history: false,
+      data_sharing_consent: false
+    };
+
+    const defaultDisplayPreferences: DisplayPreferences = {
+      language: (user.preferences.language as 'en' | 'es' | 'fr' | 'de') || 'en',
+      timezone: user.preferences.timezone || 'UTC',
+      date_format: 'MM/DD/YYYY',
+      currency_display: 'USD'
+    };
+
+    return {
+      notification_settings: defaultNotificationSettings,
+      privacy_settings: defaultPrivacySettings,
+      display_preferences: defaultDisplayPreferences,
+      updated_at: user.updated_at
+    };
+  }
+
+  updateUserSettings(userId: number, settings: Partial<UserSettings>): UserSettings | undefined {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    // Update user preferences based on settings
+    if (settings.display_preferences?.language) {
+      user.preferences.language = settings.display_preferences.language;
+    }
+    if (settings.display_preferences?.timezone) {
+      user.preferences.timezone = settings.display_preferences.timezone;
+    }
+    if (settings.notification_settings?.email_notifications !== undefined) {
+      user.preferences.notification_email = settings.notification_settings.email_notifications;
+    }
+
+    user.updated_at = new Date().toISOString();
+    this.users.set(userId, user);
+
+    // Log activity
+    this.logActivity(userId, {
+      type: 'settings',
+      action: 'settings_updated',
+      description: 'User settings were updated',
+      metadata: { settings_changed: Object.keys(settings) }
+    });
+
+    // Return updated settings
+    return this.getUserSettings(userId);
+  }
+
+  getUserActivity(userId: number, options: {
+    limit?: number;
+    offset?: number;
+    type?: string;
+    fromDate?: string;
+    toDate?: string;
+  } = {}): { activities: ActivityEntry[]; total: number } {
+    const { limit = 20, offset = 0, type, fromDate, toDate } = options;
+
+    // Filter activities for this user and apply filters
+    let userActivities = this.userActivity.filter(activity => {
+      // Add user filtering logic here when we have user_id in activities
+      // For now, return all activities for demo purposes
+      return true;
+    });
+
+    // Apply type filter
+    if (type && type !== 'all') {
+      userActivities = userActivities.filter(activity => activity.type === type);
+    }
+
+    // Apply date filters
+    if (fromDate) {
+      userActivities = userActivities.filter(activity => activity.timestamp >= fromDate);
+    }
+    if (toDate) {
+      userActivities = userActivities.filter(activity => activity.timestamp <= toDate);
+    }
+
+    // Sort by timestamp descending
+    userActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const total = userActivities.length;
+    const activities = userActivities.slice(offset, offset + limit);
+
+    return { activities, total };
+  }
+
+  private logActivity(userId: number, activity: {
+    type: ActivityEntry['type'];
+    action: string;
+    description: string;
+    metadata?: any;
+    severity?: ActivityEntry['severity'];
+  }): void {
+    const activityEntry: ActivityEntry = {
+      activity_id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: activity.type,
+      action: activity.action,
+      description: activity.description,
+      timestamp: new Date().toISOString(),
+      metadata: activity.metadata,
+      severity: activity.severity || 'info'
+    };
+
+    this.userActivity.push(activityEntry);
+
+    // Keep only last 1000 activities to prevent memory issues
+    if (this.userActivity.length > 1000) {
+      this.userActivity = this.userActivity.slice(-1000);
+    }
+  }
+
   // Utility methods
   reset(): void {
     this.products.clear();
@@ -646,6 +868,8 @@ export class MockStore {
     this.redemptions = [];
     this.jtiCache.clear();
     this.refunds.clear();
+    this.users.clear();
+    this.userActivity = [];
     this.nextOrderId = 1000;
     this.nextTicketId = 1;
     this.nextRefundId = 1;
@@ -661,7 +885,9 @@ export class MockStore {
       operators: this.operators.size,
       sessions: this.sessions.size,
       redemptions: this.redemptions.length,
-      jtiCacheSize: this.jtiCache.size
+      jtiCacheSize: this.jtiCache.size,
+      users: this.users.size,
+      userActivity: this.userActivity.length
     };
   }
 }

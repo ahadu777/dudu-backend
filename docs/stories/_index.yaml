@@ -52,3 +52,10 @@ stories:
     status: Approved
     cards:
       - promotion-detail-endpoint
+  - id: US-009
+    title: User profile and settings management
+    status: Approved
+    cards:
+      - user-profile-endpoint
+      - user-settings-endpoint
+      - user-activity-endpoint

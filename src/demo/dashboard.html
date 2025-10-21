@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synque Express - User Stories Demo Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .stories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .story-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .story-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .story-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .story-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .story-description {
+            color: #6c757d;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .story-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .status-complete {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-ready {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .story-content {
+            padding: 20px;
+        }
+
+        .test-section {
+            margin-bottom: 20px;
+        }
+
+        .test-section h4 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #117a8b;
+        }
+
+        .response-area {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        .success {
+            color: #28a745;
+        }
+
+        .auth-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .auth-section h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .token-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+
+        .links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+
+        @media (max-width: 768px) {
+            .stories-grid {
+                grid-template-columns: 1fr;
+                padding: 15px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎫 Synque Express Demo</h1>
+            <p>Interactive User Stories Dashboard - Test all implemented features</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-stories">9</div>
+                <div class="stat-label">User Stories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completed-stories">6</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-endpoints">15</div>
+                <div class="stat-label">API Endpoints</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Integration Proof</div>
+            </div>
+        </div>
+
+        <div class="stories-grid">
+            <!-- US-001: Buy package and redeem via QR -->
+            <div class="story-card">
+                <div class="story-header">
+                    <div class="story-title">US-001: Buy Package & Redeem via QR</div>
+                    <div class="story-description">Complete ticketing workflow from purchase to redemption</div>
+                    <span class="story-status status-complete">✅ Complete</span>
+                </div>
+                <div class="story-content">
+                    <div class="test-section">
+                        <h4>Test Workflow</h4>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="btn-catalog">1. View Catalog</button>
+                            <button class="btn btn-primary" id="btn-order-create">2. Create Order</button>
+                            <button class="btn btn-primary" id="btn-payment-webhook">3. Payment Notify</button>
+                            <button class="btn btn-success" id="btn-us001-workflow">🚀 Run Complete Flow</button>
+                        </div>
+                        <div class="links">
+                            <a href="/docs#/catalog/get_catalog" class="btn btn-info" target="_blank">📖 API Docs</a>
+                            <button class="btn btn-secondary" id="btn-runbook-us001" data-story="US-001">📋 Runbook</button>
+                        </div>
+                    </div>
+                    <div class="response-area" id="us001-response"></div>
+                </div>
+            </div>
+
+            <!-- US-002: Operator scan & redemption -->
+            <div class="story-card">
+                <div class="story-header">
+                    <div class="story-title">US-002: Operator Scan & Redemption</div>
+                    <div class="story-description">Operator authentication and ticket scanning workflow</div>
+                    <span class="story-status status-ready">🔄 Ready</span>
+                </div>
+                <div class="story-content">
+                    <div class="test-section">
+                        <h4>Test Workflow</h4>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="btn-operator-login">1. Operator Login</button>
+                            <button class="btn btn-primary" id="btn-validator-session">2. Start Session</button>
+                            <button class="btn btn-primary" id="btn-ticket-scan">3. Scan Ticket</button>
+                        </div>
+                        <div class="links">
+                            <button class="btn btn-secondary" id="btn-runbook-us002" data-story="US-002">📋 Runbook</button>
+                        </div>
+                    </div>
+                    <div class="response-area" id="us002-response"></div>
+                </div>
+            </div>
+
+            <!-- US-003: Buyer views tickets & QR -->
+            <div class="story-card">
+                <div class="story-header">
+                    <div class="story-title">US-003: Buyer Views Tickets & QR</div>
+                    <div class="story-description">User ticket management and QR code generation</div>
+                    <span class="story-status status-complete">✅ Complete</span>
+                </div>
+                <div class="story-content">
+                    <div class="auth-section">
+                        <h4>Authentication Required</h4>
+                        <input type="text" class="token-input" id="user-token" placeholder="Enter JWT token or click Generate">
+                        <button class="btn btn-info" id="btn-generate-token">Generate Test Token</button>
+                    </div>
+                    <div class="test-section">
+                        <h4>Test Workflow</h4>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="btn-my-tickets">1. View My Tickets</button>
+                            <button class="btn btn-primary" id="btn-qr-token">2. Generate QR Token</button>
+                        </div>
+                        <div class="links">
+                            <button class="btn btn-secondary" id="btn-runbook-us003" data-story="US-003">📋 Runbook</button>
+                        </div>
+                    </div>
+                    <div class="response-area" id="us003-response"></div>
+                </div>
+            </div>
+
+            <!-- US-009: User Profile and Settings -->
+            <div class="story-card">
+                <div class="story-header">
+                    <div class="story-title">US-009: User Profile & Settings</div>
+                    <div class="story-description">User profile management and preferences</div>
+                    <span class="story-status status-complete">✅ Complete</span>
+                </div>
+                <div class="story-content">
+                    <div class="auth-section">
+                        <h4>Authentication Required</h4>
+                        <input type="text" class="token-input" id="profile-token" placeholder="Enter JWT token or use same as above">
+                        <button class="btn btn-info" id="btn-copy-token">Copy User Token</button>
+                    </div>
+                    <div class="test-section">
+                        <h4>Test Workflow</h4>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="btn-get-profile">1. Get Profile</button>
+                            <button class="btn btn-primary" id="btn-update-profile">2. Update Profile</button>
+                            <button class="btn btn-primary" id="btn-get-settings">3. Get Settings</button>
+                            <button class="btn btn-primary" id="btn-update-settings">4. Update Settings</button>
+                            <button class="btn btn-primary" id="btn-get-activity">5. View Activity</button>
+                            <button class="btn btn-success" id="btn-us009-workflow">🚀 Run Complete Flow</button>
+                        </div>
+                        <div class="links">
+                            <button class="btn btn-secondary" id="btn-runbook-us009" data-story="US-009">📋 Runbook</button>
+                        </div>
+                    </div>
+                    <div class="response-area" id="us009-response"></div>
+                </div>
+            </div>
+
+            <!-- US-008: Promotion Details -->
+            <div class="story-card">
+                <div class="story-header">
+                    <div class="story-title">US-008: Promotion Detail View</div>
+                    <div class="story-description">Enhanced product information for informed purchasing</div>
+                    <span class="story-status status-complete">✅ Complete</span>
+                </div>
+                <div class="story-content">
+                    <div class="test-section">
+                        <h4>Test Workflow</h4>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="btn-promo-101">Transport Pass</button>
+                            <button class="btn btn-primary" id="btn-promo-102">Day Pass</button>
+                            <button class="btn btn-primary" id="btn-promo-103">Museum Ticket</button>
+                            <button class="btn btn-primary" id="btn-promo-104">Park Pass</button>
+                        </div>
+                        <div class="links">
+                            <button class="btn btn-secondary" id="btn-runbook-us008" data-story="US-008">📋 Runbook</button>
+                        </div>
+                    </div>
+                    <div class="response-area" id="us008-response"></div>
+                </div>
+            </div>
+
+            <!-- US-007: Ticket Cancellation -->
+            <div class="story-card">
+                <div class="story-header">
+                    <div class="story-title">US-007: Ticket Cancellation & Refund</div>
+                    <div class="story-description">Cancel tickets and process refunds based on policies</div>
+                    <span class="story-status status-complete">✅ Complete</span>
+                </div>
+                <div class="story-content">
+                    <div class="test-section">
+                        <h4>Test Workflow</h4>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="btn-policies">1. View Policies</button>
+                            <button class="btn btn-primary" id="btn-cancel-ticket">2. Cancel Ticket</button>
+                            <button class="btn btn-primary" id="btn-my-refunds">3. View Refunds</button>
+                        </div>
+                        <div class="links">
+                            <button class="btn btn-secondary" id="btn-runbook-us007" data-story="US-007">📋 Runbook</button>
+                        </div>
+                    </div>
+                    <div class="response-area" id="us007-response"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🚀 <strong>Synque Express Ticketing System</strong> - Complete integration proof with runbooks, examples, and E2E tests</p>
+            <p>View <a href="/docs" target="_blank">API Documentation</a> | <a href="https://github.com/your-repo" target="_blank">GitHub Repository</a></p>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = window.location.origin;
+
+        // Utility functions
+        function showResponse(elementId, content, type = 'success') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `response-area ${type}`;
+            element.textContent = content;
+        }
+
+        function showLoading(elementId) {
+            showResponse(elementId, 'Loading...', 'loading');
+        }
+
+        async function apiCall(url, options = {}) {
+            console.log('Making API call to:', url, 'with options:', options);
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+
+                console.log('Response status:', response.status, 'OK:', response.ok);
+
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    console.log('Non-JSON response:', text);
+                    data = { message: text };
+                }
+
+                return {
+                    status: response.status,
+                    ok: response.ok,
+                    data
+                };
+            } catch (error) {
+                console.error('API call failed:', error);
+                return {
+                    status: 0,
+                    ok: false,
+                    error: error.message
+                };
+            }
+        }
+
+        // Token management
+        async function generateUserToken() {
+            try {
+                // Generate a real JWT token using the server's auth endpoint
+                // For demo, we'll call a simple token generation endpoint
+                showLoading('us003-response');
+
+                // Call our token generation service
+                const result = await apiCall(`${BASE_URL}/api/v1/auth/demo-token`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: 123,
+                        email: 'john.doe@example.com'
+                    })
+                });
+
+                if (result.ok && result.data.token) {
+                    document.getElementById('user-token').value = result.data.token;
+                    showResponse('us003-response', 'Test token generated! You can now test authenticated endpoints.', 'success');
+                } else {
+                    // Fallback: generate client-side (not secure, just for demo)
+                    const demoToken = generateDemoJWT();
+                    document.getElementById('user-token').value = demoToken;
+                    showResponse('us003-response', 'Demo token generated (client-side fallback). You can now test authenticated endpoints.', 'success');
+                }
+            } catch (error) {
+                // Fallback: generate client-side
+                const demoToken = generateDemoJWT();
+                document.getElementById('user-token').value = demoToken;
+                showResponse('us003-response', 'Demo token generated (fallback). You can now test authenticated endpoints.', 'success');
+            }
+        }
+
+        function generateDemoJWT() {
+            // Simple base64 encoding for demo purposes (not a real JWT)
+            const header = btoa(JSON.stringify({alg: "HS256", typ: "JWT"}));
+            const payload = btoa(JSON.stringify({id: 123, email: "john.doe@example.com", exp: Math.floor(Date.now() / 1000) + 3600}));
+            return `${header}.${payload}.demo-signature`;
+        }
+
+        function copyUserToken() {
+            const userToken = document.getElementById('user-token').value;
+            document.getElementById('profile-token').value = userToken;
+            showResponse('us009-response', 'Token copied from user section.', 'success');
+        }
+
+        function getAuthHeaders(tokenInputId) {
+            const token = document.getElementById(tokenInputId).value;
+            if (!token) {
+                throw new Error('Please enter or generate an auth token first');
+            }
+            return {
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
+        // US-001: Catalog and Orders
+        async function testCatalog() {
+            showLoading('us001-response');
+            const result = await apiCall(`${BASE_URL}/catalog`);
+
+            if (result.ok) {
+                const formatted = `✅ Catalog Retrieved Successfully\n\nProducts Found: ${result.data.products.length}\n\n${JSON.stringify(result.data, null, 2)}`;
+                showResponse('us001-response', formatted, 'success');
+            } else {
+                showResponse('us001-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+            }
+        }
+
+        async function testOrderCreate() {
+            showLoading('us001-response');
+            const orderData = {
+                user_id: 123,
+                items: [{ product_id: 101, qty: 2 }],
+                channel_id: 1,
+                out_trade_no: `demo-${Date.now()}`
+            };
+
+            const result = await apiCall(`${BASE_URL}/orders`, {
+                method: 'POST',
+                body: JSON.stringify(orderData)
+            });
+
+            if (result.ok) {
+                const formatted = `✅ Order Created Successfully\n\nOrder ID: ${result.data.order_id}\nStatus: ${result.data.status}\n\n${JSON.stringify(result.data, null, 2)}`;
+                showResponse('us001-response', formatted, 'success');
+            } else {
+                showResponse('us001-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+            }
+        }
+
+        async function testPaymentWebhook() {
+            showLoading('us001-response');
+            const webhookData = {
+                out_trade_no: `demo-${Date.now()}`,
+                trade_status: 'TRADE_SUCCESS',
+                total_amount: '50.00'
+            };
+
+            const result = await apiCall(`${BASE_URL}/payments/notify`, {
+                method: 'POST',
+                body: JSON.stringify(webhookData)
+            });
+
+            if (result.ok) {
+                const formatted = `✅ Payment Processed Successfully\n\nTickets Issued: ${result.data.tickets_issued || 'Check response'}\n\n${JSON.stringify(result.data, null, 2)}`;
+                showResponse('us001-response', formatted, 'success');
+            } else {
+                showResponse('us001-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+            }
+        }
+
+        async function runUS001Workflow() {
+            showLoading('us001-response');
+            let output = '🚀 Running Complete US-001 Workflow...\n\n';
+
+            try {
+                // Step 1: Get catalog
+                output += '1️⃣ Getting catalog...\n';
+                const catalog = await apiCall(`${BASE_URL}/catalog`);
+                if (catalog.ok) {
+                    output += `✅ Found ${catalog.data.products.length} products\n\n`;
+                } else {
+                    throw new Error('Catalog fetch failed');
+                }
+
+                // Step 2: Create order
+                output += '2️⃣ Creating order...\n';
+                const orderData = {
+                    user_id: 123,
+                    items: [{ product_id: 101, qty: 1 }],
+                    channel_id: 1,
+                    out_trade_no: `workflow-${Date.now()}`
+                };
+
+                const order = await apiCall(`${BASE_URL}/orders`, {
+                    method: 'POST',
+                    body: JSON.stringify(orderData)
+                });
+
+                if (order.ok) {
+                    output += `✅ Order ${order.data.order_id} created\n\n`;
+                } else {
+                    throw new Error('Order creation failed');
+                }
+
+                // Step 3: Process payment
+                output += '3️⃣ Processing payment...\n';
+                const payment = await apiCall(`${BASE_URL}/payments/notify`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        out_trade_no: orderData.out_trade_no,
+                        trade_status: 'TRADE_SUCCESS',
+                        total_amount: '25.00'
+                    })
+                });
+
+                if (payment.ok) {
+                    output += `✅ Payment processed, tickets issued\n\n`;
+                } else {
+                    throw new Error('Payment processing failed');
+                }
+
+                output += '🎉 Complete workflow successful!\nTickets are now available for the user.';
+                showResponse('us001-response', output, 'success');
+
+            } catch (error) {
+                output += `❌ Workflow failed: ${error.message}`;
+                showResponse('us001-response', output, 'error');
+            }
+        }
+
+        // US-003: User Tickets
+        async function testMyTickets() {
+            showLoading('us003-response');
+            try {
+                const headers = getAuthHeaders('user-token');
+                const result = await apiCall(`${BASE_URL}/my/tickets`, { headers });
+
+                if (result.ok) {
+                    const formatted = `✅ User Tickets Retrieved\n\nTickets Found: ${result.data.tickets.length}\n\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us003-response', formatted, 'success');
+                } else {
+                    showResponse('us003-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                }
+            } catch (error) {
+                showResponse('us003-response', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testQRToken() {
+            showLoading('us003-response');
+            try {
+                const headers = getAuthHeaders('user-token');
+                // We'll use a test ticket code - in real usage this would come from the tickets list
+                const ticketCode = 'TEST-001';
+                const result = await apiCall(`${BASE_URL}/tickets/${ticketCode}/qr-token`, {
+                    method: 'POST',
+                    headers
+                });
+
+                if (result.ok) {
+                    const formatted = `✅ QR Token Generated\n\nToken: ${result.data.token}\nExpires in: ${result.data.expires_in} seconds\n\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us003-response', formatted, 'success');
+                } else {
+                    showResponse('us003-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                }
+            } catch (error) {
+                showResponse('us003-response', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // US-009: User Profile
+        async function testGetProfile() {
+            showLoading('us009-response');
+            try {
+                const headers = getAuthHeaders('profile-token');
+                const result = await apiCall(`${BASE_URL}/profile`, { headers });
+
+                if (result.ok) {
+                    const formatted = `✅ Profile Retrieved\n\nUser: ${result.data.name}\nEmail: ${result.data.email}\n\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us009-response', formatted, 'success');
+                } else {
+                    showResponse('us009-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                }
+            } catch (error) {
+                showResponse('us009-response', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUpdateProfile() {
+            showLoading('us009-response');
+            try {
+                const headers = getAuthHeaders('profile-token');
+                const updates = {
+                    name: 'Demo User Updated',
+                    preferences: {
+                        language: 'en',
+                        timezone: 'America/New_York'
+                    }
+                };
+
+                const result = await apiCall(`${BASE_URL}/profile`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify(updates)
+                });
+
+                if (result.ok) {
+                    const formatted = `✅ Profile Updated\n\nUpdated: ${JSON.stringify(updates, null, 2)}\n\nResult:\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us009-response', formatted, 'success');
+                } else {
+                    showResponse('us009-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                }
+            } catch (error) {
+                showResponse('us009-response', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetSettings() {
+            showLoading('us009-response');
+            try {
+                const headers = getAuthHeaders('profile-token');
+                const result = await apiCall(`${BASE_URL}/profile/settings`, { headers });
+
+                if (result.ok) {
+                    const formatted = `✅ Settings Retrieved\n\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us009-response', formatted, 'success');
+                } else {
+                    showResponse('us009-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                }
+            } catch (error) {
+                showResponse('us009-response', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUpdateSettings() {
+            showLoading('us009-response');
+            try {
+                const headers = getAuthHeaders('profile-token');
+                const settings = {
+                    notification_settings: {
+                        email_notifications: false,
+                        promotional_emails: true
+                    },
+                    display_preferences: {
+                        currency_display: 'EUR'
+                    }
+                };
+
+                const result = await apiCall(`${BASE_URL}/profile/settings`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify(settings)
+                });
+
+                if (result.ok) {
+                    const formatted = `✅ Settings Updated\n\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us009-response', formatted, 'success');
+                } else {
+                    showResponse('us009-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                }
+            } catch (error) {
+                showResponse('us009-response', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetActivity() {
+            showLoading('us009-response');
+            try {
+                const headers = getAuthHeaders('profile-token');
+                const result = await apiCall(`${BASE_URL}/profile/activity?limit=5`, { headers });
+
+                if (result.ok) {
+                    const formatted = `✅ Activity History Retrieved\n\nTotal: ${result.data.total}\nShowing: ${result.data.activities.length}\n\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us009-response', formatted, 'success');
+                } else {
+                    showResponse('us009-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                }
+            } catch (error) {
+                showResponse('us009-response', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function runUS009Workflow() {
+            showLoading('us009-response');
+            let output = '🚀 Running Complete US-009 Profile Workflow...\n\n';
+
+            try {
+                const headers = getAuthHeaders('profile-token');
+
+                // Step 1: Get profile
+                output += '1️⃣ Getting profile...\n';
+                const profile = await apiCall(`${BASE_URL}/profile`, { headers });
+                if (profile.ok) {
+                    output += `✅ Profile loaded for ${profile.data.name}\n\n`;
+                } else {
+                    throw new Error('Profile fetch failed');
+                }
+
+                // Step 2: Update profile
+                output += '2️⃣ Updating profile...\n';
+                const updates = { name: 'Workflow Test User' };
+                const updateResult = await apiCall(`${BASE_URL}/profile`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify(updates)
+                });
+
+                if (updateResult.ok) {
+                    output += `✅ Profile updated to "${updateResult.data.name}"\n\n`;
+                } else {
+                    throw new Error('Profile update failed');
+                }
+
+                // Step 3: Get settings
+                output += '3️⃣ Getting settings...\n';
+                const settings = await apiCall(`${BASE_URL}/profile/settings`, { headers });
+                if (settings.ok) {
+                    output += `✅ Settings loaded\n\n`;
+                } else {
+                    throw new Error('Settings fetch failed');
+                }
+
+                // Step 4: Get activity
+                output += '4️⃣ Getting activity history...\n';
+                const activity = await apiCall(`${BASE_URL}/profile/activity?limit=3`, { headers });
+                if (activity.ok) {
+                    output += `✅ Activity history loaded (${activity.data.total} total activities)\n\n`;
+                } else {
+                    throw new Error('Activity fetch failed');
+                }
+
+                output += '🎉 Complete profile workflow successful!\nAll profile features are working correctly.';
+                showResponse('us009-response', output, 'success');
+
+            } catch (error) {
+                output += `❌ Workflow failed: ${error.message}`;
+                showResponse('us009-response', output, 'error');
+            }
+        }
+
+        // US-008: Promotion Details
+        async function testPromotionDetail(productId) {
+            showLoading('us008-response');
+            const result = await apiCall(`${BASE_URL}/catalog/promotions/${productId}`);
+
+            if (result.ok) {
+                const promo = result.data.promotion;
+                const formatted = `✅ Promotion Detail Retrieved\n\nProduct: ${promo.name}\nPrice: $${promo.unit_price}\nStatus: ${promo.status}\nAvailable: ${promo.inventory.available}\n\nFeatures:\n${promo.features.map(f => `• ${f}`).join('\n')}\n\n${JSON.stringify(result.data, null, 2)}`;
+                showResponse('us008-response', formatted, 'success');
+            } else {
+                showResponse('us008-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+            }
+        }
+
+        // US-007: Cancellation
+        async function testCancellationPolicies() {
+            showLoading('us007-response');
+            const result = await apiCall(`${BASE_URL}/cancellation-policies`);
+
+            if (result.ok) {
+                const formatted = `✅ Cancellation Policies Retrieved\n\nPolicies: ${result.data.policies.length}\nExamples: ${result.data.examples.length}\n\n${JSON.stringify(result.data, null, 2)}`;
+                showResponse('us007-response', formatted, 'success');
+            } else {
+                showResponse('us007-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+            }
+        }
+
+        async function testTicketCancellation() {
+            showLoading('us007-response');
+            // Demo with a test ticket code
+            const ticketCode = 'TEST-001';
+            const result = await apiCall(`${BASE_URL}/tickets/${ticketCode}/cancel`, {
+                method: 'POST',
+                body: JSON.stringify({ reason: 'Demo cancellation test' })
+            });
+
+            if (result.ok) {
+                const formatted = `✅ Ticket Cancellation Processed\n\nTicket: ${ticketCode}\nRefund Amount: $${result.data.refund_amount}\n\n${JSON.stringify(result.data, null, 2)}`;
+                showResponse('us007-response', formatted, 'success');
+            } else {
+                showResponse('us007-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+            }
+        }
+
+        async function testMyRefunds() {
+            showLoading('us007-response');
+            const result = await apiCall(`${BASE_URL}/my/refunds`);
+
+            if (result.ok) {
+                const formatted = `✅ User Refunds Retrieved\n\nRefunds: ${result.data.refunds.length}\n\n${JSON.stringify(result.data, null, 2)}`;
+                showResponse('us007-response', formatted, 'success');
+            } else {
+                showResponse('us007-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+            }
+        }
+
+        // Placeholder functions for incomplete stories
+        async function testOperatorLogin() {
+            showResponse('us002-response', '⏳ US-002 implementation in progress. This feature will be available soon.', 'loading');
+        }
+
+        async function testValidatorSession() {
+            showResponse('us002-response', '⏳ US-002 implementation in progress. This feature will be available soon.', 'loading');
+        }
+
+        async function testTicketScan() {
+            showResponse('us002-response', '⏳ US-002 implementation in progress. This feature will be available soon.', 'loading');
+        }
+
+        // Runbook display
+        function showRunbook(storyId) {
+            const runbookUrl = `${BASE_URL}/docs/integration/${storyId}-runbook.md`;
+            window.open(runbookUrl, '_blank');
+        }
+
+        // Auto-generate token on page load for convenience
+        document.addEventListener('DOMContentLoaded', function() {
+            // Use a simple working token for immediate testing
+            const workingToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTIzLCJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwiaWF0IjoxNzMwMDAwMDAwLCJleHAiOjk5OTk5OTk5OTl9.VPL7IpR0CuFkAmTt6GU-F4k5WD_R1rV8xHzLm-NzwSs';
+            document.getElementById('user-token').value = workingToken;
+            document.getElementById('profile-token').value = workingToken;
+
+            console.log('Dashboard loaded with demo token');
+            showResponse('us003-response', '🎫 Dashboard loaded! Demo token ready for testing authenticated endpoints.', 'success');
+
+            // Set up event listeners for all buttons to avoid CSP issues
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Set up all button click events to bypass CSP restrictions
+            const buttonMap = {
+                'btn-catalog': testCatalog,
+                'btn-order-create': testOrderCreate,
+                'btn-payment-webhook': testPaymentWebhook,
+                'btn-us001-workflow': runUS001Workflow,
+                'btn-my-tickets': testMyTickets,
+                'btn-qr-token': testQRToken,
+                'btn-get-profile': testGetProfile,
+                'btn-update-profile': testUpdateProfile,
+                'btn-get-settings': testGetSettings,
+                'btn-update-settings': testUpdateSettings,
+                'btn-get-activity': testGetActivity,
+                'btn-us009-workflow': runUS009Workflow,
+                'btn-promo-101': () => testPromotionDetail(101),
+                'btn-promo-102': () => testPromotionDetail(102),
+                'btn-promo-103': () => testPromotionDetail(103),
+                'btn-promo-104': () => testPromotionDetail(104),
+                'btn-policies': testCancellationPolicies,
+                'btn-cancel-ticket': testTicketCancellation,
+                'btn-my-refunds': testMyRefunds,
+                'btn-generate-token': generateUserToken,
+                'btn-copy-token': copyUserToken,
+                // US-002 placeholder buttons
+                'btn-operator-login': testOperatorLogin,
+                'btn-validator-session': testValidatorSession,
+                'btn-ticket-scan': testTicketScan
+            };
+
+            // Add event listeners
+            Object.entries(buttonMap).forEach(([id, handler]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('click', handler);
+                }
+            });
+
+            // Set up runbook buttons with data attributes
+            const runbookButtons = document.querySelectorAll('[id^="btn-runbook-"]');
+            runbookButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const story = this.getAttribute('data-story');
+                    showRunbook(story);
+                });
+            });
+
+            console.log('Event listeners setup complete');
+        }
+    </script>
+</body>
+</html>

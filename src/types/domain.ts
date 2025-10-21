@@ -63,3 +63,72 @@ export interface RefundListResponse { refunds: Refund[]; }
 export interface CancellationPolicy { rule_type: 'redemption_based'|'time_based'|'product_based'; description: string; refund_percentage: number; conditions: any; }
 export interface CancellationPolicyExample { scenario: string; ticket_status: string; redemptions_used: number; total_redemptions: number; refund_percentage: number; explanation: string; }
 export interface CancellationPoliciesResponse { policies: CancellationPolicy[]; examples: CancellationPolicyExample[]; }
+
+// User Profile and Settings Types
+export interface UserProfile {
+  user_id: string;
+  name: string;
+  email: string;
+  preferences: UserPreferences;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export interface UserPreferences {
+  language?: string;
+  timezone?: string;
+  notification_email?: boolean;
+}
+
+export interface UserSettings {
+  notification_settings: NotificationSettings;
+  privacy_settings: PrivacySettings;
+  display_preferences: DisplayPreferences;
+  updated_at: ISODate;
+}
+
+export interface NotificationSettings {
+  email_notifications: boolean;
+  sms_notifications: boolean;
+  push_notifications: boolean;
+  order_updates: boolean;
+  promotional_emails: boolean;
+}
+
+export interface PrivacySettings {
+  profile_visibility: 'public' | 'private';
+  show_purchase_history: boolean;
+  data_sharing_consent: boolean;
+}
+
+export interface DisplayPreferences {
+  language: 'en' | 'es' | 'fr' | 'de';
+  timezone: string;
+  date_format: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
+  currency_display: 'USD' | 'EUR' | 'GBP' | 'CAD';
+}
+
+export interface ActivityEntry {
+  activity_id: string;
+  type: 'profile' | 'order' | 'ticket' | 'login' | 'settings';
+  action: string;
+  description: string;
+  timestamp: ISODate;
+  metadata?: {
+    ip_address?: string;
+    user_agent?: string;
+    resource_id?: string;
+    changes?: any;
+  };
+  severity: 'info' | 'warning' | 'critical';
+}
+
+export interface ActivityHistory {
+  activities: ActivityEntry[];
+  total: number;
+  pagination: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
+}

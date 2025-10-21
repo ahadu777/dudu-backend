@@ -23,6 +23,8 @@ import redeemRouter from './modules/redeem/router';
 import reportsRouter from './modules/reports/router';
 import refundsRouter from './modules/refunds/router';
 import policiesRouter from './modules/policies/router';
+import profileRouter from './modules/profile/router';
+import authDemoRouter from './modules/auth/demo';
 
 class App {
   public app: Application;
@@ -108,8 +110,43 @@ class App {
     this.app.use('/', refundsRouter);          // for /my/refunds
     this.app.use('/', policiesRouter);         // for /cancellation-policies
 
+    // Profile and settings routes
+    this.app.use('/profile', profileRouter);   // for /profile, /profile/settings, /profile/activity
+
+    // Demo dashboard
+    this.app.get('/demo', (_req, res) => {
+      const dashboardPath = path.resolve(process.cwd(), 'src', 'demo', 'dashboard.html');
+      if (fs.existsSync(dashboardPath)) {
+        res.setHeader('Content-Type', 'text/html');
+        res.send(fs.readFileSync(dashboardPath, 'utf-8'));
+      } else {
+        res.status(404).json({ error: 'Demo dashboard not found' });
+      }
+    });
+
+    // Serve runbooks and documentation
+    this.app.get('/docs/:type/:filename', (req, res) => {
+      const { type, filename } = req.params;
+      const validTypes = ['integration', 'stories', 'cards'];
+
+      if (!validTypes.includes(type)) {
+        return res.status(404).json({ error: 'Documentation type not found' });
+      }
+
+      const docPath = path.resolve(process.cwd(), 'docs', type, filename);
+      if (fs.existsSync(docPath)) {
+        res.setHeader('Content-Type', 'text/plain');
+        res.send(fs.readFileSync(docPath, 'utf-8'));
+      } else {
+        res.status(404).json({ error: 'Documentation file not found' });
+      }
+    });
+
     // API routes
     this.app.use(env.API_PREFIX, routes);
+
+    // Demo auth endpoints
+    this.app.use(env.API_PREFIX + '/auth', authDemoRouter);
   }
 
   private initializeSwagger(): void {

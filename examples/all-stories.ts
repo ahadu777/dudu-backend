@@ -78,6 +78,13 @@ async function runAllStoriesExample() {
     console.log('✅ US-005: Comprehensive redemption reporting');
     console.log('✅ US-006: Operator authentication and session management');
     console.log('✅ US-008: Promotion detail view for informed purchasing');
+
+    // US-009: User Profile and Settings Management
+    console.log('\n📝 US-009: User Profile and Settings Management');
+    const { demonstrateProfileWorkflow } = await import('./us009.js');
+    await demonstrateProfileWorkflow();
+    console.log('✅ US-009: User profile and settings management complete');
+
     console.log('\n🚀 System is production-ready for ticketing operations!');
 
   } catch (error) {
