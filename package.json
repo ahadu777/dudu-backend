@@ -15,6 +15,7 @@
     "example:us001": "ts-node examples/us001.ts",
     "example:us002": "ts-node examples/us002.ts",
     "example:us003": "ts-node examples/us003.ts",
+    "example:us008": "ts-node examples/us008.ts",
     "example:all": "ts-node examples/all-stories.ts",
     "sdk:generate": "npx openapi-typescript-codegen --input openapi/openapi.json --output sdk --client fetch",
     "validate:integration": "node scripts/integration-proof-validator.js",

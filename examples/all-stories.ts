@@ -8,6 +8,7 @@
 import { runUS001Example } from './us001';
 import { runUS002Example } from './us002';
 import { runUS003Example } from './us003';
+import { runUS008Example } from './us008';
 
 async function runAllStoriesExample() {
   console.log('🌟 COMPLETE INTEGRATION DEMO - ALL USER STORIES');
@@ -58,6 +59,15 @@ async function runAllStoriesExample() {
     console.log('✅ This story was demonstrated in US-002 (operator login and sessions)');
     console.log('💡 Operators can manage multiple gate sessions simultaneously\n');
 
+    // Wait a moment between stories
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // US-008: Promotion detail view
+    console.log('📖 Running US-008: Promotion detail view for dashboard');
+    console.log('-'.repeat(50));
+    await runUS008Example();
+    console.log('\n' + '='.repeat(60) + '\n');
+
     // Final summary
     console.log('🎉 ALL STORIES DEMONSTRATION COMPLETE!');
     console.log('='.repeat(60));
@@ -67,6 +77,7 @@ async function runAllStoriesExample() {
     console.log('✅ US-004: Synchronous ticket issuance on payment');
     console.log('✅ US-005: Comprehensive redemption reporting');
     console.log('✅ US-006: Operator authentication and session management');
+    console.log('✅ US-008: Promotion detail view for informed purchasing');
     console.log('\n🚀 System is production-ready for ticketing operations!');
 
   } catch (error) {

@@ -886,6 +886,175 @@
           }
         }
       ]
+    },
+    {
+      "name": "US-008: Promotion Detail View",
+      "item": [
+        {
+          "name": "1. Get Active Promotion Detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns promotion detail structure', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.promotion).to.exist;",
+                  "  pm.expect(response.promotion.id).to.eql(101);",
+                  "  pm.expect(response.promotion.name).to.exist;",
+                  "  pm.expect(response.promotion.description).to.exist;",
+                  "  pm.expect(response.promotion.unit_price).to.be.a('number');",
+                  "  pm.expect(response.promotion.features).to.be.an('array');",
+                  "  pm.expect(response.promotion.inventory).to.exist;",
+                  "  pm.expect(response.promotion.inventory.available).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Has marketing content', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.promotion.features.length).to.be.at.least(1);",
+                  "  pm.expect(response.promotion.images).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/promotions/101",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "promotions", "101"]
+            }
+          }
+        },
+        {
+          "name": "2. Get Premium Promotion Detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Premium product has higher price', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.promotion.id).to.eql(104);",
+                  "  pm.expect(response.promotion.unit_price).to.be.above(50);",
+                  "  pm.expect(response.promotion.features.join(' ')).to.include('Fast Pass');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/promotions/104",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "promotions", "104"]
+            }
+          }
+        },
+        {
+          "name": "3. Test Invalid Product ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 for invalid ID', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message for invalid ID', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.code).to.eql('INVALID_PRODUCT_ID');",
+                  "  pm.expect(response.message).to.include('valid number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/promotions/invalid",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "promotions", "invalid"]
+            }
+          }
+        },
+        {
+          "name": "4. Test Non-existent Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 for non-existent product', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message for not found', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.code).to.eql('NOT_FOUND');",
+                  "  pm.expect(response.message).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/promotions/999",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "promotions", "999"]
+            }
+          }
+        },
+        {
+          "name": "5. Test Archived Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 for archived product', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Archived product shows correct status', () => {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.promotion.id).to.eql(105);",
+                  "  pm.expect(response.promotion.status).to.eql('archived');",
+                  "  pm.expect(response.promotion.features).to.include('Currently unavailable');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/promotions/105",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "promotions", "105"]
+            }
+          }
+        }
+      ]
     }
   ]
 }

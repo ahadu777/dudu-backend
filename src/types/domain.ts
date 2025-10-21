@@ -14,6 +14,28 @@ export enum ErrorCode { IDEMPOTENCY_CONFLICT='IDEMPOTENCY_CONFLICT', TOKEN_EXPIR
 export interface FunctionSpec { function_code: string; label: string; quantity: number; }
 export interface Product { id: number; sku: string; name: string; status: 'draft'|'active'|'archived'; sale_start_at?: ISODate|null; sale_end_at?: ISODate|null; functions: FunctionSpec[]; }
 export interface CatalogResponse { products: Product[]; }
+
+// Promotion detail types for enhanced product information
+export interface PromotionDetail {
+  id: number;
+  sku: string;
+  name: string;
+  description: string;
+  unit_price: number;
+  status: 'draft'|'active'|'archived';
+  sale_start_at?: ISODate|null;
+  sale_end_at?: ISODate|null;
+  functions: FunctionSpec[];
+  inventory: {
+    sellable_cap: number;
+    reserved_count: number;
+    sold_count: number;
+    available: number;
+  };
+  features?: string[];
+  images?: string[];
+}
+export interface PromotionDetailResponse { promotion: PromotionDetail; }
 export interface OrderItemRequest { product_id: number; qty: number; }
 export interface Order { order_id: number; user_id: number; status: OrderStatus; items: OrderItemRequest[]; channel_id: number; out_trade_no: string; amounts?: { subtotal: number; discount: number; total: number; }; created_at: ISODate; paid_at?: ISODate|null; refund_amount?: number; refund_status?: 'none'|'partial'|'full'; }
 export interface TicketEntitlement { function_code: string; label: string; remaining_uses: number; }

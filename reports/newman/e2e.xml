@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="E2E buy→scan→report" tests="20" time="0.095">
-  <testsuite name="US-001: Complete Buy and Redeem Flow / 1. Health Check" id="c1421581-f2c0-4fd5-9f8b-06956dc646fc" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="0" errors="0" time="0.018">
-    <testcase name="Health check passes" time="0.018" classname="Us001CompleteBuyAndRedeemFlow1HealthCheck"/>
+<testsuites name="E2E buy→scan→report" tests="25" time="0.114">
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 1. Health Check" id="793c1fda-97ab-468f-a402-87e91b449464" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="0" errors="0" time="0.041">
+    <testcase name="Health check passes" time="0.041" classname="Us001CompleteBuyAndRedeemFlow1HealthCheck"/>
   </testsuite>
-  <testsuite name="US-001: Complete Buy and Redeem Flow / 2. Get Catalog" id="01c8092f-413f-463e-a4cb-1a2a9aec3937" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.005">
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 2. Get Catalog" id="001dfb38-ab88-43b0-891a-98a479dda68e" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.005">
     <testcase name="Catalog returns products" time="0.005" classname="Us001CompleteBuyAndRedeemFlow2GetCatalog">
       <failure type="AssertionFailure" message="expected 'active' to deeply equal 'ACTIVE'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 2. Get Catalog.]]>
         <![CDATA[Test description: Catalog returns products.]]>
@@ -17,11 +17,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-001: Complete Buy and Redeem Flow / 3. Create Order" id="c2b72297-fb9a-41e7-bf27-bb1304c83c20" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.020">
-    <testcase name="Order created successfully" time="0.020" classname="Us001CompleteBuyAndRedeemFlow3CreateOrder">
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 3. Create Order" id="48db4608-8b7e-45fd-b645-2bd5d5f4ca98" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.004">
+    <testcase name="Order created successfully" time="0.004" classname="Us001CompleteBuyAndRedeemFlow3CreateOrder">
       <failure type="AssertionFailure" message="expected response to have status code 201 but got 200">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 3. Create Order.]]>
         <![CDATA[Test description: Order created successfully.]]>
@@ -31,11 +31,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-001: Complete Buy and Redeem Flow / 4. Payment Notification" id="5230ebd5-9634-4a25-afad-870b841a0163" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.005">
-    <testcase name="Payment processed and tickets issued" time="0.005" classname="Us001CompleteBuyAndRedeemFlow4PaymentNotification">
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 4. Payment Notification" id="ef6b2e6f-be08-4abe-bafe-892a99bfbd1f" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.003">
+    <testcase name="Payment processed and tickets issued" time="0.003" classname="Us001CompleteBuyAndRedeemFlow4PaymentNotification">
       <failure type="AssertionFailure" message="expected response to have status code 200 but got 500">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 4. Payment Notification.]]>
         <![CDATA[Test description: Payment processed and tickets issued.]]>
@@ -45,11 +45,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-001: Complete Buy and Redeem Flow / 5. Get My Tickets" id="b98b1c2e-8365-4d02-870a-94608a868d04" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.002">
-    <testcase name="User has tickets with entitlements" time="0.002" classname="Us001CompleteBuyAndRedeemFlow5GetMyTickets">
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 5. Get My Tickets" id="34f1ee3c-ac46-4d92-8e9e-e8b74b612f0d" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.003">
+    <testcase name="User has tickets with entitlements" time="0.003" classname="Us001CompleteBuyAndRedeemFlow5GetMyTickets">
       <failure type="AssertionFailure" message="expected undefined not to be undefined">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 5. Get My Tickets.]]>
         <![CDATA[Test description: User has tickets with entitlements.]]>
@@ -59,11 +59,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-001: Complete Buy and Redeem Flow / 6. Generate QR Token" id="e5b32b67-5695-4e15-8a38-25f8526a3ea5" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.003">
+  <testsuite name="US-001: Complete Buy and Redeem Flow / 6. Generate QR Token" id="62736fac-54f1-4234-90e5-b1cf6edcded3" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.003">
     <testcase name="QR token generated successfully" time="0.003" classname="Us001CompleteBuyAndRedeemFlow6GenerateQrToken">
       <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-001: Complete Buy and Redeem Flow / 6. Generate QR Token.]]>
         <![CDATA[Test description: QR token generated successfully.]]>
@@ -73,14 +73,14 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-002 &amp; US-006: Operator Flow / 1. Operator Login" id="4c5070c6-d228-430f-af68-ffb03b5936b9" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="0" errors="0" time="0.003">
-    <testcase name="Operator authenticated successfully" time="0.003" classname="Us002AmpUs006OperatorFlow1OperatorLogin"/>
+  <testsuite name="US-002 &amp; US-006: Operator Flow / 1. Operator Login" id="9f6621a2-05ee-4ef2-a4b6-a7954da120ef" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="Operator authenticated successfully" time="0.002" classname="Us002AmpUs006OperatorFlow1OperatorLogin"/>
   </testsuite>
-  <testsuite name="US-002 &amp; US-006: Operator Flow / 2. Create Validator Session" id="a8ee6441-f4d6-486f-9d27-9b0cb3829f97" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.003">
-    <testcase name="Validator session created" time="0.003" classname="Us002AmpUs006OperatorFlow2CreateValidatorSession">
+  <testsuite name="US-002 &amp; US-006: Operator Flow / 2. Create Validator Session" id="8ed62f5a-bbdd-4198-bd02-64c6c7d68cd3" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.002">
+    <testcase name="Validator session created" time="0.002" classname="Us002AmpUs006OperatorFlow2CreateValidatorSession">
       <failure type="AssertionFailure" message="expected response to have status code 201 but got 200">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-002 & US-006: Operator Flow / 2. Create Validator Session.]]>
         <![CDATA[Test description: Validator session created.]]>
@@ -90,14 +90,14 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-002 &amp; US-006: Operator Flow / 3. Scan and Redeem Ticket" id="2abd7eaf-630a-4d14-b3f5-d75ebb03269f" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="0" errors="0" time="0.004">
-    <testcase name="Ticket scanned and redeemed successfully" time="0.004" classname="Us002AmpUs006OperatorFlow3ScanAndRedeemTicket"/>
+  <testsuite name="US-002 &amp; US-006: Operator Flow / 3. Scan and Redeem Ticket" id="a62b2870-4767-4c0f-914d-76ac0c6d22f4" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="Ticket scanned and redeemed successfully" time="0.003" classname="Us002AmpUs006OperatorFlow3ScanAndRedeemTicket"/>
   </testsuite>
-  <testsuite name="US-002 &amp; US-006: Operator Flow / 4. Replay Protection Test" id="fa3e12c1-2ae9-4c8a-ace2-626facef97b4" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.003">
-    <testcase name="Replay protection works" time="0.003" classname="Us002AmpUs006OperatorFlow4ReplayProtectionTest">
+  <testsuite name="US-002 &amp; US-006: Operator Flow / 4. Replay Protection Test" id="7c7c0298-1bb4-482d-96c1-aeb988193c09" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.002">
+    <testcase name="Replay protection works" time="0.002" classname="Us002AmpUs006OperatorFlow4ReplayProtectionTest">
       <failure type="AssertionFailure" message="expected response to have status code 409 but got 200">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-002 & US-006: Operator Flow / 4. Replay Protection Test.]]>
         <![CDATA[Test description: Replay protection works.]]>
@@ -107,11 +107,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-005: Reporting / 1. Get Redemptions Report" id="65c6fd33-e96a-4d3c-a958-a8e46c881576" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.002">
-    <testcase name="Redemptions report generated" time="0.002" classname="Us005Reporting1GetRedemptionsReport">
+  <testsuite name="US-005: Reporting / 1. Get Redemptions Report" id="aa4e5f5b-ccb6-4b2d-ae2b-3cec3e45be2e" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.008">
+    <testcase name="Redemptions report generated" time="0.008" classname="Us005Reporting1GetRedemptionsReport">
       <failure type="AssertionFailure" message="expected undefined to be an array">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-005: Reporting / 1. Get Redemptions Report.]]>
         <![CDATA[Test description: Redemptions report generated.]]>
@@ -121,11 +121,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-005: Reporting / 2. Filter by Location" id="a59bc29d-d6ec-4b97-88d0-00f981ea864d" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.003">
-    <testcase name="Location filter works" time="0.003" classname="Us005Reporting2FilterByLocation">
+  <testsuite name="US-005: Reporting / 2. Filter by Location" id="1520fc06-712d-4f99-a939-ad17080e8f74" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.002">
+    <testcase name="Location filter works" time="0.002" classname="Us005Reporting2FilterByLocation">
       <failure type="AssertionFailure" message="expected undefined to be an array">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-005: Reporting / 2. Filter by Location.]]>
         <![CDATA[Test description: Location filter works.]]>
@@ -135,11 +135,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="Final Validation / Verify Updated Ticket State" id="1dbd8566-5f89-43ed-8a55-13f32d626081" timestamp="2025-10-20T18:44:58.511Z" tests="1" failures="1" errors="0" time="0.003">
+  <testsuite name="Final Validation / Verify Updated Ticket State" id="dd869e56-4d4d-4659-8c73-f893d483879b" timestamp="2025-10-21T05:14:27.960Z" tests="1" failures="1" errors="0" time="0.003">
     <testcase name="Ticket usage updated correctly" time="0.003" classname="FinalValidationVerifyUpdatedTicketState">
       <failure type="AssertionFailure" message="expected undefined not to be undefined">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: Final Validation / Verify Updated Ticket State.]]>
         <![CDATA[Test description: Ticket usage updated correctly.]]>
@@ -149,21 +149,21 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-007: Ticket Cancellation and Refund / 1. Get Cancellation Policies" id="0f14e0c1-2679-46ba-9278-a07e96543845" timestamp="2025-10-20T18:44:58.511Z" tests="3" failures="0" errors="0" time="0.006">
-    <testcase name="Status is 200" time="0.006" classname="Us007TicketCancellationAndRefund1GetCancellationPolicies"/>
-    <testcase name="Returns policies and examples" time="0.006" classname="Us007TicketCancellationAndRefund1GetCancellationPolicies"/>
-    <testcase name="Has redemption-based policy" time="0.006" classname="Us007TicketCancellationAndRefund1GetCancellationPolicies"/>
+  <testsuite name="US-007: Ticket Cancellation and Refund / 1. Get Cancellation Policies" id="1d6b5d50-6925-4be5-977f-bf3f883afaea" timestamp="2025-10-21T05:14:27.960Z" tests="3" failures="0" errors="0" time="0.009">
+    <testcase name="Status is 200" time="0.009" classname="Us007TicketCancellationAndRefund1GetCancellationPolicies"/>
+    <testcase name="Returns policies and examples" time="0.009" classname="Us007TicketCancellationAndRefund1GetCancellationPolicies"/>
+    <testcase name="Has redemption-based policy" time="0.009" classname="Us007TicketCancellationAndRefund1GetCancellationPolicies"/>
   </testsuite>
-  <testsuite name="US-007: Ticket Cancellation and Refund / 2. Get User Tickets for Cancellation" id="bfbdb9ed-fd28-413f-af81-c3003ab87f78" timestamp="2025-10-20T18:44:58.511Z" tests="3" failures="0" errors="0" time="0.002">
-    <testcase name="Status is 200" time="0.002" classname="Us007TicketCancellationAndRefund2GetUserTicketsForCancellation"/>
-    <testcase name="Has tickets to cancel" time="0.002" classname="Us007TicketCancellationAndRefund2GetUserTicketsForCancellation"/>
-    <testcase name="Store active ticket for cancellation" time="0.002" classname="Us007TicketCancellationAndRefund2GetUserTicketsForCancellation"/>
+  <testsuite name="US-007: Ticket Cancellation and Refund / 2. Get User Tickets for Cancellation" id="879cb0e8-b49d-48a1-a18d-045d59ccf23e" timestamp="2025-10-21T05:14:27.960Z" tests="3" failures="0" errors="0" time="0.005">
+    <testcase name="Status is 200" time="0.005" classname="Us007TicketCancellationAndRefund2GetUserTicketsForCancellation"/>
+    <testcase name="Has tickets to cancel" time="0.005" classname="Us007TicketCancellationAndRefund2GetUserTicketsForCancellation"/>
+    <testcase name="Store active ticket for cancellation" time="0.005" classname="Us007TicketCancellationAndRefund2GetUserTicketsForCancellation"/>
   </testsuite>
-  <testsuite name="US-007: Ticket Cancellation and Refund / 3. Cancel Ticket" id="2200687d-2a36-495b-8f39-43c98244cf60" timestamp="2025-10-20T18:44:58.511Z" tests="3" failures="2" errors="0" time="0.003">
-    <testcase name="Status is 200" time="0.003" classname="Us007TicketCancellationAndRefund3CancelTicket">
+  <testsuite name="US-007: Ticket Cancellation and Refund / 3. Cancel Ticket" id="04fde9e9-b936-40ad-af2c-067736355fe5" timestamp="2025-10-21T05:14:27.960Z" tests="3" failures="2" errors="0" time="0.002">
+    <testcase name="Status is 200" time="0.002" classname="Us007TicketCancellationAndRefund3CancelTicket">
       <failure type="AssertionFailure" message="expected response to have status code 200 but got 500">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-007: Ticket Cancellation and Refund / 3. Cancel Ticket.]]>
         <![CDATA[Test description: Status is 200.]]>
@@ -172,10 +172,10 @@
    at Object.eval sandbox-script.js:1:16).]]>
       </failure>
     </testcase>
-    <testcase name="Ticket cancelled successfully" time="0.003" classname="Us007TicketCancellationAndRefund3CancelTicket">
+    <testcase name="Ticket cancelled successfully" time="0.002" classname="Us007TicketCancellationAndRefund3CancelTicket">
       <failure type="AssertionFailure" message="expected undefined to equal 'void'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-007: Ticket Cancellation and Refund / 3. Cancel Ticket.]]>
         <![CDATA[Test description: Ticket cancelled successfully.]]>
@@ -184,13 +184,13 @@
    at Object.eval sandbox-script.js:2:16).]]>
       </failure>
     </testcase>
-    <testcase name="Store refund details" time="0.003" classname="Us007TicketCancellationAndRefund3CancelTicket"/>
+    <testcase name="Store refund details" time="0.002" classname="Us007TicketCancellationAndRefund3CancelTicket"/>
   </testsuite>
-  <testsuite name="US-007: Ticket Cancellation and Refund / 4. Test Idempotency" id="cd0cd9ee-81d5-4a9f-aa94-602dfaf19d49" timestamp="2025-10-20T18:44:58.511Z" tests="2" failures="2" errors="0" time="0.001">
-    <testcase name="Status is 200" time="0.001" classname="Us007TicketCancellationAndRefund4TestIdempotency">
+  <testsuite name="US-007: Ticket Cancellation and Refund / 4. Test Idempotency" id="70785589-bc30-458b-9f89-0b3735b4324a" timestamp="2025-10-21T05:14:27.960Z" tests="2" failures="2" errors="0" time="0.002">
+    <testcase name="Status is 200" time="0.002" classname="Us007TicketCancellationAndRefund4TestIdempotency">
       <failure type="AssertionFailure" message="expected response to have status code 200 but got 500">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-007: Ticket Cancellation and Refund / 4. Test Idempotency.]]>
         <![CDATA[Test description: Status is 200.]]>
@@ -199,10 +199,10 @@
    at Object.eval sandbox-script.js:1:17).]]>
       </failure>
     </testcase>
-    <testcase name="Idempotent response" time="0.001" classname="Us007TicketCancellationAndRefund4TestIdempotency">
+    <testcase name="Idempotent response" time="0.002" classname="Us007TicketCancellationAndRefund4TestIdempotency">
       <failure type="AssertionFailure" message="expected undefined to equal 'void'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-007: Ticket Cancellation and Refund / 4. Test Idempotency.]]>
         <![CDATA[Test description: Idempotent response.]]>
@@ -212,15 +212,15 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-007: Ticket Cancellation and Refund / 5. Check Refund History" id="d5e12e82-a3d5-40ed-97f1-95f80a3b0dd2" timestamp="2025-10-20T18:44:58.511Z" tests="2" failures="0" errors="0" time="0.004">
-    <testcase name="Status is 200" time="0.004" classname="Us007TicketCancellationAndRefund5CheckRefundHistory"/>
-    <testcase name="Returns refunds array" time="0.004" classname="Us007TicketCancellationAndRefund5CheckRefundHistory"/>
+  <testsuite name="US-007: Ticket Cancellation and Refund / 5. Check Refund History" id="538a9b08-c8cf-4d29-95e2-622dd27647ee" timestamp="2025-10-21T05:14:27.960Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status is 200" time="0.002" classname="Us007TicketCancellationAndRefund5CheckRefundHistory"/>
+    <testcase name="Returns refunds array" time="0.002" classname="Us007TicketCancellationAndRefund5CheckRefundHistory"/>
   </testsuite>
-  <testsuite name="US-007: Ticket Cancellation and Refund / 6. Test Unauthorized Cancellation" id="1f369ef9-e015-4c6d-8144-c1fddf3f2a89" timestamp="2025-10-20T18:44:58.511Z" tests="2" failures="2" errors="0" time="0.002">
+  <testsuite name="US-007: Ticket Cancellation and Refund / 6. Test Unauthorized Cancellation" id="001d94ff-04c9-4843-9586-298580c6b80b" timestamp="2025-10-21T05:14:27.960Z" tests="2" failures="2" errors="0" time="0.002">
     <testcase name="Status is 404 (not found/unauthorized)" time="0.002" classname="Us007TicketCancellationAndRefund6TestUnauthorizedCancellation">
       <failure type="AssertionFailure" message="expected response to have status code 404 but got 500">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-007: Ticket Cancellation and Refund / 6. Test Unauthorized Cancellation.]]>
         <![CDATA[Test description: Status is 404 (not found/unauthorized).]]>
@@ -232,7 +232,7 @@
     <testcase name="Error response structure" time="0.002" classname="Us007TicketCancellationAndRefund6TestUnauthorizedCancellation">
       <failure type="AssertionFailure" message="expected undefined to exist">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-007: Ticket Cancellation and Refund / 6. Test Unauthorized Cancellation.]]>
         <![CDATA[Test description: Error response structure.]]>
@@ -242,11 +242,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="US-007: Ticket Cancellation and Refund / 7. Test Missing Authentication" id="a8d0700d-f77c-4110-a097-a5a0e6e7a93e" timestamp="2025-10-20T18:44:58.511Z" tests="2" failures="2" errors="0" time="0.003">
-    <testcase name="Status is 401 (unauthorized)" time="0.003" classname="Us007TicketCancellationAndRefund7TestMissingAuthentication">
+  <testsuite name="US-007: Ticket Cancellation and Refund / 7. Test Missing Authentication" id="916a466d-bccd-4035-a905-c9c2d8b9c79d" timestamp="2025-10-21T05:14:27.960Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Status is 401 (unauthorized)" time="0.001" classname="Us007TicketCancellationAndRefund7TestMissingAuthentication">
       <failure type="AssertionFailure" message="expected response to have status code 401 but got 500">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-007: Ticket Cancellation and Refund / 7. Test Missing Authentication.]]>
         <![CDATA[Test description: Status is 401 (unauthorized).]]>
@@ -255,10 +255,10 @@
    at Object.eval sandbox-script.js:1:20).]]>
       </failure>
     </testcase>
-    <testcase name="Error response structure" time="0.003" classname="Us007TicketCancellationAndRefund7TestMissingAuthentication">
+    <testcase name="Error response structure" time="0.001" classname="Us007TicketCancellationAndRefund7TestMissingAuthentication">
       <failure type="AssertionFailure" message="expected undefined to exist">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 28b91a35-77a0-4c6f-a896-abe361154ecc.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
         <![CDATA[Collection name: E2E buy→scan→report.]]>
         <![CDATA[Request name: US-007: Ticket Cancellation and Refund / 7. Test Missing Authentication.]]>
         <![CDATA[Test description: Error response structure.]]>
@@ -267,5 +267,37 @@
    at Object.eval sandbox-script.js:2:20).]]>
       </failure>
     </testcase>
+  </testsuite>
+  <testsuite name="US-008: Promotion Detail View / 1. Get Active Promotion Detail" id="8122b3ae-3c98-4d1f-973c-96eff762e4de" timestamp="2025-10-21T05:14:27.960Z" tests="3" failures="0" errors="0" time="0.002">
+    <testcase name="Status is 200" time="0.002" classname="Us008PromotionDetailView1GetActivePromotionDetail"/>
+    <testcase name="Returns promotion detail structure" time="0.002" classname="Us008PromotionDetailView1GetActivePromotionDetail"/>
+    <testcase name="Has marketing content" time="0.002" classname="Us008PromotionDetailView1GetActivePromotionDetail"/>
+  </testsuite>
+  <testsuite name="US-008: Promotion Detail View / 2. Get Premium Promotion Detail" id="122594f7-b1ac-4b5d-a910-5c0736309d7e" timestamp="2025-10-21T05:14:27.960Z" tests="2" failures="1" errors="0" time="0.003">
+    <testcase name="Status is 200" time="0.003" classname="Us008PromotionDetailView2GetPremiumPromotionDetail"/>
+    <testcase name="Premium product has higher price" time="0.003" classname="Us008PromotionDetailView2GetPremiumPromotionDetail">
+      <failure type="AssertionFailure" message="expected [ 'Park entry included', …(4) ] to include 'Fast Pass'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: de8448df-8188-4dfd-9dad-d90cbbfb036f.]]>
+        <![CDATA[Collection name: E2E buy→scan→report.]]>
+        <![CDATA[Request name: US-008: Promotion Detail View / 2. Get Premium Promotion Detail.]]>
+        <![CDATA[Test description: Premium product has higher price.]]>
+        <![CDATA[Error message: expected [ 'Park entry included', …(4) ] to include 'Fast Pass'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected [ 'Park entry included', …(4) ] to include 'Fast Pass'
+   at Object.eval sandbox-script.js:2:22).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="US-008: Promotion Detail View / 3. Test Invalid Product ID" id="9df1564d-ec91-4e28-a164-c3f45e1d2f93" timestamp="2025-10-21T05:14:27.960Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status is 400 for invalid ID" time="0.001" classname="Us008PromotionDetailView3TestInvalidProductId"/>
+    <testcase name="Error message for invalid ID" time="0.001" classname="Us008PromotionDetailView3TestInvalidProductId"/>
+  </testsuite>
+  <testsuite name="US-008: Promotion Detail View / 4. Test Non-existent Product" id="2587ebb5-9882-4795-aa63-065d6a9b5b3a" timestamp="2025-10-21T05:14:27.960Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status is 404 for non-existent product" time="0.001" classname="Us008PromotionDetailView4TestNonExistentProduct"/>
+    <testcase name="Error message for not found" time="0.001" classname="Us008PromotionDetailView4TestNonExistentProduct"/>
+  </testsuite>
+  <testsuite name="US-008: Promotion Detail View / 5. Test Archived Product" id="91b2f7bb-7bfa-4337-b9dd-e631281afa3b" timestamp="2025-10-21T05:14:27.960Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Status is 200 for archived product" time="0.003" classname="Us008PromotionDetailView5TestArchivedProduct"/>
+    <testcase name="Archived product shows correct status" time="0.003" classname="Us008PromotionDetailView5TestArchivedProduct"/>
   </testsuite>
 </testsuites>

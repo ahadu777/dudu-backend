@@ -47,3 +47,8 @@ stories:
       - ticket-cancellation
       - refund-processing
       - cancellation-policies
+  - id: US-008
+    title: Promotion detail view for dashboard
+    status: Approved
+    cards:
+      - promotion-detail-endpoint

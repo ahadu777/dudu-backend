@@ -11,7 +11,8 @@ import {
   ISODate,
   TicketCode,
   SessionId,
-  ScanResult
+  ScanResult,
+  PromotionDetail
 } from '../../types/domain.js';
 import { logger } from '../../utils/logger.js';
 
@@ -45,7 +46,46 @@ export class MockStore {
     this.initializeSeedData();
   }
 
+  // Enhanced product data for promotion details
+  private promotionData: Map<number, { description: string; unit_price: number; features: string[]; images: string[]; }> = new Map();
+
   private initializeSeedData(): void {
+    // Initialize promotion enhancement data
+    this.promotionData.set(101, {
+      description: 'Perfect for tourists and daily commuters. This convenient 3-in-1 pass gives you access to multiple transport modes in one ticket.',
+      unit_price: 25.00,
+      features: ['2 Bus rides included', '1 Ferry crossing', '1 Metro journey', 'Valid for 24 hours', 'No booking required'],
+      images: ['https://example.com/transport-pass.jpg']
+    });
+
+    this.promotionData.set(102, {
+      description: 'Unlimited travel throughout the day! Perfect for exploring the entire city at your own pace.',
+      unit_price: 45.00,
+      features: ['Unlimited bus rides', 'Unlimited metro access', 'Valid for 24 hours', 'Peak hour access included', 'Mobile ticket available'],
+      images: ['https://example.com/day-pass.jpg']
+    });
+
+    this.promotionData.set(103, {
+      description: 'Discover our world-class museum collections. Entry includes access to all permanent exhibitions.',
+      unit_price: 18.00,
+      features: ['All permanent exhibitions', 'Audio guide included', 'Valid for one day', 'Student discounts available', 'Group rates available'],
+      images: ['https://example.com/museum-ticket.jpg']
+    });
+
+    this.promotionData.set(104, {
+      description: 'Experience thrilling rides and attractions at our premier theme park. Fast Pass included for shorter wait times!',
+      unit_price: 89.00,
+      features: ['Park entry included', '3 Fast Pass rides', 'All attractions access', 'Free parking', 'Photo package discount'],
+      images: ['https://example.com/park-pass.jpg']
+    });
+
+    this.promotionData.set(105, {
+      description: 'This seasonal pass is currently unavailable. Check back for new offers!',
+      unit_price: 0.00,
+      features: ['Currently unavailable'],
+      images: []
+    });
+
     // Seed products (from products.json structure)
     this.products.set(101, {
       id: 101,
@@ -236,6 +276,36 @@ export class MockStore {
     if (!product) return undefined;
     const { inventory, ...productData } = product;
     return productData;
+  }
+
+  // Get promotion detail with enhanced information
+  getPromotionDetail(id: number): PromotionDetail | undefined {
+    const product = this.products.get(id);
+    const promotionInfo = this.promotionData.get(id);
+
+    if (!product || !promotionInfo) return undefined;
+
+    const available = product.inventory.sellable_cap - product.inventory.reserved_count - product.inventory.sold_count;
+
+    return {
+      id: product.id,
+      sku: product.sku,
+      name: product.name,
+      description: promotionInfo.description,
+      unit_price: promotionInfo.unit_price,
+      status: product.status,
+      sale_start_at: product.sale_start_at,
+      sale_end_at: product.sale_end_at,
+      functions: product.functions,
+      inventory: {
+        sellable_cap: product.inventory.sellable_cap,
+        reserved_count: product.inventory.reserved_count,
+        sold_count: product.inventory.sold_count,
+        available: available
+      },
+      features: promotionInfo.features,
+      images: promotionInfo.images
+    };
   }
 
   reserveInventory(productId: number, qty: number): boolean {
