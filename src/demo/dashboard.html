@@ -983,19 +983,62 @@
 
         // Auto-generate token on page load for convenience
         document.addEventListener('DOMContentLoaded', function() {
-            // Use a simple working token for immediate testing
-            const workingToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTIzLCJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwiaWF0IjoxNzMwMDAwMDAwLCJleHAiOjk5OTk5OTk5OTl9.VPL7IpR0CuFkAmTt6GU-F4k5WD_R1rV8xHzLm-NzwSs';
-            document.getElementById('user-token').value = workingToken;
-            document.getElementById('profile-token').value = workingToken;
+            console.log('DOM loaded, initializing demo...');
+            
+            try {
+                // Generate a fresh token for this session
+                generateFreshToken();
+                
+                console.log('Dashboard loaded with fresh token');
+                showResponse('us003-response', '🎫 Dashboard loaded! Fresh token generated for testing authenticated endpoints.', 'success');
 
-            console.log('Dashboard loaded with demo token');
-            showResponse('us003-response', '🎫 Dashboard loaded! Demo token ready for testing authenticated endpoints.', 'success');
-
-            // Set up event listeners for all buttons to avoid CSP issues
-            setupEventListeners();
+                // Set up event listeners for all buttons to avoid CSP issues
+                setupEventListeners();
+            } catch (error) {
+                console.error('Error initializing demo:', error);
+            }
         });
 
+        // Generate fresh token function
+        async function generateFreshToken() {
+            try {
+                const result = await apiCall(`${BASE_URL}/api/v1/auth/demo-token`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: 123,
+                        email: 'demo@example.com'
+                    })
+                });
+
+                if (result.ok && result.data.token) {
+                    const token = result.data.token;
+                    
+                    const userTokenEl = document.getElementById('user-token');
+                    const profileTokenEl = document.getElementById('profile-token');
+                    
+                    if (userTokenEl) userTokenEl.value = token;
+                    if (profileTokenEl) profileTokenEl.value = token;
+                    
+                    console.log('Fresh token generated and set');
+                } else {
+                    throw new Error('Failed to generate token');
+                }
+            } catch (error) {
+                console.error('Error generating fresh token:', error);
+                // Fallback to a working token
+                const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTIzLCJlbWFpbCI6ImRlbW9AZXhhbXBsZS5jb20iLCJpYXQiOjE3NjEwMzY5NTEsImV4cCI6MTc2MTY0MTc1MX0.sI2cnGdV7e1v5v6Dx2MKPuHfOPsmjByXI9vrVZBhSPo';
+                
+                const userTokenEl = document.getElementById('user-token');
+                const profileTokenEl = document.getElementById('profile-token');
+                
+                if (userTokenEl) userTokenEl.value = fallbackToken;
+                if (profileTokenEl) profileTokenEl.value = fallbackToken;
+            }
+        }
+
         function setupEventListeners() {
+            console.log('Setting up event listeners...');
+            
             // Set up all button click events to bypass CSP restrictions
             const buttonMap = {
                 'btn-catalog': testCatalog,
@@ -1026,10 +1069,19 @@
             };
 
             // Add event listeners
+            let listenersAdded = 0;
             Object.entries(buttonMap).forEach(([id, handler]) => {
                 const element = document.getElementById(id);
                 if (element) {
-                    element.addEventListener('click', handler);
+                    try {
+                        element.addEventListener('click', handler);
+                        listenersAdded++;
+                        console.log(`Added listener for ${id}`);
+                    } catch (error) {
+                        console.error(`Error adding listener for ${id}:`, error);
+                    }
+                } else {
+                    console.warn(`Element ${id} not found`);
                 }
             });
 
@@ -1042,7 +1094,7 @@
                 });
             });
 
-            console.log('Event listeners setup complete');
+            console.log(`Event listeners setup complete. Added ${listenersAdded} listeners.`);
         }
     </script>
 </body>

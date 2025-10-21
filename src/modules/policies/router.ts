@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { logger } from '../../utils/logger.js';
-import { CancellationPoliciesResponse, CancellationPolicy, CancellationPolicyExample } from '../../types/domain.js';
+import { logger } from '../../utils/logger';
+import { CancellationPoliciesResponse, CancellationPolicy, CancellationPolicyExample } from '../../types/domain';
 
 const router = Router();
 

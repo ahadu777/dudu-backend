@@ -19,8 +19,8 @@ import {
   NotificationSettings,
   PrivacySettings,
   DisplayPreferences
-} from '../../types/domain.js';
-import { logger } from '../../utils/logger.js';
+} from '../../types/domain';
+import { logger } from '../../utils/logger';
 
 /**
  * Unified Mock Data Store aligned with domain.ts

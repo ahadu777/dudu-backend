@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { mockStore } from '../../core/mock/store.js';
-import { logger } from '../../utils/logger.js';
-import { authenticate } from '../../middlewares/auth.js';
-import { ActivityHistory } from '../../types/domain.js';
+import { mockStore } from '../../core/mock/store';
+import { logger } from '../../utils/logger';
+import { authenticate } from '../../middlewares/auth';
+import { ActivityHistory } from '../../types/domain';
 
 const router = Router();
 

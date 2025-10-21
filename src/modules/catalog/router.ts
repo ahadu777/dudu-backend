@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { mockStore } from '../../core/mock/store.js';
-import { logger } from '../../utils/logger.js';
-import { CatalogResponse, PromotionDetailResponse } from '../../types/domain.js';
+import { mockStore } from '../../core/mock/store';
+import { logger } from '../../utils/logger';
+import { CatalogResponse, PromotionDetailResponse } from '../../types/domain';
 
 const router = Router();
 

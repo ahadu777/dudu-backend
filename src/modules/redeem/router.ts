@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { mockStore } from '../../core/mock/store.js';
+import { mockStore } from '../../core/mock/store';
 import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
 

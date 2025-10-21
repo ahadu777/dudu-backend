@@ -38,8 +38,22 @@ class App {
   }
 
   private initializeMiddlewares(): void {
-    // Security middleware
-    this.app.use(helmet());
+    // Security middleware with relaxed CSP for demo pages
+    this.app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"],
+        },
+      },
+    }));
 
     // CORS
     this.app.use(cors());
@@ -113,9 +127,13 @@ class App {
     // Profile and settings routes
     this.app.use('/profile', profileRouter);   // for /profile, /profile/settings, /profile/activity
 
+    // Auth demo routes
+    this.app.use('/api/v1/auth', authDemoRouter);  // for /api/v1/auth/demo-token
+
     // Demo dashboard
     this.app.get('/demo', (_req, res) => {
       const dashboardPath = path.resolve(process.cwd(), 'src', 'demo', 'dashboard.html');
+      logger.info('demo.dashboard.path', { path: dashboardPath });
       if (fs.existsSync(dashboardPath)) {
         res.setHeader('Content-Type', 'text/html');
         res.send(fs.readFileSync(dashboardPath, 'utf-8'));
@@ -123,6 +141,7 @@ class App {
         res.status(404).json({ error: 'Demo dashboard not found' });
       }
     });
+
 
     // Serve runbooks and documentation
     this.app.get('/docs/:type/:filename', (req, res) => {

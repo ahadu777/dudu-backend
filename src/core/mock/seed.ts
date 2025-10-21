@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { mockStore } from './store.js';
-import { logger } from '../../utils/logger.js';
+import { mockStore } from './store';
+import { logger } from '../../utils/logger';
 
 /**
  * Load seed data from JSON files in /docs

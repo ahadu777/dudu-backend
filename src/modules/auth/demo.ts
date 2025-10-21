@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { generateToken } from '../../middlewares/auth.js';
-import { logger } from '../../utils/logger.js';
+import { generateToken } from '../../middlewares/auth';
+import { logger } from '../../utils/logger';
 
 const router = Router();
 
