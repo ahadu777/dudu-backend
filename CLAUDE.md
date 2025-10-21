@@ -13,6 +13,44 @@
 
 ---
 
+## 🚨 FRESH AI: READ THIS FIRST
+
+### The #1 Rule: NEVER Skip the Workflow
+
+**If user describes functionality they want** → **COMPLETE AUTONOMY WORKFLOW**
+- Start with story analysis (NEVER jump to code)
+- Create cards before implementing
+- Document everything first
+
+**If user references existing work** → **TRADITIONAL WORKFLOW**
+- Work with existing stories/cards
+- Update documentation as needed
+
+---
+
+## 🚨 CRITICAL: How to Recognize What Type of Request This Is
+
+### Request Classification (MUST READ FIRST)
+
+**When user says things like:**
+- "I want users to be able to..."
+- "Add a feature where..."
+- "Users should be able to..."
+- "I need functionality for..."
+- "Create a way for users to..."
+
+➜ **THIS IS A RAW USER STORY** → Use **COMPLETE AUTONOMY WORKFLOW**
+
+**When user says things like:**
+- "Implement card XYZ"
+- "Work on the existing story ABC"
+- "Fix the bug in endpoint DEF"
+- "Update the existing card..."
+
+➜ **THIS IS TECHNICAL WORK** → Use **TRADITIONAL WORKFLOW**
+
+---
+
 ## Quick Reference - What Actually Works
 
 ### The NEW Magic Formula (with Stories)
@@ -20,15 +58,59 @@
 Story (Business) → Cards (Technical) → Code → Build → Test → Done
 ```
 
-### How We Work Now
-**COMPLETE AUTONOMY WORKFLOW:**
-1. **Raw User Story** → I analyze using `docs/templates/STORY_ANALYSIS.md`
-2. **Create Cards** → I generate technical specs using `docs/templates/CARD_TEMPLATE.md`
-3. **Implement Code** → I follow proven card-based development
-4. **Integration Proof** → I create runbooks, Newman tests, TypeScript examples
-5. **Validation** → I verify with `npm run validate:integration`
+### 🔥 COMPLETE AUTONOMY WORKFLOW (For Raw User Stories)
+**TRIGGER:** User describes a feature/functionality they want
+**NEVER SKIP TO IMPLEMENTATION - ALWAYS START WITH STORY ANALYSIS**
 
-**TRADITIONAL WORKFLOW** (when cards exist):
+**STEP-BY-STEP PROCESS:**
+
+**Step 1: Story Analysis**
+```bash
+# Read the template first
+cat docs/templates/STORY_ANALYSIS.md
+# Create story file: docs/stories/US-XXX-[story-name].md
+# Apply template to break down user story into business requirements
+```
+
+**Step 2: Create Cards**
+```bash
+# Read the template first
+cat docs/templates/CARD_TEMPLATE.md
+# Create card files: docs/cards/[card-slug].md
+# Generate technical specs following existing patterns
+```
+
+**Step 3: Document Everything**
+```bash
+# Update story index: docs/stories/_index.yaml
+# Add story → card mappings
+# Ensure all documentation is complete BEFORE coding
+```
+
+**Step 4: Implement Code**
+```bash
+# Update card status to "In Progress"
+# Follow proven card-based development in /src/modules/
+# Build and test: npm run build && npm start
+```
+
+**Step 5: Integration Proof**
+```bash
+# Create runbooks: docs/integration/US-XXX-runbook.md
+# Add Newman tests: docs/postman_e2e.json
+# Generate TypeScript examples: examples/
+```
+
+**Step 6: Validation**
+```bash
+npm run validate:integration
+npm run test:e2e
+node scripts/story-coverage.mjs
+```
+
+### TRADITIONAL WORKFLOW (When cards already exist)
+**TRIGGER:** User references existing stories/cards or asks for specific technical work
+**PROCESS:**
 1. **You paste story content** (or point to file)
 2. **I update codebase** (stories + cards)
 3. **I implement cards** (our proven workflow)
@@ -433,6 +515,68 @@ node scripts/success-dashboard.js  # Check overall progress
 - 404: Resource not found
 - 409: Business rule conflict
 - 422: Validation failed
+
+## Example Prompts for Fresh AI
+
+### Complete Feature Development (Full Autonomy)
+```
+"I want users to be able to [specific feature request]. Please analyze this as a user story, generate technical cards, implement the code, and create complete integration proof artifacts."
+
+Examples:
+- "I want users to be able to cancel their tickets and get a refund"
+- "I want operators to scan QR codes and redeem tickets at events"
+- "I want users to transfer tickets to other users"
+- "I want to add discount codes and promotional pricing"
+```
+
+### Story Analysis (Starting Point)
+```
+"Analyze this user story using our systematic approach: [paste story content]"
+"Break down this requirement into technical cards following our templates"
+"What cards would you create for this user story: [description]"
+```
+
+### Card Implementation (Traditional Workflow)
+```
+"Implement the card: [card name or file path]"
+"Please work on all pending cards and update their status"
+"Show me the progress on cards and implement the next ready one"
+"Implement the card: ticket-cancellation"
+```
+
+### Integration Proof Generation
+```
+"Create the frontend integration guide for our implemented features"
+"Generate copy-paste runbook for story [US-XXX]"
+"Update the Newman test collection with new story scenarios"
+"Create TypeScript SDK examples for all working endpoints"
+```
+
+### Quality Validation & Progress
+```
+"Run our validation scripts and fix any issues found"
+"Check integration proof completeness and update if needed"
+"Validate that all stories have proper integration artifacts"
+"What's our current progress across all stories and cards?"
+"Show me which stories are ready for frontend integration"
+"Generate the success dashboard report"
+```
+
+### Troubleshooting & Maintenance
+```
+"Fix any TypeScript compilation errors and restart the server"
+"Update the Newman tests to match current API contracts"
+"Check for integration proof drift and fix misalignments"
+"Rebuild and test all examples to ensure they work"
+```
+
+### Best Practices for Fresh AI
+1. **Always start with story analysis** when given raw requirements
+2. **Use the validation scripts** (`npm run validate:integration`) after implementation
+3. **Follow the SSoT hierarchy** (Cards → domain.ts → OpenAPI → Examples)
+4. **Create integration proof** alongside code implementation
+5. **Test with curl commands** before marking cards as "Done"
+6. **Use existing patterns** from working implementations (US-001 to US-007)
 
 ### Other Docs (Reference Only)
 - `WORKFLOW.md` - Detailed workflow steps
