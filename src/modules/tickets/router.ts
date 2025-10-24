@@ -1,35 +1,12 @@
 import { Router } from 'express';
 import { mockStore } from '../../core/mock/store';
 import { logger } from '../../utils/logger';
+import { authenticate } from '../../middlewares/auth';
 import { Ticket, TicketCancellationRequest, TicketCancellationResponse, TicketStatus } from '../../types/domain';
 
 const router = Router();
 
-// Simple auth middleware (mock for prototype)
-const mockAuth = (req: any, res: any, next: any) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({
-      code: 'UNAUTHORIZED',
-      message: 'Bearer token required'
-    });
-  }
-
-  // Mock: extract user_id from token (in production, decode JWT)
-  const token = authHeader.split(' ')[1];
-  if (token === 'user123') {
-    req.user = { user_id: 123 };
-  } else if (token === 'user456') {
-    req.user = { user_id: 456 };
-  } else {
-    return res.status(401).json({
-      code: 'UNAUTHORIZED',
-      message: 'Invalid token'
-    });
-  }
-
-  next();
-};
+// Using standard JWT authentication middleware
 
 // Simple metrics
 const metrics = {
@@ -39,9 +16,9 @@ const metrics = {
 };
 
 // GET /my/tickets - List user's tickets with entitlements
-router.get('/tickets', mockAuth, (req: any, res) => {
+router.get('/tickets', authenticate, (req: any, res) => {
   const startTime = Date.now();
-  const userId = req.user.user_id;
+  const userId = req.user.id;
 
   try {
     // Get tickets for authenticated user from mock store
@@ -76,9 +53,9 @@ router.get('/tickets', mockAuth, (req: any, res) => {
 });
 
 // POST /tickets/{code}/cancel - Cancel ticket and initiate refund
-router.post('/:code/cancel', mockAuth, (req: any, res) => {
+router.post('/:code/cancel', authenticate, (req: any, res) => {
   const { code } = req.params;
-  const userId = req.user.user_id;
+  const userId = req.user.id;
   const requestBody: TicketCancellationRequest = req.body || {};
 
   try {

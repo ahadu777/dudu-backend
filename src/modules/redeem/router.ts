@@ -4,36 +4,14 @@ import crypto from 'crypto';
 import { mockStore } from '../../core/mock/store';
 import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
+import { authenticate } from '../../middlewares/auth';
 
 const router = Router();
 
-// Simple auth middleware (mock for prototype) - matching tickets router pattern
-const mockAuth = (req: any, res: any, next: any) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({
-      code: 'UNAUTHORIZED',
-      message: 'Bearer token required'
-    });
-  }
-
-  // Mock: extract user_id from token (in production, decode JWT)
-  const token = authHeader.split(' ')[1];
-  if (token === 'user123') {
-    req.user = { id: 123, user_id: 123 };
-  } else if (token === 'user456') {
-    req.user = { id: 456, user_id: 456 };
-  } else {
-    return res.status(401).json({
-      code: 'UNAUTHORIZED',
-      message: 'Invalid token'
-    });
-  }
-  next();
-};
+// Using standard JWT authentication middleware
 
 // POST /tickets/:code/qr-token - Generate QR token
-router.post('/:code/qr-token', mockAuth, async (req, res) => {
+router.post('/:code/qr-token', authenticate, async (req, res) => {
   const { code } = req.params;
   const userId = req.user!.id;
 

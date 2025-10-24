@@ -11,20 +11,7 @@ import { errorHandler } from './middlewares/errorHandler';
 import { loggingMiddleware } from './middlewares/logging';
 import { reqIdMiddleware } from './middlewares/reqId';
 import { logger } from './utils/logger';
-import routes from './routes';
-
-// Module routers
-import catalogRouter from './modules/catalog/router';
-import ordersRouter from './modules/orders/router';
-import paymentsRouter from './modules/payments/router';
-import ticketsRouter from './modules/tickets/router';
-import operatorsRouter from './modules/operators/router';
-import redeemRouter from './modules/redeem/router';
-import reportsRouter from './modules/reports/router';
-import refundsRouter from './modules/refunds/router';
-import policiesRouter from './modules/policies/router';
-import profileRouter from './modules/profile/router';
-import authDemoRouter from './modules/auth/demo';
+import { registerModuleRouters } from './modules';
 
 class App {
   public app: Application;
@@ -108,27 +95,7 @@ class App {
       this.app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: true }));
     }
 
-    // Mount module routers
-    this.app.use('/catalog', catalogRouter);
-    this.app.use('/orders', ordersRouter);
-    this.app.use('/payments', paymentsRouter);
-    this.app.use('/my', ticketsRouter);
-    this.app.use('/tickets', ticketsRouter);   // for /tickets/{code}/cancel
-    this.app.use('/tickets', redeemRouter);    // for redemption endpoints
-    this.app.use('/operators', operatorsRouter);
-    this.app.use('/validators', operatorsRouter);
-    this.app.use('/reports', reportsRouter);
-
-    // Cancellation and refund routes
-    this.app.use('/payments', refundsRouter);  // for /payments/refund
-    this.app.use('/', refundsRouter);          // for /my/refunds
-    this.app.use('/', policiesRouter);         // for /cancellation-policies
-
-    // Profile and settings routes
-    this.app.use('/profile', profileRouter);   // for /profile, /profile/settings, /profile/activity
-
-    // Auth demo routes
-    this.app.use('/api/v1/auth', authDemoRouter);  // for /api/v1/auth/demo-token
+    registerModuleRouters(this.app, env.API_PREFIX);
 
     // Demo dashboard
     this.app.get('/demo', (_req, res) => {
@@ -161,11 +128,7 @@ class App {
       }
     });
 
-    // API routes
-    this.app.use(env.API_PREFIX, routes);
-
-    // Demo auth endpoints
-    this.app.use(env.API_PREFIX + '/auth', authDemoRouter);
+    // API routes registered via registerModuleRouters
   }
 
   private initializeSwagger(): void {
@@ -189,4 +152,3 @@ class App {
 }
 
 export default App;
-

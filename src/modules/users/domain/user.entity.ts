@@ -3,7 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
+  UpdateDateColumn
 } from 'typeorm';
 
 /**
@@ -47,7 +47,7 @@ import {
  *         isActive: true
  */
 @Entity('users')
-export class User {
+export class UserEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
@@ -69,4 +69,3 @@ export class User {
   @UpdateDateColumn()
   updatedAt!: Date;
 }
-
