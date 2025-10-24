@@ -59,3 +59,15 @@ stories:
       - user-profile-endpoint
       - user-settings-endpoint
       - user-activity-endpoint
+  - id: US-010
+    title: DeepTravel 小程序全链路购票与核销体验
+    status: Draft
+    cards:
+      - travel-search-hub
+      - seat-lock-service
+      - wechat-payment-session
+      - bundle-ticket-engine
+      - ticket-lifecycle-daemon
+      - merchant-redemption-console
+      - admin-package-config
+      - notification-orchestrator
