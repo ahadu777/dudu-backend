@@ -15,14 +15,25 @@
 
 ## 🚨 FRESH AI: READ THIS FIRST
 
-### The #1 Rule: NEVER Skip the Workflow
+### The #1 Rule: Check What Exists FIRST, Then Choose Workflow
 
-**If user describes functionality they want** → **COMPLETE AUTONOMY WORKFLOW**
+**STEP 0: Always check existing implementations first**
+- Check `docs/stories/_index.yaml` for existing stories
+- Look for working examples in `examples/`
+- Review "What's Actually Done" section below
+- Search for existing cards in `docs/cards/`
+
+**If functionality already exists** → **EXISTING WORK WORKFLOW**
+- Point user to existing implementation
+- Test/demonstrate current functionality
+- Update documentation if needed
+
+**If user describes NEW functionality** → **COMPLETE AUTONOMY WORKFLOW**
 - Start with story analysis (NEVER jump to code)
 - Create cards before implementing
 - Document everything first
 
-**If user references existing work** → **TRADITIONAL WORKFLOW**
+**If user references specific existing work** → **TRADITIONAL WORKFLOW**
 - Work with existing stories/cards
 - Update documentation as needed
 
@@ -357,12 +368,13 @@ The project is configured for DigitalOcean deployment:
 
 ### What's Actually Done (Tested & Working)
 1. **GET /catalog** - Returns active products
-2. **POST /orders** - Idempotent order creation
-3. **POST /payments/notify** - Payment processing with sync ticket issuance
-4. **Ticket Service** - Internal module for ticket generation
+2. **GET /catalog/promotions/{id}** - Returns detailed promotion information (US-008)
+3. **POST /orders** - Idempotent order creation
+4. **POST /payments/notify** - Payment processing with sync ticket issuance
+5. **Ticket Service** - Internal module for ticket generation
 
 ### Integration Proof Complete (NEW)
-1. **Story Runbooks** - Copy-paste commands for all 6 user stories (`docs/integration/`)
+1. **Story Runbooks** - Copy-paste commands for all 9 user stories (`docs/integration/`)
 2. **Newman E2E Tests** - Automated validation of complete flows (`npm run test:e2e`)
 3. **TypeScript SDK** - Generated client + working examples (`examples/`)
 4. **Accurate Dashboard** - True 50% completion using canonical cards
@@ -576,7 +588,9 @@ Examples:
 3. **Follow the SSoT hierarchy** (Cards → domain.ts → OpenAPI → Examples)
 4. **Create integration proof** alongside code implementation
 5. **Test with curl commands** before marking cards as "Done"
-6. **Use existing patterns** from working implementations (US-001 to US-007)
+6. **Use existing patterns** from completed user stories (check `/docs/stories/_index.yaml` for current examples)
+7. **Follow established card quality** seen in completed cards like `tickets-issuance`, `user-profile-endpoint`
+8. **Check dependencies** - new stories may reference existing cards or create new dependencies
 
 ### Other Docs (Reference Only)
 - `WORKFLOW.md` - Detailed workflow steps

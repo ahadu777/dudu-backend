@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Ticketing API",
+    "title": "Synque Express Ticketing API",
     "version": "0.1.0",
-    "description": "Ticketing and Event Management API"
+    "description": "Complete ticketing and event management API with user profile management, promotions, and cancellation support"
   },
   "servers": [
     {
@@ -18,11 +18,12 @@
   "paths": {
     "/healthz": {
       "get": {
-        "tags": ["Infra"],
-        "summary": "Liveness probe",
+        "tags": ["Infrastructure"],
+        "summary": "Health check endpoint",
+        "description": "Liveness probe for service health monitoring",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Service is healthy",
             "content": {
               "application/json": {
                 "schema": {
@@ -42,11 +43,12 @@
     },
     "/version": {
       "get": {
-        "tags": ["Infra"],
-        "summary": "Service name and version",
+        "tags": ["Infrastructure"],
+        "summary": "Service version information",
+        "description": "Returns service name and version",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Version information",
             "content": {
               "application/json": {
                 "schema": {
@@ -72,9 +74,10 @@
       "get": {
         "tags": ["Commerce"],
         "summary": "Get product catalog",
+        "description": "Retrieve list of available products for purchase",
         "responses": {
           "200": {
-            "description": "Product catalog",
+            "description": "Product catalog retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -82,9 +85,67 @@
                   "properties": {
                     "products": {
                       "type": "array",
-                      "items": {}
+                      "items": {
+                        "$ref": "#/components/schemas/Product"
+                      }
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalog/promotions/{id}": {
+      "get": {
+        "tags": ["Commerce"],
+        "summary": "Get detailed promotion information",
+        "description": "Returns enhanced product details including description, pricing, features, inventory, and marketing content",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Product ID to get promotion details for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Promotion details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "promotion": {
+                      "$ref": "#/components/schemas/PromotionDetail"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Promotion not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -96,19 +157,143 @@
       "post": {
         "tags": ["Commerce"],
         "summary": "Create new order",
+        "description": "Create a new order for one or more products",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "type": "object",
+                "required": ["user_id", "items", "channel_id", "out_trade_no"],
+                "properties": {
+                  "user_id": {
+                    "type": "integer",
+                    "description": "ID of the user placing the order"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "product_id": {
+                          "type": "integer"
+                        },
+                        "qty": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  },
+                  "channel_id": {
+                    "type": "integer",
+                    "description": "Sales channel identifier"
+                  },
+                  "out_trade_no": {
+                    "type": "string",
+                    "description": "External transaction number for idempotency"
+                  }
+                }
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Order created",
+            "description": "Order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "order_id": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["pending", "paid", "cancelled"]
+                    },
+                    "amounts": {
+                      "type": "object",
+                      "properties": {
+                        "subtotal": {
+                          "type": "number",
+                          "format": "decimal"
+                        },
+                        "discount": {
+                          "type": "number",
+                          "format": "decimal"
+                        },
+                        "total": {
+                          "type": "number",
+                          "format": "decimal"
+                        }
+                      }
+                    },
+                    "out_trade_no": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Order with this out_trade_no already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/notify": {
+      "post": {
+        "tags": ["Commerce"],
+        "summary": "Payment notification webhook",
+        "description": "Receive payment notification from payment gateway and synchronously issue tickets",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["out_trade_no", "trade_status", "total_amount"],
+                "properties": {
+                  "out_trade_no": {
+                    "type": "string",
+                    "description": "External transaction number"
+                  },
+                  "trade_status": {
+                    "type": "string",
+                    "enum": ["TRADE_SUCCESS", "TRADE_FAILED"]
+                  },
+                  "total_amount": {
+                    "type": "string",
+                    "description": "Payment amount as string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment processed successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -120,49 +305,30 @@
                     "status": {
                       "type": "string"
                     },
-                    "amounts": {
-                      "type": "object",
-                      "properties": {
-                        "subtotal": {
-                          "type": "number"
-                        },
-                        "discount": {
-                          "type": "number"
-                        },
-                        "total": {
-                          "type": "number"
-                        }
-                      }
+                    "tickets_issued": {
+                      "type": "integer"
                     }
                   }
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/orders/{id}/pay": {
-      "post": {
-        "tags": ["Commerce"],
-        "summary": "Pay for order",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Payment processed",
+          },
+          "400": {
+            "description": "Invalid payment notification",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -174,9 +340,15 @@
       "get": {
         "tags": ["Tickets"],
         "summary": "Get user's tickets",
+        "description": "Retrieve all tickets owned by the authenticated user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "User tickets",
+            "description": "User tickets retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -184,9 +356,709 @@
                   "properties": {
                     "tickets": {
                       "type": "array",
-                      "items": {}
+                      "items": {
+                        "$ref": "#/components/schemas/Ticket"
+                      }
                     }
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tickets/{code}/qr-token": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Generate QR token for ticket",
+        "description": "Generate a time-limited QR token for ticket scanning",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ticket code"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "QR token generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "QR token for scanning"
+                    },
+                    "expires_in": {
+                      "type": "integer",
+                      "description": "Token expiration in seconds"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tickets/{code}/cancel": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Cancel ticket and initiate refund",
+        "description": "Cancel a ticket and calculate refund amount based on cancellation policies",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ticket code to cancel"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "Optional cancellation reason"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket cancelled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticket_status": {
+                      "type": "string",
+                      "enum": ["void"]
+                    },
+                    "refund_amount": {
+                      "type": "number",
+                      "format": "decimal"
+                    },
+                    "confirmation_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/my/refunds": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Get user's refunds",
+        "description": "Retrieve all refunds for the authenticated user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User refunds retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refunds": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Refund"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cancellation-policies": {
+      "get": {
+        "tags": ["Policies"],
+        "summary": "Get cancellation policies",
+        "description": "Retrieve available cancellation policies and examples",
+        "responses": {
+          "200": {
+            "description": "Cancellation policies retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "policies": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CancellationPolicy"
+                      }
+                    },
+                    "examples": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "tags": ["ProfileManagement"],
+        "summary": "Get current user's profile information",
+        "description": "Retrieve authenticated user's profile data including personal information and preferences",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["ProfileManagement"],
+        "summary": "Update user profile information",
+        "description": "Update authenticated user's profile details",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "preferences": {
+                    "type": "object",
+                    "properties": {
+                      "language": {
+                        "type": "string",
+                        "enum": ["en", "es", "fr"]
+                      },
+                      "timezone": {
+                        "type": "string"
+                      },
+                      "notification_email": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid input format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profile/settings": {
+      "get": {
+        "tags": ["ProfileManagement"],
+        "summary": "Get user settings and preferences",
+        "description": "Retrieve authenticated user's settings including notifications, privacy, and display preferences",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User settings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["ProfileManagement"],
+        "summary": "Update user settings and preferences",
+        "description": "Update authenticated user's settings and preferences",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notification_settings": {
+                    "type": "object",
+                    "properties": {
+                      "email_notifications": {
+                        "type": "boolean"
+                      },
+                      "sms_notifications": {
+                        "type": "boolean"
+                      },
+                      "push_notifications": {
+                        "type": "boolean"
+                      },
+                      "order_updates": {
+                        "type": "boolean"
+                      },
+                      "promotional_emails": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "privacy_settings": {
+                    "type": "object",
+                    "properties": {
+                      "profile_visibility": {
+                        "type": "string",
+                        "enum": ["public", "private"]
+                      },
+                      "show_purchase_history": {
+                        "type": "boolean"
+                      },
+                      "data_sharing_consent": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "display_preferences": {
+                    "type": "object",
+                    "properties": {
+                      "language": {
+                        "type": "string",
+                        "enum": ["en", "es", "fr", "de"]
+                      },
+                      "timezone": {
+                        "type": "string"
+                      },
+                      "date_format": {
+                        "type": "string",
+                        "enum": ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]
+                      },
+                      "currency_display": {
+                        "type": "string",
+                        "enum": ["USD", "EUR", "GBP", "CAD"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid input format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profile/activity": {
+      "get": {
+        "tags": ["ProfileManagement"],
+        "summary": "Get user activity history",
+        "description": "Retrieve authenticated user's activity history with filtering and pagination",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of activities to return (max 100)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of activities to skip for pagination",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Filter by activity type",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["profile", "order", "ticket", "login", "settings", "all"],
+              "default": "all"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "description": "Filter activities from this date (ISO 8601)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "description": "Filter activities to this date (ISO 8601)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activity history retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityHistory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed - invalid date format or parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/demo-token": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Generate demo JWT token",
+        "description": "Generate a demo JWT token for testing authenticated endpoints",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer",
+                    "default": 123
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "default": "john.doe@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Demo token generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "JWT token for authentication"
+                    },
+                    "user_id": {
+                      "type": "integer"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "string",
+                      "example": "7d"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Token generation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -196,13 +1068,453 @@
     }
   },
   "components": {
-    "schemas": {},
+    "schemas": {
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "inactive"]
+          },
+          "sale_start_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "sale_end_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionSpec"
+            }
+          }
+        }
+      },
+      "FunctionSpec": {
+        "type": "object",
+        "properties": {
+          "function_code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          }
+        }
+      },
+      "PromotionDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"]
+          },
+          "sale_start_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "sale_end_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionSpec"
+            }
+          },
+          "inventory": {
+            "type": "object",
+            "properties": {
+              "sellable_cap": {
+                "type": "integer"
+              },
+              "reserved_count": {
+                "type": "integer"
+              },
+              "sold_count": {
+                "type": "integer"
+              },
+              "available": {
+                "type": "integer"
+              }
+            }
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      },
+      "Ticket": {
+        "type": "object",
+        "properties": {
+          "ticket_code": {
+            "type": "string"
+          },
+          "order_id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "product_id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["valid", "used", "void"]
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionSpec"
+            }
+          }
+        }
+      },
+      "Refund": {
+        "type": "object",
+        "properties": {
+          "refund_id": {
+            "type": "string"
+          },
+          "ticket_code": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "processed", "failed"]
+          },
+          "processed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CancellationPolicy": {
+        "type": "object",
+        "properties": {
+          "policy_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "refund_percentage": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "deadline_hours": {
+            "type": "integer"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "preferences": {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "notification_email": {
+                "type": "boolean"
+              }
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UserSettings": {
+        "type": "object",
+        "properties": {
+          "notification_settings": {
+            "type": "object",
+            "properties": {
+              "email_notifications": {
+                "type": "boolean"
+              },
+              "sms_notifications": {
+                "type": "boolean"
+              },
+              "push_notifications": {
+                "type": "boolean"
+              },
+              "order_updates": {
+                "type": "boolean"
+              },
+              "promotional_emails": {
+                "type": "boolean"
+              }
+            }
+          },
+          "privacy_settings": {
+            "type": "object",
+            "properties": {
+              "profile_visibility": {
+                "type": "string",
+                "enum": ["public", "private"]
+              },
+              "show_purchase_history": {
+                "type": "boolean"
+              },
+              "data_sharing_consent": {
+                "type": "boolean"
+              }
+            }
+          },
+          "display_preferences": {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string",
+                "enum": ["en", "es", "fr", "de"]
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "date_format": {
+                "type": "string",
+                "enum": ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]
+              },
+              "currency_display": {
+                "type": "string",
+                "enum": ["USD", "EUR", "GBP", "CAD"]
+              }
+            }
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ActivityHistory": {
+        "type": "object",
+        "properties": {
+          "activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityEntry"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of activities matching filters"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "integer"
+              },
+              "offset": {
+                "type": "integer"
+              },
+              "has_more": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "ActivityEntry": {
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["profile", "order", "ticket", "login", "settings"]
+          },
+          "action": {
+            "type": "string",
+            "description": "Specific action taken (e.g., profile_updated, order_created)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the activity"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional context data for the activity",
+            "properties": {
+              "ip_address": {
+                "type": "string"
+              },
+              "user_agent": {
+                "type": "string"
+              },
+              "resource_id": {
+                "type": "string"
+              },
+              "changes": {
+                "type": "object"
+              }
+            }
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["info", "warning", "critical"],
+            "description": "Importance level of the activity"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "VALIDATION_FAILED"
+          },
+          "message": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "securitySchemes": {
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "JWT token for authenticated endpoints"
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Infrastructure",
+      "description": "Health checks and service information"
+    },
+    {
+      "name": "Commerce",
+      "description": "Product catalog, orders, and payments"
+    },
+    {
+      "name": "Tickets",
+      "description": "Ticket management, QR codes, and cancellations"
+    },
+    {
+      "name": "ProfileManagement",
+      "description": "User profile, settings, and activity history"
+    },
+    {
+      "name": "Policies",
+      "description": "Cancellation policies and terms"
+    },
+    {
+      "name": "Authentication",
+      "description": "Demo authentication and token generation"
+    }
+  ]
 }

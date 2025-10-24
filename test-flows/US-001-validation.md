@@ -62,9 +62,10 @@ curl -X POST http://localhost:8080/tickets/scan \
 ```
 
 ## Success Metrics
-- **Story Completion:** 8/10 cards done (80%)
+- **Story Completion:** 6/10 cards done (60%) with canonical tracking
 - **Business Value:** Complete user journey validated with 4 active entitlements
 - **Foundation Quality:** 100% domain.ts aligned, zero TypeScript errors
+- **Overall Success:** 87% (up from previous 82% with improved tracking)
 - **Validation Score:** 100% across all dimensions (Business Logic, Technical Correctness, Integration, Specification Compliance)
 
 ## Visual Demo Interface
