@@ -1185,6 +1185,12 @@
               "type": "string",
               "format": "uri"
             }
+          },
+          "badges": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

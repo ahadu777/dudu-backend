@@ -19,7 +19,9 @@
     "example:all": "ts-node examples/all-stories.ts",
     "sdk:generate": "npx openapi-typescript-codegen --input openapi/openapi.json --output sdk --client fetch",
     "validate:integration": "node scripts/integration-proof-validator.js",
-    "validate:autonomy": "node scripts/fresh-ai-readiness.js"
+    "validate:autonomy": "node scripts/fresh-ai-readiness.js",
+    "demo:promotions": "node scripts/demo-launcher.js",
+    "demo:dashboard": "echo '🎫 Dashboard available at: http://localhost:8080/demo' && echo '🎯 Promotion showcase at: http://localhost:8080/demo/promotions'"
   },
   "keywords": [
     "express",

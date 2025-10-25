@@ -109,6 +109,18 @@ class App {
       }
     });
 
+    // Promotion showcase demo
+    this.app.get('/demo/promotions', (_req, res) => {
+      const showcasePath = path.resolve(process.cwd(), 'src', 'demo', 'promotion-showcase.html');
+      logger.info('demo.promotions.path', { path: showcasePath });
+      if (fs.existsSync(showcasePath)) {
+        res.setHeader('Content-Type', 'text/html');
+        res.send(fs.readFileSync(showcasePath, 'utf-8'));
+      } else {
+        res.status(404).json({ error: 'Promotion showcase not found' });
+      }
+    });
+
 
     // Serve runbooks and documentation
     this.app.get('/docs/:type/:filename', (req, res) => {

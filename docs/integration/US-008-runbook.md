@@ -31,9 +31,11 @@ curl -s http://localhost:8080/catalog/promotions/101 | jq '.'
     "id": 101,
     "sku": "PASS-3IN1",
     "name": "3-in-1 Transport Pass",
-    "description": "Perfect for tourists and daily commuters. This convenient 3-in-1 pass gives you access to multiple transport modes in one ticket.",
+    "description": "Save 40% with our popular 3-in-1 Transport Pass! Perfect for tourists and daily commuters who want seamless city travel. Get bus, ferry, and metro access in one convenient ticket - worth $42 if purchased separately.",
     "unit_price": 25,
     "status": "active",
+    "sale_start_at": "2024-10-01T00:00:00Z",
+    "sale_end_at": "2024-12-31T23:59:59Z",
     "functions": [
       {"function_code": "bus", "label": "Bus Ride", "quantity": 2},
       {"function_code": "ferry", "label": "Ferry Ride", "quantity": 1},
@@ -46,13 +48,19 @@ curl -s http://localhost:8080/catalog/promotions/101 | jq '.'
       "available": 1000
     },
     "features": [
-      "2 Bus rides included",
-      "1 Ferry crossing",
-      "1 Metro journey",
-      "Valid for 24 hours",
-      "No booking required"
+      "🚌 2 Bus rides included",
+      "⛴️ 1 Ferry crossing",
+      "🚇 1 Metro journey",
+      "⏰ Valid for 24 hours",
+      "📱 Mobile ticket - no booking required",
+      "💰 Save $17 vs individual tickets",
+      "🏷️ Best Value for city exploration"
     ],
-    "images": ["https://example.com/transport-pass.jpg"]
+    "images": [
+      "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1469213252164-be19ee483929?w=800&h=600&fit=crop"
+    ],
+    "badges": ["🔥 Popular Choice", "💎 Best Value", "⏰ Limited Time"]
   }
 }
 ```
@@ -63,7 +71,7 @@ Get detailed information for the Theme Park Pass:
 curl -s http://localhost:8080/catalog/promotions/104 | jq '.'
 ```
 
-**Expected**: Premium product with higher price ($89), park features, and fast pass benefits.
+**Expected**: Premium winter special with badges ["🎢 Premium Experience", "⚡ Fast Pass Included", "❄️ Winter Special"], sale dates, real theme park images, and enhanced features.
 
 ### 4. View Promotion Detail (Archived Product)
 Get information for an archived/inactive product:
@@ -95,9 +103,12 @@ curl -s http://localhost:8080/catalog/promotions/999 | jq '.'
 The promotion detail response provides everything needed for rich dashboard views:
 
 - **Marketing Copy**: `description`, `features[]`, `images[]`
-- **Pricing Info**: `unit_price`, `status`
+- **Pricing Info**: `unit_price`, `status`, `sale_start_at`, `sale_end_at`
 - **Inventory Status**: `inventory.available`, `inventory.sellable_cap`
 - **Product Functions**: `functions[]` for entitlement details
+- **Visual Elements**: `badges[]` for promotional labels ("Popular Choice", "Limited Time")
+- **Media Assets**: Real image URLs from Unsplash for professional display
+- **Time Urgency**: Sale dates enable countdown timers and "ending soon" messaging
 
 ### Purchase Flow Integration
 After viewing promotion details, users can proceed to purchase:

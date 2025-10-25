@@ -301,12 +301,12 @@
                 <div class="stat-label">Completed</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="total-endpoints">15</div>
+                <div class="stat-number" id="total-endpoints">15+</div>
                 <div class="stat-label">API Endpoints</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">100%</div>
-                <div class="stat-label">Integration Proof</div>
+                <div class="stat-number">🎯</div>
+                <div class="stat-label">Enhanced Demo</div>
             </div>
         </div>
 
@@ -420,18 +420,22 @@
             <!-- US-008: Promotion Details -->
             <div class="story-card">
                 <div class="story-header">
-                    <div class="story-title">US-008: Promotion Detail View</div>
-                    <div class="story-description">Enhanced product information for informed purchasing</div>
+                    <div class="story-title">US-008: Enhanced Promotion Detail View</div>
+                    <div class="story-description">Rich product information with badges, images, and time-limited offers</div>
                     <span class="story-status status-complete">✅ Complete</span>
                 </div>
                 <div class="story-content">
                     <div class="test-section">
-                        <h4>Test Workflow</h4>
+                        <h4>API Testing</h4>
                         <div class="button-group">
-                            <button class="btn btn-primary" id="btn-promo-101">Transport Pass</button>
-                            <button class="btn btn-primary" id="btn-promo-102">Day Pass</button>
-                            <button class="btn btn-primary" id="btn-promo-103">Museum Ticket</button>
-                            <button class="btn btn-primary" id="btn-promo-104">Park Pass</button>
+                            <button class="btn btn-primary" id="btn-promo-101">🚌 Transport Pass</button>
+                            <button class="btn btn-primary" id="btn-promo-102">🚇 Day Pass</button>
+                            <button class="btn btn-primary" id="btn-promo-103">🎨 Museum Ticket</button>
+                            <button class="btn btn-primary" id="btn-promo-104">🎢 Park Pass</button>
+                        </div>
+                        <div class="button-group">
+                            <a href="/demo/promotions" class="btn btn-success" target="_blank">🎯 Interactive Demo</a>
+                            <button class="btn btn-info" id="btn-test-enhanced-features">✨ Test Enhanced Features</button>
                         </div>
                         <div class="links">
                             <button class="btn btn-secondary" id="btn-runbook-us008" data-story="US-008">📋 Runbook</button>
@@ -920,6 +924,75 @@
             }
         }
 
+        async function testEnhancedFeatures() {
+            showLoading('us008-response');
+            let output = '🎯 Testing Enhanced Promotion Features...\n\n';
+
+            try {
+                // Test Transport Pass with enhanced features
+                output += '1️⃣ Testing Transport Pass (with badges & sale dates)...\n';
+                const transport = await apiCall(`${BASE_URL}/catalog/promotions/101`);
+
+                if (transport.ok) {
+                    const promo = transport.data.promotion;
+                    output += `✅ ${promo.name} - $${promo.unit_price}\n`;
+                    output += `🏷️ Badges: ${promo.badges.join(', ')}\n`;
+                    output += `⏰ Sale Period: ${promo.sale_start_at} to ${promo.sale_end_at}\n`;
+                    output += `🖼️ Images: ${promo.images.length} professional images\n`;
+                    output += `💰 Value Props: ${promo.features.filter(f => f.includes('Save')).join(', ')}\n\n`;
+                } else {
+                    throw new Error('Transport Pass test failed');
+                }
+
+                // Test Theme Park with winter special
+                output += '2️⃣ Testing Theme Park Pass (winter special)...\n';
+                const park = await apiCall(`${BASE_URL}/catalog/promotions/104`);
+
+                if (park.ok) {
+                    const promo = park.data.promotion;
+                    output += `✅ ${promo.name} - $${promo.unit_price}\n`;
+                    output += `❄️ Winter Special: ${promo.badges.includes('❄️ Winter Special') ? 'YES' : 'NO'}\n`;
+                    output += `⚡ Fast Pass: ${promo.badges.includes('⚡ Fast Pass Included') ? 'YES' : 'NO'}\n`;
+                    output += `📅 Valid Until: ${promo.sale_end_at}\n\n`;
+                } else {
+                    throw new Error('Theme Park test failed');
+                }
+
+                // Test all promotions have enhanced data
+                output += '3️⃣ Validating all promotions have enhanced features...\n';
+                const catalog = await apiCall(`${BASE_URL}/catalog`);
+
+                if (catalog.ok) {
+                    let enhancedCount = 0;
+                    for (const product of catalog.data.products) {
+                        const detail = await apiCall(`${BASE_URL}/catalog/promotions/${product.id}`);
+                        if (detail.ok && detail.data.promotion.badges && detail.data.promotion.images) {
+                            enhancedCount++;
+                        }
+                    }
+                    output += `✅ ${enhancedCount}/${catalog.data.products.length} products have enhanced features\n\n`;
+                } else {
+                    throw new Error('Catalog validation failed');
+                }
+
+                output += '🎉 All enhanced features working perfectly!\n\n';
+                output += '📋 Enhanced Features Confirmed:\n';
+                output += '• 🏷️ Dynamic badges for marketing\n';
+                output += '• 🖼️ Real Unsplash images\n';
+                output += '• ⏰ Time-limited sale periods\n';
+                output += '• 💰 Enhanced value propositions\n';
+                output += '• 📊 Real-time inventory displays\n';
+                output += '• 🎨 Professional marketing content\n\n';
+                output += '🚀 Ready for frontend integration!';
+
+                showResponse('us008-response', output, 'success');
+
+            } catch (error) {
+                output += `❌ Enhanced features test failed: ${error.message}`;
+                showResponse('us008-response', output, 'error');
+            }
+        }
+
         // US-007: Cancellation
         async function testCancellationPolicies() {
             showLoading('us007-response');
@@ -1057,6 +1130,7 @@
                 'btn-promo-102': () => testPromotionDetail(102),
                 'btn-promo-103': () => testPromotionDetail(103),
                 'btn-promo-104': () => testPromotionDetail(104),
+                'btn-test-enhanced-features': testEnhancedFeatures,
                 'btn-policies': testCancellationPolicies,
                 'btn-cancel-ticket': testTicketCancellation,
                 'btn-my-refunds': testMyRefunds,

@@ -34,6 +34,7 @@ export interface PromotionDetail {
   };
   features?: string[];
   images?: string[];
+  badges?: string[];
 }
 export interface PromotionDetailResponse { promotion: PromotionDetail; }
 export interface OrderItemRequest { product_id: number; qty: number; }

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Promotion Showcase | Synque Ticketing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .promotions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .promotion-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        .promotion-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            position: relative;
+        }
+
+        .badges-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .badge.popular {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .badge.value {
+            background: linear-gradient(45deg, #4834d4, #686de0);
+            color: white;
+        }
+
+        .badge.limited {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .card-price {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #27ae60;
+            margin-bottom: 15px;
+        }
+
+        .card-description {
+            color: #7f8c8d;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .countdown-timer {
+            background: #e74c3c;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .countdown-timer.expired {
+            background: #95a5a6;
+        }
+
+        .features-list {
+            list-style: none;
+            margin-bottom: 25px;
+        }
+
+        .features-list li {
+            padding: 8px 0;
+            color: #34495e;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+
+        .inventory-status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .inventory-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .inventory-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+
+        .inventory-text {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .cta-button {
+            width: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .cta-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            padding: 50px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .api-info {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 40px;
+            backdrop-filter: blur(10px);
+        }
+
+        .api-info h3 {
+            margin-bottom: 15px;
+        }
+
+        .api-endpoint {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .promotions-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .promotion-card {
+                margin: 0 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Enhanced Promotion Showcase</h1>
+            <p>Interactive demo of the enhanced promotion detail API with real images, badges, and time-limited offers</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading enhanced promotions...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            <h3>⚠️ Unable to Load Promotions</h3>
+            <p>Please ensure the API server is running at http://localhost:8080</p>
+            <button onclick="location.reload()" style="margin-top: 10px; padding: 10px 20px; background: white; color: #e74c3c; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
+        </div>
+
+        <div id="promotions" class="promotions-grid" style="display: none;"></div>
+
+        <div class="api-info">
+            <h3>🚀 API Integration Details</h3>
+            <p>This demo showcases live data from the enhanced promotion API:</p>
+            <div class="api-endpoint">GET /catalog/promotions/{id}</div>
+            <p><strong>New Features:</strong></p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>📱 Real Unsplash images for professional display</li>
+                <li>🏷️ Dynamic badges for marketing ("Popular Choice", "Limited Time")</li>
+                <li>⏰ Sale dates enabling countdown timers</li>
+                <li>💰 Enhanced value propositions and savings messaging</li>
+                <li>📊 Real-time inventory with visual progress bars</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+
+        async function loadPromotions() {
+            try {
+                // Get catalog first to see available promotions
+                const catalogResponse = await fetch(`${API_BASE}/catalog`);
+                if (!catalogResponse.ok) throw new Error('Failed to fetch catalog');
+
+                const catalog = await catalogResponse.json();
+                const promotions = [];
+
+                // Load detailed info for each product
+                for (const product of catalog.products) {
+                    try {
+                        const detailResponse = await fetch(`${API_BASE}/catalog/promotions/${product.id}`);
+                        if (detailResponse.ok) {
+                            const detail = await detailResponse.json();
+                            promotions.push(detail.promotion);
+                        }
+                    } catch (err) {
+                        console.warn(`Failed to load promotion ${product.id}:`, err);
+                    }
+                }
+
+                displayPromotions(promotions);
+
+            } catch (error) {
+                console.error('Error loading promotions:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function displayPromotions(promotions) {
+            const container = document.getElementById('promotions');
+            const loading = document.getElementById('loading');
+
+            loading.style.display = 'none';
+            container.style.display = 'grid';
+
+            container.innerHTML = promotions.map(promo => createPromotionCard(promo)).join('');
+
+            // Start countdown timers
+            promotions.forEach(promo => {
+                if (promo.sale_end_at) {
+                    startCountdown(promo.id, promo.sale_end_at);
+                }
+            });
+        }
+
+        function createPromotionCard(promo) {
+            const inventoryPercent = Math.round((promo.inventory.available / promo.inventory.sellable_cap) * 100);
+            const isAvailable = promo.status === 'active' && promo.inventory.available > 0;
+
+            return `
+                <div class="promotion-card">
+                    <div style="position: relative;">
+                        <img src="${promo.images?.[0] || 'https://via.placeholder.com/400x220?text=No+Image'}"
+                             alt="${promo.name}" class="card-image"
+                             onerror="this.src='https://via.placeholder.com/400x220?text=Image+Unavailable'">
+                        <div class="badges-container">
+                            ${(promo.badges || []).map(badge => `
+                                <span class="badge ${getBadgeClass(badge)}">${badge}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="card-content">
+                        <h3 class="card-title">${promo.name}</h3>
+                        <div class="card-price">$${promo.unit_price}</div>
+
+                        ${promo.sale_end_at ? `
+                            <div id="countdown-${promo.id}" class="countdown-timer">
+                                ⏰ Limited Time Offer!
+                            </div>
+                        ` : ''}
+
+                        <p class="card-description">${promo.description}</p>
+
+                        <ul class="features-list">
+                            ${(promo.features || []).slice(0, 4).map(feature => `
+                                <li>${feature}</li>
+                            `).join('')}
+                        </ul>
+
+                        <div class="inventory-status">
+                            <div class="inventory-bar">
+                                <div class="inventory-fill" style="width: ${inventoryPercent}%"></div>
+                            </div>
+                            <div class="inventory-text">
+                                ${promo.inventory.available} of ${promo.inventory.sellable_cap} available (${inventoryPercent}%)
+                            </div>
+                        </div>
+
+                        <button class="cta-button" ${!isAvailable ? 'disabled' : ''}
+                                onclick="purchasePromotion(${promo.id}, '${promo.name}')">
+                            ${isAvailable ? `🛒 Buy Now - $${promo.unit_price}` : '❌ Unavailable'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getBadgeClass(badge) {
+            if (badge.includes('Popular')) return 'popular';
+            if (badge.includes('Value') || badge.includes('Best')) return 'value';
+            if (badge.includes('Limited') || badge.includes('Time')) return 'limited';
+            return '';
+        }
+
+        function startCountdown(promoId, endDate) {
+            const countdownElement = document.getElementById(`countdown-${promoId}`);
+            if (!countdownElement) return;
+
+            const endTime = new Date(endDate).getTime();
+
+            const updateCountdown = () => {
+                const now = new Date().getTime();
+                const timeLeft = endTime - now;
+
+                if (timeLeft <= 0) {
+                    countdownElement.innerHTML = '⏰ Offer Expired';
+                    countdownElement.classList.add('expired');
+                    return;
+                }
+
+                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+                countdownElement.innerHTML = `⏰ ${days}d ${hours}h ${minutes}m ${seconds}s left!`;
+            };
+
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }
+
+        function purchasePromotion(id, name) {
+            alert(`🎉 Great choice! You selected: ${name}\n\nIn a real application, this would:\n1. Add to cart\n2. Redirect to checkout\n3. Process payment\n4. Issue tickets\n\nAPI Integration:\nPOST /orders\n{"items": [{"product_id": ${id}, "qty": 1}]}`);
+        }
+
+        // Load promotions on page load
+        document.addEventListener('DOMContentLoaded', loadPromotions);
+    </script>
+</body>
+</html>

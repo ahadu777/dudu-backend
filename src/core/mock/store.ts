@@ -57,43 +57,48 @@ export class MockStore {
   }
 
   // Enhanced product data for promotion details
-  private promotionData: Map<number, { description: string; unit_price: number; features: string[]; images: string[]; }> = new Map();
+  private promotionData: Map<number, { description: string; unit_price: number; features: string[]; images: string[]; badges: string[]; }> = new Map();
 
   private initializeSeedData(): void {
     // Initialize promotion enhancement data
     this.promotionData.set(101, {
-      description: 'Perfect for tourists and daily commuters. This convenient 3-in-1 pass gives you access to multiple transport modes in one ticket.',
+      description: 'Save 40% with our popular 3-in-1 Transport Pass! Perfect for tourists and daily commuters who want seamless city travel. Get bus, ferry, and metro access in one convenient ticket - worth $42 if purchased separately.',
       unit_price: 25.00,
-      features: ['2 Bus rides included', '1 Ferry crossing', '1 Metro journey', 'Valid for 24 hours', 'No booking required'],
-      images: ['https://example.com/transport-pass.jpg']
+      features: ['🚌 2 Bus rides included', '⛴️ 1 Ferry crossing', '🚇 1 Metro journey', '⏰ Valid for 24 hours', '📱 Mobile ticket - no booking required', '💰 Save $17 vs individual tickets', '🏷️ Best Value for city exploration'],
+      images: ['https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop', 'https://images.unsplash.com/photo-1469213252164-be19ee483929?w=800&h=600&fit=crop'],
+      badges: ['🔥 Popular Choice', '💎 Best Value', '⏰ Limited Time']
     });
 
     this.promotionData.set(102, {
-      description: 'Unlimited travel throughout the day! Perfect for exploring the entire city at your own pace.',
+      description: 'Ultimate freedom with unlimited city travel! Perfect for power tourists and business travelers who need maximum flexibility. Hop on and off any bus or metro as many times as you want.',
       unit_price: 45.00,
-      features: ['Unlimited bus rides', 'Unlimited metro access', 'Valid for 24 hours', 'Peak hour access included', 'Mobile ticket available'],
-      images: ['https://example.com/day-pass.jpg']
+      features: ['🚌 Unlimited bus rides all day', '🚇 Unlimited metro access', '⏰ Valid for 24 hours', '🚊 Peak hour access included', '📱 Mobile ticket with QR code', '🗺️ Works on all city transport lines', '💼 Perfect for business travelers'],
+      images: ['https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=800&h=600&fit=crop', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop'],
+      badges: ['⭐ Premium', '🚀 Unlimited']
     });
 
     this.promotionData.set(103, {
-      description: 'Discover our world-class museum collections. Entry includes access to all permanent exhibitions.',
+      description: 'Immerse yourself in culture and history at our award-winning museum. Explore 5 permanent exhibitions featuring art, science, and local heritage. Audio guide included - a $12 value!',
       unit_price: 18.00,
-      features: ['All permanent exhibitions', 'Audio guide included', 'Valid for one day', 'Student discounts available', 'Group rates available'],
-      images: ['https://example.com/museum-ticket.jpg']
+      features: ['🎨 All 5 permanent exhibitions', '🎧 Audio guide included ($12 value)', '📅 Valid for one full day', '🎓 Student discounts available', '👥 Group rates for 10+ visitors', '📸 Photography permitted in most areas', '☕ Museum café discount included'],
+      images: ['https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop', 'https://images.unsplash.com/photo-1566127992631-137a642a90f4?w=800&h=600&fit=crop'],
+      badges: ['🎨 Cultural', '🎓 Educational']
     });
 
     this.promotionData.set(104, {
-      description: 'Experience thrilling rides and attractions at our premier theme park. Fast Pass included for shorter wait times!',
+      description: '🎢 Premium Theme Park Experience! Skip the lines with 3 Fast Pass rides included (normally $30 extra). Full day of unlimited rides, shows, and attractions. Free parking saves you another $25!',
       unit_price: 89.00,
-      features: ['Park entry included', '3 Fast Pass rides', 'All attractions access', 'Free parking', 'Photo package discount'],
-      images: ['https://example.com/park-pass.jpg']
+      features: ['🎢 Full park entry + all rides', '⚡ 3 Fast Pass rides included ($30 value)', '🎭 All shows and attractions', '🅿️ Free parking ($25 value)', '📸 Professional photo package discount', '🍿 Food & beverage discounts', '🏆 Skip-the-line entrance'],
+      images: ['https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&h=600&fit=crop', 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800&h=600&fit=crop'],
+      badges: ['🎢 Premium Experience', '⚡ Fast Pass Included', '❄️ Winter Special']
     });
 
     this.promotionData.set(105, {
       description: 'This seasonal pass is currently unavailable. Check back for new offers!',
       unit_price: 0.00,
       features: ['Currently unavailable'],
-      images: []
+      images: [],
+      badges: ['❌ Unavailable']
     });
 
     // Seed products (from products.json structure)
@@ -102,8 +107,8 @@ export class MockStore {
       sku: 'PASS-3IN1',
       name: '3-in-1 Transport Pass',
       status: 'active',
-      sale_start_at: null,
-      sale_end_at: null,
+      sale_start_at: '2024-10-01T00:00:00Z',
+      sale_end_at: '2024-12-31T23:59:59Z',
       functions: [
         { function_code: 'bus', label: 'Bus Ride', quantity: 2 },
         { function_code: 'ferry', label: 'Ferry Ride', quantity: 1 },
@@ -156,8 +161,8 @@ export class MockStore {
       sku: 'PARK-PASS',
       name: 'Theme Park Pass',
       status: 'active',
-      sale_start_at: null,
-      sale_end_at: null,
+      sale_start_at: '2024-11-01T00:00:00Z',
+      sale_end_at: '2025-02-28T23:59:59Z',
       functions: [
         { function_code: 'park', label: 'Park Entry', quantity: 1 },
         { function_code: 'ride', label: 'Fast Pass', quantity: 3 }
@@ -369,7 +374,8 @@ export class MockStore {
         available: available
       },
       features: promotionInfo.features,
-      images: promotionInfo.images
+      images: promotionInfo.images,
+      badges: promotionInfo.badges
     };
   }
 

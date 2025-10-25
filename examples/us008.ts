@@ -41,6 +41,7 @@ interface PromotionDetail {
   };
   features?: string[];
   images?: string[];
+  badges?: string[];
 }
 
 interface PromotionDetailResponse {
@@ -79,7 +80,10 @@ async function runUS008Example() {
     console.log(`   📦 Product: ${transport.name} (${transport.sku})`);
     console.log(`   💰 Price: $${transport.unit_price}`);
     console.log(`   📝 Description: ${transport.description}`);
+    console.log(`   🏷️ Badges: ${transport.badges?.join(', ')}`);
+    console.log(`   ⏰ Sale Period: ${transport.sale_start_at} to ${transport.sale_end_at}`);
     console.log(`   ✨ Features: ${transport.features?.join(', ')}`);
+    console.log(`   🖼️ Images: ${transport.images?.length} professional images`);
     console.log(`   📊 Inventory: ${transport.inventory.available}/${transport.inventory.sellable_cap} available`);
     console.log(`   🎫 Functions: ${transport.functions.map(f => `${f.label} (${f.quantity}x)`).join(', ')}\n`);
 
@@ -94,7 +98,10 @@ async function runUS008Example() {
     console.log(`   📦 Product: ${park.name} (${park.sku})`);
     console.log(`   💰 Price: $${park.unit_price} (Premium)`);
     console.log(`   📝 Description: ${park.description}`);
+    console.log(`   🏷️ Badges: ${park.badges?.join(', ')}`);
+    console.log(`   ⏰ Sale Period: ${park.sale_start_at} to ${park.sale_end_at} (Winter Special!)`);
     console.log(`   ✨ Features: ${park.features?.join(', ')}`);
+    console.log(`   🖼️ Images: ${park.images?.length} professional images`);
     console.log(`   📊 Inventory: ${park.inventory.available}/${park.inventory.sellable_cap} available`);
     console.log(`   🎫 Functions: ${park.functions.map(f => `${f.label} (${f.quantity === 999 ? 'unlimited' : f.quantity + 'x'})`).join(', ')}\n`);
 
@@ -152,8 +159,10 @@ async function runUS008Example() {
     console.log(`   }`);
 
     console.log('\n🎉 US-008 Example completed successfully!');
-    console.log('✅ Dashboard can now display rich promotion details');
-    console.log('✅ Users can make informed purchase decisions');
+    console.log('✅ Dashboard can now display rich promotion details with badges and images');
+    console.log('✅ Time-limited promotions create urgency with sale dates');
+    console.log('✅ Users can make informed purchase decisions with enhanced content');
+    console.log('✅ Professional marketing content with real images from Unsplash');
     console.log('✅ Error cases handled gracefully');
     console.log('✅ Seamless integration with purchase flow');
 
