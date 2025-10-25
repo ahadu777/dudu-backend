@@ -60,8 +60,15 @@ stories:
       - user-settings-endpoint
       - user-activity-endpoint
   - id: US-010
-    title: Complex multi-variable pricing system
-    status: Approved
+    title: DeepTravel 小程序全链路购票与核销体验
+    status: Draft
     cards:
-      - complex-pricing-engine
-      - enhanced-order-creation
+      - travel-search-hub
+      - seat-lock-service
+      - wechat-payment-session
+      - bundle-ticket-engine
+      - ticket-lifecycle-daemon
+      - merchant-redemption-console
+      - admin-package-config
+      - notification-orchestrator
+
