@@ -59,3 +59,9 @@ stories:
       - user-profile-endpoint
       - user-settings-endpoint
       - user-activity-endpoint
+  - id: US-010
+    title: Complex multi-variable pricing system
+    status: Approved
+    cards:
+      - complex-pricing-engine
+      - enhanced-order-creation

@@ -18,7 +18,20 @@ import {
   ActivityEntry,
   NotificationSettings,
   PrivacySettings,
-  DisplayPreferences
+  DisplayPreferences,
+  PricingStructure,
+  PricingRule,
+  PackageTier,
+  AddonProduct,
+  CustomerBreakdown,
+  AddonSelection,
+  PricingCalculationRequest,
+  PricingCalculationResponse,
+  PricingAdjustment,
+  PricingBreakdown,
+  CustomerCost,
+  AddonCost,
+  TimeAdjustment
 } from '../../types/domain';
 import { logger } from '../../utils/logger';
 
@@ -58,6 +71,9 @@ export class MockStore {
 
   // Enhanced product data for promotion details
   private promotionData: Map<number, { description: string; unit_price: number; features: string[]; images: string[]; badges: string[]; }> = new Map();
+
+  // Complex pricing structures for products
+  private complexPricingData: Map<number, PricingStructure> = new Map();
 
   private initializeSeedData(): void {
     // Initialize promotion enhancement data
@@ -100,6 +116,9 @@ export class MockStore {
       images: [],
       badges: ['❌ Unavailable']
     });
+
+    // Initialize complex pricing structures
+    this.initializeComplexPricing();
 
     // Seed products (from products.json structure)
     this.products.set(101, {
@@ -332,6 +351,192 @@ export class MockStore {
         severity: 'info'
       }
     );
+  }
+
+  private initializeComplexPricing(): void {
+    // Create cruise package pricing based on screenshot (Product 106)
+    const cruisePricingStructure: PricingStructure = {
+      base_price: 288, // Adult weekday base price
+      pricing_rules: [
+        {
+          rule_type: 'time_based',
+          conditions: {
+            day_types: ['weekend', 'holiday']
+          },
+          price_modifier: {
+            type: 'absolute',
+            value: 318 // Weekend/holiday pricing
+          }
+        },
+        {
+          rule_type: 'customer_type',
+          conditions: {
+            customer_types: ['child', 'elderly']
+          },
+          price_modifier: {
+            type: 'absolute',
+            value: 188 // Fixed price for children and elderly
+          }
+        },
+        {
+          rule_type: 'special_date',
+          conditions: {
+            special_dates: ['2025-12-31', '2026-02-18']
+          },
+          price_modifier: {
+            type: 'fixed',
+            value: 0 // Special pricing TBD (待定)
+          }
+        }
+      ],
+      package_tiers: [
+        {
+          tier_id: 'premium',
+          name: 'Premium Plan',
+          base_price_modifier: 0,
+          inclusions: [
+            {
+              item_type: 'transport',
+              item_code: 'ferry_hk_macau',
+              item_name: '中環(五號碼頭)至長洲來回船票',
+              quantity: 1
+            },
+            {
+              item_type: 'meal',
+              item_code: 'onboard_meal',
+              item_name: 'Monchhichi 首盒禮品',
+              quantity: 1
+            },
+            {
+              item_type: 'entertainment',
+              item_code: 'playground_tokens',
+              item_name: '遊樂場全日門票及代幣',
+              quantity: 10
+            }
+          ]
+        },
+        {
+          tier_id: 'pet',
+          name: 'Pet Plan',
+          base_price_modifier: -100, // $188 flat rate
+          inclusions: [
+            {
+              item_type: 'transport',
+              item_code: 'pet_ferry',
+              item_name: '中環(五號碼頭)至長洲來回船票(寵物)',
+              quantity: 1
+            },
+            {
+              item_type: 'entertainment',
+              item_code: 'pet_playground',
+              item_name: '遊樂場寵物區',
+              quantity: 1
+            }
+          ]
+        },
+        {
+          tier_id: 'deluxe_tea_set',
+          name: 'Deluxe Tea Set For Two',
+          base_price_modifier: 500, // +$500-700 premium
+          inclusions: [
+            {
+              item_type: 'transport',
+              item_code: 'vip_ferry',
+              item_name: '中環(五號碼頭)至長洲來回船票(普通艙VIP船位限量)',
+              quantity: 2
+            },
+            {
+              item_type: 'meal',
+              item_code: 'tea_set',
+              item_name: 'Monchhichi首盒禮品 X2',
+              quantity: 2
+            },
+            {
+              item_type: 'entertainment',
+              item_code: 'premium_tokens',
+              item_name: '遊樂場全日門票 X2 + 遊樂場代幣20個',
+              quantity: 20
+            },
+            {
+              item_type: 'merchandise',
+              item_code: 'tea_set_exclusive',
+              item_name: 'Monchhichi Tea Set 任何時間船上享用',
+              quantity: 1
+            }
+          ]
+        }
+      ],
+      addon_products: [
+        {
+          addon_id: 'tokens-plan-a',
+          name: '遊樂場全日門票及代幣 + 10 代幣',
+          price: 100,
+          quantity_included: 10,
+          description: 'Plan A: Additional 10 playground tokens'
+        },
+        {
+          addon_id: 'tokens-plan-b',
+          name: '加購代幣 Plan B',
+          price: 180,
+          quantity_included: 20,
+          description: 'Plan B: Additional 20 playground tokens'
+        },
+        {
+          addon_id: 'tokens-plan-c',
+          name: '加購代幣 Plan C',
+          price: 400,
+          quantity_included: 50,
+          description: 'Plan C: Additional 50 playground tokens'
+        }
+      ]
+    };
+
+    this.complexPricingData.set(106, cruisePricingStructure);
+
+    // Add the cruise product to products
+    this.products.set(106, {
+      id: 106,
+      sku: 'CRUISE-2025-PREMIUM',
+      name: 'Premium Cruise Package 2025',
+      status: 'active',
+      sale_start_at: '2025-12-12T00:00:00Z',
+      sale_end_at: '2026-03-12T23:59:59Z',
+      functions: [
+        { function_code: 'ferry', label: 'Ferry Transport', quantity: 1 },
+        { function_code: 'playground', label: 'Playground Access', quantity: 1 },
+        { function_code: 'meal', label: 'Onboard Dining', quantity: 1 }
+      ],
+      inventory: {
+        sellable_cap: 200,
+        reserved_count: 0,
+        sold_count: 0
+      }
+    });
+
+    // Add promotion data for cruise package
+    this.promotionData.set(106, {
+      description: '🚢 2025年12月12日至2026年3月12日 中環(五號碼頭)頂層平台 - Premium cruise experience with multiple package options and flexible pricing for different customer types.',
+      unit_price: 288.00,
+      features: [
+        '⛴️ 中環(五號碼頭)至長洲來回船票',
+        '🎁 Monchhichi 首盒禮品',
+        '🎮 遊樂場全日門票',
+        '🪙 代幣10個起',
+        '📅 彈性日期選擇(平日/週末/假期)',
+        '👥 多種客戶類型優惠(成人/小童/長者)',
+        '🎯 可加購代幣套餐'
+      ],
+      images: [
+        'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1469213252164-be19ee483929?w=800&h=600&fit=crop'
+      ],
+      badges: ['🚢 Premium Experience', '📅 Flexible Dates', '🎁 包含禮品']
+    });
+
+    logger.info('complex.pricing.initialized', {
+      products_with_complex_pricing: this.complexPricingData.size,
+      cruise_package_id: 106
+    });
   }
 
   // Product operations
@@ -861,6 +1066,153 @@ export class MockStore {
     if (this.userActivity.length > 1000) {
       this.userActivity = this.userActivity.slice(-1000);
     }
+  }
+
+  // Complex Pricing operations
+  getComplexPricingStructure(productId: number): PricingStructure | undefined {
+    return this.complexPricingData.get(productId);
+  }
+
+  calculateComplexPricing(request: PricingCalculationRequest): PricingCalculationResponse {
+    const pricingStructure = this.complexPricingData.get(request.product_id);
+    if (!pricingStructure) {
+      throw new Error(`Complex pricing not available for product ${request.product_id}`);
+    }
+
+    let totalPrice = 0;
+    const adjustments: PricingAdjustment[] = [];
+    const perCustomerCosts: CustomerCost[] = [];
+    const timeAdjustments: TimeAdjustment[] = [];
+    const addonCosts: AddonCost[] = [];
+
+    // Calculate base pricing per customer type
+    for (const customerGroup of request.customer_breakdown) {
+      let unitPrice = pricingStructure.base_price; // Default adult price
+
+      // Apply customer type pricing rules
+      for (const rule of pricingStructure.pricing_rules) {
+        if (rule.rule_type === 'customer_type' &&
+            rule.conditions.customer_types?.includes(customerGroup.customer_type)) {
+          unitPrice = rule.price_modifier.value;
+          break;
+        }
+      }
+
+      // Apply package tier modifiers
+      if (request.package_tier && pricingStructure.package_tiers) {
+        const packageTier = pricingStructure.package_tiers.find(t => t.tier_id === request.package_tier);
+        if (packageTier) {
+          unitPrice += packageTier.base_price_modifier;
+        }
+      }
+
+      const customerCost = unitPrice * customerGroup.count;
+      totalPrice += customerCost;
+
+      perCustomerCosts.push({
+        customer_type: customerGroup.customer_type,
+        count: customerGroup.count,
+        unit_price: unitPrice,
+        total_cost: customerCost
+      });
+    }
+
+    // Apply time-based adjustments for each booking date
+    for (const bookingDate of request.booking_dates) {
+      const dayType = this.getDayType(bookingDate);
+
+      // Check for special date pricing
+      const specialDateRule = pricingStructure.pricing_rules.find(rule =>
+        rule.rule_type === 'special_date' &&
+        rule.conditions.special_dates?.includes(bookingDate)
+      );
+
+      if (specialDateRule) {
+        timeAdjustments.push({
+          date: bookingDate,
+          day_type: 'special',
+          adjustment_amount: 0, // TBD pricing
+          adjustment_reason: 'Special event pricing (待定)'
+        });
+        continue;
+      }
+
+      // Apply weekend/holiday pricing
+      if ((dayType === 'weekend' || dayType === 'holiday')) {
+        const weekendRule = pricingStructure.pricing_rules.find(rule =>
+          rule.rule_type === 'time_based' &&
+          rule.conditions.day_types?.includes(dayType)
+        );
+
+        if (weekendRule) {
+          const totalCustomers = request.customer_breakdown.reduce((sum, cb) => sum + cb.count, 0);
+          const adjustment = (weekendRule.price_modifier.value - pricingStructure.base_price) * totalCustomers;
+          totalPrice += adjustment;
+
+          adjustments.push({
+            rule_type: 'time_based',
+            description: `${dayType} premium for ${bookingDate}`,
+            amount: adjustment,
+            calculation_basis: `${totalCustomers} customers × $${weekendRule.price_modifier.value - pricingStructure.base_price}`
+          });
+
+          timeAdjustments.push({
+            date: bookingDate,
+            day_type: dayType,
+            adjustment_amount: adjustment,
+            adjustment_reason: `${dayType} premium pricing`
+          });
+        }
+      }
+    }
+
+    // Calculate add-on costs
+    let addonsTotal = 0;
+    if (request.addons && pricingStructure.addon_products) {
+      for (const addonSelection of request.addons) {
+        const addon = pricingStructure.addon_products.find(a => a.addon_id === addonSelection.addon_id);
+        if (addon) {
+          const addonCost = addon.price * addonSelection.quantity;
+          addonsTotal += addonCost;
+
+          addonCosts.push({
+            addon_id: addon.addon_id,
+            name: addon.name,
+            quantity: addonSelection.quantity,
+            unit_price: addon.price,
+            total_cost: addonCost
+          });
+        }
+      }
+    }
+
+    const finalTotal = totalPrice + addonsTotal;
+
+    return {
+      base_price: totalPrice,
+      adjustments,
+      addons_total: addonsTotal,
+      final_total: finalTotal,
+      breakdown: {
+        per_customer_costs: perCustomerCosts,
+        addon_details: addonCosts,
+        time_adjustments: timeAdjustments
+      }
+    };
+  }
+
+  private getDayType(dateString: string): 'weekday' | 'weekend' | 'holiday' {
+    const date = new Date(dateString);
+    const dayOfWeek = date.getDay();
+
+    // Simple weekend detection (Saturday = 6, Sunday = 0)
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return 'weekend';
+    }
+
+    // Could add holiday detection logic here
+    // For now, treat all weekdays as regular days
+    return 'weekday';
   }
 
   // Utility methods

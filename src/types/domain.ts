@@ -37,8 +37,40 @@ export interface PromotionDetail {
   badges?: string[];
 }
 export interface PromotionDetailResponse { promotion: PromotionDetail; }
-export interface OrderItemRequest { product_id: number; qty: number; }
-export interface Order { order_id: number; user_id: number; status: OrderStatus; items: OrderItemRequest[]; channel_id: number; out_trade_no: string; amounts?: { subtotal: number; discount: number; total: number; }; created_at: ISODate; paid_at?: ISODate|null; refund_amount?: number; refund_status?: 'none'|'partial'|'full'; }
+export interface OrderItemRequest {
+  product_id: number;
+  qty: number;
+  pricing_context?: {
+    booking_dates?: ISODate[];
+    customer_breakdown?: CustomerBreakdown[];
+    package_tier?: string;
+    addons?: AddonSelection[];
+  };
+}
+export interface Order {
+  order_id: number;
+  user_id: number;
+  status: OrderStatus;
+  items: OrderItemRequest[];
+  channel_id: number;
+  out_trade_no: string;
+  amounts?: {
+    subtotal: number;
+    addons_total?: number;
+    pricing_adjustments?: PricingAdjustment[];
+    discount: number;
+    total: number;
+  };
+  created_at: ISODate;
+  paid_at?: ISODate|null;
+  refund_amount?: number;
+  refund_status?: 'none'|'partial'|'full';
+  pricing_breakdown?: {
+    calculation_timestamp: ISODate;
+    per_item_details: any[];
+    quote_id?: string;
+  };
+}
 export interface TicketEntitlement { function_code: string; label: string; remaining_uses: number; }
 export interface Ticket { ticket_code: TicketCode; product_id: number; product_name: string; status: TicketStatus; expires_at?: ISODate|null; entitlements: TicketEntitlement[]; user_id: number; order_id: number; cancelled_at?: ISODate|null; cancellation_reason?: string|null; }
 export interface QRTokenResponse { token: string; expires_in: number; }
@@ -132,4 +164,117 @@ export interface ActivityHistory {
     offset: number;
     has_more: boolean;
   };
+}
+
+// Complex Pricing System Types (US-010)
+export interface PricingStructure {
+  base_price: number;
+  pricing_rules: PricingRule[];
+  package_tiers?: PackageTier[];
+  addon_products?: AddonProduct[];
+}
+
+export interface PricingRule {
+  rule_type: 'time_based' | 'customer_type' | 'special_date' | 'package_tier';
+  conditions: {
+    day_types?: ('weekday' | 'weekend' | 'holiday')[];
+    customer_types?: ('adult' | 'child' | 'elderly')[];
+    special_dates?: ISODate[];
+    package_tier?: string;
+  };
+  price_modifier: {
+    type: 'fixed' | 'percentage' | 'absolute';
+    value: number;
+  };
+}
+
+export interface PackageTier {
+  tier_id: string;
+  name: string;
+  base_price_modifier: number;
+  inclusions: PackageInclusion[];
+}
+
+export interface PackageInclusion {
+  item_type: 'transport' | 'meal' | 'entertainment' | 'merchandise';
+  item_code: string;
+  item_name: string;
+  quantity: number;
+  estimated_value?: number;
+}
+
+export interface AddonProduct {
+  addon_id: string;
+  name: string;
+  price: number;
+  quantity_included: number;
+  description?: string;
+}
+
+export interface CustomerBreakdown {
+  customer_type: 'adult' | 'child' | 'elderly';
+  count: number;
+}
+
+export interface AddonSelection {
+  addon_id: string;
+  quantity: number;
+}
+
+export interface PricingCalculationRequest {
+  product_id: number;
+  booking_dates: ISODate[];
+  customer_breakdown: CustomerBreakdown[];
+  addons?: AddonSelection[];
+  package_tier?: string;
+}
+
+export interface PricingCalculationResponse {
+  base_price: number;
+  adjustments: PricingAdjustment[];
+  addons_total: number;
+  final_total: number;
+  breakdown: PricingBreakdown;
+}
+
+export interface PricingAdjustment {
+  rule_type: string;
+  description: string;
+  amount: number;
+  calculation_basis: string;
+}
+
+export interface PricingBreakdown {
+  per_customer_costs: CustomerCost[];
+  addon_details: AddonCost[];
+  time_adjustments: TimeAdjustment[];
+  package_tier_info?: PackageTierInfo;
+}
+
+export interface CustomerCost {
+  customer_type: 'adult' | 'child' | 'elderly';
+  count: number;
+  unit_price: number;
+  total_cost: number;
+}
+
+export interface AddonCost {
+  addon_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  total_cost: number;
+}
+
+export interface TimeAdjustment {
+  date: ISODate;
+  day_type: 'weekday' | 'weekend' | 'holiday' | 'special';
+  adjustment_amount: number;
+  adjustment_reason: string;
+}
+
+export interface PackageTierInfo {
+  tier_id: string;
+  tier_name: string;
+  modifier_applied: number;
 }
