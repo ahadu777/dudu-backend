@@ -148,6 +148,61 @@ class MockDataStore {
           reserved_count: 0,
           sold_count: 50 // Sold out for testing
         }
+      },
+      // Cruise products with base pricing (complex pricing handled separately)
+      {
+        id: 106,
+        sku: 'CRUISE-2025-PREMIUM',
+        name: 'Premium Plan - 中環長洲來回船票',
+        description: 'Premium cruise experience with ferry, gifts, and playground tokens',
+        unit_price: 288.00, // Base weekday adult price
+        active: true,
+        functions: [
+          { function_code: 'ferry', function_name: '中環(五號碼頭)至長洲來回船票', max_uses: 1 },
+          { function_code: 'monchhichi_gift', function_name: 'Monchhichi首盒禮品', max_uses: 1 },
+          { function_code: 'playground_tokens', function_name: '遊樂場全日門票及代幣', max_uses: 10 }
+        ],
+        inventory: {
+          sellable_cap: 200,
+          reserved_count: 0,
+          sold_count: 0
+        }
+      },
+      {
+        id: 107,
+        sku: 'CRUISE-2025-PET',
+        name: 'Pet Plan - 寵物友善船票',
+        description: 'Pet-friendly cruise with special facilities',
+        unit_price: 188.00, // Flat rate for all
+        active: true,
+        functions: [
+          { function_code: 'pet_ferry', function_name: '中環(五號碼頭)至長洲來回船票(寵物)', max_uses: 1 },
+          { function_code: 'pet_playground', function_name: '遊樂場寵物區', max_uses: 1 }
+        ],
+        inventory: {
+          sellable_cap: 50,
+          reserved_count: 0,
+          sold_count: 0
+        }
+      },
+      {
+        id: 108,
+        sku: 'CRUISE-2025-DELUXE',
+        name: 'Deluxe Tea Set For Two - 頂級雙人體驗',
+        description: 'Premium VIP cruise experience with exclusive amenities',
+        unit_price: 788.00, // Base weekday adult price
+        active: true,
+        functions: [
+          { function_code: 'vip_ferry', function_name: '中環(五號碼頭)至長洲來回船票(VIP)', max_uses: 2 },
+          { function_code: 'monchhichi_gift_x2', function_name: 'Monchhichi首盒禮品 X2', max_uses: 2 },
+          { function_code: 'playground_tokens', function_name: '遊樂場代幣20個', max_uses: 20 },
+          { function_code: 'tea_set', function_name: 'Monchhichi Tea Set', max_uses: 1 }
+        ],
+        inventory: {
+          sellable_cap: 30,
+          reserved_count: 0,
+          sold_count: 0
+        }
       }
     ];
 

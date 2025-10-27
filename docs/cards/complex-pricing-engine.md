@@ -10,7 +10,7 @@ branch: ""
 pr: ""
 newman_report: "reports/newman/complex-pricing-engine.json"
 last_update: "2025-10-26T10:30:00+0800"
-related_stories: ["US-010"]
+related_stories: ["US-011"]
 ---
 
 # Complex multi-variable pricing calculation engine — Dev Notes

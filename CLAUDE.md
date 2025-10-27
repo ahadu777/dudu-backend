@@ -18,10 +18,16 @@
 ### The #1 Rule: Check What Exists FIRST, Then Choose Workflow
 
 **STEP 0: Always check existing implementations first**
-- Check `docs/stories/_index.yaml` for existing stories
+- Check `docs/stories/_index.yaml` for existing stories AND relationship metadata
 - Look for working examples in `examples/`
 - Review "What's Actually Done" section below
 - Search for existing cards in `docs/cards/`
+
+**STEP 0.5: Query Relationship Metadata (CRITICAL)**
+- Read `_index.yaml` for sequence dependencies, enhances/enhanced_by relationships
+- Check card frontmatter for relationships metadata (depends_on, triggers, integration_points)
+- Validate sequence constraints before implementing
+- Identify implicit dependencies and cross-story impacts
 
 **If functionality already exists** → **EXISTING WORK WORKFLOW**
 - Point user to existing implementation
@@ -584,13 +590,54 @@ Examples:
 
 ### Best Practices for Fresh AI
 1. **Always start with story analysis** when given raw requirements
-2. **Use the validation scripts** (`npm run validate:integration`) after implementation
-3. **Follow the SSoT hierarchy** (Cards → domain.ts → OpenAPI → Examples)
-4. **Create integration proof** alongside code implementation
-5. **Test with curl commands** before marking cards as "Done"
-6. **Use existing patterns** from completed user stories (check `/docs/stories/_index.yaml` for current examples)
-7. **Follow established card quality** seen in completed cards like `tickets-issuance`, `user-profile-endpoint`
-8. **Check dependencies** - new stories may reference existing cards or create new dependencies
+2. **Query relationship metadata FIRST** - check `_index.yaml` and card frontmatter for dependencies, sequences, and integration points
+3. **Use the validation scripts** (`npm run validate:integration`) after implementation
+4. **Follow the SSoT hierarchy** (Cards → domain.ts → OpenAPI → Examples)
+5. **Create integration proof** alongside code implementation
+6. **Test with curl commands** before marking cards as "Done"
+7. **Use existing patterns** from completed user stories (check `/docs/stories/_index.yaml` for current examples)
+8. **Follow established card quality** seen in completed cards like `tickets-issuance`, `user-profile-endpoint`
+9. **Check dependencies** - new stories may reference existing cards or create new dependencies
+
+### Knowledge Graph Query Patterns (NEW)
+
+**Before implementing any card, systematically check:**
+
+1. **Story-Level Relationships** (`docs/stories/_index.yaml`):
+   ```yaml
+   # Check for sequence dependencies
+   sequence: [catalog-endpoint → order-create → payment-webhook]
+   # Check enhancement relationships
+   enhances: [US-001]
+   enhanced_by: [US-011]
+   # Check implicit dependencies
+   implicit_dependencies: [catalog-endpoint, promotion-detail-endpoint]
+   ```
+
+2. **Card-Level Relationships** (card frontmatter):
+   ```yaml
+   relationships:
+     enhanced_by: ["complex-pricing-engine"]
+     depends_on: ["catalog-endpoint"]
+     triggers: ["payment-webhook"]
+     data_dependencies: ["Product", "Order", "PricingContext"]
+     integration_points:
+       data_stores: ["data.ts", "store.ts"] # Critical for implementation
+   ```
+
+3. **Cross-Domain Impact Analysis**:
+   - "What stories use this card?" → Search _index.yaml for card name
+   - "What must happen before this?" → Check sequence and depends_on
+   - "What does this trigger?" → Check triggers and enhanced_by
+   - "What integration points exist?" → Check integration_points metadata
+
+**Example Knowledge Graph Queries:**
+```bash
+# Before implementing order-create enhancement:
+grep -A 10 "order-create" docs/stories/_index.yaml  # Find all stories using this card
+grep -A 5 "relationships:" docs/cards/order-create.md  # Check relationship metadata
+grep "integration_points" docs/cards/order-create.md  # Critical implementation details
+```
 
 ### Other Docs (Reference Only)
 - `WORKFLOW.md` - Detailed workflow steps

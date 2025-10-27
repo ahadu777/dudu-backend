@@ -10,6 +10,17 @@ stories:
       - my-tickets
       - qr-token
       - tickets-scan
+    # Sequence dependencies for temporal relationships
+    sequence:
+      - catalog-endpoint → order-create
+      - order-create → payment-webhook
+      - payment-webhook → tickets-issuance
+      - tickets-issuance → my-tickets
+      - tickets-issuance → qr-token
+      - [operators-login, qr-token] → tickets-scan
+    # Cross-story relationships
+    enhances: []
+    enhanced_by: [US-011]
   - id: US-002
     title: Operator scan & redemption
     status: Approved
@@ -71,4 +82,20 @@ stories:
       - merchant-redemption-console
       - admin-package-config
       - notification-orchestrator
+  - id: US-011
+    title: Complex multi-variable pricing system
+    status: Approved
+    cards:
+      - complex-pricing-engine
+      - order-create
+    # Sequence dependencies
+    sequence:
+      - complex-pricing-engine → order-create
+    # Cross-story relationships
+    enhances: [US-001]
+    enhanced_by: []
+    # Implicit dependencies not in cards list
+    implicit_dependencies:
+      - catalog-endpoint # product data needed for pricing
+      - promotion-detail-endpoint # enhanced promotion display
 

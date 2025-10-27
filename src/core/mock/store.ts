@@ -354,8 +354,8 @@ export class MockStore {
   }
 
   private initializeComplexPricing(): void {
-    // Create cruise package pricing based on screenshot (Product 106)
-    const cruisePricingStructure: PricingStructure = {
+    // Product 106: Premium Plan - Base cruise experience
+    const premiumPricingStructure: PricingStructure = {
       base_price: 288, // Adult weekday base price
       pricing_rules: [
         {
@@ -389,81 +389,110 @@ export class MockStore {
           }
         }
       ],
-      package_tiers: [
+      addon_products: [
         {
-          tier_id: 'premium',
-          name: 'Premium Plan',
-          base_price_modifier: 0,
-          inclusions: [
-            {
-              item_type: 'transport',
-              item_code: 'ferry_hk_macau',
-              item_name: '中環(五號碼頭)至長洲來回船票',
-              quantity: 1
-            },
-            {
-              item_type: 'meal',
-              item_code: 'onboard_meal',
-              item_name: 'Monchhichi 首盒禮品',
-              quantity: 1
-            },
-            {
-              item_type: 'entertainment',
-              item_code: 'playground_tokens',
-              item_name: '遊樂場全日門票及代幣',
-              quantity: 10
-            }
-          ]
+          addon_id: 'tokens-plan-a',
+          name: '遊樂場全日門票及代幣 + 10 代幣',
+          price: 100,
+          quantity_included: 10,
+          description: 'Plan A: Additional 10 playground tokens'
         },
         {
-          tier_id: 'pet',
-          name: 'Pet Plan',
-          base_price_modifier: -100, // $188 flat rate
-          inclusions: [
-            {
-              item_type: 'transport',
-              item_code: 'pet_ferry',
-              item_name: '中環(五號碼頭)至長洲來回船票(寵物)',
-              quantity: 1
-            },
-            {
-              item_type: 'entertainment',
-              item_code: 'pet_playground',
-              item_name: '遊樂場寵物區',
-              quantity: 1
-            }
-          ]
+          addon_id: 'tokens-plan-b',
+          name: '加購代幣 Plan B',
+          price: 180,
+          quantity_included: 20,
+          description: 'Plan B: Additional 20 playground tokens'
         },
         {
-          tier_id: 'deluxe_tea_set',
-          name: 'Deluxe Tea Set For Two',
-          base_price_modifier: 500, // +$500-700 premium
-          inclusions: [
-            {
-              item_type: 'transport',
-              item_code: 'vip_ferry',
-              item_name: '中環(五號碼頭)至長洲來回船票(普通艙VIP船位限量)',
-              quantity: 2
-            },
-            {
-              item_type: 'meal',
-              item_code: 'tea_set',
-              item_name: 'Monchhichi首盒禮品 X2',
-              quantity: 2
-            },
-            {
-              item_type: 'entertainment',
-              item_code: 'premium_tokens',
-              item_name: '遊樂場全日門票 X2 + 遊樂場代幣20個',
-              quantity: 20
-            },
-            {
-              item_type: 'merchandise',
-              item_code: 'tea_set_exclusive',
-              item_name: 'Monchhichi Tea Set 任何時間船上享用',
-              quantity: 1
-            }
-          ]
+          addon_id: 'tokens-plan-c',
+          name: '加購代幣 Plan C',
+          price: 400,
+          quantity_included: 50,
+          description: 'Plan C: Additional 50 playground tokens'
+        }
+      ]
+    };
+
+    // Product 107: Pet Plan - Flat rate pricing
+    const petPricingStructure: PricingStructure = {
+      base_price: 188, // Flat rate for all
+      pricing_rules: [
+        {
+          rule_type: 'customer_type',
+          conditions: {
+            customer_types: ['adult', 'child', 'elderly']
+          },
+          price_modifier: {
+            type: 'absolute',
+            value: 188 // Same price for all customer types
+          }
+        },
+        {
+          rule_type: 'time_based',
+          conditions: {
+            day_types: ['weekend', 'holiday']
+          },
+          price_modifier: {
+            type: 'absolute',
+            value: 188 // No weekend premium for pets
+          }
+        },
+        {
+          rule_type: 'special_date',
+          conditions: {
+            special_dates: ['2025-12-31', '2026-02-18']
+          },
+          price_modifier: {
+            type: 'fixed',
+            value: 0 // Special pricing TBD (待定)
+          }
+        }
+      ],
+      addon_products: [
+        {
+          addon_id: 'tokens-plan-a',
+          name: '遊樂場全日門票及代幣 + 10 代幣',
+          price: 100,
+          quantity_included: 10,
+          description: 'Plan A: Additional 10 playground tokens'
+        }
+      ]
+    };
+
+    // Product 108: Deluxe Tea Set - Premium pricing
+    const deluxePricingStructure: PricingStructure = {
+      base_price: 788, // Adult weekday base price
+      pricing_rules: [
+        {
+          rule_type: 'time_based',
+          conditions: {
+            day_types: ['weekend', 'holiday']
+          },
+          price_modifier: {
+            type: 'absolute',
+            value: 888 // Weekend/holiday pricing (+$100)
+          }
+        },
+        {
+          rule_type: 'customer_type',
+          conditions: {
+            customer_types: ['child', 'elderly']
+          },
+          price_modifier: {
+            type: 'absolute',
+            value: 188 // Fixed price for children and elderly
+          }
+        },
+        {
+          rule_type: 'special_date',
+          conditions: {
+            special_dates: ['2025-12-31', '2026-02-18']
+          },
+          price_modifier: {
+            type: 'fixed',
+            value: 0 // Special pricing TBD (待定)
+          }
         }
       ],
       addon_products: [
@@ -491,20 +520,22 @@ export class MockStore {
       ]
     };
 
-    this.complexPricingData.set(106, cruisePricingStructure);
+    this.complexPricingData.set(106, premiumPricingStructure);
+    this.complexPricingData.set(107, petPricingStructure);
+    this.complexPricingData.set(108, deluxePricingStructure);
 
-    // Add the cruise product to products
+    // Add the 3 cruise products with distinct functions
     this.products.set(106, {
       id: 106,
       sku: 'CRUISE-2025-PREMIUM',
-      name: 'Premium Cruise Package 2025',
+      name: 'Premium Plan - 中環長洲來回船票',
       status: 'active',
       sale_start_at: '2025-12-12T00:00:00Z',
       sale_end_at: '2026-03-12T23:59:59Z',
       functions: [
-        { function_code: 'ferry', label: 'Ferry Transport', quantity: 1 },
-        { function_code: 'playground', label: 'Playground Access', quantity: 1 },
-        { function_code: 'meal', label: 'Onboard Dining', quantity: 1 }
+        { function_code: 'ferry', label: '中環(五號碼頭)至長洲來回船票', quantity: 1 },
+        { function_code: 'monchhichi_gift', label: 'Monchhichi首盒禮品', quantity: 1 },
+        { function_code: 'playground_tokens', label: '遊樂場全日門票及代幣', quantity: 10 }
       ],
       inventory: {
         sellable_cap: 200,
@@ -513,29 +544,104 @@ export class MockStore {
       }
     });
 
-    // Add promotion data for cruise package
+    this.products.set(107, {
+      id: 107,
+      sku: 'CRUISE-2025-PET',
+      name: 'Pet Plan - 寵物友善船票',
+      status: 'active',
+      sale_start_at: '2025-12-12T00:00:00Z',
+      sale_end_at: '2026-03-12T23:59:59Z',
+      functions: [
+        { function_code: 'pet_ferry', label: '中環(五號碼頭)至長洲來回船票(寵物)', quantity: 1 },
+        { function_code: 'pet_playground', label: '遊樂場寵物區', quantity: 1 }
+      ],
+      inventory: {
+        sellable_cap: 50,
+        reserved_count: 0,
+        sold_count: 0
+      }
+    });
+
+    this.products.set(108, {
+      id: 108,
+      sku: 'CRUISE-2025-DELUXE',
+      name: 'Deluxe Tea Set For Two - 頂級雙人體驗',
+      status: 'active',
+      sale_start_at: '2025-12-12T00:00:00Z',
+      sale_end_at: '2026-03-12T23:59:59Z',
+      functions: [
+        { function_code: 'vip_ferry', label: '中環(五號碼頭)至長洲來回船票(普通艙VIP船位限量)', quantity: 2 },
+        { function_code: 'monchhichi_gift_x2', label: 'Monchhichi首盒禮品 X2', quantity: 2 },
+        { function_code: 'playground_tokens', label: '遊樂場全日門票 X2 + 遊樂場代幣20個', quantity: 20 },
+        { function_code: 'tea_set', label: 'Monchhichi Tea Set 任何時間船上享用', quantity: 1 }
+      ],
+      inventory: {
+        sellable_cap: 30,
+        reserved_count: 0,
+        sold_count: 0
+      }
+    });
+
+    // Add promotion data for all 3 cruise packages
     this.promotionData.set(106, {
-      description: '🚢 2025年12月12日至2026年3月12日 中環(五號碼頭)頂層平台 - Premium cruise experience with multiple package options and flexible pricing for different customer types.',
+      description: '🚢 Premium Plan - 中環(五號碼頭)至長洲來回船票，包含Monchhichi首盒禮品及遊樂場全日門票和代幣。適合家庭出遊，享受經典長洲一日遊體驗。',
       unit_price: 288.00,
       features: [
-        '⛴️ 中環(五號碼頭)至長洲來回船票',
+        '⛴️ 中環(五號碼頭)至長洲來回船票(普通艙)',
         '🎁 Monchhichi 首盒禮品',
         '🎮 遊樂場全日門票',
-        '🪙 代幣10個起',
-        '📅 彈性日期選擇(平日/週末/假期)',
-        '👥 多種客戶類型優惠(成人/小童/長者)',
+        '🪙 遊樂場代幣 10個',
+        '📅 彈性日期選擇(平日$288/週末假期$318)',
+        '👥 小童長者優惠價$188',
         '🎯 可加購代幣套餐'
       ],
       images: [
         'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop',
         'https://images.unsplash.com/photo-1469213252164-be19ee483929?w=800&h=600&fit=crop'
       ],
-      badges: ['🚢 Premium Experience', '📅 Flexible Dates', '🎁 包含禮品']
+      badges: ['🔥 Popular Choice', '👨‍👩‍👧‍👦 Family Friendly']
+    });
+
+    this.promotionData.set(107, {
+      description: '🐕 Pet Plan - 寵物友善船票，讓您和愛寵一同享受長洲之旅。包含寵物專用船票和遊樂場寵物區域。',
+      unit_price: 188.00,
+      features: [
+        '🐕 中環(五號碼頭)至長洲來回船票(寵物艙)',
+        '🐾 遊樂場寵物區域通行證',
+        '💰 所有客戶類型統一價$188',
+        '📅 不分平日週末同價',
+        '🏷️ 寵物友善設施完備'
+      ],
+      images: [
+        'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&h=600&fit=crop'
+      ],
+      badges: ['🐕 Pet Friendly', '💎 Special Price']
+    });
+
+    this.promotionData.set(108, {
+      description: '✨ Deluxe Tea Set For Two - 頂級雙人體驗，VIP船位限量，雙份Monchhichi禮品，20個遊樂場代幣，船上專享茶點服務。',
+      unit_price: 788.00,
+      features: [
+        '🥇 中環(五號碼頭)至長洲來回船票(VIP船位限量)',
+        '🎁 Monchhichi首盒禮品 X2',
+        '🎮 遊樂場全日門票 X2',
+        '🪙 遊樂場代幣 20個',
+        '☕ Monchhichi Tea Set 船上享用',
+        '📅 彈性日期選擇(平日$788/週末假期$888)',
+        '👥 小童長者優惠價$188',
+        '⭐ VIP專屬服務'
+      ],
+      images: [
+        'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop'
+      ],
+      badges: ['⭐ Premium Experience', '💎 VIP Limited', '🍵 Tea Service']
     });
 
     logger.info('complex.pricing.initialized', {
       products_with_complex_pricing: this.complexPricingData.size,
-      cruise_package_id: 106
+      cruise_packages: [106, 107, 108]
     });
   }
 

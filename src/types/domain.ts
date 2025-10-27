@@ -166,7 +166,7 @@ export interface ActivityHistory {
   };
 }
 
-// Complex Pricing System Types (US-010)
+// Complex Pricing System Types (US-011)
 export interface PricingStructure {
   base_price: number;
   pricing_rules: PricingRule[];

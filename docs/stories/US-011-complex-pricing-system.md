@@ -1,4 +1,4 @@
-# Story Analysis: Complex Pricing System
+# Story Analysis: Complex Pricing System (US-011)
 
 ## Story: Dynamic Multi-Variable Pricing
 **As a** cruise/tour operator
@@ -123,10 +123,10 @@
    - **Endpoints**: GET /calendar/pricing-dates, GET /calendar/special-events
    - **Dependencies**: complex-pricing-engine
 
-### 5. **enhanced-order-creation**: Order processing with complex pricing
+### 5. **order-create**: Enhanced order processing with complex pricing support
    - **Team**: A - Commerce
-   - **Endpoints**: POST /orders (enhanced), POST /orders/calculate-preview
-   - **Dependencies**: complex-pricing-engine, package-tier-management, addon-products-catalog
+   - **Endpoints**: POST /orders (enhanced for complex pricing)
+   - **Dependencies**: complex-pricing-engine
 
 ## Implementation Priority
 
