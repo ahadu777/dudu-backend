@@ -121,6 +121,18 @@ class App {
       }
     });
 
+    // Admin package configuration demo
+    this.app.get('/demo/admin-packages', (_req, res) => {
+      const adminDemoPath = path.resolve(process.cwd(), 'src', 'demo', 'admin-package-config.html');
+      logger.info('demo.admin.packages.path', { path: adminDemoPath });
+      if (fs.existsSync(adminDemoPath)) {
+        res.setHeader('Content-Type', 'text/html');
+        res.send(fs.readFileSync(adminDemoPath, 'utf-8'));
+      } else {
+        res.status(404).json({ error: 'Admin package demo not found' });
+      }
+    });
+
 
     // Serve runbooks and documentation
     this.app.get('/docs/:type/:filename', (req, res) => {

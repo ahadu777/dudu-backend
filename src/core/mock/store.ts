@@ -11,7 +11,6 @@ import {
   ISODate,
   TicketCode,
   SessionId,
-  ScanResult,
   PromotionDetail,
   UserProfile,
   UserSettings,
@@ -31,9 +30,47 @@ import {
   PricingBreakdown,
   CustomerCost,
   AddonCost,
-  TimeAdjustment
+  TimeAdjustment,
+  PackageTemplate,
+  PackageTemplateUpsertRequest,
+  RouteFareConfig,
+  RouteFareUpsertRequest,
+  PackageTemplateHistoryResponse,
+  RouteFareHistoryResponse
 } from '../../types/domain';
 import { logger } from '../../utils/logger';
+
+export class TemplateVersionConflictError extends Error {
+  constructor(message = 'Template version conflict') {
+    super(message);
+    this.name = 'TemplateVersionConflictError';
+  }
+}
+
+export class RouteFareHistoryUnavailableError extends Error {
+  constructor(message = 'No previous route fare revision available') {
+    super(message);
+    this.name = 'RouteFareHistoryUnavailableError';
+  }
+}
+
+type TemplateVersionStack = PackageTemplate[];
+type RouteFareRevisionStack = RouteFareConfig[];
+
+interface NormalisedTemplatePayload {
+  name: string;
+  description?: string;
+  status: 'draft' | 'active' | 'archived';
+  entitlements: PackageTemplate['entitlements'];
+  pricing: PackageTemplate['pricing'];
+}
+
+interface NormalisedRouteFarePayload {
+  routeCode: string;
+  lockMinutes: number;
+  blackoutDates: ISODate[];
+  fares: RouteFareConfig['fares'];
+}
 
 /**
  * Unified Mock Data Store aligned with domain.ts
@@ -50,9 +87,13 @@ export class MockStore {
   private jtiCache: Set<string>;  // for replay prevention
   private users: Map<number, UserProfile>;  // key: user_id
   private userActivity: Array<ActivityEntry>;  // activity log
+  private packageTemplates: Map<string, TemplateVersionStack>;  // key: templateId
+  private templateNameIndex: Map<string, string>;  // key: template name
+  private routeFares: Map<string, RouteFareRevisionStack>;  // key: routeCode -> revision stack
 
   private nextOrderId = 1000;
   private nextTicketId = 1;
+  private nextTemplateId = 10000;
 
   constructor() {
     this.products = new Map();
@@ -65,6 +106,9 @@ export class MockStore {
     this.jtiCache = new Set();
     this.users = new Map();
     this.userActivity = [];
+    this.packageTemplates = new Map();
+    this.templateNameIndex = new Map();
+    this.routeFares = new Map();
 
     this.initializeSeedData();
   }
@@ -1321,6 +1365,301 @@ export class MockStore {
     return 'weekday';
   }
 
+  // Admin package configuration methods
+  upsertPackageTemplate(request: PackageTemplateUpsertRequest): { record: PackageTemplate; created: boolean; idempotent: boolean } {
+    const now = new Date().toISOString();
+    const normalised = this.normaliseTemplatePayload(request);
+    const templateName = normalised.name;
+
+    let templateId = this.templateNameIndex.get(templateName);
+    let versionStack: TemplateVersionStack | undefined = templateId ? this.packageTemplates.get(templateId) : undefined;
+
+    if (!templateId || !versionStack) {
+      templateId = `TEMPLATE-${this.nextTemplateId++}`;
+      versionStack = [];
+      this.templateNameIndex.set(templateName, templateId);
+    }
+
+    const latestVersion = versionStack.length > 0 ? versionStack[versionStack.length - 1] : undefined;
+
+    if (!request.version && latestVersion && this.isSameTemplateVersion(latestVersion, normalised)) {
+      logger.info('admin.template.upserted.idempotent', { templateId, version: latestVersion.version, strategy: 'implicit_version' });
+      return { record: this.cloneTemplateRecord(latestVersion), created: false, idempotent: true };
+    }
+
+    const requestedVersion = this.resolveTemplateVersion(versionStack, request.version);
+    const existingVersion = versionStack.find(version => version.version === requestedVersion);
+
+    if (existingVersion) {
+      const isSamePayload = this.isSameTemplateVersion(existingVersion, normalised);
+      if (isSamePayload) {
+        logger.info('admin.template.upserted.idempotent', { templateId, version: requestedVersion, strategy: 'explicit_version' });
+        return { record: this.cloneTemplateRecord(existingVersion), created: false, idempotent: true };
+      }
+
+      throw new TemplateVersionConflictError(`Template ${templateName} already has version ${requestedVersion}`);
+    }
+
+    const templateRecord: PackageTemplate = {
+      templateId,
+      version: requestedVersion,
+      name: templateName,
+      description: normalised.description,
+      entitlements: normalised.entitlements,
+      pricing: normalised.pricing,
+      status: normalised.status,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const storedRecord = this.cloneTemplateRecord(templateRecord);
+    versionStack.push(storedRecord);
+    this.packageTemplates.set(templateId, versionStack);
+
+    logger.info('admin.template.upserted', { templateId, version: requestedVersion, versions: versionStack.length });
+
+    return { record: this.cloneTemplateRecord(storedRecord), created: true, idempotent: false };
+  }
+
+  listPackageTemplates(): PackageTemplate[] {
+    return Array.from(this.packageTemplates.values()).map(stack => this.cloneTemplateRecord(stack[stack.length - 1]));
+  }
+
+  listPackageTemplateHistory(templateId: string): PackageTemplateHistoryResponse | undefined {
+    const versions = this.packageTemplates.get(templateId);
+    if (!versions) return undefined;
+    return {
+      templateId,
+      versions: versions.map(version => this.cloneTemplateRecord(version))
+    };
+  }
+
+  getPackageTemplate(templateId: string, version?: string): PackageTemplate | undefined {
+    const versions = this.packageTemplates.get(templateId);
+    if (!versions || versions.length === 0) return undefined;
+    if (!version) {
+      return this.cloneTemplateRecord(versions[versions.length - 1]);
+    }
+
+    const match = versions.find(candidate => candidate.version === version);
+    return match ? this.cloneTemplateRecord(match) : undefined;
+  }
+
+  getPackageTemplateByName(name: string, version?: string): PackageTemplate | undefined {
+    const templateId = this.templateNameIndex.get(name.trim());
+    if (!templateId) return undefined;
+    return this.getPackageTemplate(templateId, version);
+  }
+
+  upsertRouteFare(request: RouteFareUpsertRequest): RouteFareConfig {
+    const now = new Date().toISOString();
+    const normalised = this.normaliseRouteFarePayload(request);
+
+    let revisionStack = this.routeFares.get(normalised.routeCode);
+    if (!revisionStack) {
+      revisionStack = [];
+    }
+
+    const currentRevision = revisionStack[revisionStack.length - 1];
+    if (currentRevision && this.isSameRouteFarePayload(currentRevision, normalised)) {
+      logger.info('admin.routefare.upserted.idempotent', { routeCode: normalised.routeCode, revision: currentRevision.revision });
+      return this.cloneRouteFareConfig(currentRevision);
+    }
+
+    const revisionNumber = currentRevision ? currentRevision.revision + 1 : 1;
+
+    const newConfig: RouteFareConfig = {
+      routeCode: normalised.routeCode,
+      fares: normalised.fares,
+      lockMinutes: normalised.lockMinutes,
+      blackoutDates: normalised.blackoutDates,
+      updatedAt: now,
+      revision: revisionNumber
+    };
+
+    const storedConfig = this.cloneRouteFareConfig(newConfig);
+    revisionStack.push(storedConfig);
+    this.routeFares.set(normalised.routeCode, revisionStack);
+    logger.info('admin.routefare.upserted', { routeCode: normalised.routeCode, revision: revisionNumber });
+
+    return this.cloneRouteFareConfig(storedConfig);
+  }
+
+  getRouteFare(routeCode: string): RouteFareConfig | undefined {
+    const revisions = this.routeFares.get(routeCode);
+    if (!revisions || revisions.length === 0) {
+      return undefined;
+    }
+
+    return this.cloneRouteFareConfig(revisions[revisions.length - 1]);
+  }
+
+  listRouteFareHistory(routeCode: string): RouteFareHistoryResponse | undefined {
+    const revisions = this.routeFares.get(routeCode);
+    if (!revisions || revisions.length === 0) {
+      return undefined;
+    }
+
+    return {
+      routeCode,
+      revisions: revisions.map(revision => this.cloneRouteFareConfig(revision))
+    };
+  }
+
+  restorePreviousRouteFare(routeCode: string): RouteFareConfig {
+    const revisions = this.routeFares.get(routeCode);
+    if (!revisions || revisions.length < 2) {
+      throw new RouteFareHistoryUnavailableError(`Route ${routeCode} does not have a previous revision`);
+    }
+
+    // Remove the latest revision and surface the previous one as the new active revision
+    const removedRevision = revisions.pop();
+    const restored = revisions[revisions.length - 1];
+    const now = new Date().toISOString();
+
+    const restoredRevision: RouteFareConfig = this.cloneRouteFareConfig({
+      ...restored,
+      updatedAt: now
+    });
+
+    revisions[revisions.length - 1] = restoredRevision;
+    this.routeFares.set(routeCode, revisions);
+    logger.info('admin.routefare.restored', { routeCode, restoredFrom: removedRevision?.revision, activeRevision: restoredRevision.revision });
+
+    return this.cloneRouteFareConfig(restoredRevision);
+  }
+
+  private normaliseTemplatePayload(request: PackageTemplateUpsertRequest): NormalisedTemplatePayload {
+    return {
+      name: request.name.trim(),
+      description: request.description,
+      status: request.status ?? 'draft',
+      entitlements: request.entitlements.map(entitlement => ({ ...entitlement })),
+      pricing: {
+        currency: request.pricing.currency,
+        tiers: request.pricing.tiers.map(tier => ({ ...tier }))
+      }
+    };
+  }
+
+  private resolveTemplateVersion(stack: TemplateVersionStack, requestedVersion?: string): string {
+    if (requestedVersion && requestedVersion.trim().length > 0) {
+      return requestedVersion.trim();
+    }
+
+    const latest = stack[stack.length - 1];
+    if (!latest) {
+      return 'v1.0.0';
+    }
+
+    return this.incrementSemanticVersion(latest.version);
+  }
+
+  private incrementSemanticVersion(input: string): string {
+    const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(input);
+    if (match) {
+      const [, major, minor, patch] = match;
+      const nextPatch = Number.parseInt(patch, 10) + 1;
+      return `v${major}.${minor}.${nextPatch}`;
+    }
+
+    const fallback = this.packageTemplates.size + 1;
+    return `v${fallback}.0.0`;
+  }
+
+  private isSameTemplateVersion(existing: PackageTemplate, candidate: NormalisedTemplatePayload): boolean {
+    const existingPayload = this.sanitiseTemplatePayload({
+      name: existing.name,
+      description: existing.description,
+      status: existing.status,
+      entitlements: existing.entitlements.map(entitlement => ({ ...entitlement })),
+      pricing: {
+        currency: existing.pricing.currency,
+        tiers: existing.pricing.tiers.map(tier => ({ ...tier }))
+      }
+    });
+
+    const candidatePayload = this.sanitiseTemplatePayload(candidate);
+    return JSON.stringify(existingPayload) === JSON.stringify(candidatePayload);
+  }
+
+  private sanitiseTemplatePayload(payload: NormalisedTemplatePayload): NormalisedTemplatePayload {
+    const sortedEntitlements = [...payload.entitlements].sort((a, b) => a.function_code.localeCompare(b.function_code));
+    const sortedTiers = [...payload.pricing.tiers].sort((a, b) => a.tier_id.localeCompare(b.tier_id));
+
+    return {
+      name: payload.name,
+      description: payload.description,
+      status: payload.status,
+      entitlements: sortedEntitlements.map(entitlement => ({ ...entitlement })),
+      pricing: {
+        currency: payload.pricing.currency,
+        tiers: sortedTiers.map(tier => ({ ...tier }))
+      }
+    };
+  }
+
+  private cloneTemplateRecord(record: PackageTemplate): PackageTemplate {
+    return {
+      templateId: record.templateId,
+      version: record.version,
+      name: record.name,
+      description: record.description,
+      entitlements: record.entitlements.map(entitlement => ({ ...entitlement })),
+      pricing: {
+        currency: record.pricing.currency,
+        tiers: record.pricing.tiers.map(tier => ({ ...tier }))
+      },
+      status: record.status,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt
+    };
+  }
+
+  private normaliseRouteFarePayload(request: RouteFareUpsertRequest): NormalisedRouteFarePayload {
+    return {
+      routeCode: request.routeCode.trim(),
+      fares: request.fares.map(fare => ({ ...fare })),
+      lockMinutes: request.lockMinutes ?? 30,
+      blackoutDates: (request.blackoutDates ?? []).map(date => date)
+    };
+  }
+
+  private isSameRouteFarePayload(existing: RouteFareConfig, candidate: NormalisedRouteFarePayload): boolean {
+    const existingPayload = this.sanitiseRouteFarePayload({
+      routeCode: existing.routeCode,
+      fares: existing.fares.map(fare => ({ ...fare })),
+      lockMinutes: existing.lockMinutes,
+      blackoutDates: existing.blackoutDates.map(date => date)
+    });
+
+    const candidatePayload = this.sanitiseRouteFarePayload(candidate);
+    return JSON.stringify(existingPayload) === JSON.stringify(candidatePayload);
+  }
+
+  private sanitiseRouteFarePayload(payload: NormalisedRouteFarePayload): NormalisedRouteFarePayload {
+    const sortedFares = [...payload.fares].sort((a, b) => a.passenger_type.localeCompare(b.passenger_type));
+    const sortedBlackoutDates = [...payload.blackoutDates].sort();
+
+    return {
+      routeCode: payload.routeCode,
+      fares: sortedFares.map(fare => ({ ...fare })),
+      lockMinutes: payload.lockMinutes,
+      blackoutDates: sortedBlackoutDates
+    };
+  }
+
+  private cloneRouteFareConfig(config: RouteFareConfig): RouteFareConfig {
+    return {
+      routeCode: config.routeCode,
+      fares: config.fares.map(fare => ({ ...fare })),
+      lockMinutes: config.lockMinutes,
+      blackoutDates: config.blackoutDates.map(date => date),
+      updatedAt: config.updatedAt,
+      revision: config.revision
+    };
+  }
+
   // Utility methods
   reset(): void {
     this.products.clear();
@@ -1334,9 +1673,13 @@ export class MockStore {
     this.refunds.clear();
     this.users.clear();
     this.userActivity = [];
+    this.packageTemplates = new Map();
+    this.templateNameIndex = new Map();
+    this.routeFares = new Map();
     this.nextOrderId = 1000;
     this.nextTicketId = 1;
     this.nextRefundId = 1;
+    this.nextTemplateId = 10000;
 
     this.initializeSeedData();
   }

@@ -278,3 +278,84 @@ export interface PackageTierInfo {
   tier_name: string;
   modifier_applied: number;
 }
+
+// Admin package configuration types
+export interface TemplateEntitlement {
+  function_code: string;
+  label: string;
+  quantity: number;
+  redemption_channel: 'mobile' | 'operator' | 'self_service';
+  requires_id_verification: boolean;
+  validity_type: 'absolute' | 'relative';
+  validity_duration_days?: number;
+  validity_start_at?: ISODate;
+  validity_end_at?: ISODate;
+}
+
+export interface PricingTier {
+  tier_id: string;
+  name: string;
+  customer_types: ('adult' | 'child' | 'elderly')[];
+  price: number;
+  currency: string;
+}
+
+export interface PackageTemplateUpsertRequest {
+  name: string;
+  entitlements: TemplateEntitlement[];
+  pricing: {
+    currency: string;
+    tiers: PricingTier[];
+  };
+  status?: 'draft' | 'active' | 'archived';
+  version?: string;
+  description?: string;
+}
+
+export interface PackageTemplate {
+  templateId: string;
+  version: string;
+  name: string;
+  description?: string;
+  entitlements: TemplateEntitlement[];
+  pricing: {
+    currency: string;
+    tiers: PricingTier[];
+  };
+  status: 'draft' | 'active' | 'archived';
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface PackageTemplateHistoryResponse {
+  templateId: string;
+  versions: PackageTemplate[];
+}
+
+export interface FareTier {
+  passenger_type: 'adult' | 'child' | 'elderly';
+  price: number;
+  currency: string;
+  lock_minutes?: number;
+}
+
+export interface RouteFareUpsertRequest {
+  routeCode: string;
+  fares: FareTier[];
+  lockMinutes?: number;
+  blackoutDates?: ISODate[];
+}
+
+export interface RouteFareConfig {
+  routeCode: string;
+  fares: FareTier[];
+  lockMinutes: number;
+  blackoutDates: ISODate[];
+  updatedAt: ISODate;
+  revision: number;
+}
+
+export interface RouteFareHistoryResponse {
+  routeCode: string;
+  revisions: RouteFareConfig[];
+}

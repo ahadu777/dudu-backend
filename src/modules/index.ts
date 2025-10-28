@@ -11,6 +11,7 @@ import policiesRouter from './policies/router';
 import profileRouter from './profile/router';
 import usersRouter from './users/router';
 import authDemoRouter from './auth/demo';
+import adminRouter from './admin/router';
 
 export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
   const apiRouter = Router();
@@ -21,6 +22,7 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use(apiPrefix, apiRouter);
 
   app.use('/catalog', catalogRouter);
+  app.use('/admin', adminRouter);
   app.use('/orders', ordersRouter);
   app.use('/payments', paymentsRouter);
   app.use('/my', ticketsRouter);

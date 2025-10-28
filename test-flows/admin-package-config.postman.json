@@ -1,0 +1,308 @@
+{
+  "info": {
+    "name": "Admin Package Configuration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Covers package template versioning and route fare revision workflows."
+  },
+  "item": [
+    {
+      "name": "Create Template v1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const now = Date.now();",
+              "pm.collectionVariables.set('templateName', pm.collectionVariables.get('templateName') || `Weekend Explorer ${now}`);",
+              "pm.collectionVariables.set('routeCode', pm.collectionVariables.get('routeCode') || `RT-${now}`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('Template created and not idempotent', function () { pm.expect(body.idempotent).to.eql(false); });",
+              "pm.collectionVariables.set('templateId', body.templateId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "packages", "templates"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{templateName}}\",\n  \"description\": \"2-day multi-attraction pass\",\n  \"status\": \"draft\",\n  \"entitlements\": [\n    {\n      \"function_code\": \"museum\",\n      \"label\": \"Museum entry\",\n      \"quantity\": 2,\n      \"redemption_channel\": \"mobile\",\n      \"requires_id_verification\": false,\n      \"validity_type\": \"relative\",\n      \"validity_duration_days\": 7\n    }\n  ],\n  \"pricing\": {\n    \"currency\": \"USD\",\n    \"tiers\": [\n      {\n        \"tier_id\": \"base\",\n        \"name\": \"Base\",\n        \"customer_types\": [\"adult\"],\n        \"price\": 120,\n        \"currency\": \"USD\"\n      }\n    ]\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Template Upsert Idempotent",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Idempotent flag true', function () { pm.expect(body.idempotent).to.eql(true); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "packages", "templates"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{templateName}}\",\n  \"description\": \"2-day multi-attraction pass\",\n  \"status\": \"draft\",\n  \"entitlements\": [\n    {\n      \"function_code\": \"museum\",\n      \"label\": \"Museum entry\",\n      \"quantity\": 2,\n      \"redemption_channel\": \"mobile\",\n      \"requires_id_verification\": false,\n      \"validity_type\": \"relative\",\n      \"validity_duration_days\": 7\n    }\n  ],\n  \"pricing\": {\n    \"currency\": \"USD\",\n    \"tiers\": [\n      {\n        \"tier_id\": \"base\",\n        \"name\": \"Base\",\n        \"customer_types\": [\"adult\"],\n        \"price\": 120,\n        \"currency\": \"USD\"\n      }\n    ]\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Template New Version",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "packages", "templates"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{templateName}}\",\n  \"version\": \"v1.0.1\",\n  \"description\": \"Adds aquarium access\",\n  \"status\": \"active\",\n  \"entitlements\": [\n    {\n      \"function_code\": \"museum\",\n      \"label\": \"Museum entry\",\n      \"quantity\": 2,\n      \"redemption_channel\": \"mobile\",\n      \"requires_id_verification\": false,\n      \"validity_type\": \"relative\",\n      \"validity_duration_days\": 7\n    },\n    {\n      \"function_code\": \"aquarium\",\n      \"label\": \"Aquarium entry\",\n      \"quantity\": 1,\n      \"redemption_channel\": \"operator\",\n      \"requires_id_verification\": true,\n      \"validity_type\": \"absolute\",\n      \"validity_start_at\": \"2025-11-01T00:00:00Z\",\n      \"validity_end_at\": \"2026-01-31T23:59:59Z\"\n    }\n  ],\n  \"pricing\": {\n    \"currency\": \"USD\",\n    \"tiers\": [\n      {\n        \"tier_id\": \"base\",\n        \"name\": \"Base\",\n        \"customer_types\": [\"adult\"],\n        \"price\": 120,\n        \"currency\": \"USD\"\n      },\n      {\n        \"tier_id\": \"family\",\n        \"name\": \"Family\",\n        \"customer_types\": [\"adult\", \"child\"],\n        \"price\": 210,\n        \"currency\": \"USD\"\n      }\n    ]\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Template History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Two versions returned', function () { pm.expect(body.versions.length).to.be.at.least(2); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates/{{templateId}}/versions",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "packages", "templates", "{{templateId}}", "versions"]
+        }
+      }
+    },
+    {
+      "name": "Route Upsert Revision 1",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Revision is 1', function () { pm.expect(body.revision).to.eql(1); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/routes/fares/{{routeCode}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "routes", "fares", "{{routeCode}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fares\": [\n    { \"passenger_type\": \"adult\", \"price\": 35, \"currency\": \"USD\" },\n    { \"passenger_type\": \"child\", \"price\": 20, \"currency\": \"USD\" }\n  ],\n  \"lockMinutes\": 45,\n  \"blackoutDates\": [\"2025-12-31\"]\n}"
+        }
+      }
+    },
+    {
+      "name": "Route Upsert Revision 2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Revision increments', function () { pm.expect(body.revision).to.eql(2); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/routes/fares/{{routeCode}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "routes", "fares", "{{routeCode}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fares\": [\n    { \"passenger_type\": \"adult\", \"price\": 32, \"currency\": \"USD\" },\n    { \"passenger_type\": \"child\", \"price\": 18, \"currency\": \"USD\" },\n    { \"passenger_type\": \"elderly\", \"price\": 15, \"currency\": \"USD\" }\n  ],\n  \"lockMinutes\": 30\n}"
+        }
+      }
+    },
+    {
+      "name": "Route History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('History contains >= 2 revisions', function () { pm.expect(body.revisions.length).to.be.at.least(2); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/admin/routes/fares/{{routeCode}}/history",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "routes", "fares", "{{routeCode}}", "history"]
+        }
+      }
+    },
+    {
+      "name": "Route Restore Previous Revision",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/admin/routes/fares/{{routeCode}}/restore",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "routes", "fares", "{{routeCode}}", "restore"]
+        }
+      }
+    },
+    {
+      "name": "Route Restore Without History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409 when no previous revision', function () { pm.response.to.have.status(409); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/admin/routes/fares/{{routeCode}}/restore",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "routes", "fares", "{{routeCode}}", "restore"]
+        }
+      }
+    },
+    {
+      "name": "Template Version Conflict",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Conflict status 409', function () { pm.response.to.have.status(409); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "packages", "templates"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{templateName}}\",\n  \"version\": \"v1.0.1\",\n  \"description\": \"Conflicting payload\",\n  \"status\": \"active\",\n  \"entitlements\": [\n    {\n      \"function_code\": \"museum\",\n      \"label\": \"Museum entry\",\n      \"quantity\": 2,\n      \"redemption_channel\": \"mobile\",\n      \"requires_id_verification\": false,\n      \"validity_type\": \"relative\",\n      \"validity_duration_days\": 7\n    }\n  ],\n  \"pricing\": {\n    \"currency\": \"USD\",\n    \"tiers\": [\n      {\n        \"tier_id\": \"base\",\n        \"name\": \"Base\",\n        \"customer_types\": [\"adult\"],\n        \"price\": 110,\n        \"currency\": \"USD\"\n      }\n    ]\n  }\n}"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ]
+}

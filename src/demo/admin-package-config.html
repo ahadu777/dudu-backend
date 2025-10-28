@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Package Configuration Demo</title>
+  <style>
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color-scheme: light;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f2f3f5;
+      color: #1f2933;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+      font-size: 1.8rem;
+    }
+
+    p.description {
+      margin-top: 0;
+      margin-bottom: 24px;
+      color: #52606d;
+    }
+
+    .grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border: 1px solid #e4e7eb;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: #1f2933;
+    }
+
+    .section {
+      display: grid;
+      gap: 12px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #3e4c59;
+      display: block;
+    }
+
+    input[type="text"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #d9e2ec;
+      background: #f8fafc;
+      font-family: inherit;
+      font-size: 0.9rem;
+      resize: vertical;
+      min-height: 42px;
+    }
+
+    textarea {
+      min-height: 120px;
+    }
+
+    button {
+      background: #2563eb;
+      border: none;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button.secondary {
+      background: #334155;
+    }
+
+    button.ghost {
+      background: transparent;
+      color: #2563eb;
+      border: 1px solid #cbd5f5;
+    }
+
+    button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    pre.output {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      line-height: 1.45;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 999px;
+      padding: 6px 12px;
+    }
+
+    .status-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-error {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .status-info {
+      background: #e0f2fe;
+      color: #0c4a6e;
+    }
+
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .template-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .template-item {
+      border: 1px solid #d9e2ec;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f8fafc;
+    }
+
+    .template-item h3 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+
+    .muted {
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    .history {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+      background: #f1f5f9;
+    }
+
+    .history-entry {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #cbd5e1;
+    }
+
+    .history-entry:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .help {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛠️ Admin Package Configuration Demo</h1>
+  <p class="description">
+    可视化操作最近实现的 Admin API：模板版本管理、线路票价配置与回滚。示例基于 mock store，方便产品/运营验证流程。
+  </p>
+
+  <div class="grid">
+    <section class="panel" id="template-panel">
+      <h2>📦 套票模板</h2>
+      <div class="section">
+        <div class="flex-row">
+          <button id="refresh-templates">刷新模板列表</button>
+          <button class="ghost" id="load-template-history" disabled>查看选中模板历史</button>
+        </div>
+        <div id="template-status" class="status-badge status-info">等待操作</div>
+        <div id="template-list" class="template-list"></div>
+        <div>
+          <div class="section-title">模板版本历史</div>
+          <div id="template-history" class="history"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>新建 / 更新模板</h3>
+        <div class="help">修改字段后提交，未指定 version 时系统会自动递增。</div>
+        <label for="template-name">模板名称</label>
+        <input type="text" id="template-name" placeholder="Weekend Explorer" />
+
+        <label for="template-status">模板状态</label>
+        <select id="template-status-select">
+          <option value="draft">draft</option>
+          <option value="active" selected>active</option>
+          <option value="archived">archived</option>
+        </select>
+
+        <label for="template-description">描述</label>
+        <textarea id="template-description" placeholder="Two-day multi-attraction pass"></textarea>
+
+        <label for="template-entitlements">Entitlements JSON</label>
+        <textarea id="template-entitlements" spellcheck="false"></textarea>
+
+        <label for="template-pricing">Pricing JSON</label>
+        <textarea id="template-pricing" spellcheck="false"></textarea>
+
+        <label for="template-version">版本（可选）</label>
+        <input type="text" id="template-version" placeholder="例如 v1.0.2" />
+
+        <button id="submit-template">提交模板</button>
+        <pre id="template-output" class="output"></pre>
+      </div>
+    </section>
+
+    <section class="panel" id="route-panel">
+      <h2>🗺️ 线路票价配置</h2>
+      <div class="section">
+        <div class="flex-row">
+          <input type="text" id="route-code" placeholder="例如 RT-001" />
+          <button id="load-route">加载配置</button>
+          <button class="secondary" id="restore-route" disabled>回滚上一版本</button>
+        </div>
+        <div id="route-status" class="status-badge status-info">等待操作</div>
+        <pre id="route-output" class="output"></pre>
+      </div>
+
+      <div class="section">
+        <h3>更新票价</h3>
+        <div class="help">默认锁座 30 分钟，可自定义 blackoutDates/lockMinutes。</div>
+        <label for="route-fares">Fares JSON</label>
+        <textarea id="route-fares" spellcheck="false"></textarea>
+
+        <label for="route-lock">Lock Minutes（可选）</label>
+        <input type="text" id="route-lock" placeholder="例如 45" />
+
+        <label for="route-blackout">Blackout Dates（JSON 数组，可选）</label>
+        <textarea id="route-blackout" spellcheck="false"></textarea>
+
+        <button id="submit-route">保存票价</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8080';
+
+    const $ = (id) => document.getElementById(id);
+
+    const templateListEl = $('template-list');
+    const templateStatusEl = $('template-status');
+    const templateHistoryEl = $('template-history');
+    const templateOutputEl = $('template-output');
+    const loadTemplateHistoryBtn = $('load-template-history');
+    let templateDetailEl = null;
+
+    const routeStatusEl = $('route-status');
+    const routeOutputEl = $('route-output');
+    const restoreRouteBtn = $('restore-route');
+
+    let selectedTemplateId = null;
+    let selectedRouteCode = null;
+
+    function setStatus(el, type, text) {
+      el.className = `status-badge ${type}`;
+      el.textContent = text;
+    }
+
+    async function http(method, url, body) {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      if (body !== undefined) {
+        options.body = JSON.stringify(body);
+      }
+      const res = await fetch(`${API_BASE}${url}`, options);
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch (err) {
+        payload = await res.text();
+      }
+      if (!res.ok) {
+        throw { status: res.status, payload };
+      }
+      return payload;
+    }
+
+    function bootstrapTemplateForm() {
+      $('template-name').value = 'Weekend Explorer';
+      $('template-description').value = '2-day multi-attraction pass with aquarium upgrade';
+      $('template-entitlements').value = JSON.stringify([
+        {
+          function_code: 'museum',
+          label: 'Museum entry',
+          quantity: 2,
+          redemption_channel: 'mobile',
+          requires_id_verification: false,
+          validity_type: 'relative',
+          validity_duration_days: 7
+        },
+        {
+          function_code: 'aquarium',
+          label: 'Aquarium entry',
+          quantity: 1,
+          redemption_channel: 'operator',
+          requires_id_verification: true,
+          validity_type: 'absolute',
+          validity_start_at: '2025-11-01T00:00:00Z',
+          validity_end_at: '2026-01-31T23:59:59Z'
+        }
+      ], null, 2);
+
+      $('template-pricing').value = JSON.stringify({
+        currency: 'USD',
+        tiers: [
+          { tier_id: 'base', name: 'Base', customer_types: ['adult'], price: 120, currency: 'USD' },
+          { tier_id: 'family', name: 'Family', customer_types: ['adult', 'child'], price: 210, currency: 'USD' }
+        ]
+      }, null, 2);
+
+      $('route-fares').value = JSON.stringify([
+        { passenger_type: 'adult', price: 35, currency: 'USD' },
+        { passenger_type: 'child', price: 20, currency: 'USD' }
+      ], null, 2);
+
+      $('route-blackout').value = JSON.stringify(['2025-12-31'], null, 2);
+    }
+
+    function renderTemplates(templates) {
+      templateListEl.innerHTML = '';
+      if (!templates.length) {
+        templateListEl.innerHTML = '<div class="muted">暂无模板，先创建一个吧。</div>';
+        return;
+      }
+      templates.forEach((tpl) => {
+        const item = document.createElement('div');
+        item.className = 'template-item';
+        item.innerHTML = `
+          <h3>${tpl.name}</h3>
+          <div class="muted">ID: ${tpl.templateId} · Version: ${tpl.version} · Status: ${tpl.status}</div>
+          <div class="muted">Entitlements: ${tpl.entitlements.length} · Pricing tiers: ${tpl.pricing.tiers.length}</div>
+          <div class="flex-row" style="margin-top:10px;">
+            <button class="ghost" data-action="detail">查看详情</button>
+            <button class="ghost" data-action="history">查看历史</button>
+          </div>
+        `;
+        item.querySelector('[data-action="detail"]').addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await showTemplateDetail(tpl.templateId, tpl.version);
+        });
+        item.querySelector('[data-action="history"]').addEventListener('click', async (event) => {
+          event.stopPropagation();
+          selectedTemplateId = tpl.templateId;
+          loadTemplateHistoryBtn.disabled = false;
+          setStatus(templateStatusEl, 'status-info', `已选中模板 ${tpl.templateId}`);
+          await loadTemplateHistory();
+        });
+        templateListEl.appendChild(item);
+      });
+    }
+
+    async function refreshTemplates() {
+      setStatus(templateStatusEl, 'status-info', '加载模板中...');
+      try {
+        const data = await http('GET', '/admin/packages/templates');
+        renderTemplates(data.templates ?? []);
+        setStatus(templateStatusEl, 'status-success', `共加载 ${data.templates?.length ?? 0} 个模板`);
+      } catch (err) {
+        setStatus(templateStatusEl, 'status-error', `加载失败: ${err.status || '网络错误'}`);
+        templateOutputEl.textContent = JSON.stringify(err.payload ?? err, null, 2);
+      }
+    }
+
+    async function loadTemplateHistory() {
+      if (!selectedTemplateId) return;
+      setStatus(templateStatusEl, 'status-info', '获取模板历史...');
+      templateHistoryEl.innerHTML = '';
+      try {
+        const history = await http('GET', `/admin/packages/templates/${selectedTemplateId}/versions`);
+        if (!history.versions?.length) {
+          templateHistoryEl.innerHTML = '<div class="muted">没有历史记录</div>';
+        } else {
+          history.versions
+            .slice()
+            .reverse()
+            .forEach((entry) => {
+              const div = document.createElement('div');
+              div.className = 'history-entry';
+              div.innerHTML = `
+                <div><strong>${entry.version}</strong> · ${entry.status}</div>
+                <div class="muted">Updated: ${entry.updatedAt}</div>
+              `;
+              templateHistoryEl.appendChild(div);
+            });
+      }
+      setStatus(templateStatusEl, 'status-success', '模板历史加载完成');
+    } catch (err) {
+      setStatus(templateStatusEl, 'status-error', `历史加载失败: ${err.status || '网络错误'}`);
+      templateOutputEl.textContent = JSON.stringify(err.payload ?? err, null, 2);
+    }
+  }
+
+    async function showTemplateDetail(templateId, version) {
+      setStatus(templateStatusEl, 'status-info', '获取模板详情...');
+      try {
+        const query = version ? `?version=${encodeURIComponent(version)}` : '';
+        const data = await http('GET', `/admin/packages/templates/${templateId}${query}`);
+        if (!templateDetailEl) {
+          templateDetailEl = document.createElement('pre');
+          templateDetailEl.className = 'output';
+          templateDetailEl.style.marginTop = '8px';
+          templateListEl.parentElement.appendChild(templateDetailEl);
+        }
+        templateDetailEl.textContent = JSON.stringify(data.template, null, 2);
+        setStatus(templateStatusEl, 'status-success', `已加载模板 ${templateId} 详情`);
+      } catch (err) {
+        if (templateDetailEl) {
+          templateDetailEl.textContent = JSON.stringify(err.payload ?? err, null, 2);
+        }
+        setStatus(templateStatusEl, 'status-error', `详情加载失败: ${err.status || '网络错误'}`);
+      }
+    }
+
+    function parseJSONField(value, fallback) {
+      if (!value.trim()) return fallback;
+      return JSON.parse(value);
+    }
+
+    async function submitTemplate() {
+      setStatus(templateStatusEl, 'status-info', '提交中...');
+      templateOutputEl.textContent = '';
+      try {
+        const payload = {
+          name: $('template-name').value.trim(),
+          status: $('template-status-select').value,
+          description: $('template-description').value.trim(),
+          entitlements: parseJSONField($('template-entitlements').value, []),
+          pricing: parseJSONField($('template-pricing').value, {}),
+        };
+        const version = $('template-version').value.trim();
+        if (version) {
+          payload.version = version;
+        }
+        if (!payload.name || !payload.entitlements.length || !payload.pricing.currency) {
+          throw { status: 400, payload: { message: '请填写名称、权益与定价信息' } };
+        }
+
+        const response = await http('POST', '/admin/packages/templates', payload);
+        templateOutputEl.textContent = JSON.stringify(response, null, 2);
+        setStatus(templateStatusEl, 'status-success', `模板 ${response.templateId} 已 ${(response.idempotent ? '复用' : '保存')} (version ${response.version})`);
+        await refreshTemplates();
+      } catch (err) {
+        setStatus(templateStatusEl, 'status-error', `提交失败: ${err.status || '网络错误'}`);
+        templateOutputEl.textContent = JSON.stringify(err.payload ?? err, null, 2);
+      }
+    }
+
+    function renderRoute(config) {
+      if (!config) {
+        routeOutputEl.textContent = '';
+        return;
+      }
+      routeOutputEl.textContent = JSON.stringify(config, null, 2);
+    }
+
+    async function loadRouteFare() {
+      const routeCode = $('route-code').value.trim();
+      if (!routeCode) {
+        setStatus(routeStatusEl, 'status-error', '请输入 routeCode');
+        return;
+      }
+      setStatus(routeStatusEl, 'status-info', '加载线路票价...');
+      try {
+        const config = await http('GET', `/admin/routes/fares/${routeCode}`);
+        selectedRouteCode = routeCode;
+        restoreRouteBtn.disabled = false;
+        renderRoute(config);
+        setStatus(routeStatusEl, 'status-success', `已加载 ${routeCode} (revision ${config.revision})`);
+      } catch (err) {
+        renderRoute(err.payload);
+        restoreRouteBtn.disabled = true;
+        setStatus(routeStatusEl, 'status-error', `加载失败: ${err.status || '网络错误'}`);
+      }
+    }
+
+    async function submitRoute() {
+      const routeCode = $('route-code').value.trim();
+      if (!routeCode) {
+        setStatus(routeStatusEl, 'status-error', '请输入 routeCode');
+        return;
+      }
+      setStatus(routeStatusEl, 'status-info', '保存票价中...');
+      try {
+        const fares = parseJSONField($('route-fares').value, []);
+        if (!Array.isArray(fares) || fares.length === 0) {
+          throw { status: 400, payload: { message: '请至少配置一个 fare 条目' } };
+        }
+        const payload = {
+          routeCode,
+          fares,
+        };
+        const lockValue = $('route-lock').value.trim();
+        if (lockValue) {
+          payload.lockMinutes = Number(lockValue);
+        }
+        const blackout = $('route-blackout').value.trim();
+        if (blackout) {
+          payload.blackoutDates = parseJSONField(blackout, []);
+        }
+
+        const config = await http('PUT', `/admin/routes/fares/${routeCode}`, payload);
+        selectedRouteCode = routeCode;
+        restoreRouteBtn.disabled = false;
+        renderRoute(config);
+        setStatus(routeStatusEl, 'status-success', `票价已更新 (revision ${config.revision})`);
+      } catch (err) {
+        renderRoute(err.payload);
+        setStatus(routeStatusEl, 'status-error', `保存失败: ${err.status || '网络错误'}`);
+      }
+    }
+
+    async function restoreRoute() {
+      if (!selectedRouteCode) return;
+      setStatus(routeStatusEl, 'status-info', '回滚至上一版本...');
+      try {
+        const config = await http('POST', `/admin/routes/fares/${selectedRouteCode}/restore`);
+        renderRoute(config);
+        setStatus(routeStatusEl, 'status-success', `已回滚 ${selectedRouteCode} 至 revision ${config.revision}`);
+      } catch (err) {
+        setStatus(routeStatusEl, 'status-error', `回滚失败: ${err.status || '网络错误'}`);
+        renderRoute(err.payload);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bootstrapTemplateForm();
+      $('refresh-templates').addEventListener('click', refreshTemplates);
+      loadTemplateHistoryBtn.addEventListener('click', loadTemplateHistory);
+      $('submit-template').addEventListener('click', submitTemplate);
+
+      $('load-route').addEventListener('click', loadRouteFare);
+      $('submit-route').addEventListener('click', submitRoute);
+      restoreRouteBtn.addEventListener('click', restoreRoute);
+
+      // 初始加载
+      refreshTemplates().catch(() => setStatus(templateStatusEl, 'status-error', '加载失败'));
+    });
+  </script>
+</body>
+</html>
