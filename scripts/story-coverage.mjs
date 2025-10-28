@@ -35,7 +35,15 @@ function YAMLtoJSON(txt){
     if (!current) continue;
     if (line.startsWith('title:')){ current.title = line.split(':').slice(1).join(':').trim(); continue; }
     if (line.startsWith('status:')){ current.status = line.split(':').slice(1).join(':').trim(); continue; }
-    if (line.startsWith('cards:')){ inCards = true; continue; }
+    if (line.startsWith('cards:')){
+      inCards = true;
+      continue;
+    }
+    if (line.includes(':')){
+      // any new section resets cards parsing
+      inCards = false;
+      continue;
+    }
     if (inCards && line.startsWith('- ')){
       current.cards.push(line.slice(2).trim());
       continue;

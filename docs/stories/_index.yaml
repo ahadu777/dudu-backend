@@ -147,6 +147,10 @@ stories:
       - tickets-scan
       - operators-login
       - validators-sessions
+    validation_assets:
+      runbook: docs/integration/US-010-runbook.md
+      newman:
+        - reports/newman/admin-package-config.json
   - id: US-010A
     title: DeepTravel 旅客闭环体验
     status: Draft
@@ -172,6 +176,10 @@ stories:
       - tickets-issuance
       - my-tickets
       - qr-token
+    validation_assets:
+      runbook: docs/integration/US-010A-runbook.md
+      newman:
+        - reports/newman/us-010a-traveler-loop.json
   - id: US-010B
     title: DeepTravel 运营支撑体系
     status: Draft
@@ -198,6 +206,10 @@ stories:
       - refund-processing
       - reports-redemptions
       - cancellation-policies
+    validation_assets:
+      runbook: docs/integration/US-010B-runbook.md
+      newman:
+        - reports/newman/us-010b-operations-backbone.json
   - id: US-011
     title: Complex multi-variable pricing system
     status: Approved

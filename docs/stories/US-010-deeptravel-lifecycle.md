@@ -72,15 +72,20 @@ last_update: 2025-10-24T18:28:44+08:00
 - 定时任务保障票券过期处理，通知推送具备重试机制
 
 ## Links
-- 新增卡片：待创建（参见 Proposed Cards）
-- 复用卡片：catalog-endpoint、order-create-idempotent、payment-webhook、tickets-issuance、tickets-scan、ticket-cancellation、refund-processing
+- 子故事：
+  - [US-010A — DeepTravel 旅客闭环体验](US-010A-traveler-loop.md)
+  - [US-010B — DeepTravel 运营支撑体系](US-010B-operations-backbone.md)
+- 复用能力：catalog-endpoint、order-create-idempotent、payment-webhook、tickets-issuance、tickets-scan、ticket-cancellation、refund-processing
+- 运行验证（见子故事 Runbook 与 Newman 场景）
 
-## Proposed Cards
-1. **travel-search-hub** (Team A) — 热门城市、禁售日、线路/班次与套票查询 API，含缓存策略与组合筛选。
-2. **seat-lock-service** (Team A) — 独立的锁座/库存占用模块，生成 `reservations` 表并与订单生命周期联动。
-3. **wechat-payment-session** (Team A) — 微信支付下单参数生成与支付状态轮询接口，衔接现有 payment-webhook。
-4. **bundle-ticket-engine** (Team B) — 多乘客、阶梯定价与套票权益快照生成/发行逻辑，扩展 tickets-issuance。
-5. **ticket-lifecycle-daemon** (Team B) — 票券状态机与过期/退改处理调度，触发通知与订单终态更新。
-6. **merchant-redemption-console** (Team C) — 商家端核销 API 扩展（扫码订单、逐项核销、核销日志查询）。
-7. **admin-package-config** (Team A) — 后台套票模板、线路票价、退改规则、促销、商家管理接口。
-8. **notification-orchestrator** (Team B) — 统一通知编排，发送支付成功/取消/退改/核销/到期提醒，含重试与模板配置。
+## Decomposition & Cards
+- **US-010A** 聚焦旅客闭环，囊括：
+  - travel-search-hub
+  - seat-lock-service
+  - wechat-payment-session
+  - bundle-ticket-engine
+- **US-010B** 聚焦运营支撑，囊括：
+  - admin-package-config
+  - ticket-lifecycle-daemon
+  - notification-orchestrator
+  - merchant-redemption-console

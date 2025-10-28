@@ -1,7 +1,7 @@
 import { Router } from 'express';
+import { randomBytes } from 'crypto';
 import { mockDataStore } from '../../core/mock/data';
 import { ticketService } from '../tickets/service';
-import { ERR } from '../../core/errors/codes';
 
 const router = Router();
 
@@ -33,6 +33,60 @@ function validateSignature(signature: string): boolean {
   // In production, would verify with payment provider's secret
   return !!(signature && signature.length > 0);
 }
+
+router.post('/wechat/session', (req, res) => {
+  const { orderId, amount, currency, reservationId, description } = req.body ?? {};
+
+  if (!orderId || typeof orderId !== 'number') {
+    return res.status(422).json({
+      code: 'WECHAT_SESSION_INVALID_ORDER_ID',
+      message: 'orderId (number) is required'
+    });
+  }
+
+  if (amount === undefined || Number.isNaN(Number(amount)) || Number(amount) <= 0) {
+    return res.status(422).json({
+      code: 'WECHAT_SESSION_INVALID_AMOUNT',
+      message: 'amount must be a positive number'
+    });
+  }
+
+  if (!currency || typeof currency !== 'string') {
+    return res.status(422).json({
+      code: 'WECHAT_SESSION_INVALID_CURRENCY',
+      message: 'currency is required'
+    });
+  }
+
+  const order = mockDataStore.getOrderById(orderId);
+  if (!order) {
+    return res.status(404).json({
+      code: 'WECHAT_SESSION_ORDER_NOT_FOUND',
+      message: 'Order not found'
+    });
+  }
+
+  const prepayId = `wx_${randomBytes(12).toString('hex')}`;
+  const nonceStr = randomBytes(16).toString('hex');
+  const timeStamp = Math.floor(Date.now() / 1000).toString();
+  const packageValue = `prepay_id=${prepayId}`;
+  const paySign = randomBytes(16).toString('hex');
+
+  return res.status(200).json({
+    order_id: orderId,
+    reservation_id: reservationId ?? null,
+    amount: Number(amount),
+    currency,
+    description: description ?? '',
+    prepay_id: prepayId,
+    nonce_str: nonceStr,
+    time_stamp: timeStamp,
+    sign_type: 'HMAC-SHA256',
+    package: packageValue,
+    pay_sign: paySign,
+    expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+  });
+});
 
 // POST /payments/notify - Payment webhook handler
 router.post('/notify', async (req, res) => {

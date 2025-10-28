@@ -153,6 +153,116 @@
         }
       }
     },
+    "/travel/hot-cities": {
+      "get": {
+        "tags": ["Travel"],
+        "summary": "List popular origins/destinations",
+        "description": "Returns the cached list of hot cities shown to travelers",
+        "responses": {
+          "200": {
+            "description": "Hot cities retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TravelHotCitiesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/travel/blackout-dates": {
+      "get": {
+        "tags": ["Travel"],
+        "summary": "Get annual blackout dates",
+        "description": "Returns dates where DeepTravel routes are unavailable",
+        "responses": {
+          "200": {
+            "description": "Blackout calendar returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TravelBlackoutDatesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/travel/search": {
+      "get": {
+        "tags": ["Travel"],
+        "summary": "Search travel routes and bundles",
+        "description": "Search available DeepTravel routes with pricing and bundle suggestions",
+        "parameters": [
+          {
+            "name": "origin",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origin location code (e.g. HKG)"
+          },
+          {
+            "name": "destination",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Destination location code (e.g. MAC)"
+          },
+          {
+            "name": "travel_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Travel date in YYYY-MM-DD format"
+          },
+          {
+            "name": "passenger_types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated passenger types (adult,child,senior)"
+          },
+          {
+            "name": "passenger_count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "description": "Total passenger count override (≤10)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Travel search results returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TravelSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid search parameters"
+          }
+        }
+      }
+    },
     "/orders": {
       "post": {
         "tags": ["Commerce"],
@@ -261,6 +371,82 @@
         }
       }
     },
+    "/reservations": {
+      "post": {
+        "tags": ["Reservations"],
+        "summary": "Create seat reservation",
+        "description": "Locks seats for a DeepTravel route before payment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReservationCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reservation created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationCreateResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Existing reservation returned for idempotent key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationCreateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "409": {
+            "description": "Seats unavailable"
+          },
+          "422": {
+            "description": "Invalid reservation payload"
+          }
+        }
+      }
+    },
+    "/reservations/{reservationId}": {
+      "delete": {
+        "tags": ["Reservations"],
+        "summary": "Release reservation",
+        "description": "Releases a previously held reservation",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reservation released"
+          },
+          "404": {
+            "description": "Reservation not found"
+          },
+          "409": {
+            "description": "Reservation already released or expired"
+          }
+        }
+      }
+    },
     "/payments/notify": {
       "post": {
         "tags": ["Commerce"],
@@ -332,6 +518,41 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/payments/wechat/session": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Create WeChat pay session",
+        "description": "Generates WeChat prepay parameters for DeepTravel orders",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeChatSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "WeChat payment session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeChatSessionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "422": {
+            "description": "Invalid request payload"
           }
         }
       }
@@ -1447,6 +1668,306 @@
           }
         }
       },
+      "TravelHotCity": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "integer"
+          }
+        }
+      },
+      "TravelHotCitiesResponse": {
+        "type": "object",
+        "properties": {
+          "cities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TravelHotCity"
+            }
+          }
+        }
+      },
+      "TravelBlackoutDatesResponse": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer"
+          },
+          "blackout_dates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        }
+      },
+      "TravelPassengerType": {
+        "type": "string",
+        "enum": ["adult", "child", "senior"]
+      },
+      "TravelRoutePricingSegment": {
+        "type": "object",
+        "properties": {
+          "passenger_type": {
+            "$ref": "#/components/schemas/TravelPassengerType"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "unit_amount": {
+            "type": "integer"
+          },
+          "subtotal_amount": {
+            "type": "integer"
+          }
+        }
+      },
+      "TravelRoutePricing": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "base_amount": {
+            "type": "integer"
+          },
+          "passenger_breakdown": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TravelRoutePricingSegment"
+            }
+          },
+          "total_amount": {
+            "type": "integer"
+          }
+        }
+      },
+      "TravelRouteAvailability": {
+        "type": "object",
+        "properties": {
+          "capacity": {
+            "type": "integer"
+          },
+          "available": {
+            "type": "integer"
+          }
+        }
+      },
+      "TravelRoute": {
+        "type": "object",
+        "properties": {
+          "route_id": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "carrier": {
+            "type": "string"
+          },
+          "seat_class": {
+            "type": "string"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/TravelRouteAvailability"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/TravelRoutePricing"
+          },
+          "bundle_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TravelBundle": {
+        "type": "object",
+        "properties": {
+          "bundle_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "base_price": {
+            "type": "integer"
+          },
+          "includes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TravelSearchResponse": {
+        "type": "object",
+        "properties": {
+          "routes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TravelRoute"
+            }
+          },
+          "bundles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TravelBundle"
+            }
+          }
+        }
+      },
+      "ReservationPassenger": {
+        "type": "object",
+        "properties": {
+          "passenger_type": {
+            "$ref": "#/components/schemas/TravelPassengerType"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": ["passenger_type", "count"]
+      },
+      "ReservationCreateRequest": {
+        "type": "object",
+        "required": ["route_id", "travel_date", "seats"],
+        "properties": {
+          "route_id": {
+            "type": "string"
+          },
+          "travel_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "seats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservationPassenger"
+            },
+            "minItems": 1
+          },
+          "hold_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "idempotency_key": {
+            "type": "string"
+          }
+        }
+      },
+      "ReservationCreateResponse": {
+        "type": "object",
+        "properties": {
+          "reservation_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["HELD", "RELEASED", "EXPIRED"]
+          },
+          "lock_expire_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_in_seconds": {
+            "type": "integer"
+          }
+        }
+      },
+      "WeChatSessionRequest": {
+        "type": "object",
+        "required": ["orderId", "amount", "currency"],
+        "properties": {
+          "orderId": {
+            "type": "integer"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "reservationId": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "WeChatSessionResponse": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer"
+          },
+          "reservation_id": {
+            "type": ["string", "null"]
+          },
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "prepay_id": {
+            "type": "string"
+          },
+          "nonce_str": {
+            "type": "string"
+          },
+          "time_stamp": {
+            "type": "string"
+          },
+          "sign_type": {
+            "type": "string"
+          },
+          "package": {
+            "type": "string"
+          },
+          "pay_sign": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Error": {
         "type": "object",
         "properties": {
@@ -1517,6 +2038,18 @@
     {
       "name": "Policies",
       "description": "Cancellation policies and terms"
+    },
+    {
+      "name": "Travel",
+      "description": "Travel search, bundles, and blackout calendars"
+    },
+    {
+      "name": "Reservations",
+      "description": "Seat reservations and release workflow"
+    },
+    {
+      "name": "Payments",
+      "description": "Payment session orchestration and callbacks"
     },
     {
       "name": "Authentication",

@@ -12,6 +12,8 @@ import profileRouter from './profile/router';
 import usersRouter from './users/router';
 import authDemoRouter from './auth/demo';
 import adminRouter from './admin/router';
+import travelRouter from './travel/router';
+import reservationsRouter from './reservations/router';
 
 export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
   const apiRouter = Router();
@@ -22,6 +24,8 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use(apiPrefix, apiRouter);
 
   app.use('/catalog', catalogRouter);
+  app.use('/travel', travelRouter);
+  app.use('/reservations', reservationsRouter);
   app.use('/admin', adminRouter);
   app.use('/orders', ordersRouter);
   app.use('/payments', paymentsRouter);
