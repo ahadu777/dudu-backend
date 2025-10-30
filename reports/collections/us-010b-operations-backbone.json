@@ -1,0 +1,260 @@
+{
+  "info": {
+    "name": "US-010B Operations Backbone",
+    "_postman_id": "00000000-0000-4000-8000-0000000A10B",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Upsert 套票模板",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('templateName', 'DeepTravel Template ' + Date.now());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200/201', () => pm.expect([200,201]).to.include(pm.response.code));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('templateId', json.templateId);",
+              "pm.collectionVariables.set('templateVersion', json.version);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"{{templateName}}\", \"status\": \"active\", \"entitlements\": [{\"function_code\": \"ferry\", \"label\": \"Ferry Ride\", \"quantity\": 1, \"redemption_channel\": \"operator\", \"requires_id_verification\": false, \"validity_type\": \"relative\", \"validity_duration_days\": 7}], \"pricing\": {\"currency\": \"HKD\", \"tiers\": [{\"tier_id\": \"adult\", \"name\": \"Adult\", \"customer_types\": [\"adult\"], \"price\": 4500, \"currency\": \"HKD\"}]}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "packages",
+            "templates"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. 列出模板",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "packages",
+            "templates"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('templates 为数组', () => pm.expect(json.templates).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. 获取模板详情",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates/{{templateId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "packages",
+            "templates",
+            "{{templateId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('返回template对象', () => pm.expect(pm.response.json()).to.have.property('template'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. 模板历史",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin/packages/templates/{{templateId}}/versions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "packages",
+            "templates",
+            "{{templateId}}",
+            "versions"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. 更新路线票价",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fares\": [{\"passenger_type\": \"adult\", \"price\": 220, \"currency\": \"HKD\"}, {\"passenger_type\": \"child\", \"price\": 140, \"currency\": \"HKD\"}], \"lockMinutes\": 20, \"blackoutDates\": [\"2025-12-24\"]}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/routes/fares/DT-PEAK",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "routes",
+            "fares",
+            "DT-PEAK"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. 获取路线票价",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin/routes/fares/DT-PEAK",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "routes",
+            "fares",
+            "DT-PEAK"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('fares 为数组', () => pm.expect(json.fares).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. 路线票价历史",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin/routes/fares/DT-PEAK/history",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "routes",
+            "fares",
+            "DT-PEAK",
+            "history"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200或404', () => pm.expect([200,404]).to.include(pm.response.code));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://express-jdpny.ondigitalocean.app"
+    }
+  ]
+}

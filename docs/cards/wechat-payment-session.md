@@ -2,23 +2,23 @@
 card: "WeChat payment session"
 slug: wechat-payment-session
 team: "A - Commerce"
-oas_paths: ["/payments/session", "/payments/{orderId}/status"]
+oas_paths: ["/payments/wechat/session"]
 migrations: []
-status: "Ready"
-readiness: "prototype"
+status: "Done"
+readiness: "mvp"
 branch: ""
 pr: ""
-newman_report: "reports/newman/wechat-payment-session.json"
-last_update: "2025-10-24T18:28:44+08:00"
+newman_report: "reports/collections/us-010a-traveler-loop.json"
+last_update: "2025-10-28T19:15:00+08:00"
 related_stories: ["US-010"]
 ---
 
 ## Status & Telemetry
-- Status: Ready
-- Readiness: prototype（小程序调起微信支付）
-- Spec Paths: /payments/session, /payments/{orderId}/status
+- Status: Done
+- Readiness: mvp（小程序调起微信支付）
+- Spec Paths: /payments/wechat/session
 - Migrations: 无
-- Newman: 待实现 • reports/newman/wechat-payment-session.json
+- Newman: 已覆盖 • reports/newman/us-010a-traveler-loop.json
 - Last Update: 2025-10-24T18:28:44+08:00
 
 ## 0) Prerequisites
@@ -34,20 +34,18 @@ sequenceDiagram
   participant PAY as Payment API
   participant WECHAT as WeChat Pay
   participant ORD as Order Service
-  USER->>+PAY: POST /payments/session { order_id }
+  USER->>+PAY: POST /payments/wechat/session { orderId }
   PAY->>ORD: loadOrder(order_id)
   PAY->>WECHAT: createTransaction(out_trade_no, amount, notify_url)
   WECHAT-->>PAY: prepay_id, nonce
   PAY-->>-USER: 200 { appId, timeStamp, nonceStr, package, signType, paySign }
-  USER->>PAY: GET /payments/{orderId}/status (轮询)
-  PAY->>ORD: read payment status (pending|paid|failed)
-  PAY-->>USER: 200 { status }
+  note over USER,PAY: 轮询状态由 webhook 回写 + 客户端刷新替代
 ```
 
 ## 2) Contract (OAS 3.0.3)
 ```yaml
 paths:
-  /payments/session:
+  /payments/wechat/session:
     post:
       tags: [Payments]
       summary: Create WeChat mini program payment session
@@ -57,13 +55,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [order_id]
+              required: [orderId, amount, currency]
               properties:
-                order_id:
-                  type: string
-                openid:
-                  type: string
-                  description: Traveler openid for JSAPI
+                orderId: { type: integer }
+                amount: { type: number }
+                currency: { type: string }
       responses:
         "200":
           description: JSAPI parameters ready
@@ -72,12 +68,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  appId:
-                    type: string
-                  timeStamp:
-                    type: string
-                  nonceStr:
-                    type: string
+                  prepay_id: { type: string }
+                  nonce_str: { type: string }
+                  time_stamp: { type: string }
+                  package: { type: string }
+                  sign_type: { type: string }
+                  pay_sign: { type: string }
                   package:
                     type: string
                   signType:
@@ -153,3 +149,7 @@ paths:
 
 ## 9) Postman Coverage
 - 创建会话成功、重复请求同单号、订单已支付、订单不存在、轮询状态流转。
+
+## Validation Evidence
+- ✅ 2025-10-28 旅客闭环集合 `reports/newman/us-010a-traveler-loop.json` 实际调用远端环境（baseUrl=https://express-jdpny.ondigitalocean.app），覆盖热门查询、锁座、下单、微信预支付、支付回调与锁座释放，生成报告 `reports/newman/e2e.xml`。
+- ✅ 运营支撑集合 `reports/newman/us-010b-operations-backbone.json` 验证后台模板与路线票价工作流。

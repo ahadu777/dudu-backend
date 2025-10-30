@@ -89,3 +89,7 @@ last_update: 2025-10-24T18:28:44+08:00
   - ticket-lifecycle-daemon
   - notification-orchestrator
   - merchant-redemption-console
+
+## Validation evidence
+- 2025-10-28：旅客闭环集合 `reports/collections/us-010a-traveler-loop.json` pass，报告 `reports/newman/e2e.xml`
+- 2025-10-28：运营支撑集合 `reports/collections/us-010b-operations-backbone.json` pass

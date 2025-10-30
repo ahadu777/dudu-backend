@@ -1,4 +1,4 @@
-# Maintenance: 新增或更新故事 / 卡片时，必须同步维护 sequence、enhances、implicit_dependencies 等字段以支撑 Step 0.5 关系校验。
+# Maintenance: 新增或更新故事 / 卡片时，必须同步维护 sequence、enhances 等字段以支撑 Step 0.5 关系校验。
 stories:
   - id: US-001
     title: Buy package and redeem via QR
@@ -33,9 +33,7 @@ stories:
       - operators-login → validators-sessions
       - [validators-sessions, qr-token] → tickets-scan
     enhances: [US-001]
-    implicit_dependencies:
-      - qr-token
-      - my-tickets
+    
   - id: US-003
     title: Buyer views tickets & QR
     status: Approved
@@ -46,9 +44,7 @@ stories:
       - tickets-issuance → my-tickets
       - my-tickets → qr-token
     enhances: [US-001]
-    implicit_dependencies:
-      - order-create
-      - tickets-issuance
+    
   - id: US-004
     title: Payment notify → issue tickets (sync)
     status: Approved
@@ -59,9 +55,6 @@ stories:
       - order-create → payment-webhook
       - payment-webhook → tickets-issuance
     enhances: [US-001]
-    implicit_dependencies:
-      - order-create
-      - tickets-issuance
   - id: US-005
     title: Reporting — redemptions list
     status: Approved
@@ -71,8 +64,7 @@ stories:
       - tickets-scan → reports-redemptions
       - refund-processing → reports-redemptions
     enhances: [US-001, US-002, US-007]
-    implicit_dependencies:
-      - tickets-scan
+    
   - id: US-006
     title: Operator auth & session lifecycle
     status: Approved
@@ -82,8 +74,7 @@ stories:
     sequence:
       - operators-login → validators-sessions
     enhances: [US-002]
-    implicit_dependencies:
-      - tickets-scan
+    
   - id: US-007
     title: Ticket cancellation and refund
     status: Approved
@@ -96,9 +87,7 @@ stories:
       - ticket-cancellation → refund-processing
       - refund-processing → payment-webhook
     enhances: [US-001, US-004]
-    implicit_dependencies:
-      - payment-webhook
-      - tickets-issuance
+    
   - id: US-008
     title: Promotion detail view for dashboard
     status: Approved
@@ -107,8 +96,7 @@ stories:
     sequence:
       - catalog-endpoint → promotion-detail-endpoint
     enhances: [US-001]
-    implicit_dependencies:
-      - catalog-endpoint
+    
   - id: US-009
     title: User profile and settings management
     status: Approved
@@ -120,7 +108,7 @@ stories:
       - user-profile-endpoint → user-settings-endpoint
       - user-settings-endpoint → user-activity-endpoint
     enhances: []
-    implicit_dependencies: []
+    
   - id: US-010
     title: DeepTravel 小程序全链路购票与核销体验
     status: Draft
@@ -137,20 +125,12 @@ stories:
       - US-010A
       - US-010B
     enhances: [US-001, US-002, US-004, US-007]
-    implicit_dependencies:
-      - catalog-endpoint
-      - order-create
-      - payment-webhook
-      - tickets-issuance
-      - ticket-cancellation
-      - refund-processing
-      - tickets-scan
-      - operators-login
-      - validators-sessions
+    
     validation_assets:
       runbook: docs/integration/US-010-runbook.md
       newman:
-        - reports/newman/admin-package-config.json
+        - reports/collections/us-010a-traveler-loop.json
+        - reports/collections/us-010b-operations-backbone.json
   - id: US-010A
     title: DeepTravel 旅客闭环体验
     status: Draft
@@ -167,19 +147,12 @@ stories:
       - bundle-ticket-engine → tickets-issuance
       - order-create → wechat-payment-session
       - wechat-payment-session → payment-webhook
-      - payment-webhook → tickets-issuance
     enhances: [US-001, US-003, US-004]
-    implicit_dependencies:
-      - catalog-endpoint
-      - order-create
-      - payment-webhook
-      - tickets-issuance
-      - my-tickets
-      - qr-token
+    
     validation_assets:
       runbook: docs/integration/US-010A-runbook.md
       newman:
-        - reports/newman/us-010a-traveler-loop.json
+        - reports/collections/us-010a-traveler-loop.json
   - id: US-010B
     title: DeepTravel 运营支撑体系
     status: Draft
@@ -193,23 +166,14 @@ stories:
       - admin-package-config → merchant-redemption-console
       - tickets-issuance → ticket-lifecycle-daemon
       - ticket-lifecycle-daemon → notification-orchestrator
-      - ticket-cancellation → refund-processing
       - refund-processing → notification-orchestrator
       - [operators-login, validators-sessions] → merchant-redemption-console
-      - [merchant-redemption-console, tickets-scan] → reports-redemptions
     enhances: [US-002, US-005, US-006, US-007]
-    implicit_dependencies:
-      - operators-login
-      - validators-sessions
-      - tickets-scan
-      - ticket-cancellation
-      - refund-processing
-      - reports-redemptions
-      - cancellation-policies
+    
     validation_assets:
       runbook: docs/integration/US-010B-runbook.md
       newman:
-        - reports/newman/us-010b-operations-backbone.json
+        - reports/collections/us-010b-operations-backbone.json
   - id: US-011
     title: Complex multi-variable pricing system
     status: Approved
@@ -222,7 +186,4 @@ stories:
     # Cross-story relationships
     enhances: [US-001]
     enhanced_by: []
-    # Implicit dependencies not in cards list
-    implicit_dependencies:
-      - catalog-endpoint # product data needed for pricing
-      - promotion-detail-endpoint # enhanced promotion display
+    

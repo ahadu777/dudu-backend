@@ -3,12 +3,17 @@
 该 Runbook 协助验证后台配置、票券生命周期守护、通知编排与商家核销端的协同，确保运营支撑链路与既有退款/扫码流程兼容。
 
 ## 前置条件
-- **Base URL**：`http://localhost:8080`
+- **Base URL**：`https://express-jdpny.ondigitalocean.app` (可转本地)
 - 服务已启动：`npm run build && PORT=8080 npm start`
 - 如需清理数据，执行 `POST /demo/reset`
 - 建议先完成 US-010A 闭环验证，以便存在可用票券
 
 ## 流程步骤
+
+### 0. 验证资产
+- Newman：`reports/collections/us-010b-operations-backbone.json`
+- 命令：`npx newman run reports/collections/us-010b-operations-backbone.json`
+
 
 ### 1. 配置套票模板与线路票价
 ```bash
@@ -27,11 +32,11 @@ TEMPLATE_PAYLOAD='{
     ]
   }
 }'
-curl -s -X POST http://localhost:8080/admin/packages/templates \
+curl -s -X POST https://express-jdpny.ondigitalocean.app/admin/packages/templates \
   -H 'Content-Type: application/json' \
   -d "$TEMPLATE_PAYLOAD" | jq '.'
 
-curl -s -X PUT http://localhost:8080/admin/routes/fares/DT-PEAK \
+curl -s -X PUT https://express-jdpny.ondigitalocean.app/admin/routes/fares/DT-PEAK \
   -H 'Content-Type: application/json' \
   -d '{
         "fares": [
@@ -46,14 +51,14 @@ curl -s -X PUT http://localhost:8080/admin/routes/fares/DT-PEAK \
 
 ### 2. 启动票券生命周期守护
 ```bash
-curl -s -X POST http://localhost:8080/internal/tasks/tickets/lifecycle/run \
+curl -s -X POST https://express-jdpny.ondigitalocean.app/internal/tasks/tickets/lifecycle/run \
   -H 'X-Debug-Mode: true' | jq '.'
 ```
 **期望**：返回处理统计，如 `expiredProcessed`、`refundTriggered`；任务运行后票券状态符合策略。
 
 ### 3. 通知编排验证
 ```bash
-curl -s -X POST http://localhost:8080/internal/notifications/dispatch \
+curl -s -X POST https://express-jdpny.ondigitalocean.app/internal/notifications/dispatch \
   -H 'Content-Type: application/json' \
   -d '{
         "event": "ticket.expired",
@@ -65,15 +70,15 @@ curl -s -X POST http://localhost:8080/internal/notifications/dispatch \
 
 ### 4. 商家核销控制台
 ```bash
-SESSION=$(curl -s -X POST http://localhost:8080/operators/login \
+SESSION=$(curl -s -X POST https://express-jdpny.ondigitalocean.app/operators/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"merchant-demo","password":"demo123"}' | jq -r '.operator_token')
 
-VALIDATOR=$(curl -s -X POST http://localhost:8080/validators/sessions \
+VALIDATOR=$(curl -s -X POST https://express-jdpny.ondigitalocean.app/validators/sessions \
   -H 'Content-Type: application/json' \
   -d "{\"operator_token\":\"$SESSION\",\"device_id\":\"terminal-01\",\"location_id\":\"HKG-PIER\"}" | jq -r '.session_id')
 
-curl -s -X POST http://localhost:8080/merchant/redemptions \
+curl -s -X POST https://express-jdpny.ondigitalocean.app/merchant/redemptions \
   -H 'Content-Type: application/json' \
   -d "{
         \"ticketId\": \"$TICKET_ID\",
@@ -85,7 +90,7 @@ curl -s -X POST http://localhost:8080/merchant/redemptions \
 
 ### 5. 报表联动
 ```bash
-curl -s "http://localhost:8080/reports/redemptions?from=2025-10-01T00:00:00Z&to=2025-12-31T23:59:59Z" | jq '.events | length'
+curl -s "https://express-jdpny.ondigitalocean.app/reports/redemptions?from=2025-10-01T00:00:00Z&to=2025-12-31T23:59:59Z" | jq '.events | length'
 ```
 **期望**：事件数量递增，包含刚完成的核销记录。
 
@@ -97,5 +102,5 @@ curl -s "http://localhost:8080/reports/redemptions?from=2025-10-01T00:00:00Z&to=
 - [ ] 报表可看到最新核销事件
 
 ## 相关资产
-- Newman：`reports/newman/us-010b-operations-backbone.json`
+- Newman：`reports/collections/us-010b-operations-backbone.json`
 - Story 文档：`docs/stories/US-010B-operations-backbone.md`

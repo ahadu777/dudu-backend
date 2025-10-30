@@ -1,0 +1,409 @@
+{
+  "info": {
+    "name": "US-010A Traveler Loop",
+    "_postman_id": "00000000-0000-4000-8000-0000000A10A",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. 热门城市",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/travel/hot-cities",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "travel",
+            "hot-cities"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('cities array存在且非空', () => { pm.expect(json).to.have.property('cities').that.is.an('array').that.is.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. 禁售日",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/travel/blackout-dates",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "travel",
+            "blackout-dates"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('包含year和blackout_dates', () => { pm.expect(json).to.have.property('year'); pm.expect(json).to.have.property('blackout_dates').that.is.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. 线路搜索",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/travel/search?origin={{origin}}&destination={{destination}}&travel_date={{travelDate}}&passenger_types=adult,child",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "travel",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "origin",
+              "value": "{{origin}}"
+            },
+            {
+              "key": "destination",
+              "value": "{{destination}}"
+            },
+            {
+              "key": "travel_date",
+              "value": "{{travelDate}}"
+            },
+            {
+              "key": "passenger_types",
+              "value": "adult,child"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('返回routes数组', () => pm.expect(json.routes).to.be.an('array').that.is.not.empty);",
+              "pm.collectionVariables.set('routeId', json.routes[0].route_id);",
+              "pm.collectionVariables.set('selectedCarrier', json.routes[0].carrier);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. 创建锁座",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"route_id\": \"{{routeId}}\", \"travel_date\": \"{{travelDate}}\", \"seats\": [{\"passenger_type\": \"adult\", \"count\": 1}, {\"passenger_type\": \"child\", \"count\": 1}], \"hold_minutes\": 10}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reservations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reservations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 或 200', () => pm.expect([200,201]).to.include(pm.response.code));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('reservationId', json.reservation_id);",
+              "pm.collectionVariables.set('reservationExpiresAt', json.lock_expire_at);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. 创建订单",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('outTradeNo', 'DT-ORDER-' + Date.now());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('orderId', json.order_id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"items\": [{\"product_id\": 101, \"qty\": 1}], \"channel_id\": 10, \"out_trade_no\": \"{{outTradeNo}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders"
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. 微信预下单",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"orderId\": {{orderId}},\n  \"amount\": 99,\n  \"currency\": \"HKD\",\n  \"description\": \"DeepTravel Traveler Loop\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payments/wechat/session",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "payments",
+            "wechat",
+            "session"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('prepayId', json.prepay_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. 支付回调",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"order_id\": {{orderId}},\n  \"payment_status\": \"SUCCESS\",\n  \"paid_at\": \"{{paidAt}}\",\n  \"signature\": \"demo-signature\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payments/notify",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "payments",
+            "notify"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200 或 400', () => pm.expect([200,400]).to.include(pm.response.code));",
+              "if (pm.response.code === 200) { pm.collectionVariables.set('paymentProcessed', true); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. 生成 demo token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"user_id\": 1, \"email\": \"demo@deeptravel.test\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/demo-token",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "demo-token"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('authToken', json.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. 查询票券",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/my/tickets",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "my",
+            "tickets"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('返回票券且非空', () => pm.expect(json).to.have.property('tickets').that.is.an('array').that.is.not.empty);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. 释放锁座",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/reservations/{{reservationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reservations",
+            "{{reservationId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('释放成功或已处理', () => pm.expect([204,409,404]).to.include(pm.response.code));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://express-jdpny.ondigitalocean.app"
+    },
+    {
+      "key": "origin",
+      "value": "HKG"
+    },
+    {
+      "key": "destination",
+      "value": "MAC"
+    },
+    {
+      "key": "travelDate",
+      "value": "2025-11-01"
+    },
+    {
+      "key": "paidAt",
+      "value": "2025-10-28T11:02:00Z"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="US-010A Traveler Loop" tests="10" time="6.701">
+  <testsuite name="1. 热门城市" id="5f6e16fd-c375-4224-91e3-f7b43550c154" timestamp="2025-10-30T11:06:44.880Z" tests="2" failures="0" errors="0" time="1.114">
+    <testcase name="status 200" time="1.114" classname="1"/>
+    <testcase name="cities array存在且非空" time="1.114" classname="1"/>
+  </testsuite>
+  <testsuite name="2. 禁售日" id="b4620764-0664-49ea-9124-4ad57475d9f2" timestamp="2025-10-30T11:06:44.880Z" tests="2" failures="0" errors="0" time="0.969">
+    <testcase name="status 200" time="0.969" classname="2"/>
+    <testcase name="包含year和blackout_dates" time="0.969" classname="2"/>
+  </testsuite>
+  <testsuite name="3. 线路搜索" id="a4f80f41-8578-418f-85fc-10122d1f0a8e" timestamp="2025-10-30T11:06:44.880Z" tests="2" failures="0" errors="0" time="0.751">
+    <testcase name="status 200" time="0.751" classname="3"/>
+    <testcase name="返回routes数组" time="0.751" classname="3"/>
+  </testsuite>
+  <testsuite name="4. 创建锁座" id="ed978a0d-3716-49ce-861f-80d91c14cadb" timestamp="2025-10-30T11:06:44.880Z" tests="1" failures="0" errors="0" time="0.774">
+    <testcase name="201 或 200" time="0.774" classname="4"/>
+  </testsuite>
+  <testsuite name="5. 创建订单" id="15085e0b-5836-4bef-be91-6cbc1c0de5ad" timestamp="2025-10-30T11:06:44.880Z" tests="1" failures="0" errors="0" time="0.392">
+    <testcase name="status 200" time="0.392" classname="5"/>
+  </testsuite>
+  <testsuite name="6. 微信预下单" id="7f25edc6-1a2d-4209-825d-2b784fd2ba74" timestamp="2025-10-30T11:06:44.880Z" tests="1" failures="0" errors="0" time="0.371">
+    <testcase name="status 200" time="0.371" classname="6"/>
+  </testsuite>
+  <testsuite name="7. 支付回调" id="1d14669f-56ff-4abc-a614-3e31c39b1f2e" timestamp="2025-10-30T11:06:44.880Z" tests="1" failures="0" errors="0" time="0.581">
+    <testcase name="status 200 或 400" time="0.581" classname="7"/>
+  </testsuite>
+  <testsuite name="8. 生成 demo token" id="6446d723-471c-4097-888c-5bf2d5c6ae49" timestamp="2025-10-30T11:06:44.880Z" tests="1" failures="0" errors="0" time="0.572">
+    <testcase name="status 200" time="0.572" classname="8DemoToken"/>
+  </testsuite>
+  <testsuite name="9. 查询票券" id="e426f0ab-2935-411c-a8eb-9b005e948e03" timestamp="2025-10-30T11:06:44.880Z" tests="2" failures="1" errors="0" time="0.811">
+    <testcase name="status 200" time="0.811" classname="9"/>
+    <testcase name="返回票券且非空" time="0.811" classname="9">
+      <failure type="AssertionFailure" message="expected [] not to be empty">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 00000000-0000-4000-8000-0000000A10A.]]>
+        <![CDATA[Collection name: US-010A Traveler Loop.]]>
+        <![CDATA[Request name: 9. 查询票券.]]>
+        <![CDATA[Test description: 返回票券且非空.]]>
+        <![CDATA[Error message: expected [] not to be empty.]]>
+        <![CDATA[Stacktrace: AssertionError: expected [] not to be empty
+   at Object.eval sandbox-script.js:2:9).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="10. 释放锁座" id="f768eac6-46be-4489-9930-f44bafc8a1be" timestamp="2025-10-30T11:06:44.880Z" tests="1" failures="0" errors="0" time="0.366">
+    <testcase name="释放成功或已处理" time="0.366" classname="10"/>
+  </testsuite>
+</testsuites>

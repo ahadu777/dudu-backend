@@ -14,7 +14,8 @@ last_update: "2025-10-19T22:21:00+0800"
 # Catalog endpoint (real) — Dev Notes
 
 ## Purpose
-Expose active products and their functions so buyers can select a package.
+Expose active ticket offerings (bus/ferry/package passes) and their functions so buyers can select a package pass.
+Note: the response uses `products[]` for backward compatibility; semantically these are ticket offerings.
 
 ## Contract
 - `GET /catalog` — see `/openapi/openapi.json` (3.0.3).

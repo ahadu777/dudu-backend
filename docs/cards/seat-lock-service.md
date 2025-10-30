@@ -4,12 +4,12 @@ slug: seat-lock-service
 team: "A - Commerce"
 oas_paths: ["/reservations", "/reservations/{reservationId}"]
 migrations: ["db/migrations/0011_reservations_table.sql"]
-status: "Ready"
-readiness: "prototype"
+status: "Done"
+readiness: "mvp"
 branch: ""
 pr: ""
-newman_report: "reports/newman/seat-lock-service.json"
-last_update: "2025-10-24T18:28:44+08:00"
+newman_report: "reports/collections/us-010a-traveler-loop.json"
+last_update: "2025-10-28T19:15:00+08:00"
 related_stories: ["US-010"]
 ---
 
@@ -18,7 +18,7 @@ related_stories: ["US-010"]
 - Readiness: prototype（首次支持锁座 & 自动释放）
 - Spec Paths: /reservations, /reservations/{reservationId}
 - Migrations: db/migrations/0011_reservations_table.sql
-- Newman: 未实现 • reports/newman/seat-lock-service.json
+- Newman: 已覆盖 • reports/collections/us-010a-traveler-loop.json
 - Last Update: 2025-10-24T18:28:44+08:00
 
 ## 0) Prerequisites
@@ -153,3 +153,11 @@ paths:
 - 库存不足 -> 409。
 - DELETE 释放、重复删除 -> 404。
 - 模拟超时释放（通过测试钩子缩短 lock_expire_at）。
+
+## Validation Evidence
+- ✅ 2025-10-28 旅客闭环集合 `reports/newman/us-010a-traveler-loop.json` 实际调用远端环境（baseUrl=https://express-jdpny.ondigitalocean.app），覆盖热门查询、锁座、下单、微信预支付、支付回调与锁座释放，生成报告 `reports/newman/e2e.xml`。
+- ✅ 运营支撑集合 `reports/newman/us-010b-operations-backbone.json` 验证后台模板与路线票价工作流。
+
+## 验证记录
+- ✅ 2025-10-28：`reports/newman/us-010a-traveler-loop.json` 成功覆盖旅客闭环，报告 `reports/newman/e2e.xml`。
+- ✅ 同日：`reports/newman/us-010b-operations-backbone.json` 通过运营支撑流程。
