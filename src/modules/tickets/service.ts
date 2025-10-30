@@ -1,5 +1,7 @@
 import { mockDataStore } from '../../core/mock/data';
+import { mockStore } from '../../core/mock/store';
 import { ERR } from '../../core/errors/codes';
+import { TicketStatus, TicketEntitlement } from '../../types/domain';
 
 interface Entitlement {
   function_code: string;
@@ -93,6 +95,12 @@ class TicketService {
           remaining_uses: func.max_uses === -1 ? 999 : func.max_uses
         }));
 
+        const storeEntitlements: TicketEntitlement[] = product.functions.map(func => ({
+          function_code: func.function_code,
+          label: func.function_name ?? func.function_code,
+          remaining_uses: func.max_uses === -1 ? 999 : func.max_uses
+        }));
+
         const now = new Date();
         const validFrom = now;
         const validUntil = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year validity
@@ -116,6 +124,17 @@ class TicketService {
           user_id: ticket.user_id,
           status: ticket.status,
           entitlements: ticket.entitlements
+        });
+
+        mockStore.createTicket({
+          ticket_code: ticketCode,
+          product_id: product.id,
+          product_name: product.name,
+          status: TicketStatus.ACTIVE,
+          entitlements: storeEntitlements,
+          user_id: order.user_id,
+          order_id: orderId,
+          expires_at: validUntil.toISOString()
         });
 
         tickets.push({

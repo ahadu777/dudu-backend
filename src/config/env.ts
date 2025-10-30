@@ -30,5 +30,6 @@ export const env = cleanEnv(process.env, {
 
   // QR Token Configuration
   QR_SIGNER_SECRET: str({ default: 'qr-signing-secret-change-in-production' }),
+  // QR token TTL in seconds (default 5 minutes)
+  QR_TOKEN_TTL_SECONDS: num({ default: 300 }),
 });
-

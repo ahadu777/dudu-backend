@@ -344,16 +344,42 @@
                     <span class="story-status status-ready">🔄 Ready</span>
                 </div>
                 <div class="story-content">
+                    <div class="auth-section">
+                        <h4>Operator Authentication</h4>
+                        <div class="button-group" style="margin-bottom:8px; gap:8px; align-items:center;">
+                            <input type="text" class="token-input" id="operator-username" placeholder="username" value="alice" style="max-width:200px;">
+                            <input type="password" class="token-input" id="operator-password" placeholder="password" value="secret123" style="max-width:200px;">
+                            <button class="btn btn-info" id="btn-operator-login">Login</button>
+                        </div>
+                        <input type="text" class="token-input" id="operator-token" placeholder="Operator token will appear here" readonly>
+                    </div>
+
+                    <div class="auth-section">
+                        <h4>Validator Session</h4>
+                        <div class="button-group" style="margin-bottom:8px; gap:8px; align-items:center;">
+                            <input type="text" class="token-input" id="validator-device-id" placeholder="device_id" value="gate-01" style="max-width:200px;">
+                            <input type="number" class="token-input" id="validator-location-id" placeholder="location_id (optional)" value="52" style="max-width:220px;">
+                            <button class="btn btn-info" id="btn-validator-session">Start Session</button>
+                        </div>
+                        <input type="text" class="token-input" id="validator-session-id" placeholder="Session ID will appear here" readonly>
+                    </div>
+
+                    <div class="auth-section">
+                        <h4>Scan Ticket</h4>
+                        <div class="button-group" style="margin-bottom:8px; gap:8px; align-items:center;">
+                            <input type="text" class="token-input" id="scan-function-code" placeholder="function_code (e.g., bus/ferry/metro)" style="max-width:280px;">
+                            <input type="text" class="token-input" id="scan-qr-token" placeholder="Paste qr_token here or generate in US-003" style="flex:1;">
+                            <button class="btn btn-primary" id="btn-ticket-scan">Scan</button>
+                        </div>
+                        <small>Tip: Use US-003 to view tickets and generate QR token. The token and suggested function_code will autopopulate here.</small>
+                    </div>
                     <div class="test-section">
                         <h4>Test Workflow</h4>
                         <div class="button-group">
-                            <button class="btn btn-primary" id="btn-operator-login">1. Operator Login</button>
-                            <button class="btn btn-primary" id="btn-validator-session">2. Start Session</button>
-                            <button class="btn btn-primary" id="btn-ticket-scan">3. Scan Ticket</button>
+                            <button class="btn btn-primary" id="btn-runbook-us002" data-story="US-002">📋 Open Runbook</button>
+                            <button class="btn btn-success" id="btn-simulate-redemption">🚀 Simulate Redemption</button>
                         </div>
-                        <div class="links">
-                            <button class="btn btn-secondary" id="btn-runbook-us002" data-story="US-002">📋 Runbook</button>
-                        </div>
+                        <div class="links"></div>
                     </div>
                     <div class="response-area" id="us002-response"></div>
                 </div>
@@ -377,6 +403,11 @@
                         <div class="button-group">
                             <button class="btn btn-primary" id="btn-my-tickets">1. View My Tickets</button>
                             <button class="btn btn-primary" id="btn-qr-token">2. Generate QR Token</button>
+                        </div>
+                        <div class="button-group" style="gap:10px; align-items:center;">
+                            <select id="user-ticket-select" class="token-input" style="max-width:320px; display:none;"></select>
+                            <select id="user-ticket-fn-select" class="token-input" style="max-width:260px; display:none;"></select>
+                            <small id="user-ticket-hint" style="color:#6c757d; display:none;">Select ticket and function_code before generating QR.</small>
                         </div>
                         <div class="links">
                             <button class="btn btn-secondary" id="btn-runbook-us003" data-story="US-003">📋 Runbook</button>
@@ -621,22 +652,45 @@
 
         async function testPaymentWebhook() {
             showLoading('us001-response');
-            const webhookData = {
-                out_trade_no: `demo-${Date.now()}`,
-                trade_status: 'TRADE_SUCCESS',
-                total_amount: '50.00'
-            };
+            try {
+                // Create a demo order first (since webhook needs order_id)
+                const orderData = {
+                    user_id: 123,
+                    items: [{ product_id: 101, qty: 1 }],
+                    channel_id: 1,
+                    out_trade_no: `demo-${Date.now()}`
+                };
 
-            const result = await apiCall(`${BASE_URL}/payments/notify`, {
-                method: 'POST',
-                body: JSON.stringify(webhookData)
-            });
+                const order = await apiCall(`${BASE_URL}/orders`, {
+                    method: 'POST',
+                    body: JSON.stringify(orderData)
+                });
 
-            if (result.ok) {
-                const formatted = `✅ Payment Processed Successfully\n\nTickets Issued: ${result.data.tickets_issued || 'Check response'}\n\n${JSON.stringify(result.data, null, 2)}`;
-                showResponse('us001-response', formatted, 'success');
-            } else {
-                showResponse('us001-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                if (!order.ok) {
+                    showResponse('us001-response', `❌ Order creation failed: ${order.data && (order.data.message || order.data.error)}`, 'error');
+                    return;
+                }
+
+                const notifyBody = {
+                    order_id: order.data.order_id,
+                    payment_status: 'SUCCESS',
+                    paid_at: new Date().toISOString(),
+                    signature: 'demo'
+                };
+
+                const result = await apiCall(`${BASE_URL}/payments/notify`, {
+                    method: 'POST',
+                    body: JSON.stringify(notifyBody)
+                });
+
+                if (result.ok) {
+                    const formatted = `✅ Payment Processed Successfully\n\nOrder: ${order.data.order_id}\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us001-response', formatted, 'success');
+                } else {
+                    showResponse('us001-response', `❌ Webhook error: ${result.data.message || result.error}`, 'error');
+                }
+            } catch (e) {
+                showResponse('us001-response', `❌ Error: ${e.message}`, 'error');
             }
         }
 
@@ -679,9 +733,10 @@
                 const payment = await apiCall(`${BASE_URL}/payments/notify`, {
                     method: 'POST',
                     body: JSON.stringify({
-                        out_trade_no: orderData.out_trade_no,
-                        trade_status: 'TRADE_SUCCESS',
-                        total_amount: '25.00'
+                        order_id: order.data.order_id,
+                        payment_status: 'SUCCESS',
+                        paid_at: new Date().toISOString(),
+                        signature: 'demo'
                     })
                 });
 
@@ -710,6 +765,53 @@
                 if (result.ok) {
                     const formatted = `✅ User Tickets Retrieved\n\nTickets Found: ${result.data.tickets.length}\n\n${JSON.stringify(result.data, null, 2)}`;
                     showResponse('us003-response', formatted, 'success');
+
+                    // Populate selectors for ticket and function_code
+                    const selTicket = document.getElementById('user-ticket-select');
+                    const selFn = document.getElementById('user-ticket-fn-select');
+                    const hint = document.getElementById('user-ticket-hint');
+                    if (selTicket && selFn && hint) {
+                        // Reset options
+                        selTicket.innerHTML = '';
+                        selFn.innerHTML = '';
+
+                        const tickets = result.data.tickets || [];
+                        tickets.forEach(t => {
+                            const opt = document.createElement('option');
+                            const remain = (t.entitlements||[]).reduce((s,e)=>s+Number(e.remaining_uses||0),0);
+                            opt.value = t.ticket_code;
+                            opt.textContent = `${t.ticket_code} • ${t.product_name || ''} • remaining=${remain}`.trim();
+                            selTicket.appendChild(opt);
+                        });
+
+                        // Attach change handler to populate functions
+                        selTicket.onchange = () => {
+                            const code = selTicket.value;
+                            const t = tickets.find(x => x.ticket_code === code) || tickets[0];
+                            selFn.innerHTML = '';
+                            (t?.entitlements||[]).forEach(e => {
+                                const opt = document.createElement('option');
+                                opt.value = e.function_code;
+                                opt.textContent = `${e.function_code} (${e.remaining_uses})`;
+                                opt.disabled = Number(e.remaining_uses||0) <= 0;
+                                selFn.appendChild(opt);
+                            });
+                            // Select first available (>0) by default
+                            const firstUsable = Array.from(selFn.options).find(o => !o.disabled);
+                            if (firstUsable) selFn.value = firstUsable.value;
+                        };
+
+                        // Trigger once to init functions list
+                        if (tickets.length > 0) {
+                            selTicket.value = tickets[0].ticket_code;
+                            selTicket.onchange();
+                        }
+
+                        // Show selectors
+                        selTicket.style.display = 'block';
+                        selFn.style.display = 'block';
+                        hint.style.display = 'inline-block';
+                    }
                 } else {
                     showResponse('us003-response', `❌ Error: ${result.data.message || result.error}`, 'error');
                 }
@@ -722,19 +824,48 @@
             showLoading('us003-response');
             try {
                 const headers = getAuthHeaders('user-token');
-                // We'll use a test ticket code - in real usage this would come from the tickets list
-                const ticketCode = 'TEST-001';
-                const result = await apiCall(`${BASE_URL}/tickets/${ticketCode}/qr-token`, {
-                    method: 'POST',
-                    headers
-                });
+                // Prefer selection if available, otherwise fetch and pick
+                const selTicket = document.getElementById('user-ticket-select');
+                const selFn = document.getElementById('user-ticket-fn-select');
+                let ticketCode = selTicket && selTicket.value;
+                let fnPref = selFn && selFn.value;
 
-                if (result.ok) {
-                    const formatted = `✅ QR Token Generated\n\nToken: ${result.data.token}\nExpires in: ${result.data.expires_in} seconds\n\n${JSON.stringify(result.data, null, 2)}`;
-                    showResponse('us003-response', formatted, 'success');
-                } else {
-                    showResponse('us003-response', `❌ Error: ${result.data.message || result.error}`, 'error');
+                let ticketsData = null;
+                if (!ticketCode) {
+                    const ticketsRes = await apiCall(`${BASE_URL}/my/tickets`, { headers });
+                    if (!ticketsRes.ok || !ticketsRes.data.tickets || ticketsRes.data.tickets.length === 0) {
+                        showResponse('us003-response', `❌ No tickets available for this user`, 'error');
+                        return;
+                    }
+                    ticketsData = ticketsRes.data.tickets;
+                    const pickTicket = ticketsData.find(t => (t.entitlements || []).some(e => e.remaining_uses > 0)) || ticketsData[0];
+                    ticketCode = pickTicket.ticket_code;
+                    fnPref = ((pickTicket.entitlements||[]).find(e => e.remaining_uses > 0) || (pickTicket.entitlements||[])[0])?.function_code;
                 }
+
+                const result = await apiCall(`${BASE_URL}/tickets/${ticketCode}/qr-token`, { method: 'POST', headers });
+                if (!result.ok) {
+                    showResponse('us003-response', `❌ No tickets available for this user`, 'error');
+                }
+
+                // Autopopulate US-002 scan fields
+                const token = result.data.token;
+                // If we didn't have selection, we might need entitlements to hint function code
+                let fnCode = fnPref || '';
+                if (!fnCode) {
+                    const tickets = ticketsData || (await apiCall(`${BASE_URL}/my/tickets`, { headers })).data.tickets;
+                    const t = tickets.find(x => x.ticket_code === ticketCode) || tickets[0];
+                    const ent = (t?.entitlements || []).find(e => e.remaining_uses > 0) || (t?.entitlements || [])[0];
+                    fnCode = ent ? ent.function_code : '';
+                }
+
+                const scanTokenEl = document.getElementById('scan-qr-token');
+                const fnInputEl = document.getElementById('scan-function-code');
+                if (scanTokenEl) scanTokenEl.value = token;
+                if (fnInputEl && fnCode) fnInputEl.value = fnCode;
+
+                const formatted = `✅ QR Token Generated\n\nTicket: ${ticketCode}\nSuggested function_code: ${fnCode || '-'}\nToken: ${token}\nExpires in: ${result.data.expires_in} seconds\n`;
+                showResponse('us003-response', formatted, 'success');
             } catch (error) {
                 showResponse('us003-response', `❌ Error: ${error.message}`, 'error');
             }
@@ -1035,17 +1166,187 @@
             }
         }
 
-        // Placeholder functions for incomplete stories
+        // US-002: Implemented actions
         async function testOperatorLogin() {
-            showResponse('us002-response', '⏳ US-002 implementation in progress. This feature will be available soon.', 'loading');
+            showLoading('us002-response');
+            const username = (document.getElementById('operator-username') || {}).value || 'alice';
+            const password = (document.getElementById('operator-password') || {}).value || 'secret123';
+            try {
+                const result = await apiCall(`${BASE_URL}/operators/login`, {
+                    method: 'POST',
+                    body: JSON.stringify({ username, password })
+                });
+                if (result.ok && result.data.operator_token) {
+                    const token = result.data.operator_token;
+                    const tokenEl = document.getElementById('operator-token');
+                    if (tokenEl) tokenEl.value = token;
+                    showResponse('us002-response', `✅ Operator login success\nUser: ${username}`, 'success');
+                } else {
+                    showResponse('us002-response', `❌ Login failed: ${result.data && (result.data.message || result.data.error)}`, 'error');
+                }
+            } catch (e) {
+                showResponse('us002-response', `❌ Login error: ${e.message}`, 'error');
+            }
         }
 
         async function testValidatorSession() {
-            showResponse('us002-response', '⏳ US-002 implementation in progress. This feature will be available soon.', 'loading');
+            showLoading('us002-response');
+            const deviceId = (document.getElementById('validator-device-id') || {}).value || 'gate-01';
+            const locationId = (document.getElementById('validator-location-id') || {}).value;
+            const operatorToken = (document.getElementById('operator-token') || {}).value;
+            if (!operatorToken) {
+                showResponse('us002-response', '❌ Please login operator first', 'error');
+                return;
+            }
+            try {
+                const headers = { 'Authorization': `Bearer ${operatorToken}` };
+                const body = { device_id: deviceId };
+                if (locationId) body.location_id = Number(locationId);
+                const result = await apiCall(`${BASE_URL}/validators/sessions`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(body)
+                });
+                if (result.ok && result.data.session_id) {
+                    const sessEl = document.getElementById('validator-session-id');
+                    if (sessEl) sessEl.value = result.data.session_id;
+                    showResponse('us002-response', `✅ Session created\nSession: ${result.data.session_id}\nExpires in: ${result.data.expires_in}s`, 'success');
+                } else {
+                    showResponse('us002-response', `❌ Session failed: ${result.data && (result.data.message || result.data.error)}`, 'error');
+                }
+            } catch (e) {
+                showResponse('us002-response', `❌ Session error: ${e.message}`, 'error');
+            }
         }
 
         async function testTicketScan() {
-            showResponse('us002-response', '⏳ US-002 implementation in progress. This feature will be available soon.', 'loading');
+            showLoading('us002-response');
+            const qrToken = (document.getElementById('scan-qr-token') || {}).value;
+            const functionCode = (document.getElementById('scan-function-code') || {}).value;
+            const sessionId = (document.getElementById('validator-session-id') || {}).value;
+            const locationId = (document.getElementById('validator-location-id') || {}).value;
+            if (!qrToken || !functionCode || !sessionId) {
+                showResponse('us002-response', '❌ Missing required fields: qr_token/function_code/session_id', 'error');
+                return;
+            }
+            try {
+                const body = { qr_token: qrToken, function_code: functionCode, session_id: sessionId };
+                if (locationId) body.location_id = Number(locationId);
+                const result = await apiCall(`${BASE_URL}/tickets/scan`, {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                if (result.ok) {
+                    const formatted = `✅ Scan success\nResult: ${result.data.result}\nStatus: ${result.data.ticket_status}\n\n${JSON.stringify(result.data, null, 2)}`;
+                    showResponse('us002-response', formatted, 'success');
+                } else {
+                    const err = result.data && (result.data.message || result.data.error) || 'Unknown';
+                    showResponse('us002-response', `❌ Scan failed (${result.status}): ${err}`, 'error');
+                }
+            } catch (e) {
+                showResponse('us002-response', `❌ Scan error: ${e.message}`, 'error');
+            }
+        }
+
+        // One-click simulation: Token -> Tickets -> QR -> Operator Login -> Session -> Scan
+        async function simulateRedemptionFlow() {
+            showLoading('us002-response');
+            let log = '🚀 Simulating end-to-end redemption...\n\n';
+            try {
+                // 1) Ensure user token
+                let userTokenEl = document.getElementById('user-token');
+                let userToken = userTokenEl && userTokenEl.value;
+                if (!userToken) {
+                    const demo = await apiCall(`${BASE_URL}/api/v1/auth/demo-token`, {
+                        method: 'POST',
+                        body: JSON.stringify({ user_id: 123, email: 'demo@example.com' })
+                    });
+                    if (!demo.ok) throw new Error('Failed to generate user token');
+                    userToken = demo.data.token;
+                    if (userTokenEl) userTokenEl.value = userToken;
+                }
+                const userHeaders = { 'Authorization': `Bearer ${userToken}` };
+                log += '✅ User token ready\n';
+
+                // 2) Fetch tickets; if none, fallback: create order + notify; if still none, try user_id=1
+                let ticketsRes = await apiCall(`${BASE_URL}/my/tickets`, { headers: userHeaders });
+                if (!ticketsRes.ok || !ticketsRes.data || (ticketsRes.data.tickets||[]).length === 0) {
+                    // Fallback path: switch to user_id=1 to match backend order creation default
+                    const demo1 = await apiCall(`${BASE_URL}/api/v1/auth/demo-token`, {
+                        method: 'POST',
+                        body: JSON.stringify({ user_id: 1, email: 'user1@example.com' })
+                    });
+                    if (demo1.ok) {
+                        const token1 = demo1.data.token;
+                        if (userTokenEl) userTokenEl.value = token1;
+                        userToken = token1;
+                    }
+                    const headers1 = { 'Authorization': `Bearer ${userToken}` };
+                    // Create order
+                    const orderData = { user_id: 1, items: [{ product_id: 101, qty: 1 }], channel_id: 1, out_trade_no: `sim-${Date.now()}` };
+                    const order = await apiCall(`${BASE_URL}/orders`, { method: 'POST', body: JSON.stringify(orderData) });
+                    if (!order.ok) throw new Error(`Order creation failed: ${order.data && (order.data.message || order.data.error)}`);
+                    // Notify payment
+                    const notifyBody = { order_id: order.data.order_id, payment_status: 'SUCCESS', paid_at: new Date().toISOString(), signature: 'demo' };
+                    const notify = await apiCall(`${BASE_URL}/payments/notify`, { method: 'POST', body: JSON.stringify(notifyBody) });
+                    if (!notify.ok) throw new Error(`Payment notify failed: ${notify.data && (notify.data.message || notify.data.error)}`);
+                    // Refetch tickets
+                    ticketsRes = await apiCall(`${BASE_URL}/my/tickets`, { headers: headers1 });
+                }
+                if (!ticketsRes.ok || !ticketsRes.data || (ticketsRes.data.tickets||[]).length === 0) {
+                    throw new Error('No tickets available after payment');
+                }
+                const tickets = ticketsRes.data.tickets;
+                const pickTicket = tickets.find(t => (t.entitlements||[]).some(e => e.remaining_uses > 0)) || tickets[0];
+                const fnCode = ((pickTicket.entitlements||[]).find(e => e.remaining_uses > 0) || (pickTicket.entitlements||[])[0]).function_code;
+                log += `✅ Using ticket ${pickTicket.ticket_code} with function_code=${fnCode}\n`;
+
+                // 3) Generate QR token
+                const qrRes = await apiCall(`${BASE_URL}/tickets/${pickTicket.ticket_code}/qr-token`, { method: 'POST', headers: { 'Authorization': `Bearer ${userToken}` } });
+                if (!qrRes.ok) throw new Error(`QR generation failed: ${qrRes.data && (qrRes.data.message || qrRes.data.error)}`);
+                const qrToken = qrRes.data.token;
+                const scanTokenEl = document.getElementById('scan-qr-token');
+                const fnInputEl = document.getElementById('scan-function-code');
+                if (scanTokenEl) scanTokenEl.value = qrToken;
+                if (fnInputEl) fnInputEl.value = fnCode;
+                log += '✅ QR token generated\n';
+
+                // 4) Operator login
+                const opLogin = await apiCall(`${BASE_URL}/operators/login`, { method: 'POST', body: JSON.stringify({ username: 'alice', password: 'secret123' }) });
+                if (!opLogin.ok) throw new Error(`Operator login failed: ${opLogin.data && (opLogin.data.message || opLogin.data.error)}`);
+                const opToken = opLogin.data.operator_token;
+                const opTokenEl = document.getElementById('operator-token');
+                if (opTokenEl) opTokenEl.value = opToken;
+                log += '✅ Operator logged in\n';
+
+                // 5) Create validator session
+                const sess = await apiCall(`${BASE_URL}/validators/sessions`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${opToken}` },
+                    body: JSON.stringify({ device_id: 'gate-01', location_id: 52 })
+                });
+                if (!sess.ok) throw new Error(`Session creation failed: ${sess.data && (sess.data.message || sess.data.error)}`);
+                const sessionId = sess.data.session_id;
+                const sessEl = document.getElementById('validator-session-id');
+                if (sessEl) sessEl.value = sessionId;
+                log += `✅ Session created: ${sessionId}\n`;
+
+                // 6) Scan & redeem
+                const scan = await apiCall(`${BASE_URL}/tickets/scan`, {
+                    method: 'POST',
+                    body: JSON.stringify({ qr_token: qrToken, function_code: fnCode, session_id: sessionId, location_id: 52 })
+                });
+                if (!scan.ok) {
+                    const err = scan.data && (scan.data.message || scan.data.error) || 'Unknown';
+                    throw new Error(`Scan failed: ${err}`);
+                }
+                log += `🎉 Scan success! Status: ${scan.data.ticket_status}\n`;
+                log += `${JSON.stringify(scan.data, null, 2)}\n`;
+                showResponse('us002-response', log, 'success');
+            } catch (e) {
+                log += `❌ Simulation error: ${e.message}`;
+                showResponse('us002-response', log, 'error');
+            }
         }
 
         // Runbook display
@@ -1136,10 +1437,13 @@
                 'btn-my-refunds': testMyRefunds,
                 'btn-generate-token': generateUserToken,
                 'btn-copy-token': copyUserToken,
-                // US-002 placeholder buttons
+                // selectors are handled dynamically after tickets loaded
+                // US-002 implemented buttons
                 'btn-operator-login': testOperatorLogin,
                 'btn-validator-session': testValidatorSession,
-                'btn-ticket-scan': testTicketScan
+                'btn-ticket-scan': testTicketScan,
+                'btn-runbook-us002': () => showRunbook('US-002'),
+                'btn-simulate-redemption': simulateRedemptionFlow
             };
 
             // Add event listeners

@@ -46,7 +46,7 @@ router.post('/:code/qr-token', authenticate, async (req, res) => {
 
     // 4. Generate JWT payload
     const now = Math.floor(Date.now() / 1000);
-    const exp = now + 60; // 60 seconds TTL
+    const exp = now + Number(env.QR_TOKEN_TTL_SECONDS); // configurable TTL in seconds
     const jti = crypto.randomUUID(); // unique nonce
     const codeHash = crypto.createHash('sha256').update(code).digest('hex').substring(0, 16);
 
@@ -67,7 +67,7 @@ router.post('/:code/qr-token', authenticate, async (req, res) => {
 
     res.json({
       token,
-      expires_in: 60
+      expires_in: Number(env.QR_TOKEN_TTL_SECONDS)
     });
 
   } catch (error) {
