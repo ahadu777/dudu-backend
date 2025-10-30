@@ -1,0 +1,352 @@
+{
+  "info": {
+    "name": "Ticket Scan Tests",
+    "description": "Test QR ticket scanning and redemption endpoint",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "operator_token",
+      "value": ""
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "user_token",
+      "value": ""
+    },
+    {
+      "key": "qr_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup 1 - Get Operator Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Operator login successful', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('operator_token', response.operator_token);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/operators/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["operators", "login"]
+        }
+      }
+    },
+    {
+      "name": "Setup 2 - Create Validator Session",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Session created successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('session_id', response.session_id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{operator_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"device_id\": \"gate-01\",\n  \"location_id\": 52\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/validators/sessions",
+          "host": ["{{baseUrl}}"],
+          "path": ["validators", "sessions"]
+        }
+      }
+    },
+    {
+      "name": "Setup 3 - Get User Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('User token generated', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('user_token', response.token);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": 123,\n  \"email\": \"test@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/demo-token",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "demo-token"]
+        }
+      }
+    },
+    {
+      "name": "Setup 4 - Generate QR Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('QR token generated', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('qr_token', response.token);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tickets/TKT-123-001/qr-token",
+          "host": ["{{baseUrl}}"],
+          "path": ["tickets", "TKT-123-001", "qr-token"]
+        }
+      }
+    },
+    {
+      "name": "Successful Scan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Scan successful', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('result');",
+              "    pm.expect(response.result).to.eql('success');",
+              "    pm.expect(response).to.have.property('ticket_status');",
+              "    pm.expect(response).to.have.property('entitlements');",
+              "    pm.expect(response.entitlements).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"bus\",\n  \"session_id\": \"{{session_id}}\",\n  \"location_id\": 52\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/tickets/scan",
+          "host": ["{{baseUrl}}"],
+          "path": ["tickets", "scan"]
+        }
+      }
+    },
+    {
+      "name": "Replay Attack Prevention",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "",
+              "pm.test('Replay error returned', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('error');",
+              "    pm.expect(response.error).to.eql('REPLAY');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"bus\",\n  \"session_id\": \"{{session_id}}\",\n  \"location_id\": 52\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/tickets/scan",
+          "host": ["{{baseUrl}}"],
+          "path": ["tickets", "scan"]
+        }
+      }
+    },
+    {
+      "name": "Wrong Function Code",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Generate fresh QR token for this test",
+              "const userToken = pm.collectionVariables.get('user_token');",
+              "",
+              "pm.sendRequest({",
+              "    url: pm.collectionVariables.get('baseUrl') + '/tickets/TKT-123-001/qr-token',",
+              "    method: 'POST',",
+              "    header: {",
+              "        'Authorization': 'Bearer ' + userToken",
+              "    }",
+              "}, function (err, response) {",
+              "    if (!err && response.code === 200) {",
+              "        const data = response.json();",
+              "        pm.collectionVariables.set('fresh_qr_token', data.token);",
+              "    }",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "",
+              "pm.test('Wrong function error returned', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('error');",
+              "    pm.expect(response.error).to.eql('WRONG_FUNCTION');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_token\": \"{{fresh_qr_token}}\",\n  \"function_code\": \"airplane\",\n  \"session_id\": \"{{session_id}}\",\n  \"location_id\": 52\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/tickets/scan",
+          "host": ["{{baseUrl}}"],
+          "path": ["tickets", "scan"]
+        }
+      }
+    },
+    {
+      "name": "Invalid Session",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 401', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Invalid session error returned', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('error');",
+              "    pm.expect(response.error).to.eql('INVALID_SESSION');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_id\": \"invalid-session\",\n  \"location_id\": 52\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/tickets/scan",
+          "host": ["{{baseUrl}}"],
+          "path": ["tickets", "scan"]
+        }
+      }
+    }
+  ]
+}

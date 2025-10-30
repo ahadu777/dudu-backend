@@ -18,43 +18,113 @@ curl -s -X POST http://localhost:8080/operators/login \
   -d '{
     "username": "alice",
     "password": "secret123"
-  }' | jq '.'
+  }'
 ```
 
-**Expected**: Returns `operator_token` with proper permissions
+**Expected Result:**
+```json
+{"operator_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+```
 
 ### 2. Create Validator Session
 Bind operator to specific gate device and location:
 ```bash
-# Replace <OPERATOR_TOKEN> with token from step 1
+# Replace OPERATOR_TOKEN with token from step 1
+OPERATOR_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
 curl -s -X POST http://localhost:8080/validators/sessions \
-  -H "Authorization: Bearer <OPERATOR_TOKEN>" \
+  -H "Authorization: Bearer $OPERATOR_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
     "device_id": "gate-01",
     "location_id": 52
-  }' | jq '.'
+  }'
 ```
 
-**Expected**: Returns `session_id` for this gate session
+**Expected Result:**
+```json
+{"session_id":"sess-abc123...","expires_in":28800}
+```
 
-### 3. Scan Valid Ticket
+### 3. Generate User QR Token (for testing)
+Generate a QR token for an existing ticket:
+```bash
+# Get user token
+USER_TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/demo-token \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id": 123, "email": "test@example.com"}' | \
+  grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+# Generate QR token for test ticket TKT-123-001
+curl -s -X POST http://localhost:8080/tickets/TKT-123-001/qr-token \
+  -H "Authorization: Bearer $USER_TOKEN"
+```
+
+**Expected Result:**
+```json
+{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","expires_in":60}
+```
+
+### 4. Scan Valid Ticket
 Scan a QR code and redeem function:
 ```bash
-# Replace <QR_TOKEN> and <SESSION_ID> with actual values
+# Replace QR_TOKEN and SESSION_ID with actual values from steps above
+QR_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+SESSION_ID="sess-abc123..."
+
 curl -s -X POST http://localhost:8080/tickets/scan \
   -H 'Content-Type: application/json' \
   -d '{
-    "qr_token": "<QR_TOKEN>",
-    "function_code": "ferry",
-    "session_id": "<SESSION_ID>",
+    "qr_token": "'$QR_TOKEN'",
+    "function_code": "bus",
+    "session_id": "'$SESSION_ID'",
     "location_id": 52
   }' | jq '.'
 ```
 
-**Expected**:
-- Success: `{"result": "success", "remaining_uses": N}`
-- Invalid: `{"result": "error", "error_code": "..."}`
+**Expected Result:**
+```json
+{
+  "result": "success",
+  "ticket_status": "partially_redeemed",
+  "entitlements": [
+    {"function_code": "bus", "label": "Bus Ride", "remaining_uses": 1},
+    {"function_code": "ferry", "label": "Ferry Ride", "remaining_uses": 1},
+    {"function_code": "metro", "label": "Metro Entry", "remaining_uses": 1}
+  ],
+  "ts": "2025-10-30T05:53:42.292Z"
+}
+```
+
+### 5. Test Error Scenarios
+
+**Replay Attack (using same QR token twice):**
+```bash
+# Use same QR_TOKEN and SESSION_ID again
+curl -s -X POST http://localhost:8080/tickets/scan \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "qr_token": "'$QR_TOKEN'",
+    "function_code": "bus",
+    "session_id": "'$SESSION_ID'"
+  }'
+```
+
+**Expected:** `{"error":"REPLAY","message":"QR code already used"}`
+
+**Wrong Function Code:**
+```bash
+# Generate fresh QR token and test invalid function
+curl -s -X POST http://localhost:8080/tickets/scan \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "qr_token": "'$NEW_QR_TOKEN'",
+    "function_code": "airplane",
+    "session_id": "'$SESSION_ID'"
+  }'
+```
+
+**Expected:** `{"error":"WRONG_FUNCTION","message":"Function airplane not available on this ticket"}`
 
 ### 4. Handle Different Function Codes
 Test scanning for different transport modes:

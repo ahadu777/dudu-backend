@@ -1,0 +1,2025 @@
+{
+  "collection": {
+    "item": [
+      {
+        "id": "9466efa8-1a62-4b52-af89-916adf36a6b5",
+        "name": "Setup - Get Operator Token",
+        "request": {
+          "url": {
+            "path": [
+              "operators",
+              "login"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "99d0859e-6266-4430-90e9-79603cad55ce",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Operator login successful', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response).to.have.property('operator_token');",
+                "    pm.collectionVariables.set('operator_token', response.operator_token);",
+                "});"
+              ],
+              "_lastExecutionId": "c7de9946-a22e-434f-91e9-811a9e45fd8e"
+            }
+          }
+        ]
+      },
+      {
+        "id": "efeaf855-3b36-4f7c-bfc4-8312a030e85a",
+        "name": "Successful Session Creation",
+        "request": {
+          "url": {
+            "path": [
+              "validators",
+              "sessions"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer {{operator_token}}"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"device_id\": \"gate-01\",\n  \"location_id\": 52\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "58f582e5-1cfc-45ae-9c5b-a7fee48cbc40",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status is 200', function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "pm.test('Returns session details', function () {",
+                "    const response = pm.response.json();",
+                "    pm.expect(response).to.have.property('session_id');",
+                "    pm.expect(response).to.have.property('expires_in');",
+                "    pm.expect(response.session_id).to.be.a('string');",
+                "    pm.expect(response.expires_in).to.equal(28800);",
+                "});"
+              ],
+              "_lastExecutionId": "cfaef5ee-3ab6-456c-8817-a642dfd51926"
+            }
+          }
+        ]
+      },
+      {
+        "id": "11338a58-1bd4-4edc-9bb9-b1ee74dbe673",
+        "name": "Missing Device ID",
+        "request": {
+          "url": {
+            "path": [
+              "validators",
+              "sessions"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer {{operator_token}}"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"location_id\": 52\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "f6147eee-12ab-48f9-96a1-f93b995d119c",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status is 400', function () {",
+                "    pm.response.to.have.status(400);",
+                "});",
+                "",
+                "pm.test('Returns validation error', function () {",
+                "    const response = pm.response.json();",
+                "    pm.expect(response).to.have.property('error');",
+                "    pm.expect(response.error).to.eql('INVALID_REQUEST');",
+                "});"
+              ],
+              "_lastExecutionId": "4544aa07-e7ef-4445-bffa-1a35f8b6abff"
+            }
+          }
+        ]
+      },
+      {
+        "id": "9eb7cd3c-c1f4-450c-b5ff-65cbe68df107",
+        "name": "Invalid Operator Token",
+        "request": {
+          "url": {
+            "path": [
+              "validators",
+              "sessions"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer invalid-token"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"device_id\": \"gate-01\"\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "3ef46e9d-2108-4975-8baa-1beaedbc8c08",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status is 401', function () {",
+                "    pm.response.to.have.status(401);",
+                "});",
+                "",
+                "pm.test('Returns authentication error', function () {",
+                "    const response = pm.response.json();",
+                "    pm.expect(response).to.have.property('error');",
+                "});"
+              ],
+              "_lastExecutionId": "20679eb3-d115-466c-9073-3c4896f79d01"
+            }
+          }
+        ]
+      }
+    ],
+    "event": [],
+    "variable": [
+      {
+        "type": "any",
+        "value": "http://localhost:8080",
+        "key": "baseUrl"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "operator_token"
+      }
+    ],
+    "info": {
+      "_postman_id": "27511cf7-36fe-452d-9d5b-802e43b3b0a0",
+      "name": "Validator Sessions Tests",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "Test validator session creation endpoint",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "id": "4fa5eea6-b516-48c5-b564-fa3f007afa6e",
+    "values": []
+  },
+  "globals": {
+    "id": "30e65ef9-8512-4b8b-b399-64d150790f8e",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 7,
+        "pending": 0,
+        "failed": 1
+      },
+      "testScripts": {
+        "total": 4,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 36.75,
+      "responseMin": 3,
+      "responseMax": 135,
+      "responseSd": 56.7290710306453,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1761804473364,
+      "completed": 1761804473618
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 4,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "4db7dca4-42bb-4600-bf6b-0768fe5df7fe",
+          "httpRequestId": "45bb5de3-cccb-4410-981c-d76db74fbaaa"
+        },
+        "item": {
+          "id": "9466efa8-1a62-4b52-af89-916adf36a6b5",
+          "name": "Setup - Get Operator Token",
+          "request": {
+            "url": {
+              "path": [
+                "operators",
+                "login"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "99d0859e-6266-4430-90e9-79603cad55ce",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Operator login successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('operator_token');",
+                  "    pm.collectionVariables.set('operator_token', response.operator_token);",
+                  "});"
+                ],
+                "_lastExecutionId": "c7de9946-a22e-434f-91e9-811a9e45fd8e"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "operators",
+              "login"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "9764060b-6853-44ec-b748-59cca2322145",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "52",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+          }
+        },
+        "response": {
+          "id": "83d42f9a-dabb-4dbc-8ae6-9b85b7bc246e",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data: https:;connect-src 'self';font-src 'self';object-src 'none';media-src 'self';frame-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'self';script-src-attr 'none';upgrade-insecure-requests"
+            },
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Cross-Origin-Resource-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Origin-Agent-Cluster",
+              "value": "?1"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-DNS-Prefetch-Control",
+              "value": "off"
+            },
+            {
+              "key": "X-Download-Options",
+              "value": "noopen"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-Permitted-Cross-Domain-Policies",
+              "value": "none"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "236"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"ec-khRl1dl539F3rHQxoialRdglCIs\""
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 30 Oct 2025 06:07:53 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              95,
+              116,
+              111,
+              107,
+              101,
+              110,
+              34,
+              58,
+              34,
+              101,
+              121,
+              74,
+              104,
+              98,
+              71,
+              99,
+              105,
+              79,
+              105,
+              74,
+              73,
+              85,
+              122,
+              73,
+              49,
+              78,
+              105,
+              73,
+              115,
+              73,
+              110,
+              82,
+              53,
+              99,
+              67,
+              73,
+              54,
+              73,
+              107,
+              112,
+              88,
+              86,
+              67,
+              74,
+              57,
+              46,
+              101,
+              121,
+              74,
+              122,
+              100,
+              87,
+              73,
+              105,
+              79,
+              106,
+              69,
+              115,
+              73,
+              110,
+              86,
+              122,
+              90,
+              88,
+              74,
+              117,
+              89,
+              87,
+              49,
+              108,
+              73,
+              106,
+              111,
+              105,
+              89,
+              87,
+              120,
+              112,
+              89,
+              50,
+              85,
+              105,
+              76,
+              67,
+              74,
+              121,
+              98,
+              50,
+              120,
+              108,
+              99,
+              121,
+              73,
+              54,
+              87,
+              121,
+              74,
+              110,
+              89,
+              88,
+              82,
+              108,
+              88,
+              50,
+              57,
+              119,
+              90,
+              88,
+              74,
+              104,
+              100,
+              71,
+              57,
+              121,
+              73,
+              105,
+              119,
+              105,
+              100,
+              109,
+              70,
+              115,
+              97,
+              87,
+              82,
+              104,
+              100,
+              71,
+              57,
+              121,
+              73,
+              108,
+              48,
+              115,
+              73,
+              109,
+              108,
+              104,
+              100,
+              67,
+              73,
+              54,
+              77,
+              84,
+              99,
+              50,
+              77,
+              84,
+              103,
+              119,
+              78,
+              68,
+              81,
+              51,
+              77,
+              121,
+              119,
+              105,
+              90,
+              88,
+              104,
+              119,
+              73,
+              106,
+              111,
+              120,
+              78,
+              122,
+              89,
+              120,
+              79,
+              68,
+              107,
+              119,
+              79,
+              68,
+              99,
+              122,
+              102,
+              81,
+              46,
+              81,
+              73,
+              116,
+              55,
+              81,
+              51,
+              100,
+              81,
+              121,
+              106,
+              105,
+              70,
+              117,
+              113,
+              114,
+              111,
+              103,
+              74,
+              121,
+              90,
+              98,
+              52,
+              48,
+              55,
+              100,
+              45,
+              49,
+              108,
+              85,
+              49,
+              50,
+              65,
+              95,
+              55,
+              110,
+              81,
+              108,
+              105,
+              107,
+              51,
+              50,
+              48,
+              48,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 135,
+          "responseSize": 236
+        },
+        "id": "9466efa8-1a62-4b52-af89-916adf36a6b5",
+        "assertions": [
+          {
+            "assertion": "Operator login successful",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "cfdd9041-02ab-4a9b-9bbb-880db0d0c38c",
+          "length": 4,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "1b1d507b-459c-42db-bdbe-299de4f0aea7"
+        },
+        "item": {
+          "id": "efeaf855-3b36-4f7c-bfc4-8312a030e85a",
+          "name": "Successful Session Creation",
+          "request": {
+            "url": {
+              "path": [
+                "validators",
+                "sessions"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operator_token}}"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"gate-01\",\n  \"location_id\": 52\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "58f582e5-1cfc-45ae-9c5b-a7fee48cbc40",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns session details', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('session_id');",
+                  "    pm.expect(response).to.have.property('expires_in');",
+                  "    pm.expect(response.session_id).to.be.a('string');",
+                  "    pm.expect(response.expires_in).to.equal(28800);",
+                  "});"
+                ],
+                "_lastExecutionId": "cfaef5ee-3ab6-456c-8817-a642dfd51926"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "validators",
+              "sessions"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYWxpY2UiLCJyb2xlcyI6WyJnYXRlX29wZXJhdG9yIiwidmFsaWRhdG9yIl0sImlhdCI6MTc2MTgwNDQ3MywiZXhwIjoxNzYxODkwODczfQ.QIt7Q3dQyjiFuqrogJyZb407d-1lU12A_7nQlik3200"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "140a877b-18a7-44a7-9a54-dd4c4df543ea",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "49",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"device_id\": \"gate-01\",\n  \"location_id\": 52\n}"
+          }
+        },
+        "response": {
+          "id": "bf3f8e7d-9906-425d-b0ef-cad0fe8414c6",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data: https:;connect-src 'self';font-src 'self';object-src 'none';media-src 'self';frame-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'self';script-src-attr 'none';upgrade-insecure-requests"
+            },
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Cross-Origin-Resource-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Origin-Agent-Cluster",
+              "value": "?1"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-DNS-Prefetch-Control",
+              "value": "off"
+            },
+            {
+              "key": "X-Download-Options",
+              "value": "noopen"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-Permitted-Cross-Domain-Policies",
+              "value": "none"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "77"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"4d-7AazzydeOM9xHoIO7GATA1hvg6Y\""
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 30 Oct 2025 06:07:53 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              115,
+              101,
+              115,
+              115,
+              105,
+              111,
+              110,
+              95,
+              105,
+              100,
+              34,
+              58,
+              34,
+              115,
+              101,
+              115,
+              115,
+              45,
+              48,
+              55,
+              53,
+              50,
+              101,
+              52,
+              48,
+              52,
+              45,
+              57,
+              49,
+              98,
+              100,
+              45,
+              52,
+              57,
+              99,
+              49,
+              45,
+              56,
+              55,
+              99,
+              48,
+              45,
+              97,
+              49,
+              98,
+              57,
+              50,
+              99,
+              101,
+              53,
+              53,
+              101,
+              48,
+              56,
+              34,
+              44,
+              34,
+              101,
+              120,
+              112,
+              105,
+              114,
+              101,
+              115,
+              95,
+              105,
+              110,
+              34,
+              58,
+              50,
+              56,
+              56,
+              48,
+              48,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 5,
+          "responseSize": 77
+        },
+        "id": "efeaf855-3b36-4f7c-bfc4-8312a030e85a",
+        "assertions": [
+          {
+            "assertion": "Status is 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Returns session details",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "20c8bbb1-9685-4fd6-859a-dd766df862a7",
+          "length": 4,
+          "cycles": 1,
+          "position": 2,
+          "iteration": 0,
+          "httpRequestId": "edfec02c-e536-43b5-9216-76e2d93d4922"
+        },
+        "item": {
+          "id": "11338a58-1bd4-4edc-9bb9-b1ee74dbe673",
+          "name": "Missing Device ID",
+          "request": {
+            "url": {
+              "path": [
+                "validators",
+                "sessions"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operator_token}}"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location_id\": 52\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "f6147eee-12ab-48f9-96a1-f93b995d119c",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Returns validation error', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "    pm.expect(response.error).to.eql('INVALID_REQUEST');",
+                  "});"
+                ],
+                "_lastExecutionId": "4544aa07-e7ef-4445-bffa-1a35f8b6abff"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "validators",
+              "sessions"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYWxpY2UiLCJyb2xlcyI6WyJnYXRlX29wZXJhdG9yIiwidmFsaWRhdG9yIl0sImlhdCI6MTc2MTgwNDQ3MywiZXhwIjoxNzYxODkwODczfQ.QIt7Q3dQyjiFuqrogJyZb407d-1lU12A_7nQlik3200"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "2bda8687-eb45-4aff-9199-fcdafe773210",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "23",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"location_id\": 52\n}"
+          }
+        },
+        "response": {
+          "id": "dcbe99c8-d311-4b08-9760-44e714be094f",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data: https:;connect-src 'self';font-src 'self';object-src 'none';media-src 'self';frame-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'self';script-src-attr 'none';upgrade-insecure-requests"
+            },
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Cross-Origin-Resource-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Origin-Agent-Cluster",
+              "value": "?1"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-DNS-Prefetch-Control",
+              "value": "off"
+            },
+            {
+              "key": "X-Download-Options",
+              "value": "noopen"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-Permitted-Cross-Domain-Policies",
+              "value": "none"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "61"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"3d-865O7SZ7Bmk8C0WzrdSKgdzdKEQ\""
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 30 Oct 2025 06:07:53 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              34,
+              73,
+              78,
+              86,
+              65,
+              76,
+              73,
+              68,
+              95,
+              82,
+              69,
+              81,
+              85,
+              69,
+              83,
+              84,
+              34,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              100,
+              101,
+              118,
+              105,
+              99,
+              101,
+              95,
+              105,
+              100,
+              32,
+              105,
+              115,
+              32,
+              114,
+              101,
+              113,
+              117,
+              105,
+              114,
+              101,
+              100,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 4,
+          "responseSize": 61
+        },
+        "id": "11338a58-1bd4-4edc-9bb9-b1ee74dbe673",
+        "assertions": [
+          {
+            "assertion": "Status is 400",
+            "skipped": false
+          },
+          {
+            "assertion": "Returns validation error",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "fa1c13c9-c1f0-43f7-b520-bce956524e67",
+          "length": 4,
+          "cycles": 1,
+          "position": 3,
+          "iteration": 0,
+          "httpRequestId": "86d2557a-1f5f-4f7a-a650-0812f19dd69b"
+        },
+        "item": {
+          "id": "9eb7cd3c-c1f4-450c-b5ff-65cbe68df107",
+          "name": "Invalid Operator Token",
+          "request": {
+            "url": {
+              "path": [
+                "validators",
+                "sessions"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid-token"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"gate-01\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "3ef46e9d-2108-4975-8baa-1beaedbc8c08",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Returns authentication error', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "});"
+                ],
+                "_lastExecutionId": "20679eb3-d115-466c-9073-3c4896f79d01"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "validators",
+              "sessions"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer invalid-token"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "0aa56f50-426b-4ba7-8de8-a02c06b4ca17",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "28",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"device_id\": \"gate-01\"\n}"
+          }
+        },
+        "response": {
+          "id": "f4305dd1-1769-4d23-a58f-486be5f837cb",
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data: https:;connect-src 'self';font-src 'self';object-src 'none';media-src 'self';frame-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'self';script-src-attr 'none';upgrade-insecure-requests"
+            },
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Cross-Origin-Resource-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Origin-Agent-Cluster",
+              "value": "?1"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-DNS-Prefetch-Control",
+              "value": "off"
+            },
+            {
+              "key": "X-Download-Options",
+              "value": "noopen"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-Permitted-Cross-Domain-Policies",
+              "value": "none"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "52"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"34-DOFkvVqkDbWeGyxLQ+aD0iv8FlI\""
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 30 Oct 2025 06:07:53 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              58,
+              102,
+              97,
+              108,
+              115,
+              101,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              73,
+              110,
+              118,
+              97,
+              108,
+              105,
+              100,
+              32,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              32,
+              116,
+              111,
+              107,
+              101,
+              110,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 3,
+          "responseSize": 52
+        },
+        "id": "9eb7cd3c-c1f4-450c-b5ff-65cbe68df107",
+        "assertions": [
+          {
+            "assertion": "Status is 401",
+            "skipped": false
+          },
+          {
+            "assertion": "Returns authentication error",
+            "skipped": false,
+            "error": {
+              "name": "AssertionError",
+              "index": 1,
+              "test": "Returns authentication error",
+              "message": "expected { success: false, …(1) } to have property 'error'",
+              "stack": "AssertionError: expected { success: false, …(1) } to have property 'error'\n   at Object.eval sandbox-script.js:2:4)"
+            }
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 426
+    },
+    "failures": [
+      {
+        "error": {
+          "name": "AssertionError",
+          "index": 1,
+          "test": "Returns authentication error",
+          "message": "expected { success: false, …(1) } to have property 'error'",
+          "stack": "AssertionError: expected { success: false, …(1) } to have property 'error'\n   at Object.eval sandbox-script.js:2:4)",
+          "checksum": "34c5258eba3cf09e9b15478b1834e175",
+          "id": "4b654119-2757-4ae6-bac4-355eb6079fef",
+          "timestamp": 1761804473611,
+          "stacktrace": [
+            {
+              "fileName": "sandbox-script.js",
+              "lineNumber": 2,
+              "functionName": "Object.eval",
+              "typeName": "Object",
+              "methodName": "eval",
+              "columnNumber": 4,
+              "native": false
+            }
+          ]
+        },
+        "at": "assertion:1 in test-script",
+        "source": {
+          "id": "9eb7cd3c-c1f4-450c-b5ff-65cbe68df107",
+          "name": "Invalid Operator Token",
+          "request": {
+            "url": {
+              "path": [
+                "validators",
+                "sessions"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid-token"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"gate-01\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "3ef46e9d-2108-4975-8baa-1beaedbc8c08",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Returns authentication error', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "});"
+                ],
+                "_lastExecutionId": "20679eb3-d115-466c-9073-3c4896f79d01"
+              }
+            }
+          ]
+        },
+        "parent": {
+          "item": [
+            {
+              "id": "9466efa8-1a62-4b52-af89-916adf36a6b5",
+              "name": "Setup - Get Operator Token",
+              "request": {
+                "url": {
+                  "path": [
+                    "operators",
+                    "login"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "99d0859e-6266-4430-90e9-79603cad55ce",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Operator login successful', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response).to.have.property('operator_token');",
+                      "    pm.collectionVariables.set('operator_token', response.operator_token);",
+                      "});"
+                    ],
+                    "_lastExecutionId": "c7de9946-a22e-434f-91e9-811a9e45fd8e"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "efeaf855-3b36-4f7c-bfc4-8312a030e85a",
+              "name": "Successful Session Creation",
+              "request": {
+                "url": {
+                  "path": [
+                    "validators",
+                    "sessions"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{operator_token}}"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_id\": \"gate-01\",\n  \"location_id\": 52\n}"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "58f582e5-1cfc-45ae-9c5b-a7fee48cbc40",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Returns session details', function () {",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response).to.have.property('session_id');",
+                      "    pm.expect(response).to.have.property('expires_in');",
+                      "    pm.expect(response.session_id).to.be.a('string');",
+                      "    pm.expect(response.expires_in).to.equal(28800);",
+                      "});"
+                    ],
+                    "_lastExecutionId": "cfaef5ee-3ab6-456c-8817-a642dfd51926"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "11338a58-1bd4-4edc-9bb9-b1ee74dbe673",
+              "name": "Missing Device ID",
+              "request": {
+                "url": {
+                  "path": [
+                    "validators",
+                    "sessions"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{operator_token}}"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"location_id\": 52\n}"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "f6147eee-12ab-48f9-96a1-f93b995d119c",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 400', function () {",
+                      "    pm.response.to.have.status(400);",
+                      "});",
+                      "",
+                      "pm.test('Returns validation error', function () {",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response).to.have.property('error');",
+                      "    pm.expect(response.error).to.eql('INVALID_REQUEST');",
+                      "});"
+                    ],
+                    "_lastExecutionId": "4544aa07-e7ef-4445-bffa-1a35f8b6abff"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "9eb7cd3c-c1f4-450c-b5ff-65cbe68df107",
+              "name": "Invalid Operator Token",
+              "request": {
+                "url": {
+                  "path": [
+                    "validators",
+                    "sessions"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer invalid-token"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_id\": \"gate-01\"\n}"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "3ef46e9d-2108-4975-8baa-1beaedbc8c08",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 401', function () {",
+                      "    pm.response.to.have.status(401);",
+                      "});",
+                      "",
+                      "pm.test('Returns authentication error', function () {",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response).to.have.property('error');",
+                      "});"
+                    ],
+                    "_lastExecutionId": "20679eb3-d115-466c-9073-3c4896f79d01"
+                  }
+                }
+              ]
+            }
+          ],
+          "event": [],
+          "variable": [
+            {
+              "type": "any",
+              "value": "http://localhost:8080",
+              "key": "baseUrl"
+            },
+            {
+              "type": "any",
+              "value": "",
+              "key": "operator_token"
+            }
+          ],
+          "info": {
+            "_postman_id": "27511cf7-36fe-452d-9d5b-802e43b3b0a0",
+            "name": "Validator Sessions Tests",
+            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+            "description": {
+              "content": "Test validator session creation endpoint",
+              "type": "text/plain"
+            }
+          }
+        },
+        "cursor": {
+          "ref": "fa1c13c9-c1f0-43f7-b520-bce956524e67",
+          "length": 4,
+          "cycles": 1,
+          "position": 3,
+          "iteration": 0,
+          "httpRequestId": "86d2557a-1f5f-4f7a-a650-0812f19dd69b",
+          "scriptId": "3ef46e9d-2108-4975-8baa-1beaedbc8c08",
+          "execution": "20679eb3-d115-466c-9073-3c4896f79d01"
+        }
+      }
+    ],
+    "error": null
+  }
+}

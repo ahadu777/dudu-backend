@@ -1,0 +1,185 @@
+{
+  "info": {
+    "name": "Validator Sessions Tests",
+    "description": "Test validator session creation endpoint",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "operator_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup - Get Operator Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Operator login successful', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('operator_token');",
+              "    pm.collectionVariables.set('operator_token', response.operator_token);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/operators/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["operators", "login"]
+        }
+      }
+    },
+    {
+      "name": "Successful Session Creation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns session details', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('session_id');",
+              "    pm.expect(response).to.have.property('expires_in');",
+              "    pm.expect(response.session_id).to.be.a('string');",
+              "    pm.expect(response.expires_in).to.equal(28800);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{operator_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"device_id\": \"gate-01\",\n  \"location_id\": 52\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/validators/sessions",
+          "host": ["{{baseUrl}}"],
+          "path": ["validators", "sessions"]
+        }
+      }
+    },
+    {
+      "name": "Missing Device ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Returns validation error', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('error');",
+              "    pm.expect(response.error).to.eql('INVALID_REQUEST');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{operator_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_id\": 52\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/validators/sessions",
+          "host": ["{{baseUrl}}"],
+          "path": ["validators", "sessions"]
+        }
+      }
+    },
+    {
+      "name": "Invalid Operator Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 401', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Returns authentication error', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('error');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer invalid-token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"device_id\": \"gate-01\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/validators/sessions",
+          "host": ["{{baseUrl}}"],
+          "path": ["validators", "sessions"]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,1337 @@
+{
+  "collection": {
+    "item": [
+      {
+        "id": "0441abc8-14da-48c1-b572-0cd52bfac9d6",
+        "name": "Successful Login",
+        "request": {
+          "url": {
+            "path": [
+              "operators",
+              "login"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "7baa8308-ba0d-4c2b-a965-dc6e3fdeb45c",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status is 200', function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "pm.test('Returns operator token', function () {",
+                "    const response = pm.response.json();",
+                "    pm.expect(response).to.have.property('operator_token');",
+                "    pm.expect(response.operator_token).to.be.a('string');",
+                "    pm.expect(response.operator_token.length).to.be.greaterThan(0);",
+                "});"
+              ],
+              "_lastExecutionId": "5c3f1d9e-b21e-4386-a3c0-e6a56f701fca"
+            }
+          }
+        ]
+      },
+      {
+        "id": "9fb471cf-df44-45d0-8774-378e893b673f",
+        "name": "Invalid Credentials",
+        "request": {
+          "url": {
+            "path": [
+              "operators",
+              "login"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"wrongpassword\"\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "611d6423-1411-4e7a-ac76-94d40a34109b",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status is 401', function () {",
+                "    pm.response.to.have.status(401);",
+                "});",
+                "",
+                "pm.test('Returns error message', function () {",
+                "    const response = pm.response.json();",
+                "    pm.expect(response).to.have.property('error');",
+                "    pm.expect(response.error).to.eql('INVALID_CREDENTIALS');",
+                "});"
+              ],
+              "_lastExecutionId": "c068d22c-ae7f-4175-a4ac-5faa0c6accbf"
+            }
+          }
+        ]
+      },
+      {
+        "id": "2b9735ea-fd55-4fd5-8d10-478bdb3020ff",
+        "name": "Missing Credentials",
+        "request": {
+          "url": {
+            "path": [
+              "operators",
+              "login"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"alice\"\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "42c012d6-82e7-4019-85eb-ddb0d75c57ac",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status is 400', function () {",
+                "    pm.response.to.have.status(400);",
+                "});",
+                "",
+                "pm.test('Returns validation error', function () {",
+                "    const response = pm.response.json();",
+                "    pm.expect(response).to.have.property('error');",
+                "    pm.expect(response.error).to.eql('INVALID_REQUEST');",
+                "});"
+              ],
+              "_lastExecutionId": "2a8bdcde-1c0d-4d05-8a02-c532a7636d4a"
+            }
+          }
+        ]
+      }
+    ],
+    "event": [],
+    "variable": [
+      {
+        "type": "any",
+        "value": "http://localhost:8080",
+        "key": "baseUrl"
+      }
+    ],
+    "info": {
+      "_postman_id": "468f7f5c-3a45-4804-bb1e-f440e01d9cc0",
+      "name": "Operators Login Tests",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "Test operator authentication endpoint",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "id": "e001fe4c-6eb8-4bfb-83f7-0223e1fc4898",
+    "values": []
+  },
+  "globals": {
+    "id": "fc3be731-0003-4ed2-b70c-36f3a64ef919",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 6,
+        "pending": 0,
+        "failed": 0
+      },
+      "testScripts": {
+        "total": 3,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 76.66666666666667,
+      "responseMin": 25,
+      "responseMax": 107,
+      "responseSd": 36.718145680606234,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1761804466782,
+      "completed": 1761804467125
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 3,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "4723e72c-9a3b-4ef3-9d9c-2a56d8b508d5",
+          "httpRequestId": "1b65f32d-121f-43c7-b1fd-c056fc14d5f8"
+        },
+        "item": {
+          "id": "0441abc8-14da-48c1-b572-0cd52bfac9d6",
+          "name": "Successful Login",
+          "request": {
+            "url": {
+              "path": [
+                "operators",
+                "login"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "7baa8308-ba0d-4c2b-a965-dc6e3fdeb45c",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns operator token', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('operator_token');",
+                  "    pm.expect(response.operator_token).to.be.a('string');",
+                  "    pm.expect(response.operator_token.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "_lastExecutionId": "5c3f1d9e-b21e-4386-a3c0-e6a56f701fca"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "operators",
+              "login"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "094fce29-eb68-4b7a-bc74-a83f78ab12d5",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "52",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+          }
+        },
+        "response": {
+          "id": "8d11744b-33d0-489e-bdf6-536ce1cf31f8",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data: https:;connect-src 'self';font-src 'self';object-src 'none';media-src 'self';frame-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'self';script-src-attr 'none';upgrade-insecure-requests"
+            },
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Cross-Origin-Resource-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Origin-Agent-Cluster",
+              "value": "?1"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-DNS-Prefetch-Control",
+              "value": "off"
+            },
+            {
+              "key": "X-Download-Options",
+              "value": "noopen"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-Permitted-Cross-Domain-Policies",
+              "value": "none"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "236"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"ec-SqYDxzz2ez5WiNaq8JhsUEXn6rM\""
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 30 Oct 2025 06:07:46 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              95,
+              116,
+              111,
+              107,
+              101,
+              110,
+              34,
+              58,
+              34,
+              101,
+              121,
+              74,
+              104,
+              98,
+              71,
+              99,
+              105,
+              79,
+              105,
+              74,
+              73,
+              85,
+              122,
+              73,
+              49,
+              78,
+              105,
+              73,
+              115,
+              73,
+              110,
+              82,
+              53,
+              99,
+              67,
+              73,
+              54,
+              73,
+              107,
+              112,
+              88,
+              86,
+              67,
+              74,
+              57,
+              46,
+              101,
+              121,
+              74,
+              122,
+              100,
+              87,
+              73,
+              105,
+              79,
+              106,
+              69,
+              115,
+              73,
+              110,
+              86,
+              122,
+              90,
+              88,
+              74,
+              117,
+              89,
+              87,
+              49,
+              108,
+              73,
+              106,
+              111,
+              105,
+              89,
+              87,
+              120,
+              112,
+              89,
+              50,
+              85,
+              105,
+              76,
+              67,
+              74,
+              121,
+              98,
+              50,
+              120,
+              108,
+              99,
+              121,
+              73,
+              54,
+              87,
+              121,
+              74,
+              110,
+              89,
+              88,
+              82,
+              108,
+              88,
+              50,
+              57,
+              119,
+              90,
+              88,
+              74,
+              104,
+              100,
+              71,
+              57,
+              121,
+              73,
+              105,
+              119,
+              105,
+              100,
+              109,
+              70,
+              115,
+              97,
+              87,
+              82,
+              104,
+              100,
+              71,
+              57,
+              121,
+              73,
+              108,
+              48,
+              115,
+              73,
+              109,
+              108,
+              104,
+              100,
+              67,
+              73,
+              54,
+              77,
+              84,
+              99,
+              50,
+              77,
+              84,
+              103,
+              119,
+              78,
+              68,
+              81,
+              50,
+              78,
+              105,
+              119,
+              105,
+              90,
+              88,
+              104,
+              119,
+              73,
+              106,
+              111,
+              120,
+              78,
+              122,
+              89,
+              120,
+              79,
+              68,
+              107,
+              119,
+              79,
+              68,
+              89,
+              50,
+              102,
+              81,
+              46,
+              114,
+              45,
+              75,
+              45,
+              85,
+              108,
+              80,
+              114,
+              120,
+              53,
+              88,
+              72,
+              100,
+              88,
+              70,
+              106,
+              119,
+              81,
+              105,
+              76,
+              109,
+              80,
+              116,
+              74,
+              110,
+              73,
+              65,
+              104,
+              83,
+              90,
+              87,
+              105,
+              111,
+              77,
+              89,
+              72,
+              76,
+              80,
+              122,
+              90,
+              111,
+              84,
+              111,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 98,
+          "responseSize": 236
+        },
+        "id": "0441abc8-14da-48c1-b572-0cd52bfac9d6",
+        "assertions": [
+          {
+            "assertion": "Status is 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Returns operator token",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "37e741f4-3d9f-4a11-bf4a-684f4949d6c4",
+          "length": 3,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "add5b656-cf39-469e-ba32-c45677c5a0b5"
+        },
+        "item": {
+          "id": "9fb471cf-df44-45d0-8774-378e893b673f",
+          "name": "Invalid Credentials",
+          "request": {
+            "url": {
+              "path": [
+                "operators",
+                "login"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"wrongpassword\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "611d6423-1411-4e7a-ac76-94d40a34109b",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Returns error message', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "    pm.expect(response.error).to.eql('INVALID_CREDENTIALS');",
+                  "});"
+                ],
+                "_lastExecutionId": "c068d22c-ae7f-4175-a4ac-5faa0c6accbf"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "operators",
+              "login"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "ecf06e93-d357-4213-842b-610506c9f8f2",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "56",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"wrongpassword\"\n}"
+          }
+        },
+        "response": {
+          "id": "2c15f22c-51b6-4374-b6f8-d6a05b17e00d",
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data: https:;connect-src 'self';font-src 'self';object-src 'none';media-src 'self';frame-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'self';script-src-attr 'none';upgrade-insecure-requests"
+            },
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Cross-Origin-Resource-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Origin-Agent-Cluster",
+              "value": "?1"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-DNS-Prefetch-Control",
+              "value": "off"
+            },
+            {
+              "key": "X-Download-Options",
+              "value": "noopen"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-Permitted-Cross-Domain-Policies",
+              "value": "none"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "72"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"48-mne6J0AQFjq2DqaYJrZ01Kxs2vE\""
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 30 Oct 2025 06:07:47 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              34,
+              73,
+              78,
+              86,
+              65,
+              76,
+              73,
+              68,
+              95,
+              67,
+              82,
+              69,
+              68,
+              69,
+              78,
+              84,
+              73,
+              65,
+              76,
+              83,
+              34,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              73,
+              110,
+              118,
+              97,
+              108,
+              105,
+              100,
+              32,
+              117,
+              115,
+              101,
+              114,
+              110,
+              97,
+              109,
+              101,
+              32,
+              111,
+              114,
+              32,
+              112,
+              97,
+              115,
+              115,
+              119,
+              111,
+              114,
+              100,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 107,
+          "responseSize": 72
+        },
+        "id": "9fb471cf-df44-45d0-8774-378e893b673f",
+        "assertions": [
+          {
+            "assertion": "Status is 401",
+            "skipped": false
+          },
+          {
+            "assertion": "Returns error message",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "3580d884-bf15-427e-8ee9-735c29131120",
+          "length": 3,
+          "cycles": 1,
+          "position": 2,
+          "iteration": 0,
+          "httpRequestId": "c24e56c7-5efc-47ad-b6bb-8de48b346adb"
+        },
+        "item": {
+          "id": "2b9735ea-fd55-4fd5-8d10-478bdb3020ff",
+          "name": "Missing Credentials",
+          "request": {
+            "url": {
+              "path": [
+                "operators",
+                "login"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"alice\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "42c012d6-82e7-4019-85eb-ddb0d75c57ac",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Returns validation error', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "    pm.expect(response.error).to.eql('INVALID_REQUEST');",
+                  "});"
+                ],
+                "_lastExecutionId": "2a8bdcde-1c0d-4d05-8a02-c532a7636d4a"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "operators",
+              "login"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "94f5e028-e002-4cb8-8911-a4618bb2e3e7",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "25",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"alice\"\n}"
+          }
+        },
+        "response": {
+          "id": "d1ead1c1-5c47-4522-bc67-99b65d8a27b4",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data: https:;connect-src 'self';font-src 'self';object-src 'none';media-src 'self';frame-src 'none';base-uri 'self';form-action 'self';frame-ancestors 'self';script-src-attr 'none';upgrade-insecure-requests"
+            },
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Cross-Origin-Resource-Policy",
+              "value": "same-origin"
+            },
+            {
+              "key": "Origin-Agent-Cluster",
+              "value": "?1"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "no-referrer"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-DNS-Prefetch-Control",
+              "value": "off"
+            },
+            {
+              "key": "X-Download-Options",
+              "value": "noopen"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-Permitted-Cross-Domain-Policies",
+              "value": "none"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "0"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "74"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"4a-VavY3vtOUXbh+ZP+cHZZCb1oM7M\""
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 30 Oct 2025 06:07:47 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              34,
+              73,
+              78,
+              86,
+              65,
+              76,
+              73,
+              68,
+              95,
+              82,
+              69,
+              81,
+              85,
+              69,
+              83,
+              84,
+              34,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              85,
+              115,
+              101,
+              114,
+              110,
+              97,
+              109,
+              101,
+              32,
+              97,
+              110,
+              100,
+              32,
+              112,
+              97,
+              115,
+              115,
+              119,
+              111,
+              114,
+              100,
+              32,
+              97,
+              114,
+              101,
+              32,
+              114,
+              101,
+              113,
+              117,
+              105,
+              114,
+              101,
+              100,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 25,
+          "responseSize": 74
+        },
+        "id": "2b9735ea-fd55-4fd5-8d10-478bdb3020ff",
+        "assertions": [
+          {
+            "assertion": "Status is 400",
+            "skipped": false
+          },
+          {
+            "assertion": "Returns validation error",
+            "skipped": false
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 382
+    },
+    "failures": [],
+    "error": null
+  }
+}

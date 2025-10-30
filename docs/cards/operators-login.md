@@ -4,12 +4,12 @@ slug: operators-login
 team: "C - Gate"
 oas_paths: ["/operators/login"]
 migrations: []
-status: "Ready"
+status: "Done"
 readiness: "production"
-branch: ""
+branch: "init-ai"
 pr: ""
-newman_report: "reports/newman/operators-login.json"
-last_update: "2025-10-20T00:12:44+0800"
+newman_report: "reports/newman/operators-login-result.json"
+last_update: "2025-10-30T13:54:00+0800"
 related_stories: ["US-002","US-006"]
 ---
 

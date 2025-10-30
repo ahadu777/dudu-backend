@@ -4,12 +4,12 @@ slug: tickets-scan
 team: "C - Gate"
 oas_paths: ["/tickets/scan"]
 migrations: ["db/migrations/0004_redemption_events_jti.sql", "db/migrations/0007_redemptions_indexes.sql"]
-status: "Ready"
+status: "Done"
 readiness: "production"
-branch: ""
+branch: "init-ai"
 pr: ""
-newman_report: "reports/newman/tickets-scan.json"
-last_update: "2025-10-20T09:56:51+0800"
+newman_report: "reports/newman/tickets-scan-result.json"
+last_update: "2025-10-30T13:54:00+0800"
 related_stories: ["US-001","US-002"]
 ---
 

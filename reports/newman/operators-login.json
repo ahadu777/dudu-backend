@@ -1,0 +1,133 @@
+{
+  "info": {
+    "name": "Operators Login Tests",
+    "description": "Test operator authentication endpoint",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "Successful Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns operator token', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('operator_token');",
+              "    pm.expect(response.operator_token).to.be.a('string');",
+              "    pm.expect(response.operator_token.length).to.be.greaterThan(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/operators/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["operators", "login"]
+        }
+      }
+    },
+    {
+      "name": "Invalid Credentials",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 401', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Returns error message', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('error');",
+              "    pm.expect(response.error).to.eql('INVALID_CREDENTIALS');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"wrongpassword\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/operators/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["operators", "login"]
+        }
+      }
+    },
+    {
+      "name": "Missing Credentials",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Returns validation error', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('error');",
+              "    pm.expect(response.error).to.eql('INVALID_REQUEST');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/operators/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["operators", "login"]
+        }
+      }
+    }
+  ]
+}

@@ -3,13 +3,18 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { env } from '../config/env';
 import { AppError } from './errorHandler';
 
-// 扩展 Express Request 类型以包含 user
+// 扩展 Express Request 类型以包含 user 和 operator
 declare global {
   namespace Express {
     interface Request {
       user?: {
         id: number;
         email: string;
+      };
+      operator?: {
+        operator_id: number;
+        username: string;
+        roles: string[];
       };
     }
   }
@@ -71,6 +76,42 @@ export const optionalAuthenticate = (
   }
 
   next();
+};
+
+/**
+ * Operator JWT 认证中间件
+ * 验证 Authorization header 中的 operator Bearer token
+ */
+export const authenticateOperator = (req: Request, res: Response, next: NextFunction): void => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new AppError('No operator token provided', 401);
+    }
+
+    const token = authHeader.substring(7); // 移除 "Bearer " 前缀
+
+    // 验证 operator token
+    const decoded = jwt.verify(token, String(env.JWT_SECRET)) as any;
+
+    // 将 operator 信息添加到请求对象
+    req.operator = {
+      operator_id: decoded.sub,
+      username: decoded.username,
+      roles: decoded.roles
+    };
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      next(new AppError('Invalid operator token', 401));
+    } else if (error instanceof jwt.TokenExpiredError) {
+      next(new AppError('Operator token expired', 401));
+    } else {
+      next(error);
+    }
+  }
 };
 
 /**

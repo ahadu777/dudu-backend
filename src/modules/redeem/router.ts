@@ -81,23 +81,213 @@ router.post('/:code/qr-token', authenticate, async (req, res) => {
 
 // POST /tickets/scan - Scan and redeem ticket
 router.post('/scan', (req, res) => {
-  // TODO: Team C - Implement ticket scanning
-  // Mock implementation for integration proof
-  const { function_code } = req.body;
+  const { qr_token, function_code, session_id, location_id } = req.body;
 
-  // Simulate entitlements with remaining uses
-  const mockEntitlements = [
-    { function_code: 'ferry', remaining_uses: function_code === 'ferry' ? 0 : 1 },
-    { function_code: 'bus', remaining_uses: 2 },
-    { function_code: 'mrt', remaining_uses: 1 }
-  ];
+  if (!qr_token || !function_code || !session_id) {
+    return res.status(400).json({
+      error: 'INVALID_REQUEST',
+      message: 'qr_token, function_code, and session_id are required'
+    });
+  }
 
-  res.json({
-    result: 'success',
-    ticket_status: 'active',
-    entitlements: mockEntitlements,
-    ts: new Date().toISOString()
-  });
+  try {
+    logger.info('scan.attempt', { function_code, session_id, location_id });
+
+    // 1. Verify session is valid
+    if (!mockStore.isSessionValid(session_id)) {
+      return res.status(401).json({
+        error: 'INVALID_SESSION',
+        message: 'Session expired or not found'
+      });
+    }
+
+    const session = mockStore.getSession(session_id);
+    if (!session) {
+      return res.status(401).json({
+        error: 'INVALID_SESSION',
+        message: 'Session not found'
+      });
+    }
+
+    // 2. Parse and verify QR token
+    let tokenPayload;
+    try {
+      tokenPayload = jwt.verify(qr_token, env.QR_SIGNER_SECRET) as any;
+    } catch (jwtError) {
+      logger.info('scan.reject', { reason: 'TOKEN_EXPIRED', session_id });
+
+      // Record rejection event
+      mockStore.addRedemption({
+        ticket_id: 0, // Unknown ticket
+        function_code,
+        operator_id: session.operator_id,
+        session_id,
+        location_id: location_id || null,
+        jti: null,
+        result: 'reject' as any,
+        reason: 'TOKEN_EXPIRED',
+        ts: new Date().toISOString()
+      });
+
+      return res.status(422).json({
+        error: 'TOKEN_EXPIRED',
+        message: 'QR code has expired'
+      });
+    }
+
+    const { tid: ticketCode, jti } = tokenPayload;
+
+    // 3. Check for replay (idempotency)
+    if (jti && mockStore.hasJti(jti)) {
+      return res.status(409).json({
+        error: 'REPLAY',
+        message: 'QR code already used'
+      });
+    }
+
+    // 4. Get ticket and validate
+    const ticket = mockStore.getTicket(ticketCode);
+    if (!ticket) {
+      logger.info('scan.reject', { reason: 'TICKET_NOT_FOUND', ticket_code: ticketCode });
+      return res.status(404).json({
+        error: 'TICKET_NOT_FOUND',
+        message: 'Ticket not found'
+      });
+    }
+
+    // 5. Validate ticket status
+    if (ticket.status === 'expired' || ticket.status === 'void') {
+      logger.info('scan.reject', {
+        reason: 'TICKET_INVALID',
+        ticket_code: ticketCode,
+        status: ticket.status
+      });
+
+      mockStore.addRedemption({
+        ticket_id: parseInt(ticketCode.split('-')[2]) || 0,
+        function_code,
+        operator_id: session.operator_id,
+        session_id,
+        location_id: location_id || null,
+        jti,
+        result: 'reject' as any,
+        reason: 'TICKET_INVALID',
+        ts: new Date().toISOString()
+      });
+
+      return res.status(422).json({
+        error: 'TICKET_INVALID',
+        message: `Ticket status: ${ticket.status}`
+      });
+    }
+
+    // 6. Find entitlement for the function
+    const entitlement = ticket.entitlements.find(e => e.function_code === function_code);
+    if (!entitlement) {
+      logger.info('scan.reject', {
+        reason: 'WRONG_FUNCTION',
+        ticket_code: ticketCode,
+        function_code,
+        available_functions: ticket.entitlements.map(e => e.function_code)
+      });
+
+      mockStore.addRedemption({
+        ticket_id: parseInt(ticketCode.split('-')[2]) || 0,
+        function_code,
+        operator_id: session.operator_id,
+        session_id,
+        location_id: location_id || null,
+        jti,
+        result: 'reject' as any,
+        reason: 'WRONG_FUNCTION',
+        ts: new Date().toISOString()
+      });
+
+      return res.status(422).json({
+        error: 'WRONG_FUNCTION',
+        message: `Function ${function_code} not available on this ticket`
+      });
+    }
+
+    // 7. Check remaining uses
+    if (entitlement.remaining_uses <= 0) {
+      logger.info('scan.reject', {
+        reason: 'NO_REMAINING',
+        ticket_code: ticketCode,
+        function_code,
+        remaining_uses: entitlement.remaining_uses
+      });
+
+      mockStore.addRedemption({
+        ticket_id: parseInt(ticketCode.split('-')[2]) || 0,
+        function_code,
+        operator_id: session.operator_id,
+        session_id,
+        location_id: location_id || null,
+        jti,
+        result: 'reject' as any,
+        reason: 'NO_REMAINING',
+        ts: new Date().toISOString()
+      });
+
+      return res.status(422).json({
+        error: 'NO_REMAINING',
+        message: 'No remaining uses for this function'
+      });
+    }
+
+    // 8. SUCCESS: Decrement entitlement and record redemption
+    const success = mockStore.decrementEntitlement(ticketCode, function_code);
+    if (!success) {
+      logger.error('scan.error', { ticket_code: ticketCode, function_code });
+      return res.status(500).json({
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to process redemption'
+      });
+    }
+
+    // Record successful redemption
+    mockStore.addRedemption({
+      ticket_id: parseInt(ticketCode.split('-')[2]) || 0,
+      function_code,
+      operator_id: session.operator_id,
+      session_id,
+      location_id: location_id || null,
+      jti,
+      result: 'success' as any,
+      reason: null,
+      ts: new Date().toISOString()
+    });
+
+    // Get updated ticket info
+    const updatedTicket = mockStore.getTicket(ticketCode);
+
+    logger.info('scan.success', {
+      ticket_code: ticketCode,
+      function_code,
+      new_status: updatedTicket?.status,
+      remaining_uses: entitlement.remaining_uses - 1
+    });
+
+    res.json({
+      result: 'success',
+      ticket_status: updatedTicket?.status || 'unknown',
+      entitlements: updatedTicket?.entitlements || [],
+      ts: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logger.error('scan.error', {
+      function_code,
+      session_id,
+      error: (error as Error).message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Scan failed'
+    });
+  }
 });
 
 export default router;

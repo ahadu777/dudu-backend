@@ -4,12 +4,12 @@ slug: validators-sessions
 team: "C - Gate"
 oas_paths: ["/validators/sessions"]
 migrations: ["db/migrations/0005_validator_sessions.sql"]
-status: "Ready"
+status: "Done"
 readiness: "production"
-branch: ""
+branch: "init-ai"
 pr: ""
-newman_report: "reports/newman/validators-sessions.json"
-last_update: "2025-10-20T00:12:44+0800"
+newman_report: "reports/newman/validators-sessions-result.json"
+last_update: "2025-10-30T13:54:00+0800"
 related_stories: ["US-002","US-006"]
 ---
 
