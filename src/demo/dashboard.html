@@ -378,6 +378,7 @@
                         <div class="button-group">
                             <button class="btn btn-primary" id="btn-runbook-us002" data-story="US-002">📋 Open Runbook</button>
                             <button class="btn btn-success" id="btn-simulate-redemption">🚀 Simulate Redemption</button>
+                            <button class="btn btn-secondary" id="btn-reset-mock">🧹 一键重置</button>
                         </div>
                         <div class="links"></div>
                     </div>
@@ -1349,6 +1350,38 @@
             }
         }
 
+        // One-click reset: reset mock store to initial seed (requires operator login)
+        async function resetMockData() {
+            showLoading('us002-response');
+            const operatorToken = (document.getElementById('operator-token') || {}).value;
+            if (!operatorToken) {
+                showResponse('us002-response', '❌ Please login operator first', 'error');
+                return;
+            }
+            try {
+                const result = await apiCall(`${BASE_URL}/dev/reset`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${operatorToken}` }
+                });
+                if (result.ok) {
+                    const stats = result.data.stats || {};
+                    // Clear fields for clarity
+                    const scanTokenEl = document.getElementById('scan-qr-token');
+                    const fnInputEl = document.getElementById('scan-function-code');
+                    const sessEl = document.getElementById('validator-session-id');
+                    if (scanTokenEl) scanTokenEl.value = '';
+                    if (fnInputEl) fnInputEl.value = '';
+                    if (sessEl) sessEl.value = '';
+                    showResponse('us002-response', `✅ Mock data reset to seed\nTickets: ${stats.tickets || 0}, Products: ${stats.products || 0}`, 'success');
+                } else {
+                    const err = result.data && (result.data.message || result.data.error) || 'Unknown';
+                    showResponse('us002-response', `❌ Reset failed (${result.status}): ${err}`, 'error');
+                }
+            } catch (e) {
+                showResponse('us002-response', `❌ Reset error: ${e.message}`, 'error');
+            }
+        }
+
         // Runbook display
         function showRunbook(storyId) {
             const runbookUrl = `${BASE_URL}/docs/integration/${storyId}-runbook.md`;
@@ -1443,7 +1476,8 @@
                 'btn-validator-session': testValidatorSession,
                 'btn-ticket-scan': testTicketScan,
                 'btn-runbook-us002': () => showRunbook('US-002'),
-                'btn-simulate-redemption': simulateRedemptionFlow
+                'btn-simulate-redemption': simulateRedemptionFlow,
+                'btn-reset-mock': resetMockData
             };
 
             // Add event listeners

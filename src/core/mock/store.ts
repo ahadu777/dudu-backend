@@ -1697,6 +1697,40 @@ export class MockStore {
       userActivity: this.userActivity.length
     };
   }
+
+  // Reset all in-memory data to initial seed (for demo reset button)
+  resetAll(): void {
+    // Re-initialize containers
+    this.products = new Map();
+    this.orders = new Map();
+    this.ordersByOrderId = new Map();
+    this.tickets = new Map();
+    this.operators = new Map();
+    this.sessions = new Map();
+    this.redemptions = [];
+    this.jtiCache = new Set();
+    this.users = new Map();
+    this.userActivity = [];
+    this.packageTemplates = new Map();
+    this.templateNameIndex = new Map();
+    this.routeFares = new Map();
+    this.refunds = new Map();
+
+    // Reset counters
+    this.nextOrderId = 1000;
+    this.nextTicketId = 1;
+    this.nextRefundId = 1;
+    this.nextTemplateId = 10000;
+
+    // Reset auxiliary maps
+    this.promotionData = new Map();
+    this.complexPricingData = new Map();
+
+    // Seed again
+    this.initializeSeedData();
+
+    logger.info('mock.store.reset_all');
+  }
 }
 
 // Export singleton instance
