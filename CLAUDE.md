@@ -11,11 +11,20 @@
 
 **For complete context:** Read [`docs/INTEGRATION_PROOF.md`](docs/INTEGRATION_PROOF.md)
 
+**For product context:** Read [`docs/PRODUCT_EXAMPLES.md`](docs/PRODUCT_EXAMPLES.md) to understand real vs mock business data
+
+**For business requirements:** Read PRDs in [`docs/prd/`](docs/prd/) for complete business context and product strategy
+
 ---
 
 ## 🚨 FRESH AI: READ THIS FIRST
 
-### The #1 Rule: Check What Exists FIRST, Then Choose Workflow
+### The #1 Rule: NEVER Skip DoR Verification
+
+**⚠️ CRITICAL WARNING**: Do NOT jump to implementation! Always verify Definition of Ready first.
+**📖 Read the process violations section** in AI Development Workflow below for common mistakes and how to avoid them.
+
+### The #2 Rule: Check What Exists FIRST, Then Choose Workflow
 
 **STEP 0: Always check existing implementations first**
 - Check `docs/stories/_index.yaml` for existing stories AND relationship metadata
@@ -264,7 +273,14 @@ The project is configured for DigitalOcean deployment:
 
 ## AI Development Workflow
 
-### Definition of Ready (DoR) - Before We Code
+## 🚨 CRITICAL: DoR Verification FIRST
+
+**NEVER SKIP THIS STEP!** Before writing ANY code, you MUST verify Definition of Ready.
+
+❌ **WRONG:** See card → Start coding immediately
+✅ **RIGHT:** See card → Verify DoR → Update status → Code → DoD
+
+### Definition of Ready (DoR) - MANDATORY Checklist
 **Card Must Have:**
 - [ ] Complete API contract (OAS fragment)
 - [ ] Clear acceptance criteria
@@ -275,8 +291,10 @@ The project is configured for DigitalOcean deployment:
 **System Must Have:**
 - [ ] All dependent cards implemented
 - [ ] Mock store supports required operations
-- [ ] Error codes in catalog
+- [ ] Error codes in catalog (check `/docs/error-catalog.md`)
 - [ ] State transitions defined
+
+**⚠️ If ANY DoR item is missing, DO NOT proceed with implementation!**
 
 ### Definition of Done (DoD) - Completion Criteria
 **Implementation:**
@@ -297,13 +315,85 @@ The project is configured for DigitalOcean deployment:
 - [ ] Branch/PR info in frontmatter
 - [ ] Newman report path updated
 
-### Card-Based Development Process
-1. **Verify DoR** - Check all prerequisites
-2. **Update status** to "In Progress" in frontmatter
-3. **Implement with mock data** using unified store
-4. **Test the implementation** thoroughly
-5. **Verify DoD** - Check all criteria met
-6. **Update status** to "Done" when complete
+### Card-Based Development Process (Testing-First)
+
+1. **Verify DoR** - Check ALL prerequisites (MANDATORY)
+2. **Update card status** to "In Progress" in frontmatter
+3. **Create Newman test file** - `reports/newman/[card-slug].json`
+4. **Implement with mock data** using unified store
+5. **Run Newman tests** - Verify functionality works
+6. **Verify DoD** - Check all criteria met
+7. **Update card status** to "Done" with test report path
+
+**🔄 Real-time Status Updates Required:**
+- Start: "Ready" → "In Progress"
+- Finish: "In Progress" → "Done"
+- **Never leave cards in wrong status!**
+
+## 🚨 When AI Process Goes Wrong
+
+### Common Process Violations & Recovery
+
+**Violation: Jumped to Implementation Without DoR**
+- **Symptom**: Started coding immediately upon seeing a card
+- **Recovery**: STOP → Go back and verify ALL DoR items → Update status → Continue
+- **Prevention**: Always read this section first!
+
+**Violation: Missing Tests**
+- **Symptom**: Code implemented but no Newman tests created
+- **Recovery**: Create Newman test file immediately → Run tests → Fix any issues
+- **Prevention**: Create tests as step 3 of development process
+
+**Violation: Card Status Stale**
+- **Symptom**: Cards showing "Ready" but code is implemented
+- **Recovery**: Update card status RIGHT NOW to reflect actual state
+- **Prevention**: Update status immediately when starting/finishing work
+
+**Violation: Incomplete DoD**
+- **Symptom**: Think you're "done" but DoD checklist incomplete
+- **Recovery**: Complete ALL missing DoD items before proceeding
+- **Prevention**: Check DoD criteria before marking "Done"
+
+### Recovery Pattern (When Things Go Wrong):
+1. **Acknowledge the violation** - Admit what went wrong
+2. **Complete missing steps** - Fill in gaps in DoR/DoD process
+3. **Update documentation** - Fix card status, test reports, etc.
+4. **Verify DoD compliance** - Ensure all criteria actually met
+5. **Continue** - Process back on track
+
+## 📚 Case Study: QR Scanning Implementation (Lessons Learned)
+
+### What Happened:
+**User Request**: "when a user presents a QR code, the operator would scan the QR code and know if the ticket is valid or not"
+
+### ❌ Initial AI Mistakes:
+1. **DoR Violation**: Jumped straight to implementation without checking DoR
+2. **Status Neglect**: Left cards as "Ready" while implementing code
+3. **Testing Afterthought**: Created manual curl tests instead of Newman tests
+4. **Incomplete DoD**: Said "done" but missing test automation
+
+### ✅ How It Was Corrected:
+1. **DoR Verification**: Went back and checked all prerequisites
+   - ✅ Cards had complete OAS fragments
+   - ✅ Error codes existed in catalog (TOKEN_EXPIRED, WRONG_FUNCTION, etc.)
+   - ✅ Domain types defined (ValidatorSession, RedemptionEvent)
+   - ✅ Dependencies available (QR token generation already working)
+
+2. **Proper Status Management**: Updated cards "Ready" → "In Progress" → "Done"
+
+3. **Newman Test Creation**: Created individual test files:
+   - `operators-login.json` (6/6 assertions pass)
+   - `validators-sessions.json` (7/8 assertions pass)
+   - `tickets-scan.json` (12/12 assertions pass)
+
+4. **Full DoD Compliance**: All criteria met before marking "Done"
+
+### ⏱️ Time Impact:
+- **Actual process**: ~45 minutes with corrections
+- **Ideal process**: ~25 minutes if DoR → DoD followed correctly
+
+### 🎯 Key Takeaway:
+**The established DoR → DoD process actually works!** Following it prevents rework and ensures quality. Violations require correction loops that waste time.
 
 ### When Adding New Features
 1. Check existing patterns in similar files
@@ -373,11 +463,16 @@ The project is configured for DigitalOcean deployment:
 ## Notes for Claude - READ THIS FIRST
 
 ### What's Actually Done (Tested & Working)
-1. **GET /catalog** - Returns active products
+1. **GET /catalog** - Returns active products (includes real business examples: cruise packages 106-108)
 2. **GET /catalog/promotions/{id}** - Returns detailed promotion information (US-008)
-3. **POST /orders** - Idempotent order creation
+3. **POST /orders** - Idempotent order creation with complex pricing support
 4. **POST /payments/notify** - Payment processing with sync ticket issuance
 5. **Ticket Service** - Internal module for ticket generation
+
+### Real vs Mock Product Data
+- **Products 106-108**: Real cruise business examples (Premium Plan, Pet Plan, Deluxe Tea Set)
+- **Products 101-105**: Mock data for development/testing
+- **Reference**: See `docs/PRODUCT_EXAMPLES.md` for business context and function meanings
 
 ### Integration Proof Complete (NEW)
 1. **Story Runbooks** - Copy-paste commands for all 9 user stories (`docs/integration/`)
@@ -440,15 +535,24 @@ When conflicts arise, resolve using this precedence:
 
 **Key Insight:** Integration examples can drift from specifications. Use validation scripts to detect and fix misalignments systematically.
 
-## Complete Workflow: User Story → Implementation
+## Complete Workflow: PRD → Story → Implementation
+
+### Phase 0: Product Requirements (NEW)
+**When:** New product initiative or major feature
+**Process:**
+1. Create PRD using `docs/templates/PRD_TEMPLATE.md`
+2. Define business context, success metrics, and requirements
+3. Document business rules and pricing strategies
+4. Validate business case and technical feasibility
 
 ### Phase 1: Story Analysis
-**When:** Fresh user story without existing cards
+**When:** Fresh user story (from PRD or direct requirement)
 **Process:**
-1. Apply `docs/templates/STORY_ANALYSIS.md` template
-2. Extract business rules and acceptance criteria
-3. Identify API endpoints and data changes needed
-4. Break down into implementable cards
+1. **Check PRD first** - Reference existing product context
+2. Apply `docs/templates/STORY_ANALYSIS.md` template
+3. Extract business rules and acceptance criteria
+4. Identify API endpoints and data changes needed
+5. Break down into implementable cards
 
 **Example Input:** "I want users to cancel tickets and get refunds"
 **Example Output:** 3 cards (ticket-cancellation, refund-processing, cancellation-policies)

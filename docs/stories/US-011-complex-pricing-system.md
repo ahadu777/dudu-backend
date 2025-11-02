@@ -5,6 +5,12 @@
 **I want** to offer dynamic pricing based on multiple variables (date types, customer types, package tiers, special events)
 **So that** I can maximize revenue while providing transparent pricing that matches market demand and customer segments
 
+## Real Business Context
+**Based on**: Actual cruise package pricing table (real business requirement, not mock data)
+**Market**: Tourism/leisure travel with family-oriented ferry + entertainment packages
+**Implementation**: Products 106-108 represent real business package tiers
+**Reference**: See `docs/PRODUCT_EXAMPLES.md` for complete business context and function meanings
+
 **Acceptance Criteria:**
 - [ ] Pricing varies by time period (weekdays vs weekends/holidays vs special dates)
 - [ ] Different rates for customer types (adults, children, elderly)

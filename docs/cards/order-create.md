@@ -39,6 +39,19 @@ relationships:
 Create order and reserve inventory atomically; idempotent via (user_id, out_trade_no).
 **Enhanced**: Now supports complex pricing with customer types, package tiers, and add-ons.
 
+## Business Context
+**Real Business Examples**: Products 106-108 are based on actual cruise package requirements:
+- **Market Segment**: Tourism/leisure travel with family-oriented packages
+- **Pricing Strategy**: Time-based pricing (weekday/weekend) + customer type discounts
+- **Package Tiers**: Entry (Pet $188), Standard (Premium $288/$318), Luxury (Deluxe $788/$888)
+- **Reference**: See `docs/PRODUCT_EXAMPLES.md` for complete business context
+
+**Function Codes Represent Real Capabilities**:
+- `ferry`/`pet_ferry`/`vip_ferry`: Transportation service levels
+- `monchhichi_gift`: Branded merchandise partnerships
+- `playground_tokens`: Entertainment credit systems
+- `tea_set`: Cultural experience components
+
 ## Contract (Enhanced)
 
 ### Basic Order (Backward Compatible)
