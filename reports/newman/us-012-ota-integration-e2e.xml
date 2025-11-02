@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="US-012 OTA Platform Integration" tests="11" time="0.240">
+  <testsuite name="1. Authentication Test (Should Fail)" id="6b20dafb-dba8-4631-8e75-7db49bd7c926" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.023">
+    <testcase name="API key required" time="0.023" classname="1AuthenticationTestShouldFail"/>
+    <testcase name="Error message correct" time="0.023" classname="1AuthenticationTestShouldFail"/>
+  </testsuite>
+  <testsuite name="2. Get OTA Inventory" id="fc19bc06-b00e-452c-a800-20aeb9a7efd8" timestamp="2025-11-02T17:53:48.637Z" tests="3" failures="0" errors="0" time="0.005">
+    <testcase name="Status 200" time="0.005" classname="2GetOtaInventory"/>
+    <testcase name="5000 total units available" time="0.005" classname="2GetOtaInventory"/>
+    <testcase name="Pricing context included" time="0.005" classname="2GetOtaInventory"/>
+  </testsuite>
+  <testsuite name="3. Create Reservation (Premium Plan)" id="1ae8d52e-e9d2-4183-a19b-912002616561" timestamp="2025-11-02T17:53:48.637Z" tests="3" failures="0" errors="0" time="0.009">
+    <testcase name="Reservation created" time="0.009" classname="3CreateReservationPremiumPlan"/>
+    <testcase name="Reservation ID returned" time="0.009" classname="3CreateReservationPremiumPlan"/>
+    <testcase name="Pricing snapshot included" time="0.009" classname="3CreateReservationPremiumPlan"/>
+  </testsuite>
+  <testsuite name="4. Verify Inventory Reduction" id="1242c0f6-ce9f-4ab9-99f5-1f362ab6eb2c" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Status 200" time="0.003" classname="4VerifyInventoryReduction"/>
+    <testcase name="Product 106 inventory reduced" time="0.003" classname="4VerifyInventoryReduction"/>
+  </testsuite>
+  <testsuite name="5. Get Reservation Details" id="f0603192-0393-4bf6-9855-4430244ba78b" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="Status 200" time="0.004" classname="5GetReservationDetails"/>
+    <testcase name="Reservation details correct" time="0.004" classname="5GetReservationDetails"/>
+  </testsuite>
+  <testsuite name="6. Create Maximum Reservation (Pet Plan)" id="2634f6f8-955e-444b-bb63-f8e49653e8e0" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.123">
+    <testcase name="Maximum reservation allowed" time="0.123" classname="6CreateMaximumReservationPetPlan"/>
+    <testcase name="Correct pricing for Pet Plan" time="0.123" classname="6CreateMaximumReservationPetPlan"/>
+  </testsuite>
+  <testsuite name="7. Test Validation Limits (Should Fail)" id="feeb4280-600b-46b2-8f66-bfbd293bde2d" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="Validation error for excessive quantity" time="0.004" classname="7TestValidationLimitsShouldFail"/>
+    <testcase name="Correct error message" time="0.004" classname="7TestValidationLimitsShouldFail"/>
+  </testsuite>
+  <testsuite name="8. Test Invalid Product (Should Fail)" id="4465127a-e0d2-4f33-b010-6715ae504fd3" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.007">
+    <testcase name="Product not found error" time="0.007" classname="8TestInvalidProductShouldFail"/>
+    <testcase name="Correct error message" time="0.007" classname="8TestInvalidProductShouldFail"/>
+  </testsuite>
+  <testsuite name="9. List Active Reservations" id="95a4bd5e-b364-438e-a5b4-31c5c9f0c605" timestamp="2025-11-02T17:53:48.637Z" tests="3" failures="0" errors="0" time="0.018">
+    <testcase name="Status 200" time="0.018" classname="9ListActiveReservations"/>
+    <testcase name="Reservations array present" time="0.018" classname="9ListActiveReservations"/>
+    <testcase name="At least 2 reservations exist" time="0.018" classname="9ListActiveReservations"/>
+  </testsuite>
+  <testsuite name="10. Test Invalid API Key (Should Fail)" id="19e2677b-b214-47c9-86af-857a4b70750a" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.036">
+    <testcase name="Invalid API key rejected" time="0.036" classname="10TestInvalidApiKeyShouldFail"/>
+    <testcase name="Correct error message" time="0.036" classname="10TestInvalidApiKeyShouldFail"/>
+  </testsuite>
+  <testsuite name="11. Cleanup - Manual Expiry Test" id="f29208b5-bfba-4e43-83c7-a90844f24177" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.008">
+    <testcase name="Cleanup completed" time="0.008" classname="11CleanupManualExpiryTest"/>
+    <testcase name="Expiry count returned" time="0.008" classname="11CleanupManualExpiryTest"/>
+  </testsuite>
+</testsuites>

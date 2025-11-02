@@ -1286,6 +1286,270 @@
           }
         }
       }
+    },
+    "/api/ota/inventory": {
+      "get": {
+        "tags": ["OTA Integration"],
+        "summary": "Get OTA inventory availability",
+        "description": "Retrieve real-time availability for cruise packages allocated to OTA channel with pricing context",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated product IDs to filter (e.g., '106,107,108')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inventory availability retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTAInventoryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key required or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/reserve": {
+      "post": {
+        "tags": ["OTA Integration"],
+        "summary": "Create package reservation",
+        "description": "Reserve cruise package inventory for OTA sales pipeline with 24-hour automatic expiry",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OTAReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reservation created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTAReservationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key required or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error - quantity limits exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/reservations": {
+      "get": {
+        "tags": ["OTA Integration"],
+        "summary": "List active reservations",
+        "description": "Retrieve all active reservations for the authenticated OTA partner",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active reservations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reservations": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChannelReservation"
+                      }
+                    },
+                    "total_count": {
+                      "type": "integer",
+                      "description": "Total number of active reservations"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key required or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/reservations/{reservationId}": {
+      "get": {
+        "tags": ["OTA Integration"],
+        "summary": "Get reservation details",
+        "description": "Retrieve detailed information for a specific reservation",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Reservation ID to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reservation details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelReservation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key required or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reservation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/reservations/cleanup": {
+      "post": {
+        "tags": ["OTA Integration"],
+        "summary": "Manual reservation cleanup",
+        "description": "Manually trigger cleanup of expired reservations (for testing purposes)",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cleanup completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Cleanup completed successfully"
+                    },
+                    "expired_reservations": {
+                      "type": "integer",
+                      "description": "Number of reservations that were expired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key required or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2007,6 +2271,176 @@
             }
           }
         }
+      },
+      "OTAInventoryResponse": {
+        "type": "object",
+        "properties": {
+          "available_quantities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "description": "Available quantity for each product ID"
+            },
+            "example": {
+              "106": 2000,
+              "107": 1500,
+              "108": 1500
+            }
+          },
+          "pricing_context": {
+            "type": "object",
+            "properties": {
+              "base_prices": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "weekday": {
+                      "type": "number",
+                      "format": "decimal"
+                    },
+                    "weekend": {
+                      "type": "number",
+                      "format": "decimal"
+                    }
+                  }
+                },
+                "example": {
+                  "106": {"weekday": 288, "weekend": 318},
+                  "107": {"weekday": 188, "weekend": 218},
+                  "108": {"weekday": 788, "weekend": 818}
+                }
+              },
+              "customer_types": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": ["adult", "child", "elderly"]
+              },
+              "special_dates": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "multiplier": {
+                      "type": "number",
+                      "format": "decimal"
+                    }
+                  }
+                },
+                "example": {
+                  "2025-12-31": {"multiplier": 1.5},
+                  "2026-02-18": {"multiplier": 1.3}
+                }
+              }
+            }
+          }
+        }
+      },
+      "OTAReservationRequest": {
+        "type": "object",
+        "required": ["product_id", "quantity"],
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "description": "Cruise package product ID to reserve",
+            "example": 106
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of packages to reserve (1-100)",
+            "example": 25
+          },
+          "reservation_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional custom expiry time (defaults to 24 hours)",
+            "nullable": true
+          }
+        }
+      },
+      "OTAReservationResponse": {
+        "type": "object",
+        "properties": {
+          "reservation_id": {
+            "type": "string",
+            "description": "Unique reservation identifier",
+            "example": "res_1"
+          },
+          "reserved_until": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Reservation expiry timestamp"
+          },
+          "pricing_snapshot": {
+            "type": "object",
+            "properties": {
+              "base_price": {
+                "type": "number",
+                "format": "decimal",
+                "description": "Base price per package",
+                "example": 288
+              },
+              "weekend_premium": {
+                "type": "number",
+                "format": "decimal",
+                "description": "Weekend surcharge amount",
+                "example": 30
+              },
+              "customer_discounts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number",
+                  "format": "decimal"
+                },
+                "description": "Discount amounts by customer type",
+                "example": {
+                  "child": 100,
+                  "elderly": 100
+                }
+              }
+            }
+          }
+        }
+      },
+      "ChannelReservation": {
+        "type": "object",
+        "properties": {
+          "reservation_id": {
+            "type": "string",
+            "description": "Unique reservation identifier"
+          },
+          "product_id": {
+            "type": "integer",
+            "description": "Reserved product ID"
+          },
+          "channel_id": {
+            "type": "string",
+            "description": "OTA channel identifier"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "Reserved quantity"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "expired", "activated", "cancelled"],
+            "description": "Current reservation status"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Reservation expiry timestamp"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Reservation creation timestamp"
+          }
+        }
       }
     },
     "securitySchemes": {
@@ -2015,6 +2449,12 @@
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "description": "JWT token for authenticated endpoints"
+      },
+      "otaApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for OTA platform integration"
       }
     }
   },
@@ -2054,6 +2494,10 @@
     {
       "name": "Authentication",
       "description": "Demo authentication and token generation"
+    },
+    {
+      "name": "OTA Integration",
+      "description": "Online Travel Agency platform integration for cruise package reservations"
     }
   ]
 }

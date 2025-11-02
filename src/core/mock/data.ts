@@ -1,4 +1,22 @@
 // Mock data store for development without database
+export interface ChannelAllocation {
+  allocated: number;
+  reserved: number;
+  sold: number;
+}
+
+export interface ChannelReservation {
+  reservation_id: string;
+  product_id: number;
+  channel_id: string;
+  quantity: number;
+  status: 'active' | 'expired' | 'activated' | 'cancelled';
+  expires_at: Date;
+  created_at: Date;
+  activated_at?: Date;
+  order_id?: number;
+}
+
 export interface MockProduct {
   id: number;
   sku: string;
@@ -15,6 +33,9 @@ export interface MockProduct {
     sellable_cap: number;
     reserved_count: number;
     sold_count: number;
+  };
+  channel_allocations: {
+    [channel: string]: ChannelAllocation;
   };
 }
 
@@ -54,8 +75,10 @@ class MockDataStore {
   private products: Map<number, MockProduct> = new Map();
   private orders: Map<string, MockOrder> = new Map(); // key: user_id-out_trade_no
   private tickets: Map<number, MockTicket> = new Map();
+  private reservations: Map<string, ChannelReservation> = new Map(); // key: reservation_id
   private nextOrderId = 10001;
   private nextTicketId = 50001;
+  private nextReservationId = 1;
 
   constructor() {
     this.initializeProducts();
@@ -79,6 +102,10 @@ class MockDataStore {
           sellable_cap: 1000,
           reserved_count: 0,
           sold_count: 0
+        },
+        channel_allocations: {
+          direct: { allocated: 1000, reserved: 0, sold: 0 },
+          ota: { allocated: 0, reserved: 0, sold: 0 }
         }
       },
       {
@@ -97,6 +124,10 @@ class MockDataStore {
           sellable_cap: 100,
           reserved_count: 0,
           sold_count: 0
+        },
+        channel_allocations: {
+          direct: { allocated: 100, reserved: 0, sold: 0 },
+          ota: { allocated: 0, reserved: 0, sold: 0 }
         }
       },
       {
@@ -114,6 +145,10 @@ class MockDataStore {
           sellable_cap: 200,
           reserved_count: 0,
           sold_count: 0
+        },
+        channel_allocations: {
+          direct: { allocated: 200, reserved: 0, sold: 0 },
+          ota: { allocated: 0, reserved: 0, sold: 0 }
         }
       },
       {
@@ -130,6 +165,10 @@ class MockDataStore {
           sellable_cap: 500,
           reserved_count: 0,
           sold_count: 0
+        },
+        channel_allocations: {
+          direct: { allocated: 500, reserved: 0, sold: 0 },
+          ota: { allocated: 0, reserved: 0, sold: 0 }
         }
       },
       {
@@ -147,6 +186,10 @@ class MockDataStore {
           sellable_cap: 50,
           reserved_count: 0,
           sold_count: 50 // Sold out for testing
+        },
+        channel_allocations: {
+          direct: { allocated: 50, reserved: 0, sold: 50 },
+          ota: { allocated: 0, reserved: 0, sold: 0 }
         }
       },
       // Cruise products with base pricing (complex pricing handled separately)
@@ -163,9 +206,13 @@ class MockDataStore {
           { function_code: 'playground_tokens', function_name: '遊樂場全日門票及代幣', max_uses: 10 }
         ],
         inventory: {
-          sellable_cap: 200,
+          sellable_cap: 3000, // Increased to accommodate OTA allocation
           reserved_count: 0,
           sold_count: 0
+        },
+        channel_allocations: {
+          direct: { allocated: 1000, reserved: 0, sold: 0 },
+          ota: { allocated: 2000, reserved: 0, sold: 0 } // 2000 units for OTA
         }
       },
       {
@@ -180,9 +227,13 @@ class MockDataStore {
           { function_code: 'pet_playground', function_name: '遊樂場寵物區', max_uses: 1 }
         ],
         inventory: {
-          sellable_cap: 50,
+          sellable_cap: 2000, // Increased to accommodate OTA allocation
           reserved_count: 0,
           sold_count: 0
+        },
+        channel_allocations: {
+          direct: { allocated: 500, reserved: 0, sold: 0 },
+          ota: { allocated: 1500, reserved: 0, sold: 0 } // 1500 units for OTA
         }
       },
       {
@@ -199,9 +250,13 @@ class MockDataStore {
           { function_code: 'tea_set', function_name: 'Monchhichi Tea Set', max_uses: 1 }
         ],
         inventory: {
-          sellable_cap: 30,
+          sellable_cap: 1800, // Increased to accommodate OTA allocation
           reserved_count: 0,
           sold_count: 0
+        },
+        channel_allocations: {
+          direct: { allocated: 300, reserved: 0, sold: 0 },
+          ota: { allocated: 1500, reserved: 0, sold: 0 } // 1500 units for OTA
         }
       }
     ];
@@ -323,12 +378,125 @@ class MockDataStore {
     return undefined;
   }
 
+  // Channel management operations
+  getChannelAvailability(channelId: string, productIds?: number[]): { [productId: number]: number } {
+    const availability: { [productId: number]: number } = {};
+
+    const productsToCheck = productIds || Array.from(this.products.keys());
+
+    for (const productId of productsToCheck) {
+      const product = this.products.get(productId);
+      if (product && product.channel_allocations[channelId]) {
+        const allocation = product.channel_allocations[channelId];
+        availability[productId] = allocation.allocated - allocation.reserved - allocation.sold;
+      }
+    }
+
+    return availability;
+  }
+
+  createChannelReservation(productId: number, channelId: string, quantity: number, ttlHours: number = 24): ChannelReservation | null {
+    const product = this.products.get(productId);
+    if (!product || !product.channel_allocations[channelId]) {
+      return null;
+    }
+
+    const allocation = product.channel_allocations[channelId];
+    const available = allocation.allocated - allocation.reserved - allocation.sold;
+
+    if (available < quantity) {
+      return null; // Insufficient inventory
+    }
+
+    // Create reservation
+    const reservationId = `res_${this.nextReservationId++}`;
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + ttlHours);
+
+    const reservation: ChannelReservation = {
+      reservation_id: reservationId,
+      product_id: productId,
+      channel_id: channelId,
+      quantity,
+      status: 'active',
+      expires_at: expiresAt,
+      created_at: new Date()
+    };
+
+    // Update channel allocation
+    allocation.reserved += quantity;
+
+    // Store reservation
+    this.reservations.set(reservationId, reservation);
+
+    return reservation;
+  }
+
+  getReservation(reservationId: string): ChannelReservation | undefined {
+    return this.reservations.get(reservationId);
+  }
+
+  activateReservation(reservationId: string, orderId: number): boolean {
+    const reservation = this.reservations.get(reservationId);
+    if (!reservation || reservation.status !== 'active') {
+      return false;
+    }
+
+    const product = this.products.get(reservation.product_id);
+    if (!product) {
+      return false;
+    }
+
+    const allocation = product.channel_allocations[reservation.channel_id];
+
+    // Move from reserved to sold
+    allocation.reserved -= reservation.quantity;
+    allocation.sold += reservation.quantity;
+
+    // Update reservation status
+    reservation.status = 'activated';
+    reservation.activated_at = new Date();
+    reservation.order_id = orderId;
+
+    return true;
+  }
+
+  expireReservations(): number {
+    const now = new Date();
+    let expiredCount = 0;
+
+    for (const reservation of this.reservations.values()) {
+      if (reservation.status === 'active' && reservation.expires_at < now) {
+        // Expire the reservation
+        reservation.status = 'expired';
+
+        // Release inventory
+        const product = this.products.get(reservation.product_id);
+        if (product && product.channel_allocations[reservation.channel_id]) {
+          product.channel_allocations[reservation.channel_id].reserved -= reservation.quantity;
+        }
+
+        expiredCount++;
+      }
+    }
+
+    return expiredCount;
+  }
+
+  getActiveReservations(channelId?: string): ChannelReservation[] {
+    return Array.from(this.reservations.values()).filter(r =>
+      r.status === 'active' && (!channelId || r.channel_id === channelId)
+    );
+  }
+
   // Reset for testing
   reset() {
     this.orders.clear();
     this.tickets.clear();
+    this.reservations.clear();
     this.nextOrderId = 10001;
     this.nextTicketId = 50001;
+    this.nextReservationId = 1;
     this.initializeProducts(); // Reset products to initial state
   }
 }

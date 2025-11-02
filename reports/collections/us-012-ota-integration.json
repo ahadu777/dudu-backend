@@ -1,0 +1,454 @@
+{
+  "info": {
+    "name": "US-012 OTA Platform Integration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "End-to-end testing of OTA platform integration for 5000 ticket allocation"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{BASE_URL}}",
+      "type": "string"
+    },
+    {
+      "key": "otaApiKey",
+      "value": "ota_test_key_12345",
+      "type": "string"
+    },
+    {
+      "key": "reservationId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication Test (Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('API key required', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Error message correct', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.eql('API_KEY_REQUIRED');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/inventory",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "inventory"]
+        }
+      }
+    },
+    {
+      "name": "2. Get OTA Inventory",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('5000 total units available', function () {",
+              "    const response = pm.response.json();",
+              "    const quantities = response.available_quantities;",
+              "    const total = (quantities['106'] || 0) + (quantities['107'] || 0) + (quantities['108'] || 0);",
+              "    pm.expect(total).to.be.at.least(4000); // Allow for some reservations",
+              "});",
+              "",
+              "pm.test('Pricing context included', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.pricing_context).to.be.an('object');",
+              "    pm.expect(response.pricing_context.base_prices).to.be.an('object');",
+              "    pm.expect(response.pricing_context.customer_types).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/inventory",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "inventory"]
+        }
+      }
+    },
+    {
+      "name": "3. Create Reservation (Premium Plan)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Reservation created', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Reservation ID returned', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.reservation_id).to.be.a('string');",
+              "    pm.collectionVariables.set('reservationId', response.reservation_id);",
+              "});",
+              "",
+              "pm.test('Pricing snapshot included', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.pricing_snapshot).to.be.an('object');",
+              "    pm.expect(response.pricing_snapshot.base_price).to.eql(288);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 25\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/reserve",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "reserve"]
+        }
+      }
+    },
+    {
+      "name": "4. Verify Inventory Reduction",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Product 106 inventory reduced', function () {",
+              "    const response = pm.response.json();",
+              "    const available106 = response.available_quantities['106'];",
+              "    pm.expect(available106).to.be.below(2000); // Should be reduced from reservation",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/inventory",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "inventory"]
+        }
+      }
+    },
+    {
+      "name": "5. Get Reservation Details",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Reservation details correct', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.product_id).to.eql(106);",
+              "    pm.expect(response.quantity).to.eql(25);",
+              "    pm.expect(response.status).to.eql('active');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/reservations/{{reservationId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "reservations", "{{reservationId}}"]
+        }
+      }
+    },
+    {
+      "name": "6. Create Maximum Reservation (Pet Plan)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Maximum reservation allowed', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Correct pricing for Pet Plan', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.pricing_snapshot.base_price).to.eql(188);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 100\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/reserve",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "reserve"]
+        }
+      }
+    },
+    {
+      "name": "7. Test Validation Limits (Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Validation error for excessive quantity', function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "",
+              "pm.test('Correct error message', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.eql('VALIDATION_ERROR');",
+              "    pm.expect(response.message).to.include('between 1 and 100');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 108,\n  \"quantity\": 150\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/reserve",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "reserve"]
+        }
+      }
+    },
+    {
+      "name": "8. Test Invalid Product (Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Product not found error', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Correct error message', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.eql('PRODUCT_NOT_FOUND');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 999,\n  \"quantity\": 10\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/reserve",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "reserve"]
+        }
+      }
+    },
+    {
+      "name": "9. List Active Reservations",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Reservations array present', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.reservations).to.be.an('array');",
+              "    pm.expect(response.total_count).to.be.a('number');",
+              "});",
+              "",
+              "pm.test('At least 2 reservations exist', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.reservations.length).to.be.at.least(2);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/reservations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "reservations"]
+        }
+      }
+    },
+    {
+      "name": "10. Test Invalid API Key (Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Invalid API key rejected', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Correct error message', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.eql('INVALID_API_KEY');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "invalid_key_12345"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/inventory",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "inventory"]
+        }
+      }
+    },
+    {
+      "name": "11. Cleanup - Manual Expiry Test",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Cleanup completed', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Expiry count returned', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.message).to.include('Cleanup completed');",
+              "    pm.expect(response.expired_reservations).to.be.a('number');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/reservations/cleanup",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "reservations", "cleanup"]
+        }
+      }
+    }
+  ]
+}

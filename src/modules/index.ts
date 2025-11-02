@@ -15,6 +15,7 @@ import adminRouter from './admin/router';
 import travelRouter from './travel/router';
 import reservationsRouter from './reservations/router';
 import devRouter from './dev/router';
+import otaRouter from './ota/router';
 
 export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
   const apiRouter = Router();
@@ -37,6 +38,7 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/validators', operatorsRouter);
   app.use('/reports', reportsRouter);
   app.use('/dev', devRouter);
+  app.use('/api/ota', otaRouter);
 
   app.use('/payments', refundsRouter);
   app.use('/', refundsRouter);

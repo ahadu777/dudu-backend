@@ -11,10 +11,6 @@
 
 **For complete context:** Read [`docs/INTEGRATION_PROOF.md`](docs/INTEGRATION_PROOF.md)
 
-**For product context:** Read [`docs/PRODUCT_EXAMPLES.md`](docs/PRODUCT_EXAMPLES.md) to understand real vs mock business data
-
-**For business requirements:** Read PRDs in [`docs/prd/`](docs/prd/) for complete business context and product strategy
-
 ---
 
 ## 🚨 FRESH AI: READ THIS FIRST
@@ -123,10 +119,8 @@ cat docs/templates/CARD_TEMPLATE.md
 **Step 5: Integration Proof**
 ```bash
 # Create runbooks: docs/integration/US-XXX-runbook.md
-# Add Newman tests: reports/collections/us-XXX-*.json
-# Integrate into main E2E runner: scripts/run-e2e-by-context.mjs
+# Add Newman tests: docs/postman_e2e.json
 # Generate TypeScript examples: examples/
-# Update OpenAPI specification: openapi/openapi.json
 ```
 
 **Step 6: Validation**
@@ -134,8 +128,6 @@ cat docs/templates/CARD_TEMPLATE.md
 npm run validate:integration
 npm run test:e2e
 node scripts/story-coverage.mjs
-curl -s http://localhost:8080/openapi.json | python3 -m json.tool
-curl -s http://localhost:8080/docs/ | grep -q "Swagger UI"
 ```
 
 ### TRADITIONAL WORKFLOW (When cards already exist)
@@ -325,56 +317,14 @@ The project is configured for DigitalOcean deployment:
 2. **Update card status** to "In Progress" in frontmatter
 3. **Create Newman test file** - `reports/newman/[card-slug].json`
 4. **Implement with mock data** using unified store
-5. **Update OpenAPI specification** - Add endpoints, schemas, security (CRITICAL for external integration)
-6. **Run Newman tests** - Verify functionality works
-7. **Verify DoD** - Check all criteria met
-8. **Update card status** to "Done" with test report path
+5. **Run Newman tests** - Verify functionality works
+6. **Verify DoD** - Check all criteria met
+7. **Update card status** to "Done" with test report path
 
 **🔄 Real-time Status Updates Required:**
 - Start: "Ready" → "In Progress"
 - Finish: "In Progress" → "Done"
 - **Never leave cards in wrong status!**
-
-## 🚨 CRITICAL: OpenAPI Synchronization (External Integration)
-
-**⚠️ NEVER SKIP THIS STEP!** External partners depend on accurate API documentation.
-
-### OpenAPI Maintenance Pattern (Mandatory for New Endpoints)
-
-**When adding new endpoints:**
-1. **Implement endpoint** in `src/modules/`
-2. **IMMEDIATELY add to** `openapi/openapi.json`:
-   - Add path definition with complete request/response schemas
-   - Add any new schemas to components section
-   - Add security requirements if needed
-   - Add appropriate tags for organization
-3. **Validate OpenAPI**: `curl http://localhost:8080/openapi.json | python3 -m json.tool`
-4. **Test Swagger UI**: Access `http://localhost:8080/docs/` to verify documentation
-
-**⚠️ Missing this step breaks external partner integration!**
-
-### OpenAPI Update Checklist
-- [ ] Path definitions added with correct HTTP methods
-- [ ] Request/response schemas match implementation exactly
-- [ ] Security schemes properly referenced
-- [ ] Error responses documented (400, 401, 404, 422, etc.)
-- [ ] Examples provided for complex schemas
-- [ ] Tags added for logical endpoint grouping
-- [ ] Server URLs configured for production use
-
-### OpenAPI Schema Patterns
-```json
-// Endpoint with API key authentication
-"security": [{"otaApiKey": []}]
-
-// Schema with proper examples
-"example": {"106": 2000, "107": 1500}
-
-// Error response reference
-"$ref": "#/components/schemas/Error"
-```
-
-**Real Impact**: OTA integration (US-012) required manual OpenAPI sync. Without it, external partners would have no documentation despite working APIs.
 
 ## 🚨 When AI Process Goes Wrong
 
@@ -400,43 +350,12 @@ The project is configured for DigitalOcean deployment:
 - **Recovery**: Complete ALL missing DoD items before proceeding
 - **Prevention**: Check DoD criteria before marking "Done"
 
-**Violation: Missing OpenAPI Sync**
-- **Symptom**: Endpoints work but not documented in `/docs` or `/openapi.json`
-- **Recovery**: Add complete OpenAPI documentation immediately
-- **Prevention**: Include OpenAPI update as mandatory step 5 in development process
-
 ### Recovery Pattern (When Things Go Wrong):
 1. **Acknowledge the violation** - Admit what went wrong
 2. **Complete missing steps** - Fill in gaps in DoR/DoD process
 3. **Update documentation** - Fix card status, test reports, etc.
 4. **Verify DoD compliance** - Ensure all criteria actually met
 5. **Continue** - Process back on track
-
-## 📚 Case Study: OTA Platform Integration (Complete Success)
-
-### What Happened:
-**User Request**: "we need to reserve 5000 tickets for OTA platform integration by Nov 15"
-
-### ✅ Complete Workflow Success:
-1. **PRD Creation**: Created PRD-002 establishing business requirements and success metrics
-2. **Story Analysis**: US-012 with proper business context and technical breakdown
-3. **Card Generation**: Single comprehensive `ota-channel-management` card (consolidated from 4)
-4. **Implementation**: Complete OTA API with authentication, reservations, and inventory management
-5. **Integration Proof**: Runbook, Newman tests, TypeScript examples, and OpenAPI documentation
-6. **E2E Integration**: Full test runner integration and validation
-7. **External Partner Ready**: Complete documentation accessible via `/docs` and `/openapi.json`
-
-### 🎯 Key Success Metrics Achieved:
-- **Timeline**: Delivered Nov 3 (12 days ahead of Nov 15 deadline)
-- **Functionality**: 5000 package allocation fully operational
-- **Quality**: 25/25 E2E test assertions passing
-- **Integration**: External partners have complete self-service documentation
-
-### 💡 Workflow Insights Discovered:
-- **Single Comprehensive Card** > Multiple small cards for complex integrations
-- **OpenAPI sync is critical** for external partner success
-- **Integration proof workflow solves real business problems**
-- **PRD → Code traceability enables measurable success metrics**
 
 ## 📚 Case Study: QR Scanning Implementation (Lessons Learned)
 
@@ -540,21 +459,11 @@ The project is configured for DigitalOcean deployment:
 ## Notes for Claude - READ THIS FIRST
 
 ### What's Actually Done (Tested & Working)
-1. **GET /catalog** - Returns active products (includes real business examples: cruise packages 106-108)
+1. **GET /catalog** - Returns active products
 2. **GET /catalog/promotions/{id}** - Returns detailed promotion information (US-008)
-3. **POST /orders** - Idempotent order creation with complex pricing support
+3. **POST /orders** - Idempotent order creation
 4. **POST /payments/notify** - Payment processing with sync ticket issuance
 5. **Ticket Service** - Internal module for ticket generation
-6. **OTA Integration API** - Complete external partner integration (US-012):
-   - GET/POST `/api/ota/*` - Inventory, reservations, authentication
-   - 5000 package allocation operational
-   - Full OpenAPI documentation at `/docs` and `/openapi.json`
-   - External partner ready with TypeScript examples and runbooks
-
-### Real vs Mock Product Data
-- **Products 106-108**: Real cruise business examples (Premium Plan, Pet Plan, Deluxe Tea Set)
-- **Products 101-105**: Mock data for development/testing
-- **Reference**: See `docs/PRODUCT_EXAMPLES.md` for business context and function meanings
 
 ### Integration Proof Complete (NEW)
 1. **Story Runbooks** - Copy-paste commands for all 9 user stories (`docs/integration/`)
@@ -617,156 +526,15 @@ When conflicts arise, resolve using this precedence:
 
 **Key Insight:** Integration examples can drift from specifications. Use validation scripts to detect and fix misalignments systematically.
 
-## Complete Workflow: PRD → Story → Implementation
-
-### Phase 0: Product Requirements (NEW)
-**When:** New product initiative or major feature
-**Process:**
-1. Create PRD using `docs/templates/PRD_TEMPLATE.md`
-2. Define business context, success metrics, and requirements
-3. Document business rules and pricing strategies
-4. Validate business case and technical feasibility
-
-## 🔄 Product-Code Synchronization Strategy
-
-### The Synchronization Challenge
-**Problem**: How to ensure PRDs (business requirements) stay aligned with implementation (working code)?
-
-```
-PRD (Business Intent) ←→ Stories ←→ Cards ←→ Code (Working System)
-    ↑                                                ↑
-Business strategy                              Technical reality
-
-SYNC GAPS:
-- Business changes don't propagate to code
-- Code changes don't update business docs
-- Implementation learnings don't inform business strategy
-```
-
-### Synchronization Mechanisms
-
-#### 1. **PRD → Code Traceability**
-**Ensure business requirements drive implementation:**
-- **Link business metrics to technical metrics**: PRD success criteria → monitoring dashboards
-- **Validate business rules in code**: Pricing logic must match PRD business rules
-- **Function code business mapping**: Each technical function represents documented business capability
-- **Success metric implementation**: Business KPIs must be measurable in the system
-
-**Example**: PRD-001 pricing strategy → complex-pricing-engine implementation → actual cruise package pricing
-
-#### 2. **Code → PRD Feedback Loop**
-**Ensure implementation reality informs business strategy:**
-- **Technical constraints update business assumptions**: Performance limits → pricing model adjustments
-- **Usage data validates business hypotheses**: Customer behavior → package tier optimization
-- **Implementation costs inform business cases**: Development effort → feature prioritization
-- **Performance metrics challenge business metrics**: System capabilities → realistic success criteria
-
-#### 3. **Change Management Process**
-**Systematic handling of business-technical changes:**
-
-**When PRD Changes:**
-```bash
-1. Identify affected stories and cards
-2. Update technical specifications to match new business requirements
-3. Assess implementation impact (effort, timeline, technical debt)
-4. Update validation criteria and success metrics
-5. Propagate changes through Story → Card → Code chain
-```
-
-**When Code Changes:**
-```bash
-1. Assess business impact of technical changes
-2. Update PRD if business capabilities or constraints change
-3. Validate that technical changes still serve business objectives
-4. Update success metrics if technical reality differs from assumptions
-5. Document lessons learned for future PRD creation
-```
-
-#### 4. **Validation Scripts for Business-Technical Alignment**
-**Automated detection of sync drift:**
-
-```bash
-# Proposed validation scripts:
-npm run validate:business-alignment    # Check PRD → Code traceability
-npm run validate:pricing-rules        # Validate business rules in implementation
-npm run validate:success-metrics      # Ensure business KPIs are measurable
-npm run validate:function-mapping     # Verify function codes match business capabilities
-```
-
-#### 5. **Living Document Strategy**
-**Keep PRDs and code synchronized through:**
-- **Regular PRD reviews**: Quarterly business-technical alignment sessions
-- **Implementation feedback cycles**: Technical learnings update business assumptions
-- **Success metric monitoring**: Actual performance validates/invalidates business hypotheses
-- **Customer feedback integration**: Real usage patterns inform both business strategy and technical priorities
-
-### Practical Synchronization Examples
-
-#### Example 1: Pricing Strategy Evolution
-```
-PRD Change: "Add demand-based pricing for peak seasons"
-↓
-Story Analysis: Update US-011 complex pricing requirements
-↓
-Card Updates: Enhance complex-pricing-engine with demand algorithms
-↓
-Code Implementation: Add real-time demand tracking and pricing adjustment
-↓
-Success Validation: Monitor revenue impact vs PRD success criteria
-```
-
-#### Example 2: Technical Constraint Discovery
-```
-Code Reality: "QR token generation has 5-second limit"
-↓
-Business Impact Assessment: Affects customer experience expectations
-↓
-PRD Update: Adjust performance requirements and user experience assumptions
-↓
-Story Refinement: Add performance optimization requirements
-↓
-Success Metric Adjustment: Update customer satisfaction targets
-```
-
-### Synchronization Success Criteria
-
-**Well-Synchronized System Indicators:**
-- ✅ Business success metrics are measurable in the implemented system
-- ✅ Technical function codes have clear business capability mappings
-- ✅ Pricing logic in code exactly matches PRD business rules
-- ✅ Implementation performance meets PRD assumptions
-- ✅ Customer usage patterns validate PRD market hypotheses
-
-**Sync Drift Warning Signs:**
-- ❌ Business rules documented but not implemented
-- ❌ Code features that don't serve documented business objectives
-- ❌ Success metrics that can't be measured with current implementation
-- ❌ Technical debt that prevents business requirement fulfillment
-- ❌ Customer feedback contradicting PRD assumptions
-
-### AI Role in Synchronization
-
-**AI can help maintain sync by:**
-1. **Cross-referencing**: Automatically link business requirements to technical implementation
-2. **Drift detection**: Compare PRD business rules with actual code logic
-3. **Impact analysis**: Assess how technical changes affect business objectives
-4. **Validation**: Ensure new features serve documented business needs
-5. **Documentation**: Generate sync reports showing business-technical alignment status
-
-**AI limitations in sync:**
-- Cannot assess market reality vs business assumptions
-- Cannot evaluate customer satisfaction vs technical implementation
-- Cannot make business strategy decisions based on technical constraints
-- Requires human judgment for business priority vs technical feasibility trade-offs
+## Complete Workflow: User Story → Implementation
 
 ### Phase 1: Story Analysis
-**When:** Fresh user story (from PRD or direct requirement)
+**When:** Fresh user story without existing cards
 **Process:**
-1. **Check PRD first** - Reference existing product context
-2. Apply `docs/templates/STORY_ANALYSIS.md` template
-3. Extract business rules and acceptance criteria
-4. Identify API endpoints and data changes needed
-5. Break down into implementable cards
+1. Apply `docs/templates/STORY_ANALYSIS.md` template
+2. Extract business rules and acceptance criteria
+3. Identify API endpoints and data changes needed
+4. Break down into implementable cards
 
 **Example Input:** "I want users to cancel tickets and get refunds"
 **Example Output:** 3 cards (ticket-cancellation, refund-processing, cancellation-policies)
@@ -916,44 +684,6 @@ Examples:
 7. **Use existing patterns** from completed user stories (check `/docs/stories/_index.yaml` for current examples)
 8. **Follow established card quality** seen in completed cards like `tickets-issuance`, `user-profile-endpoint`
 9. **Check dependencies** - new stories may reference existing cards or create new dependencies
-10. **ALWAYS provide AI Impact Feedback** - analyze how changes affect AI reasoning and workflow (see requirement below)
-
-## 🚨 MANDATORY: AI Impact Feedback Requirement
-
-**EVERY response involving changes must include:**
-
-### "Impact for AI-Driven Development" Section
-- **How does this change affect AI reasoning capabilities?**
-- **What workflow improvements does this enable/require?**
-- **How does this impact knowledge graph effectiveness?**
-- **What new AI capabilities does this unlock?**
-- **What AI limitations does this expose or address?**
-
-### Why This Matters
-- **Continuous improvement**: Each change teaches us about AI-driven development
-- **Workflow evolution**: Understanding impact drives better processes
-- **Knowledge graph enhancement**: AI feedback improves system design
-- **Future AI context**: New AI sessions benefit from impact analysis
-
-### Examples of Required AI Impact Analysis
-```markdown
-## Impact for AI-Driven Development
-
-✅ **Positive Impacts:**
-- New relationship metadata enables automatic dependency discovery
-- PRD workflow separates business context from technical implementation
-- Template consistency improves AI document parsing
-
-❌ **Limitations Exposed:**
-- Current system cannot detect cross-domain integration conflicts
-- Business rule changes require manual propagation to technical specs
-
-🔄 **Workflow Improvements Enabled:**
-- AI can now trace business requirements through PRD → Story → Card → Code
-- Relationship queries become systematic rather than ad-hoc
-```
-
-**This feedback is NOT optional - it's required for system evolution.**
 
 ### Knowledge Graph Query Patterns (NEW)
 

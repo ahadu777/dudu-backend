@@ -10,7 +10,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:e2e": "BASE_URL=${BASE_URL:-https://express-jdpny.ondigitalocean.app} && node scripts/run-e2e-by-context.mjs --story US-010A && node scripts/run-e2e-by-context.mjs --story US-010B",
+    "test:e2e": "BASE_URL=${BASE_URL:-https://express-jdpny.ondigitalocean.app} && node scripts/run-e2e-by-context.mjs --story US-010A && node scripts/run-e2e-by-context.mjs --story US-010B && node scripts/run-e2e-by-context.mjs --story US-012",
     "test:e2e:ci": "npm run test:e2e",
     "example:us001": "ts-node examples/us001.ts",
     "example:us002": "ts-node examples/us002.ts",

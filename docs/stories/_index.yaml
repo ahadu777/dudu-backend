@@ -186,4 +186,23 @@ stories:
     # Cross-story relationships
     enhances: [US-001]
     enhanced_by: []
-    
+  - id: US-012
+    title: OTA Platform Integration for Bulk Ticket Reservation
+    status: Done
+    cards:
+      - ota-channel-management
+    # Sequence dependencies (consolidated into single comprehensive card)
+    sequence: []
+    # Cross-story relationships
+    enhances: [US-001, US-011]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-002"
+    deadline: "2025-11-15"
+    implementation_date: "2025-11-03"
+    implicit_dependencies: [catalog-endpoint, order-create, payment-webhook]
+    # E2E validation assets
+    validation_assets:
+      newman:
+        - reports/collections/us-012-ota-integration.json
+
