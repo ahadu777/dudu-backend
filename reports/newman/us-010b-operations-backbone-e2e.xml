@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="US-010B Operations Backbone" tests="7" time="6.879">
-  <testsuite name="1. Upsert 套票模板" id="e1afa632-e7e0-42bc-9bf9-fd2ad6c87879" timestamp="2025-10-30T11:07:12.875Z" tests="1" failures="0" errors="0" time="1.319">
-    <testcase name="200/201" time="1.319" classname="1Upsert"/>
+<testsuites name="US-010B Operations Backbone" tests="7" time="1.077">
+  <testsuite name="1. Upsert 套票模板" id="c3f15bab-9a81-420f-b445-17731ec79082" timestamp="2025-11-02T17:36:47.543Z" tests="1" failures="0" errors="0" time="0.260">
+    <testcase name="200/201" time="0.260" classname="1Upsert"/>
   </testsuite>
-  <testsuite name="2. 列出模板" id="5ffe3959-2df5-4bf3-98af-fc751d0656ee" timestamp="2025-10-30T11:07:12.875Z" tests="2" failures="0" errors="0" time="1.023">
-    <testcase name="status 200" time="1.023" classname="2"/>
-    <testcase name="templates 为数组" time="1.023" classname="2"/>
+  <testsuite name="2. 列出模板" id="4740ebd9-75e3-48b6-9380-ef9ffeb8377e" timestamp="2025-11-02T17:36:47.543Z" tests="2" failures="0" errors="0" time="0.120">
+    <testcase name="status 200" time="0.120" classname="2"/>
+    <testcase name="templates 为数组" time="0.120" classname="2"/>
   </testsuite>
-  <testsuite name="3. 获取模板详情" id="16a946d3-0d0f-4ae0-93d4-9740fdd22ccb" timestamp="2025-10-30T11:07:12.875Z" tests="2" failures="0" errors="0" time="0.773">
-    <testcase name="status 200" time="0.773" classname="3"/>
-    <testcase name="返回template对象" time="0.773" classname="3"/>
+  <testsuite name="3. 获取模板详情" id="c7cc2d91-82f1-4518-b38a-252c6af3b106" timestamp="2025-11-02T17:36:47.543Z" tests="2" failures="0" errors="0" time="0.185">
+    <testcase name="status 200" time="0.185" classname="3"/>
+    <testcase name="返回template对象" time="0.185" classname="3"/>
   </testsuite>
-  <testsuite name="4. 模板历史" id="82b0f90c-2e3f-46a5-a650-ec5896b6aaa2" timestamp="2025-10-30T11:07:12.875Z" tests="1" failures="0" errors="0" time="0.921">
-    <testcase name="status 200" time="0.921" classname="4"/>
+  <testsuite name="4. 模板历史" id="9be72ba3-546c-475b-9bfb-c188114f5781" timestamp="2025-11-02T17:36:47.543Z" tests="1" failures="0" errors="0" time="0.178">
+    <testcase name="status 200" time="0.178" classname="4"/>
   </testsuite>
-  <testsuite name="5. 更新路线票价" id="052526b6-85d1-460c-8c2c-c3ddb930ce0e" timestamp="2025-10-30T11:07:12.875Z" tests="1" failures="0" errors="0" time="1.201">
-    <testcase name="status 200" time="1.201" classname="5"/>
+  <testsuite name="5. 更新路线票价" id="5a3f6e79-5847-476b-bcd0-a7860d0fb07f" timestamp="2025-11-02T17:36:47.543Z" tests="1" failures="0" errors="0" time="0.107">
+    <testcase name="status 200" time="0.107" classname="5"/>
   </testsuite>
-  <testsuite name="6. 获取路线票价" id="3096e833-0468-4b67-a70a-4d8cbce07dac" timestamp="2025-10-30T11:07:12.875Z" tests="2" failures="0" errors="0" time="0.859">
-    <testcase name="status 200" time="0.859" classname="6"/>
-    <testcase name="fares 为数组" time="0.859" classname="6"/>
+  <testsuite name="6. 获取路线票价" id="08ec354e-0a43-43fd-990b-da388cf4c123" timestamp="2025-11-02T17:36:47.543Z" tests="2" failures="0" errors="0" time="0.110">
+    <testcase name="status 200" time="0.110" classname="6"/>
+    <testcase name="fares 为数组" time="0.110" classname="6"/>
   </testsuite>
-  <testsuite name="7. 路线票价历史" id="96a0e699-2690-4ad9-9461-336750d1e2d9" timestamp="2025-10-30T11:07:12.875Z" tests="1" failures="0" errors="0" time="0.783">
-    <testcase name="status 200或404" time="0.783" classname="7"/>
+  <testsuite name="7. 路线票价历史" id="646cddbf-7055-41ca-9daa-71e15c101a24" timestamp="2025-11-02T17:36:47.543Z" tests="1" failures="0" errors="0" time="0.117">
+    <testcase name="status 200或404" time="0.117" classname="7"/>
   </testsuite>
 </testsuites>
