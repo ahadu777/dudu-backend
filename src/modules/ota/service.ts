@@ -3,6 +3,7 @@ import { logger } from '../../utils/logger';
 import { AppDataSource } from '../../config/database';
 import { OTARepository } from './domain/ota.repository';
 import { mockDataStore } from '../../core/mock/data';
+import { dataSourceConfig } from '../../config/data-source';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -57,7 +58,7 @@ export class OTAService {
 
     const targetProducts = productIds || [106, 107, 108]; // Default to cruise packages
 
-    if (await this.isDatabaseAvailable()) {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       // Use database
       const repo = await this.getRepository();
       const inventories = await repo.getInventoryByProductIds(targetProducts);
@@ -79,9 +80,11 @@ export class OTAService {
 
           // Get pricing from product
           if (inventory.product) {
+            const basePrice = Number(inventory.product.base_price);
+            const weekendPremium = Number(inventory.product.weekend_premium || 30);
             pricing_context.base_prices[inventory.product_id] = {
-              weekday: inventory.product.base_price,
-              weekend: inventory.product.base_price + (inventory.product.weekend_premium || 30)
+              weekday: basePrice,
+              weekend: basePrice + weekendPremium
             };
           }
         }
@@ -152,7 +155,7 @@ export class OTAService {
       expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Default 24 hours
     }
 
-    if (await this.isDatabaseAvailable()) {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       // Use database
       const repo = await this.getRepository();
 
@@ -168,8 +171,8 @@ export class OTAService {
 
         // Build pricing snapshot
         const pricing_snapshot = {
-          base_price: product.base_price,
-          weekend_premium: product.weekend_premium || 30.00,
+          base_price: Number(product.base_price),
+          weekend_premium: Number(product.weekend_premium || 30.00),
           customer_discounts: product.customer_discounts || {}
         };
 
@@ -285,7 +288,7 @@ export class OTAService {
   }
 
   async getReservation(reservationId: string) {
-    if (await this.isDatabaseAvailable()) {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
       const reservation = await repo.findReservation(reservationId);
 
@@ -327,7 +330,7 @@ export class OTAService {
   }
 
   async expireOldReservations(): Promise<number> {
-    if (await this.isDatabaseAvailable()) {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
       const expiredCount = await repo.expireReservations();
       if (expiredCount > 0) {
@@ -344,7 +347,7 @@ export class OTAService {
   }
 
   async getActiveReservations() {
-    if (await this.isDatabaseAvailable()) {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
       const reservations = await repo.findActiveReservations('ota');
       return reservations.map(r => ({
