@@ -285,4 +285,88 @@ router.get('/orders/:id/tickets', async (req: AuthenticatedRequest, res: Respons
   }
 });
 
+// POST /api/ota/tickets/bulk-generate - Generate pre-made tickets for OTA
+router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { product_id, quantity, batch_id } = req.body;
+
+    // Validate required fields
+    if (typeof product_id !== 'number' || typeof quantity !== 'number' || !batch_id) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'product_id (number), quantity (number), and batch_id are required'
+      });
+    }
+
+    const result = await otaService.bulkGenerateTickets({
+      product_id,
+      quantity,
+      batch_id
+    });
+
+    res.status(201).json(result);
+
+  } catch (error: any) {
+    logger.error('OTA bulk ticket generation failed', {
+      partner: req.ota_partner?.name,
+      error: error.message,
+      request_body: req.body
+    });
+
+    const statusCode = error.code === 'PRODUCT_NOT_FOUND' ? 404 :
+                      error.code === 'SOLD_OUT' ? 409 :
+                      error.code === 'VALIDATION_ERROR' ? 422 : 500;
+
+    res.status(statusCode).json({
+      error: error.code || 'INTERNAL_ERROR',
+      message: error.message || 'Failed to generate tickets'
+    });
+  }
+});
+
+// POST /api/ota/tickets/:code/activate - Activate pre-made ticket with customer details
+router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ticketCode = req.params.code;
+    const { customer_details, payment_reference } = req.body;
+
+    // Validate required fields
+    if (!customer_details || !payment_reference) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'customer_details and payment_reference are required'
+      });
+    }
+
+    if (!customer_details.name || !customer_details.email || !customer_details.phone) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'customer_details must include name, email, and phone'
+      });
+    }
+
+    const result = await otaService.activatePreMadeTicket(ticketCode, {
+      customer_details,
+      payment_reference
+    });
+
+    res.status(200).json(result);
+
+  } catch (error: any) {
+    logger.error('OTA ticket activation failed', {
+      partner: req.ota_partner?.name,
+      ticket_code: req.params.code,
+      error: error.message
+    });
+
+    const statusCode = error.code === 'TICKET_NOT_FOUND' ? 404 :
+                      error.code === 'TICKET_ALREADY_ACTIVATED' ? 409 : 500;
+
+    res.status(statusCode).json({
+      error: error.code || 'INTERNAL_ERROR',
+      message: error.message || 'Failed to activate ticket'
+    });
+  }
+});
+
 export default router;

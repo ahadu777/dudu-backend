@@ -135,6 +135,88 @@ deadline: "2025-11-15"
   - Deluxe Tea Set (108): 1500 units OTA, 300 units direct (83% OTA allocation)
 - **Rationale**: Higher OTA allocation for premium products maximizes partnership value
 
+### Administrator Setup Process
+
+#### Initial Inventory Allocation (System Setup)
+**Responsibility**: System Administrator
+**Frequency**: One-time setup per product launch
+
+```yaml
+Step 1: Product Configuration
+- Access: Admin dashboard or direct database
+- Action: Set total inventory capacity per product
+- Example: Product 106 total capacity = 3000 units
+
+Step 2: Channel Allocation
+- Calculate channel split based on business strategy
+- Premium Plan (106): 2000 OTA + 1000 Direct = 3000 total
+- Pet Plan (107): 1500 OTA + 500 Direct = 2000 total
+- Deluxe Tea Set (108): 1500 OTA + 300 Direct = 1800 total
+
+Step 3: System Configuration
+Database Mode:
+  UPDATE products SET
+    channel_allocations = {
+      "ota": {"allocated": 2000, "reserved": 0, "sold": 0},
+      "direct": {"allocated": 1000, "reserved": 0, "sold": 0}
+    }
+  WHERE product_id = 106;
+
+Mock Mode (Development):
+  File: src/core/mock/data.ts
+  Update: Product initialization with channel_allocations
+
+Step 4: Validation
+- GET /api/ota/inventory → Verify OTA allocations appear
+- Monitor: channel_allocations.ota.allocated values
+- Test: Create reservation to ensure inventory decrements
+```
+
+#### Ongoing Inventory Management
+**Responsibility**: Business Operations Team
+**Frequency**: As needed based on demand
+
+```yaml
+Reallocation Process:
+1. Monitor channel performance via admin dashboard
+2. Identify over/under-performing channels
+3. Execute inventory reallocation:
+
+   Example: Move 500 units from Direct to OTA
+   - Check direct channel utilization < 70%
+   - Check OTA channel demand > available
+   - Execute reallocation:
+     * Direct: 1000 → 500 units
+     * OTA: 2000 → 2500 units
+
+4. Update allocation records
+5. Notify OTA partners of increased availability
+
+Emergency Inventory Release:
+- Scenario: OTA partner urgent request
+- Process: Admin override to allocate additional units
+- Approval: Business stakeholder sign-off required
+- Execution: Direct database/system update
+```
+
+#### Monitoring & Alerts
+```yaml
+Key Metrics to Monitor:
+- Inventory utilization by channel (target: >80%)
+- Reservation-to-sale conversion rate
+- Expired reservation frequency (should be <10%)
+
+Automated Alerts:
+- OTA inventory below 100 units remaining
+- Channel utilization imbalance (>20% difference)
+- Unusual reservation patterns or API abuse
+
+Admin Dashboard Views:
+- Real-time inventory levels per product/channel
+- Historical allocation performance
+- Partner-specific usage patterns
+```
+
 ### Pricing Consistency
 - **Pricing Model**: Identical complex pricing across all channels (maintains PRD-001 strategy)
 - **Price Points**:
@@ -164,7 +246,7 @@ deadline: "2025-11-15"
 # POST /api/ota/reserve - Create reservation
 ```
 
-### Phase 2: Order Fulfillment (🔄 Implementation Required)
+### Phase 2: Order Fulfillment (✅ Implementation Complete)
 
 #### Reservation Activation
 ```yaml
@@ -187,6 +269,50 @@ POST /api/ota/reservations/{reservation_id}/activate:
       confirmation_code: string
     409: "Reservation expired or already activated"
     422: "Invalid customer details"
+```
+
+### Phase 2.5: Pre-Made Ticket Support (🔄 New Implementation)
+
+#### Bulk Ticket Generation
+```yaml
+POST /api/ota/tickets/bulk-generate:
+  summary: Generate pre-made tickets for OTA offline sales
+  requestBody:
+    product_id: number
+    quantity: number (1-5000)
+    batch_id: string
+  responses:
+    201:
+      batch_id: string
+      tickets: array[
+        ticket_code: string
+        qr_code: string (base64 image)
+        status: "PRE_GENERATED"
+        entitlements: array[FunctionEntitlement]
+      ]
+      total_generated: number
+    422: "Invalid quantity or product not available"
+
+#### Individual Ticket Activation
+POST /api/ota/tickets/{ticket_code}/activate:
+  summary: Complete pre-made ticket with customer details
+  parameters:
+    - ticket_code: string (path)
+  requestBody:
+    customer_details:
+      name: string
+      email: string
+      phone: string
+    payment_reference: string
+  responses:
+    200:
+      ticket_code: string
+      order_id: string
+      customer_name: string
+      status: "ACTIVE"
+      activated_at: string
+    404: "Ticket code not found"
+    409: "Ticket already activated"
 ```
 
 #### Reservation Management
@@ -231,6 +357,137 @@ GET /api/ota/orders/{order_id}/tickets:
 - **Real-time Sync**: Reservations immediately impact available inventory
 - **Automatic Cleanup**: Expired reservations release inventory without manual intervention
 - **Error Recovery**: System continues operating if individual reservations fail
+
+### System Architecture Flows
+
+#### Pre-Made Ticket Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant OTA as OTA Platform
+    participant API as OTA API Gateway
+    participant Service as OTA Service
+    participant Store as Mock Data Store
+    participant Customer as End Customer
+
+    Note over OTA,Store: Phase 1: Bulk Generation (OTA Preparation)
+    OTA->>API: POST /api/ota/tickets/bulk-generate
+    Note right of OTA: {product_id: 106, quantity: 5000, batch_id: "BATCH-001"}
+    API->>Service: Validate & Generate Tickets
+    Service->>Store: Reserve Inventory (5000 units)
+    Service->>Store: Create Pre-Generated Tickets
+    Note right of Store: Status: PRE_GENERATED<br/>Customer: null<br/>QR Codes: Generated
+    Store-->>Service: Ticket Codes Created
+    Service-->>API: Return Ticket Batch
+    API-->>OTA: {tickets: [...], total_generated: 5000}
+
+    Note over OTA,Customer: Phase 2: Customer Sale (OTA → Customer)
+    Customer->>OTA: Purchase Ticket via OTA Website
+    Note right of Customer: Customer provides payment<br/>OTA handles transaction
+    OTA->>OTA: Process Payment Locally
+
+    Note over OTA,Store: Phase 3: Ticket Activation (Complete Transaction)
+    OTA->>API: POST /api/ota/tickets/{code}/activate
+    Note right of OTA: {customer_details: {...}, payment_reference: "PAY-123"}
+    API->>Service: Activate Pre-Made Ticket
+    Service->>Store: Find Ticket by Code
+    Service->>Store: Create Order Record
+    Service->>Store: Link Customer to Ticket
+    Note right of Store: Status: PRE_GENERATED → ACTIVE<br/>Customer: Assigned<br/>Order: Created
+    Store-->>Service: Activation Complete
+    Service-->>API: Return Order Details
+    API-->>OTA: {order_id, customer_name, status: "ACTIVE"}
+
+    Note over Customer,Store: Phase 4: Ticket Usage (Venue Redemption)
+    Customer->>Customer: Receive QR Code from OTA
+    Customer->>Store: Present QR at Venue
+    Note right of Customer: QR contains ticket metadata
+    Store->>Store: Validate Active Ticket
+    Store-->>Customer: Grant Access + Entitlements
+```
+
+#### Traditional Reservation Flow (Comparison)
+```mermaid
+sequenceDiagram
+    participant OTA as OTA Platform
+    participant API as OTA API Gateway
+    participant Service as OTA Service
+    participant Store as Mock Data Store
+    participant Customer as End Customer
+
+    Note over OTA,Store: Real-Time Reservation Model
+    Customer->>OTA: Browse Products
+    OTA->>API: GET /api/ota/inventory
+    API-->>OTA: Available Quantities
+
+    Customer->>OTA: Initiate Purchase
+    OTA->>API: POST /api/ota/reserve
+    Note right of OTA: {product_id: 106, quantity: 2}
+    API->>Store: Create Temporary Reservation
+    Store-->>API: {reservation_id, expires_at}
+    API-->>OTA: Reservation Created (24h hold)
+
+    Customer->>OTA: Complete Payment
+    OTA->>API: POST /api/ota/reservations/{id}/activate
+    Note right of OTA: {customer_details, payment_reference}
+    API->>Store: Convert Reservation → Order
+    Store-->>API: Order + Tickets Created
+    API-->>OTA: {order_id, tickets: [...]}
+```
+
+### Complete Testing Workflow
+
+#### End-to-End Pre-Made Ticket Flow
+```yaml
+Prerequisites:
+  - OTA API key with permissions: tickets:bulk-generate, tickets:activate
+  - Products 106/107/108 with available OTA allocation
+  - Server running with mock data mode
+
+Step 1: Verify Available Inventory
+GET /api/ota/inventory
+Headers: x-api-key: ota_test_key_12345
+Expected: Shows available units per product for OTA channel
+
+Step 2: Generate Pre-Made Ticket Batch
+POST /api/ota/tickets/bulk-generate
+Headers: x-api-key: ota_test_key_12345
+Body: {
+  "product_id": 106,
+  "quantity": 5,
+  "batch_id": "TEST-BATCH-001"
+}
+Expected: 201 response with 5 ticket codes and QR codes
+Verify: Each ticket has status "PRE_GENERATED"
+
+Step 3: Activate Individual Ticket
+POST /api/ota/tickets/{ticket_code}/activate
+Headers: x-api-key: ota_test_key_12345
+Body: {
+  "customer_details": {
+    "name": "Test Customer",
+    "email": "test@example.com",
+    "phone": "+1555000111"
+  },
+  "payment_reference": "PAY-TEST-001"
+}
+Expected: 200 response with order_id and status "ACTIVE"
+
+Step 4: Verify Order Creation
+GET /api/ota/orders
+Headers: x-api-key: ota_test_key_12345
+Expected: Shows order with customer details from Step 3
+
+Step 5: Verify QR Code Access
+GET /api/ota/orders/{order_id}/tickets
+Headers: x-api-key: ota_test_key_12345
+Expected: QR codes match those generated in Step 2
+
+Test Scenarios:
+- Duplicate activation: Try activating same ticket twice → 409 error
+- Invalid ticket: Try activating non-existent code → 404 error
+- Inventory validation: Generate more tickets than available → 409 error
+- Missing permissions: Use wrong API key → 403 error
+```
 
 ## Success Metrics & KPIs
 
@@ -283,13 +540,22 @@ GET /api/ota/orders/{order_id}/tickets:
 - API authentication middleware
 - Real-time availability tracking
 
-**Phase 2** (Nov 6-10, 2025): Order Fulfillment Integration - 🔄 **IN PROGRESS**
+**Phase 2** (Nov 6-10, 2025): Order Fulfillment Integration - ✅ **COMPLETED**
 - ✅ Reservation expiry automation
-- ❌ Reservation activation endpoint (`POST /api/ota/reservations/{id}/activate`)
-- ❌ Order creation integration with existing payment flow
-- ❌ QR code generation and delivery to OTA
+- ✅ Reservation activation endpoint (`POST /api/ota/reservations/{id}/activate`)
+- ✅ Order creation integration with existing payment flow
+- ✅ QR code generation and delivery to OTA
 - ✅ Complex pricing system integration
 - ✅ Error handling and monitoring
+
+**Phase 2.5** (Nov 4, 2025): Pre-Made Ticket Support - ✅ **COMPLETED**
+- ✅ Bulk ticket generation endpoint (`POST /api/ota/tickets/bulk-generate`)
+- ✅ Individual ticket activation endpoint (`POST /api/ota/tickets/{code}/activate`)
+- ✅ Pre-generated ticket status management (PRE_GENERATED → ACTIVE)
+- ✅ Inventory allocation for bulk ticket batches
+- ✅ Customer-order association for purchased tickets
+- ✅ API key permissions for new endpoints
+- ✅ Complete end-to-end testing workflow validated
 
 **Phase 3** (Nov 11-15, 2025): Production Readiness - ✅ **COMPLETED**
 - Load testing and performance validation
@@ -323,7 +589,8 @@ GET /api/ota/orders/{order_id}/tickets:
 - **Stories**: US-012 (OTA Platform Integration)
 - **Cards**: ota-channel-management, ota-authentication-middleware, ota-order-processing, channel-inventory-tracking
 - **Code**: Working implementation with channel separation and API endpoints
-- **Testing**: End-to-end validation completed with 750 units reserved in testing
+- **Phase 2.5 Addition**: Pre-made ticket system with bulk generation and activation endpoints
+- **Testing**: End-to-end validation completed with 750 units reserved in testing + pre-made ticket workflow validated
 
 ### Validation Results
 - **Technical**: All API endpoints responding correctly with proper authentication
@@ -387,4 +654,4 @@ GET /api/ota/orders/{order_id}/tickets:
 - `docs/stories/US-012-ota-platform-integration.md` (technical implementation story)
 - `docs/cards/ota-channel-management.md` (core technical specifications)
 
-**Business Impact Summary**: Successfully delivered multi-channel inventory system enabling 5000 package unit allocation to OTA partners, expanding market reach while maintaining operational consistency with existing cruise platform. System operational and ready for partner onboarding.
+**Business Impact Summary**: Successfully delivered multi-channel inventory system enabling 5000 package unit allocation to OTA partners, expanding market reach while maintaining operational consistency with existing cruise platform. **Phase 2.5 Enhancement**: Added pre-made ticket capability enabling OTA offline sales with bulk generation and individual customer activation. Complete system operational and ready for partner onboarding with both real-time and pre-made ticket workflows.

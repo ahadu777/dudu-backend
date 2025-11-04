@@ -86,8 +86,9 @@ class MockDataStore {
   private orders: Map<string, MockOrder> = new Map(); // key: user_id-out_trade_no
   private tickets: Map<number, MockTicket> = new Map();
   private reservations: Map<string, ChannelReservation> = new Map(); // key: reservation_id
-  private nextOrderId = 10001;
-  private nextTicketId = 50001;
+  public preGeneratedTickets: Map<string, any> = new Map(); // key: ticket_code
+  public nextOrderId = 10001;
+  public nextTicketId = 50001;
   private nextReservationId = 1;
 
   constructor() {
@@ -627,6 +628,27 @@ class MockDataStore {
     }
     // Fallback to existing getOrder method logic if needed
     return undefined;
+  }
+
+  reserveChannelInventory(channel: string, productId: number, quantity: number): boolean {
+    const product = this.products.get(productId);
+    if (!product || !product.channel_allocations[channel]) {
+      return false;
+    }
+
+    const allocation = product.channel_allocations[channel];
+    if (allocation.allocated >= quantity) {
+      allocation.allocated -= quantity;
+      allocation.reserved += quantity;
+      return true;
+    }
+
+    return false;
+  }
+
+  addOrder(orderId: string, orderData: any): void {
+    // For OTA orders, we store them with order_id as key for easy retrieval
+    this.orders.set(orderId, orderData);
   }
 }
 

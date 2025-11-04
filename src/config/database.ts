@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+
 export const AppDataSource = new DataSource({
   type: 'mysql',
   host: process.env.DB_HOST || 'localhost',
@@ -11,7 +12,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_DATABASE || 'express_api',
-  synchronize: false, // Always false for safety
+  synchronize: false, // Disabled - tables already exist
   // logging: process.env.NODE_ENV === 'development', // 显示所有 SQL（调试用）
   logging: ['error', 'warn'], // 只显示错误和警告（推荐）
   entities: [path.resolve(__dirname, '../modules/**/domain/*.{ts,js}')],

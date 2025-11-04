@@ -2,16 +2,22 @@ import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { ProductEntity } from './product.entity';
 import { ProductInventoryEntity } from './product-inventory.entity';
 import { ChannelReservationEntity, ReservationStatus } from './channel-reservation.entity';
+import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
+import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
   private inventoryRepo: Repository<ProductInventoryEntity>;
   private reservationRepo: Repository<ChannelReservationEntity>;
+  private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
+  private otaOrderRepo: Repository<OTAOrderEntity>;
 
   constructor(private dataSource: DataSource) {
     this.productRepo = dataSource.getRepository(ProductEntity);
     this.inventoryRepo = dataSource.getRepository(ProductInventoryEntity);
     this.reservationRepo = dataSource.getRepository(ChannelReservationEntity);
+    this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
+    this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
   }
 
   // Product operations
@@ -292,5 +298,149 @@ export class OTARepository {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // Pre-Generated Ticket Operations
+  async createPreGeneratedTickets(tickets: Partial<PreGeneratedTicketEntity>[]): Promise<PreGeneratedTicketEntity[]> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Bulk insert tickets
+      const savedTickets = await queryRunner.manager.save(PreGeneratedTicketEntity, tickets);
+
+      // Update inventory (reserve units for the batch)
+      if (tickets.length > 0) {
+        const productId = tickets[0].product_id;
+        const quantity = tickets.length;
+
+        // Update inventory using the helper method
+        const inventory = await queryRunner.manager.findOne(ProductInventoryEntity, {
+          where: { product_id: productId }
+        });
+
+        if (inventory) {
+          if (!inventory.reserveInventory('ota', quantity)) {
+            throw new Error('Insufficient inventory for reservation');
+          }
+          await queryRunner.manager.save(ProductInventoryEntity, inventory);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      return savedTickets;
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async findPreGeneratedTicket(ticketCode: string): Promise<PreGeneratedTicketEntity | null> {
+    return this.preGeneratedTicketRepo.findOne({
+      where: { ticket_code: ticketCode }
+    });
+  }
+
+  async findPreGeneratedTicketsByBatch(batchId: string): Promise<PreGeneratedTicketEntity[]> {
+    return this.preGeneratedTicketRepo.find({
+      where: { batch_id: batchId },
+      order: { created_at: 'ASC' }
+    });
+  }
+
+  async activatePreGeneratedTicket(
+    ticketCode: string,
+    customerData: {
+      customer_name: string;
+      customer_email: string;
+      customer_phone?: string;
+      payment_reference: string;
+    },
+    orderData: Partial<OTAOrderEntity>
+  ): Promise<{ ticket: PreGeneratedTicketEntity; order: OTAOrderEntity }> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Find the pre-generated ticket
+      const ticket = await queryRunner.manager.findOne(PreGeneratedTicketEntity, {
+        where: { ticket_code: ticketCode, status: 'PRE_GENERATED' }
+      });
+
+      if (!ticket) {
+        throw new Error(`Ticket ${ticketCode} not found or already activated`);
+      }
+
+      // Create the order
+      const order = queryRunner.manager.create(OTAOrderEntity, {
+        ...orderData,
+        customer_name: customerData.customer_name,
+        customer_email: customerData.customer_email,
+        customer_phone: customerData.customer_phone,
+        payment_reference: customerData.payment_reference
+      });
+
+      const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
+
+      // Update the ticket with customer info and link to order
+      ticket.customer_name = customerData.customer_name;
+      ticket.customer_email = customerData.customer_email;
+      ticket.customer_phone = customerData.customer_phone;
+      ticket.payment_reference = customerData.payment_reference;
+      ticket.order_id = savedOrder.order_id;
+      ticket.status = 'ACTIVE';
+      ticket.activated_at = new Date();
+
+      const savedTicket = await queryRunner.manager.save(PreGeneratedTicketEntity, ticket);
+
+      // Update inventory (move from reserved to sold)
+      const inventory = await queryRunner.manager.findOne(ProductInventoryEntity, {
+        where: { product_id: ticket.product_id }
+      });
+
+      if (inventory) {
+        inventory.activateReservation('ota', 1);
+        await queryRunner.manager.save(ProductInventoryEntity, inventory);
+      }
+
+      await queryRunner.commitTransaction();
+      return { ticket: savedTicket, order: savedOrder };
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // OTA Order Operations
+  async createOTAOrder(orderData: Partial<OTAOrderEntity>): Promise<OTAOrderEntity> {
+    const order = this.otaOrderRepo.create(orderData);
+    return this.otaOrderRepo.save(order);
+  }
+
+  async findOTAOrdersByChannel(): Promise<OTAOrderEntity[]> {
+    return this.otaOrderRepo.find({
+      where: { channel_id: 2 }, // OTA channel
+      order: { created_at: 'DESC' }
+    });
+  }
+
+  async findOTAOrderById(orderId: string): Promise<OTAOrderEntity | null> {
+    return this.otaOrderRepo.findOne({
+      where: { order_id: orderId }
+    });
+  }
+
+  async findTicketsByOrderId(orderId: string): Promise<PreGeneratedTicketEntity[]> {
+    return this.preGeneratedTicketRepo.find({
+      where: { order_id: orderId, status: 'ACTIVE' }
+    });
   }
 }

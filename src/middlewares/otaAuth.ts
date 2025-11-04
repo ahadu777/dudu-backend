@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 
 // Simple API key store - in production this would be in database
 const API_KEYS = new Map<string, { partner_name: string, permissions: string[], rate_limit: number }>([
-  ['ota_test_key_12345', { partner_name: 'Test OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create'], rate_limit: 100 }],
+  ['ota_test_key_12345', { partner_name: 'Test OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 100 }],
   ['ota_prod_key_67890', { partner_name: 'Production OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create'], rate_limit: 1000 }]
 ]);
 

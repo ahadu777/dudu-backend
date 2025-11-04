@@ -47,6 +47,35 @@ export interface OTAActivateResponse {
   confirmation_code: string;
 }
 
+export interface OTABulkGenerateRequest {
+  product_id: number;
+  quantity: number;
+  batch_id: string;
+}
+
+export interface OTABulkGenerateResponse {
+  batch_id: string;
+  tickets: any[];
+  total_generated: number;
+}
+
+export interface OTATicketActivateRequest {
+  customer_details: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  payment_reference: string;
+}
+
+export interface OTATicketActivateResponse {
+  ticket_code: string;
+  order_id: string;
+  customer_name: string;
+  status: string;
+  activated_at: string;
+}
+
 export class OTAService {
   private otaRepository: OTARepository | null = null;
 
@@ -491,8 +520,18 @@ export class OTAService {
 
   async getOrders(): Promise<any[]> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
-      // TODO: Implement database method
-      logger.warn('ota.orders.database_not_implemented');
+      // Database implementation
+      const orders = await this.otaRepository!.findOTAOrdersByChannel();
+      return orders.map((order: any) => ({
+        order_id: order.order_id,
+        product_id: order.product_id,
+        customer_name: order.customer_name,
+        customer_email: order.customer_email,
+        total_amount: order.total_amount,
+        status: order.status,
+        created_at: order.created_at.toISOString(),
+        confirmation_code: order.confirmation_code
+      }));
     }
 
     // Mock implementation
@@ -511,8 +550,21 @@ export class OTAService {
 
   async getOrderTickets(orderId: string): Promise<any[]> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
-      // TODO: Implement database method
-      logger.warn('ota.order_tickets.database_not_implemented');
+      // Database implementation
+      const tickets = await this.otaRepository!.findTicketsByOrderId(orderId);
+      if (tickets.length === 0) {
+        throw {
+          code: 'ORDER_NOT_FOUND',
+          message: `Order ${orderId} not found`
+        };
+      }
+
+      return tickets.map((ticket: any) => ({
+        ticket_code: ticket.ticket_code,
+        qr_code: ticket.qr_code,
+        entitlements: ticket.entitlements,
+        status: ticket.status
+      }));
     }
 
     // Mock implementation
@@ -530,6 +582,317 @@ export class OTAService {
         entitlements: ticket.entitlements,
         status: ticket.status
       }));
+  }
+
+  async bulkGenerateTickets(request: OTABulkGenerateRequest): Promise<OTABulkGenerateResponse> {
+    logger.info('ota.tickets.bulk_generation_requested', {
+      product_id: request.product_id,
+      quantity: request.quantity,
+      batch_id: request.batch_id
+    });
+
+    // Validate quantity
+    if (request.quantity < 1 || request.quantity > 5000) {
+      throw {
+        code: ERR.VALIDATION_ERROR,
+        message: 'Quantity must be between 1 and 5000'
+      };
+    }
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      // Database implementation
+      logger.info('ota.tickets.bulk_generation_database_mode', {
+        batch_id: request.batch_id,
+        quantity: request.quantity
+      });
+
+      // Get product from database
+      const product = await this.otaRepository!.findProductById(request.product_id);
+      if (!product) {
+        throw {
+          code: ERR.PRODUCT_NOT_FOUND,
+          message: `Product ${request.product_id} not found`
+        };
+      }
+
+      // Check inventory availability - inventory should be included with the product
+      const inventory = product.inventory[0]; // There should be one inventory per product
+      if (!inventory) {
+        throw {
+          code: ERR.PRODUCT_NOT_FOUND,
+          message: `No inventory found for product ${request.product_id}`
+        };
+      }
+
+      const otaAvailable = inventory.getChannelAvailable('ota');
+      if (otaAvailable < request.quantity) {
+        throw {
+          code: ERR.SOLD_OUT,
+          message: `Insufficient OTA inventory. Available: ${otaAvailable}, Requested: ${request.quantity}`
+        };
+      }
+
+      // Generate tickets for database
+      const tickets = [];
+      for (let i = 0; i < request.quantity; i++) {
+        const ticketId = Date.now() + (Math.random() * 1000) + i; // Unique ID with index
+        const ticketCode = `CRUISE-${new Date().getFullYear()}-${product.category.toUpperCase()}-${Math.floor(ticketId)}`;
+
+        const qrData = JSON.stringify({
+          ticket_id: ticketId,
+          product_id: product.id,
+          batch_id: request.batch_id,
+          issued_at: new Date().toISOString()
+        });
+
+        // Use entitlements from product or default cruise functions
+        const entitlements = product.entitlements?.map((entitlement: any) => ({
+          function_code: entitlement.type,
+          remaining_uses: 1
+        })) || [
+          { function_code: 'ferry', remaining_uses: 1 },
+          { function_code: 'deck_access', remaining_uses: 1 },
+          { function_code: 'dining', remaining_uses: 1 }
+        ];
+
+        const ticket = {
+          ticket_code: ticketCode,
+          product_id: product.id,
+          batch_id: request.batch_id,
+          status: 'PRE_GENERATED' as const,
+          entitlements,
+          qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+          created_at: new Date()
+        };
+
+        tickets.push(ticket);
+      }
+
+      // Save to database with inventory update
+      const savedTickets = await this.otaRepository!.createPreGeneratedTickets(tickets);
+
+      logger.info('ota.tickets.bulk_generation_database_completed', {
+        batch_id: request.batch_id,
+        product_id: request.product_id,
+        total_generated: savedTickets.length
+      });
+
+      return {
+        batch_id: request.batch_id,
+        tickets: savedTickets.map(ticket => ({
+          ticket_code: ticket.ticket_code,
+          qr_code: ticket.qr_code,
+          status: ticket.status,
+          entitlements: ticket.entitlements
+        })),
+        total_generated: savedTickets.length
+      };
+    }
+
+    // Mock implementation
+    const product = mockDataStore.getProduct(request.product_id);
+    if (!product) {
+      throw {
+        code: ERR.PRODUCT_NOT_FOUND,
+        message: `Product ${request.product_id} not found`
+      };
+    }
+
+    // Check if we have enough OTA allocation
+    const availability = mockDataStore.getChannelAvailability('ota', [request.product_id]);
+    if (availability[request.product_id] < request.quantity) {
+      throw {
+        code: ERR.SOLD_OUT,
+        message: `Insufficient OTA inventory. Available: ${availability[request.product_id]}, Requested: ${request.quantity}`
+      };
+    }
+
+    // Generate pre-made tickets
+    const tickets = [];
+    for (let i = 0; i < request.quantity; i++) {
+      const ticketId = mockDataStore.nextTicketId++;
+      const ticketCode = `${product.sku}-${ticketId}`;
+
+      const qrData = JSON.stringify({
+        ticket_id: ticketId,
+        product_id: product.id,
+        batch_id: request.batch_id,
+        issued_at: new Date().toISOString()
+      });
+
+      const ticket = {
+        id: ticketId,
+        code: ticketCode,
+        product_id: product.id,
+        batch_id: request.batch_id,
+        status: 'PRE_GENERATED',
+        entitlements: product.functions.map(func => ({
+          function_code: func.function_code,
+          remaining_uses: 1
+        })),
+        qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+        created_at: new Date(),
+        customer_name: null,
+        customer_email: null,
+        order_id: null
+      };
+
+      tickets.push(ticket);
+      mockDataStore.preGeneratedTickets.set(ticketCode, ticket);
+    }
+
+    // Reserve inventory for this batch
+    mockDataStore.reserveChannelInventory('ota', request.product_id, request.quantity);
+
+    logger.info('ota.tickets.bulk_generation_completed', {
+      batch_id: request.batch_id,
+      product_id: request.product_id,
+      total_generated: tickets.length
+    });
+
+    return {
+      batch_id: request.batch_id,
+      tickets: tickets.map(ticket => ({
+        ticket_code: ticket.code,
+        qr_code: ticket.qr_code,
+        status: ticket.status,
+        entitlements: ticket.entitlements
+      })),
+      total_generated: tickets.length
+    };
+  }
+
+  async activatePreMadeTicket(ticketCode: string, request: OTATicketActivateRequest): Promise<OTATicketActivateResponse> {
+    logger.info('ota.ticket.activation_requested', {
+      ticket_code: ticketCode,
+      customer_email: request.customer_details.email,
+      payment_reference: request.payment_reference
+    });
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      // Database implementation
+      logger.info('ota.ticket.activation_database_mode', {
+        ticket_code: ticketCode,
+        customer_email: request.customer_details.email
+      });
+
+      // Generate order ID
+      const orderId = `ORD-${Date.now()}`;
+      const now = new Date();
+
+      // Prepare order data
+      const orderData = {
+        order_id: orderId,
+        product_id: 0, // Will be set from ticket
+        channel_id: 2, // OTA channel
+        total_amount: 382, // Base price for simplicity
+        status: 'confirmed' as const,
+        confirmation_code: `CONF-${Date.now()}`,
+        created_at: now
+      };
+
+      try {
+        // Use repository to activate ticket and create order atomically
+        const result = await this.otaRepository!.activatePreGeneratedTicket(
+          ticketCode,
+          {
+            customer_name: request.customer_details.name,
+            customer_email: request.customer_details.email,
+            customer_phone: request.customer_details.phone,
+            payment_reference: request.payment_reference
+          },
+          orderData
+        );
+
+        logger.info('ota.ticket.activation_database_completed', {
+          ticket_code: ticketCode,
+          order_id: result.order.order_id,
+          customer_name: result.ticket.customer_name
+        });
+
+        return {
+          ticket_code: ticketCode,
+          order_id: result.order.order_id,
+          customer_name: result.ticket.customer_name!,
+          status: 'ACTIVE',
+          activated_at: result.ticket.activated_at!.toISOString()
+        };
+
+      } catch (error: any) {
+        if (error.message?.includes('not found')) {
+          throw {
+            code: 'TICKET_NOT_FOUND',
+            message: error.message
+          };
+        }
+        if (error.message?.includes('already activated')) {
+          throw {
+            code: 'TICKET_ALREADY_ACTIVATED',
+            message: error.message
+          };
+        }
+        throw error;
+      }
+    }
+
+    // Mock implementation
+    const ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+    if (!ticket) {
+      throw {
+        code: 'TICKET_NOT_FOUND',
+        message: `Ticket ${ticketCode} not found`
+      };
+    }
+
+    if (ticket.status !== 'PRE_GENERATED') {
+      throw {
+        code: 'TICKET_ALREADY_ACTIVATED',
+        message: `Ticket ${ticketCode} is already ${ticket.status}`
+      };
+    }
+
+    // Create order for this ticket
+    const orderId = `ORD-${mockDataStore.nextOrderId++}`;
+    const now = new Date();
+
+    const order = {
+      order_id: orderId,
+      product_id: ticket.product_id,
+      channel_id: 2, // OTA channel ID
+      customer_name: request.customer_details.name,
+      customer_email: request.customer_details.email,
+      customer_phone: request.customer_details.phone,
+      payment_reference: request.payment_reference,
+      total_amount: 382, // Base price for simplicity
+      status: 'confirmed',
+      created_at: now,
+      confirmation_code: `CONF-${mockDataStore.nextOrderId}`,
+      tickets: [ticket]
+    };
+
+    // Update ticket with customer details
+    ticket.customer_name = request.customer_details.name;
+    ticket.customer_email = request.customer_details.email;
+    ticket.order_id = orderId;
+    ticket.status = 'ACTIVE';
+    ticket.activated_at = now;
+
+    // Store the order
+    mockDataStore.addOrder(orderId, order);
+
+    logger.info('ota.ticket.activation_completed', {
+      ticket_code: ticketCode,
+      order_id: orderId,
+      customer_name: request.customer_details.name
+    });
+
+    return {
+      ticket_code: ticketCode,
+      order_id: orderId,
+      customer_name: request.customer_details.name,
+      status: 'ACTIVE',
+      activated_at: now.toISOString()
+    };
   }
 }
 
