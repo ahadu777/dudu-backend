@@ -1,0 +1,421 @@
+{
+  "info": {
+    "name": "US-013 Venue Operations Platform",
+    "description": "Complete E2E testing for PRD-003 Event Venue Operations including multi-terminal fraud detection and real-time analytics",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "qr_secret",
+      "value": "qr-signing-secret-change-in-production"
+    }
+  ],
+  "item": [
+    {
+      "name": "Venue Session Management",
+      "item": [
+        {
+          "name": "Create Central Pier Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Session created successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.venue_code).to.eql('central-pier');",
+                  "    pm.expect(response.session_code).to.match(/^VS-MOCK-/);",
+                  "    pm.expect(response.supported_functions).to.include('ferry_boarding');",
+                  "    pm.collectionVariables.set('central_pier_session', response.session_code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"central-pier\",\n  \"operator_id\": 2001,\n  \"operator_name\": \"Alice Chan\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\",\n  \"duration_hours\": 8\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Create Cheung Chau Multi-Function Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Multi-function session created', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.venue_code).to.eql('cheung-chau');",
+                  "    pm.expect(response.supported_functions).to.include.members(['ferry_boarding', 'gift_redemption', 'playground_token']);",
+                  "    pm.collectionVariables.set('cheung_chau_session', response.session_code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"cheung-chau\",\n  \"operator_id\": 2002,\n  \"operator_name\": \"Bob Wong\",\n  \"terminal_device_id\": \"TERMINAL-CC-001\",\n  \"duration_hours\": 8\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "sessions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enhanced Venue Scanning",
+      "item": [
+        {
+          "name": "Generate QR Token for Testing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Generate QR token for testing",
+                  "const jwt = require('jsonwebtoken');",
+                  "const payload = {",
+                  "    tid: 'TKT-123-001',",
+                  "    jti: 'newman-test-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),",
+                  "    iat: Math.floor(Date.now() / 1000),",
+                  "    exp: Math.floor(Date.now() / 1000) + 300",
+                  "};",
+                  "const secret = pm.collectionVariables.get('qr_secret');",
+                  "const token = jwt.sign(payload, secret);",
+                  "pm.collectionVariables.set('test_qr_token', token);",
+                  "pm.test('QR token generated', function () {",
+                  "    pm.expect(token).to.be.a('string');",
+                  "    pm.expect(token.split('.')).to.have.lengthOf(3);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/healthz",
+              "host": ["{{base_url}}"],
+              "path": ["healthz"]
+            }
+          }
+        },
+        {
+          "name": "Ferry Boarding Scan - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ferry boarding successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.eql('success');",
+                  "    pm.expect(response.venue_info.venue_code).to.exist;",
+                  "    pm.expect(response.performance_metrics.response_time_ms).to.be.below(2000);",
+                  "    pm.expect(response.performance_metrics.fraud_checks_passed).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{test_qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_code\": \"{{central_pier_session}}\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "scan"]
+            }
+          }
+        },
+        {
+          "name": "Cross-Terminal Fraud Detection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Fraud detection working', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.eql('reject');",
+                  "    pm.expect(response.reason).to.match(/ALREADY_REDEEMED|NO_REMAINING/);",
+                  "    pm.expect(response.performance_metrics.response_time_ms).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{test_qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_code\": \"{{cheung_chau_session}}\",\n  \"terminal_device_id\": \"TERMINAL-CC-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "scan"]
+            }
+          }
+        },
+        {
+          "name": "Wrong Function Code - Reject",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Generate new QR token for this test",
+                  "const jwt = require('jsonwebtoken');",
+                  "const payload = {",
+                  "    tid: 'TKT-123-001',",
+                  "    jti: 'wrong-func-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),",
+                  "    iat: Math.floor(Date.now() / 1000),",
+                  "    exp: Math.floor(Date.now() / 1000) + 300",
+                  "};",
+                  "const secret = pm.collectionVariables.get('qr_secret');",
+                  "const newToken = jwt.sign(payload, secret);",
+                  "pm.collectionVariables.set('wrong_func_token', newToken);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{wrong_func_token}}\",\n  \"function_code\": \"gift_redemption\",\n  \"session_code\": \"{{central_pier_session}}\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "scan"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Real-time Analytics",
+      "item": [
+        {
+          "name": "Central Pier Analytics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Analytics data available', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.venue_code).to.eql('central-pier');",
+                  "    pm.expect(response.metrics).to.exist;",
+                  "    pm.expect(response.metrics.total_scans).to.be.a('number');",
+                  "    pm.expect(response.metrics.success_rate).to.be.a('number');",
+                  "    pm.expect(response.metrics.function_breakdown).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/venue/central-pier/analytics?hours=24",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "central-pier", "analytics"],
+              "query": [
+                {
+                  "key": "hours",
+                  "value": "24"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cheung Chau Analytics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Multi-function venue analytics', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.venue_code).to.eql('cheung-chau');",
+                  "    pm.expect(response.metrics.function_breakdown).to.have.property('ferry_boarding');",
+                  "    pm.expect(response.metrics.function_breakdown).to.have.property('gift_redemption');",
+                  "    pm.expect(response.metrics.function_breakdown).to.have.property('playground_token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/venue/cheung-chau/analytics?hours=1",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "cheung-chau", "analytics"],
+              "query": [
+                {
+                  "key": "hours",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Performance Validation",
+      "item": [
+        {
+          "name": "Response Time Validation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response time under 2 seconds', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test('Performance metrics included', function () {",
+                  "    if (pm.response.status === 200) {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.performance_metrics).to.exist;",
+                  "        pm.expect(response.performance_metrics.response_time_ms).to.be.below(2000);",
+                  "        pm.expect(response.performance_metrics.fraud_checks_passed).to.be.a('boolean');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{test_qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_code\": \"{{central_pier_session}}\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "scan"]
+            }
+          }
+        },
+        {
+          "name": "Concurrent Session Support",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Multiple sessions supported', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.session_code).to.exist;",
+                  "    pm.expect(response.venue_code).to.eql('gift-shop-central');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"gift-shop-central\",\n  \"operator_id\": 2003,\n  \"operator_name\": \"Carol Lee\",\n  \"terminal_device_id\": \"TERMINAL-GS-001\",\n  \"duration_hours\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "sessions"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

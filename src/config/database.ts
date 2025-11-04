@@ -11,7 +11,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_DATABASE || 'express_api',
-  synchronize: process.env.NODE_ENV === 'development', // 生产环境应设为 false
+  synchronize: false, // Always false for safety
   // logging: process.env.NODE_ENV === 'development', // 显示所有 SQL（调试用）
   logging: ['error', 'warn'], // 只显示错误和警告（推荐）
   entities: [path.resolve(__dirname, '../modules/**/domain/*.{ts,js}')],
@@ -20,4 +20,8 @@ export const AppDataSource = new DataSource({
   charset: 'utf8mb4',
   timezone: '+08:00',
   maxQueryExecutionTime: 1000, // 慢查询警告（超过 1 秒）
+  // ssl: false, // Disable SSL for local connections
+  extra: {
+    connectionLimit: 10,
+  },
 });

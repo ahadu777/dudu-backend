@@ -205,4 +205,28 @@ stories:
     validation_assets:
       newman:
         - reports/collections/us-012-ota-integration.json
+  - id: US-013
+    title: Event Venue Operations Platform
+    status: Done
+    cards:
+      - venue-session-management
+      - venue-enhanced-scanning
+      - venue-analytics-reporting
+    # Sequence dependencies
+    sequence:
+      - venue-session-management → venue-enhanced-scanning
+      - venue-enhanced-scanning → venue-analytics-reporting
+    # Cross-story relationships
+    enhances: [US-001, US-002]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-003"
+    deadline: "2025-11-04"
+    implementation_date: "2025-11-03"
+    implicit_dependencies: [qr-token, tickets-issuance]
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-013-runbook.md
+      newman:
+        - reports/collections/us-013-venue-operations.json
 

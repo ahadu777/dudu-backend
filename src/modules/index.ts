@@ -16,6 +16,7 @@ import travelRouter from './travel/router';
 import reservationsRouter from './reservations/router';
 import devRouter from './dev/router';
 import otaRouter from './ota/router';
+import venueRouter from './venue/router';
 
 export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
   const apiRouter = Router();
@@ -39,6 +40,7 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/reports', reportsRouter);
   app.use('/dev', devRouter);
   app.use('/api/ota', otaRouter);
+  app.use('/venue', venueRouter);
 
   app.use('/payments', refundsRouter);
   app.use('/', refundsRouter);
