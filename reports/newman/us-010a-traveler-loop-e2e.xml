@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="US-010A Traveler Loop" tests="10" time="1.302">
-  <testsuite name="1. 热门城市" id="1af85038-8be0-4aa1-854c-5f636dde7830" timestamp="2025-11-02T17:36:45.164Z" tests="2" failures="0" errors="0" time="0.287">
-    <testcase name="status 200" time="0.287" classname="1"/>
-    <testcase name="cities array存在且非空" time="0.287" classname="1"/>
+<testsuites name="US-010A Traveler Loop" tests="10" time="1.868">
+  <testsuite name="1. 热门城市" id="97256491-2122-4d5e-aa2f-b3b48b59b70e" timestamp="2025-11-04T06:40:57.098Z" tests="2" failures="0" errors="0" time="0.377">
+    <testcase name="status 200" time="0.377" classname="1"/>
+    <testcase name="cities array存在且非空" time="0.377" classname="1"/>
   </testsuite>
-  <testsuite name="2. 禁售日" id="2a37ec6b-304e-44fe-842d-dc9c9ac9bdce" timestamp="2025-11-02T17:36:45.164Z" tests="2" failures="0" errors="0" time="0.112">
-    <testcase name="status 200" time="0.112" classname="2"/>
-    <testcase name="包含year和blackout_dates" time="0.112" classname="2"/>
+  <testsuite name="2. 禁售日" id="ce8f2cc3-a9ac-49eb-afe1-e286c3c5be13" timestamp="2025-11-04T06:40:57.098Z" tests="2" failures="0" errors="0" time="0.192">
+    <testcase name="status 200" time="0.192" classname="2"/>
+    <testcase name="包含year和blackout_dates" time="0.192" classname="2"/>
   </testsuite>
-  <testsuite name="3. 线路搜索" id="e4f42ab2-717b-42ec-826f-74e2e82d1e68" timestamp="2025-11-02T17:36:45.164Z" tests="2" failures="0" errors="0" time="0.129">
-    <testcase name="status 200" time="0.129" classname="3"/>
-    <testcase name="返回routes数组" time="0.129" classname="3"/>
+  <testsuite name="3. 线路搜索" id="a37c4046-f016-4866-a0de-a125b3e00fa2" timestamp="2025-11-04T06:40:57.098Z" tests="2" failures="0" errors="0" time="0.191">
+    <testcase name="status 200" time="0.191" classname="3"/>
+    <testcase name="返回routes数组" time="0.191" classname="3"/>
   </testsuite>
-  <testsuite name="4. 创建锁座" id="1e65ae3b-76d7-4c07-a481-11d2bee491d0" timestamp="2025-11-02T17:36:45.164Z" tests="1" failures="0" errors="0" time="0.117">
-    <testcase name="201 或 200" time="0.117" classname="4"/>
+  <testsuite name="4. 创建锁座" id="321b283b-c4f4-45de-a92c-09d3c6b46da2" timestamp="2025-11-04T06:40:57.098Z" tests="1" failures="0" errors="0" time="0.251">
+    <testcase name="201 或 200" time="0.251" classname="4"/>
   </testsuite>
-  <testsuite name="5. 创建订单" id="0251cd4c-559f-4b1c-8192-76d418af6f2d" timestamp="2025-11-02T17:36:45.164Z" tests="1" failures="0" errors="0" time="0.102">
-    <testcase name="status 200" time="0.102" classname="5"/>
+  <testsuite name="5. 创建订单" id="02cdb492-a27b-4abb-865b-ac8915f3dd21" timestamp="2025-11-04T06:40:57.098Z" tests="1" failures="0" errors="0" time="0.121">
+    <testcase name="status 200" time="0.121" classname="5"/>
   </testsuite>
-  <testsuite name="6. 微信预下单" id="2c08472e-164a-456d-9f98-cf878e0e7b46" timestamp="2025-11-02T17:36:45.164Z" tests="1" failures="0" errors="0" time="0.119">
-    <testcase name="status 200" time="0.119" classname="6"/>
+  <testsuite name="6. 微信预下单" id="ae6f8739-f823-409b-bbbb-67c11f143494" timestamp="2025-11-04T06:40:57.098Z" tests="1" failures="0" errors="0" time="0.170">
+    <testcase name="status 200" time="0.170" classname="6"/>
   </testsuite>
-  <testsuite name="7. 支付回调" id="bab01f98-cb90-4cc9-8856-735c89cd79c8" timestamp="2025-11-02T17:36:45.164Z" tests="1" failures="0" errors="0" time="0.114">
-    <testcase name="status 200 或 400" time="0.114" classname="7"/>
+  <testsuite name="7. 支付回调" id="7be8854f-6a3e-4437-a7e4-ed5e03a459d3" timestamp="2025-11-04T06:40:57.098Z" tests="1" failures="0" errors="0" time="0.151">
+    <testcase name="status 200 或 400" time="0.151" classname="7"/>
   </testsuite>
-  <testsuite name="8. 生成 demo token" id="f5e388f1-9c55-4f81-83a8-eeddb95a23c6" timestamp="2025-11-02T17:36:45.164Z" tests="1" failures="0" errors="0" time="0.103">
-    <testcase name="status 200" time="0.103" classname="8DemoToken"/>
+  <testsuite name="8. 生成 demo token" id="353f7d8e-a4a6-40c6-a5b2-4ef8a1a2c8e8" timestamp="2025-11-04T06:40:57.098Z" tests="1" failures="0" errors="0" time="0.113">
+    <testcase name="status 200" time="0.113" classname="8DemoToken"/>
   </testsuite>
-  <testsuite name="9. 查询票券" id="d3da7a4d-9f60-45d7-a0d8-57f04deedfe5" timestamp="2025-11-02T17:36:45.164Z" tests="2" failures="0" errors="0" time="0.109">
-    <testcase name="status 200" time="0.109" classname="9"/>
-    <testcase name="返回票券且非空" time="0.109" classname="9"/>
+  <testsuite name="9. 查询票券" id="f70f22a6-59d2-40c2-ae1e-38033b4763f4" timestamp="2025-11-04T06:40:57.098Z" tests="2" failures="0" errors="0" time="0.186">
+    <testcase name="status 200" time="0.186" classname="9"/>
+    <testcase name="返回票券且非空" time="0.186" classname="9"/>
   </testsuite>
-  <testsuite name="10. 释放锁座" id="8236c33f-6ac1-4164-a59e-a24fa0f3edeb" timestamp="2025-11-02T17:36:45.164Z" tests="1" failures="0" errors="0" time="0.110">
-    <testcase name="释放成功或已处理" time="0.110" classname="10"/>
+  <testsuite name="10. 释放锁座" id="c8e8f28b-27f4-474f-9685-05744c2f32ca" timestamp="2025-11-04T06:40:57.098Z" tests="1" failures="0" errors="0" time="0.116">
+    <testcase name="释放成功或已处理" time="0.116" classname="10"/>
   </testsuite>
 </testsuites>

@@ -30,6 +30,23 @@ export interface OTAReserveResponse {
   };
 }
 
+export interface OTAActivateRequest {
+  customer_details: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  payment_reference: string;
+  special_requests?: string;
+}
+
+export interface OTAActivateResponse {
+  order_id: string;
+  tickets: any[];
+  total_amount: number;
+  confirmation_code: string;
+}
+
 export class OTAService {
   private otaRepository: OTARepository | null = null;
 
@@ -365,6 +382,154 @@ export class OTAService {
         quantity: r.quantity,
         expires_at: r.expires_at.toISOString(),
         created_at: r.created_at.toISOString()
+      }));
+    }
+  }
+
+  async activateReservation(reservationId: string, request: OTAActivateRequest): Promise<OTAActivateResponse> {
+    logger.info('ota.reservation.activation_requested', {
+      reservation_id: reservationId,
+      customer_email: request.customer_details.email,
+      payment_reference: request.payment_reference
+    });
+
+    // First, validate the reservation exists and is active
+    const reservation = await this.getReservation(reservationId);
+
+    if (reservation.status !== 'active') {
+      throw {
+        code: ERR.VALIDATION_ERROR,
+        message: `Reservation ${reservationId} is ${reservation.status} and cannot be activated`
+      };
+    }
+
+    // Check if reservation has expired
+    const now = new Date();
+    const expiresAt = new Date(reservation.expires_at);
+    if (now > expiresAt) {
+      throw {
+        code: ERR.VALIDATION_ERROR,
+        message: 'Reservation has expired and cannot be activated'
+      };
+    }
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      // Database implementation - TODO: Implement database activation method
+      logger.warn('ota.reservation.database_activation_not_implemented', {
+        reservation_id: reservationId
+      });
+      // Fall through to mock implementation for now
+    }
+
+    // Mock implementation (always used for now)
+    const order = mockDataStore.activateReservation(
+        reservationId,
+        request.customer_details,
+        request.payment_reference
+      );
+
+      if (!order) {
+        throw {
+          code: ERR.VALIDATION_ERROR,
+          message: 'Failed to activate reservation'
+        };
+      }
+
+      logger.info('ota.reservation.activated', {
+        source: 'mock',
+        reservation_id: reservationId,
+        order_id: order.order_id,
+        total_amount: order.total_amount
+      });
+
+      return {
+        order_id: order.order_id,
+        tickets: order.tickets,
+        total_amount: order.total_amount,
+        confirmation_code: order.confirmation_code
+      };
+    }
+
+  async cancelReservation(reservationId: string): Promise<void> {
+    logger.info('ota.reservation.cancellation_requested', {
+      reservation_id: reservationId
+    });
+
+    // First, validate the reservation exists
+    const reservation = await this.getReservation(reservationId);
+
+    if (reservation.status === 'activated') {
+      throw {
+        code: 'CANNOT_CANCEL_ACTIVATED',
+        message: `Reservation ${reservationId} has been activated and cannot be cancelled`
+      };
+    }
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+      await repo.cancelReservation(reservationId);
+
+      logger.info('ota.reservation.cancelled', {
+        source: 'database',
+        reservation_id: reservationId
+      });
+    } else {
+      const cancelled = mockDataStore.cancelReservation(reservationId);
+      if (!cancelled) {
+        throw {
+          code: 'RESERVATION_NOT_FOUND',
+          message: `Reservation ${reservationId} not found`
+        };
+      }
+
+      logger.info('ota.reservation.cancelled', {
+        source: 'mock',
+        reservation_id: reservationId
+      });
+    }
+  }
+
+  async getOrders(): Promise<any[]> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      // TODO: Implement database method
+      logger.warn('ota.orders.database_not_implemented');
+    }
+
+    // Mock implementation
+    const orders = mockDataStore.getOrdersByChannel('ota');
+    return orders.map((order: any) => ({
+        order_id: order.order_id,
+        product_id: order.product_id,
+        customer_name: order.customer_name,
+        customer_email: order.customer_email,
+        total_amount: order.total_amount,
+        status: order.status,
+        created_at: order.created_at.toISOString(),
+        confirmation_code: order.confirmation_code
+      }));
+    }
+  }
+
+  async getOrderTickets(orderId: string): Promise<any[]> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      // TODO: Implement database method
+      logger.warn('ota.order_tickets.database_not_implemented');
+    }
+
+    // Mock implementation
+    const order = mockDataStore.getOrderByOrderId(orderId);
+    if (!order) {
+      throw {
+        code: 'ORDER_NOT_FOUND',
+        message: `Order ${orderId} not found`
+      };
+    }
+
+    return (order.tickets || []).map((ticket: any) => ({
+        ticket_code: ticket.code,
+        qr_code: `data:image/png;base64,${Buffer.from(JSON.stringify({ticket_id: ticket.id, product_id: order.product_id})).toString('base64')}`,
+        entitlements: ticket.entitlements,
+        status: ticket.status
       }));
     }
   }

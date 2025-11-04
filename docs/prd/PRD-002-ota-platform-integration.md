@@ -25,7 +25,10 @@ deadline: "2025-11-15"
 - <2 second API response times for OTA partners
 - Revenue expansion through external channel partnerships
 
-**Timeline**: Delivered Nov 3, 2025 (12 days ahead of deadline)
+**Timeline**:
+- Phase 1 (Inventory & Reservations): Delivered Nov 3, 2025 ✅
+- Phase 2 (Order Fulfillment): Nov 4, 2025 🔄
+- Phase 3 (Complete Integration): Nov 15, 2025 📋
 
 ## Business Context
 
@@ -147,8 +150,81 @@ deadline: "2025-11-15"
   - No reservation fees (reduces partnership friction)
 - **Activation Process**:
   - OTA payment notification triggers existing order creation flow
+  - Reserved inventory converts to sold inventory atomically
+  - QR codes generated and delivered to OTA platform
+  - Integration with existing ticket fulfillment system
   - Reservation automatically converts to sale upon payment
   - Same ticket issuance system generates packages with entitlements
+
+## Complete API Specification
+
+### Phase 1: Inventory & Reservations (✅ Implemented)
+```yaml
+# GET /api/ota/inventory - Get available quantities
+# POST /api/ota/reserve - Create reservation
+```
+
+### Phase 2: Order Fulfillment (🔄 Implementation Required)
+
+#### Reservation Activation
+```yaml
+POST /api/ota/reservations/{reservation_id}/activate:
+  summary: Convert reservation to confirmed order
+  parameters:
+    - reservation_id: string (path)
+  requestBody:
+    customer_details:
+      name: string
+      email: string
+      phone: string
+    payment_reference: string
+    special_requests?: string
+  responses:
+    201:
+      order_id: string
+      tickets: array[TicketResponse]
+      total_amount: number
+      confirmation_code: string
+    409: "Reservation expired or already activated"
+    422: "Invalid customer details"
+```
+
+#### Reservation Management
+```yaml
+GET /api/ota/reservations:
+  summary: List all active reservations for OTA
+  responses:
+    200:
+      reservations: array[ReservationDetails]
+      total_count: number
+
+DELETE /api/ota/reservations/{reservation_id}:
+  summary: Cancel reservation (releases inventory)
+  responses:
+    204: "Reservation cancelled"
+    409: "Cannot cancel activated reservation"
+```
+
+#### Order & Ticket Access
+```yaml
+GET /api/ota/orders:
+  summary: List confirmed orders for OTA
+  responses:
+    200:
+      orders: array[OrderSummary]
+      total_count: number
+
+GET /api/ota/orders/{order_id}/tickets:
+  summary: Get QR codes and ticket details
+  responses:
+    200:
+      tickets: array[
+        ticket_code: string
+        qr_code: string (base64 image)
+        entitlements: array[FunctionEntitlement]
+        status: string
+      ]
+```
 
 ### Business Logic
 - **Inventory Separation**: Channel allocations prevent cross-channel overselling
@@ -207,11 +283,13 @@ deadline: "2025-11-15"
 - API authentication middleware
 - Real-time availability tracking
 
-**Phase 2** (Nov 6-10, 2025): Business Logic Integration - ✅ **COMPLETED**
-- Reservation expiry automation
-- Order creation integration with existing payment flow
-- Complex pricing system integration
-- Error handling and monitoring
+**Phase 2** (Nov 6-10, 2025): Order Fulfillment Integration - 🔄 **IN PROGRESS**
+- ✅ Reservation expiry automation
+- ❌ Reservation activation endpoint (`POST /api/ota/reservations/{id}/activate`)
+- ❌ Order creation integration with existing payment flow
+- ❌ QR code generation and delivery to OTA
+- ✅ Complex pricing system integration
+- ✅ Error handling and monitoring
 
 **Phase 3** (Nov 11-15, 2025): Production Readiness - ✅ **COMPLETED**
 - Load testing and performance validation

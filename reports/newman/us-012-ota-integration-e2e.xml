@@ -1,50 +1,391 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="US-012 OTA Platform Integration" tests="11" time="0.240">
-  <testsuite name="1. Authentication Test (Should Fail)" id="6b20dafb-dba8-4631-8e75-7db49bd7c926" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.023">
-    <testcase name="API key required" time="0.023" classname="1AuthenticationTestShouldFail"/>
-    <testcase name="Error message correct" time="0.023" classname="1AuthenticationTestShouldFail"/>
+<testsuites name="US-012 OTA Platform Integration" tests="11" time="0.000">
+  <testsuite name="1. Authentication Test (Should Fail)" id="f37f4953-9f87-4756-896f-e5adb4eafb4c" timestamp="2025-11-04T06:41:02.724Z" tests="2" failures="2" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="API key required" time="0.000" classname="1AuthenticationTestShouldFail">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Authentication Test (Should Fail).]]>
+        <![CDATA[Test description: API key required.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Error message correct" time="0.000" classname="1AuthenticationTestShouldFail">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Authentication Test (Should Fail).]]>
+        <![CDATA[Test description: Error message correct.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:1).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="2. Get OTA Inventory" id="fc19bc06-b00e-452c-a800-20aeb9a7efd8" timestamp="2025-11-02T17:53:48.637Z" tests="3" failures="0" errors="0" time="0.005">
-    <testcase name="Status 200" time="0.005" classname="2GetOtaInventory"/>
-    <testcase name="5000 total units available" time="0.005" classname="2GetOtaInventory"/>
-    <testcase name="Pricing context included" time="0.005" classname="2GetOtaInventory"/>
+  <testsuite name="2. Get OTA Inventory" id="fd1af2cd-4284-48b0-aab9-fb5530adf480" timestamp="2025-11-04T06:41:02.724Z" tests="3" failures="3" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Status 200" time="0.000" classname="2GetOtaInventory">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Get OTA Inventory.]]>
+        <![CDATA[Test description: Status 200.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:2).]]>
+      </failure>
+    </testcase>
+    <testcase name="5000 total units available" time="0.000" classname="2GetOtaInventory">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Get OTA Inventory.]]>
+        <![CDATA[Test description: 5000 total units available.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:2).]]>
+      </failure>
+    </testcase>
+    <testcase name="Pricing context included" time="0.000" classname="2GetOtaInventory">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Get OTA Inventory.]]>
+        <![CDATA[Test description: Pricing context included.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:3:2).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="3. Create Reservation (Premium Plan)" id="1ae8d52e-e9d2-4183-a19b-912002616561" timestamp="2025-11-02T17:53:48.637Z" tests="3" failures="0" errors="0" time="0.009">
-    <testcase name="Reservation created" time="0.009" classname="3CreateReservationPremiumPlan"/>
-    <testcase name="Reservation ID returned" time="0.009" classname="3CreateReservationPremiumPlan"/>
-    <testcase name="Pricing snapshot included" time="0.009" classname="3CreateReservationPremiumPlan"/>
+  <testsuite name="3. Create Reservation (Premium Plan)" id="950c7bec-65ce-49db-b44b-08f6972a16da" timestamp="2025-11-04T06:41:02.724Z" tests="3" failures="3" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Reservation created" time="0.000" classname="3CreateReservationPremiumPlan">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 3. Create Reservation (Premium Plan).]]>
+        <![CDATA[Test description: Reservation created.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:3).]]>
+      </failure>
+    </testcase>
+    <testcase name="Reservation ID returned" time="0.000" classname="3CreateReservationPremiumPlan">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 3. Create Reservation (Premium Plan).]]>
+        <![CDATA[Test description: Reservation ID returned.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:3).]]>
+      </failure>
+    </testcase>
+    <testcase name="Pricing snapshot included" time="0.000" classname="3CreateReservationPremiumPlan">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 3. Create Reservation (Premium Plan).]]>
+        <![CDATA[Test description: Pricing snapshot included.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:3:3).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="4. Verify Inventory Reduction" id="1242c0f6-ce9f-4ab9-99f5-1f362ab6eb2c" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.003">
-    <testcase name="Status 200" time="0.003" classname="4VerifyInventoryReduction"/>
-    <testcase name="Product 106 inventory reduced" time="0.003" classname="4VerifyInventoryReduction"/>
+  <testsuite name="4. Verify Inventory Reduction" id="6295859b-3cd7-48da-9e47-6654d43b9909" timestamp="2025-11-04T06:41:02.724Z" tests="2" failures="2" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Status 200" time="0.000" classname="4VerifyInventoryReduction">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Verify Inventory Reduction.]]>
+        <![CDATA[Test description: Status 200.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:4).]]>
+      </failure>
+    </testcase>
+    <testcase name="Product 106 inventory reduced" time="0.000" classname="4VerifyInventoryReduction">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Verify Inventory Reduction.]]>
+        <![CDATA[Test description: Product 106 inventory reduced.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:4).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="5. Get Reservation Details" id="f0603192-0393-4bf6-9855-4430244ba78b" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.004">
-    <testcase name="Status 200" time="0.004" classname="5GetReservationDetails"/>
-    <testcase name="Reservation details correct" time="0.004" classname="5GetReservationDetails"/>
+  <testsuite name="5. Get Reservation Details" id="a28ff55a-88ca-4a3f-94b1-e976e50e602c" timestamp="2025-11-04T06:41:02.724Z" tests="2" failures="2" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Status 200" time="0.000" classname="5GetReservationDetails">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 5. Get Reservation Details.]]>
+        <![CDATA[Test description: Status 200.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:5).]]>
+      </failure>
+    </testcase>
+    <testcase name="Reservation details correct" time="0.000" classname="5GetReservationDetails">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 5. Get Reservation Details.]]>
+        <![CDATA[Test description: Reservation details correct.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:5).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="6. Create Maximum Reservation (Pet Plan)" id="2634f6f8-955e-444b-bb63-f8e49653e8e0" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.123">
-    <testcase name="Maximum reservation allowed" time="0.123" classname="6CreateMaximumReservationPetPlan"/>
-    <testcase name="Correct pricing for Pet Plan" time="0.123" classname="6CreateMaximumReservationPetPlan"/>
+  <testsuite name="6. Create Maximum Reservation (Pet Plan)" id="370230a6-b891-4d37-8820-87d9aeab7654" timestamp="2025-11-04T06:41:02.724Z" tests="2" failures="2" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Maximum reservation allowed" time="0.000" classname="6CreateMaximumReservationPetPlan">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 6. Create Maximum Reservation (Pet Plan).]]>
+        <![CDATA[Test description: Maximum reservation allowed.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:6).]]>
+      </failure>
+    </testcase>
+    <testcase name="Correct pricing for Pet Plan" time="0.000" classname="6CreateMaximumReservationPetPlan">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 6. Create Maximum Reservation (Pet Plan).]]>
+        <![CDATA[Test description: Correct pricing for Pet Plan.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:6).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="7. Test Validation Limits (Should Fail)" id="feeb4280-600b-46b2-8f66-bfbd293bde2d" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.004">
-    <testcase name="Validation error for excessive quantity" time="0.004" classname="7TestValidationLimitsShouldFail"/>
-    <testcase name="Correct error message" time="0.004" classname="7TestValidationLimitsShouldFail"/>
+  <testsuite name="7. Test Validation Limits (Should Fail)" id="615381d0-9708-4cc8-82e0-ccfd3aa3ee9e" timestamp="2025-11-04T06:41:02.724Z" tests="2" failures="2" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Validation error for excessive quantity" time="0.000" classname="7TestValidationLimitsShouldFail">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 7. Test Validation Limits (Should Fail).]]>
+        <![CDATA[Test description: Validation error for excessive quantity.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:7).]]>
+      </failure>
+    </testcase>
+    <testcase name="Correct error message" time="0.000" classname="7TestValidationLimitsShouldFail">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 7. Test Validation Limits (Should Fail).]]>
+        <![CDATA[Test description: Correct error message.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:7).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="8. Test Invalid Product (Should Fail)" id="4465127a-e0d2-4f33-b010-6715ae504fd3" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.007">
-    <testcase name="Product not found error" time="0.007" classname="8TestInvalidProductShouldFail"/>
-    <testcase name="Correct error message" time="0.007" classname="8TestInvalidProductShouldFail"/>
+  <testsuite name="8. Test Invalid Product (Should Fail)" id="46df4e0e-a9e8-491c-ab9b-58f49f630b85" timestamp="2025-11-04T06:41:02.724Z" tests="2" failures="2" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Product not found error" time="0.000" classname="8TestInvalidProductShouldFail">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 8. Test Invalid Product (Should Fail).]]>
+        <![CDATA[Test description: Product not found error.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:8).]]>
+      </failure>
+    </testcase>
+    <testcase name="Correct error message" time="0.000" classname="8TestInvalidProductShouldFail">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 8. Test Invalid Product (Should Fail).]]>
+        <![CDATA[Test description: Correct error message.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:8).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="9. List Active Reservations" id="95a4bd5e-b364-438e-a5b4-31c5c9f0c605" timestamp="2025-11-02T17:53:48.637Z" tests="3" failures="0" errors="0" time="0.018">
-    <testcase name="Status 200" time="0.018" classname="9ListActiveReservations"/>
-    <testcase name="Reservations array present" time="0.018" classname="9ListActiveReservations"/>
-    <testcase name="At least 2 reservations exist" time="0.018" classname="9ListActiveReservations"/>
+  <testsuite name="9. List Active Reservations" id="1f195d4a-cbf8-4d13-8159-bec300d4ac54" timestamp="2025-11-04T06:41:02.724Z" tests="3" failures="3" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Status 200" time="0.000" classname="9ListActiveReservations">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 9. List Active Reservations.]]>
+        <![CDATA[Test description: Status 200.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:9).]]>
+      </failure>
+    </testcase>
+    <testcase name="Reservations array present" time="0.000" classname="9ListActiveReservations">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 9. List Active Reservations.]]>
+        <![CDATA[Test description: Reservations array present.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:9).]]>
+      </failure>
+    </testcase>
+    <testcase name="At least 2 reservations exist" time="0.000" classname="9ListActiveReservations">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 9. List Active Reservations.]]>
+        <![CDATA[Test description: At least 2 reservations exist.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:3:9).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="10. Test Invalid API Key (Should Fail)" id="19e2677b-b214-47c9-86af-857a4b70750a" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.036">
-    <testcase name="Invalid API key rejected" time="0.036" classname="10TestInvalidApiKeyShouldFail"/>
-    <testcase name="Correct error message" time="0.036" classname="10TestInvalidApiKeyShouldFail"/>
+  <testsuite name="10. Test Invalid API Key (Should Fail)" id="39b2d307-db1b-41cc-b6c6-97eb9c18b694" timestamp="2025-11-04T06:41:02.724Z" tests="2" failures="2" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Invalid API key rejected" time="0.000" classname="10TestInvalidApiKeyShouldFail">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 10. Test Invalid API Key (Should Fail).]]>
+        <![CDATA[Test description: Invalid API key rejected.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:10).]]>
+      </failure>
+    </testcase>
+    <testcase name="Correct error message" time="0.000" classname="10TestInvalidApiKeyShouldFail">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 10. Test Invalid API Key (Should Fail).]]>
+        <![CDATA[Test description: Correct error message.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:10).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="11. Cleanup - Manual Expiry Test" id="f29208b5-bfba-4e43-83c7-a90844f24177" timestamp="2025-11-02T17:53:48.637Z" tests="2" failures="0" errors="0" time="0.008">
-    <testcase name="Cleanup completed" time="0.008" classname="11CleanupManualExpiryTest"/>
-    <testcase name="Expiry count returned" time="0.008" classname="11CleanupManualExpiryTest"/>
+  <testsuite name="11. Cleanup - Manual Expiry Test" id="1aef7d96-b0d1-4a23-8250-7dceb5c8fb36" timestamp="2025-11-04T06:41:02.724Z" tests="2" failures="2" errors="1" time="0.000">
+    <system-err><![CDATA[Iteration: 0
+RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+
+---
+]]></system-err>
+    <testcase name="Cleanup completed" time="0.000" classname="11CleanupManualExpiryTest">
+      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 11. Cleanup - Manual Expiry Test.]]>
+        <![CDATA[Test description: Cleanup completed.]]>
+        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+   at Object.eval sandbox-script.js:1:11).]]>
+      </failure>
+    </testcase>
+    <testcase name="Expiry count returned" time="0.000" classname="11CleanupManualExpiryTest">
+      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 1a68e557-40d4-40b6-827e-8abd51eaf742.]]>
+        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
+        <![CDATA[Request name: 11. Cleanup - Manual Expiry Test.]]>
+        <![CDATA[Test description: Expiry count returned.]]>
+        <![CDATA[Error message: "undefined" is not valid JSON.]]>
+        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+   at Object.eval sandbox-script.js:2:11).]]>
+      </failure>
+    </testcase>
   </testsuite>
 </testsuites>

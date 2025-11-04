@@ -1,4 +1,6 @@
 // Mock data store for development without database
+import { Buffer } from 'buffer';
+
 export interface ChannelAllocation {
   allocated: number;
   reserved: number;
@@ -56,6 +58,14 @@ export interface MockOrder {
   }>;
   created_at: Date;
   paid_at?: Date;
+  // OTA-specific fields
+  order_id?: string;
+  product_id?: number;
+  customer_name?: string;
+  customer_email?: string;
+  total_amount?: number;
+  confirmation_code?: string;
+  tickets?: MockTicket[];
 }
 
 export interface MockTicket {
@@ -436,7 +446,7 @@ class MockDataStore {
     return this.reservations.get(reservationId);
   }
 
-  activateReservation(reservationId: string, orderId: number): boolean {
+  activateReservationSimple(reservationId: string, orderId: number): boolean {
     const reservation = this.reservations.get(reservationId);
     if (!reservation || reservation.status !== 'active') {
       return false;
@@ -489,6 +499,91 @@ class MockDataStore {
     );
   }
 
+  activateReservation(reservationId: string, customerDetails: any, paymentReference: string): any {
+    const reservation = this.reservations.get(reservationId);
+    if (!reservation || reservation.status !== 'active') {
+      return null;
+    }
+
+    // Check if expired
+    if (new Date() > reservation.expires_at) {
+      return null;
+    }
+
+    const product = this.products.get(reservation.product_id);
+    if (!product) {
+      return null;
+    }
+
+    // Create order
+    const orderId = this.nextOrderId++;
+    const confirmationCode = `CONF-${orderId}-${Date.now().toString(36).toUpperCase()}`;
+
+    // Generate tickets for each unit in the reservation
+    const tickets = [];
+    for (let i = 0; i < reservation.quantity; i++) {
+      const ticketId = this.nextTicketId++;
+      const ticketCode = `${product.sku}-${ticketId}`;
+      const qrData = JSON.stringify({
+        ticket_id: ticketId,
+        product_id: product.id,
+        order_id: orderId,
+        issued_at: new Date().toISOString()
+      });
+
+      const ticket: MockTicket = {
+        id: ticketId,
+        order_id: orderId,
+        user_id: 1, // Default user for OTA orders
+        code: ticketCode,
+        status: 'ACTIVE',
+        entitlements: product.functions.map(func => ({
+          function_code: func.function_code,
+          remaining_uses: 1
+        })),
+        created_at: new Date()
+      };
+
+      // Store the actual ticket
+      this.tickets.set(ticketId, ticket);
+
+      // Add API response format to tickets array
+      tickets.push({
+        ticket_code: ticketCode,
+        qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+        entitlements: product.functions.map(f => ({
+          function_code: f.function_code,
+          function_name: f.function_name,
+          max_uses: f.max_uses,
+          used_count: 0
+        })),
+        status: 'ACTIVE'
+      });
+    }
+
+    // Update reservation status
+    reservation.status = 'activated';
+    reservation.activated_at = new Date();
+    reservation.order_id = orderId;
+
+    // Update inventory: move from reserved to sold
+    const channelAllocation = product.channel_allocations[reservation.channel_id];
+    if (channelAllocation) {
+      channelAllocation.reserved -= reservation.quantity;
+      channelAllocation.sold += reservation.quantity;
+    }
+
+    // Calculate total amount
+    const totalAmount = product.unit_price * reservation.quantity;
+
+    return {
+      order_id: orderId.toString(),
+      tickets: tickets,
+      total_amount: totalAmount,
+      confirmation_code: confirmationCode
+    };
+  }
+
   // Reset for testing
   reset() {
     this.orders.clear();
@@ -498,6 +593,40 @@ class MockDataStore {
     this.nextTicketId = 50001;
     this.nextReservationId = 1;
     this.initializeProducts(); // Reset products to initial state
+  }
+
+  cancelReservation(reservationId: string): boolean {
+    const reservation = this.reservations.get(reservationId);
+    if (!reservation) {
+      return false;
+    }
+
+    // Release reserved inventory back to available
+    const product = this.products.get(reservation.product_id);
+    if (product && product.channel_allocations[reservation.channel_id]) {
+      product.channel_allocations[reservation.channel_id].reserved -= reservation.quantity;
+    }
+
+    // Remove the reservation
+    this.reservations.delete(reservationId);
+    return true;
+  }
+
+  getOrdersByChannel(channel: string): MockOrder[] {
+    return Array.from(this.orders.values()).filter(order =>
+      order.channel_id === (channel === 'ota' ? 2 : 1)
+    );
+  }
+
+  getOrderByOrderId(orderId: string): MockOrder | undefined {
+    // Try to find by order_id first (OTA orders)
+    for (const order of this.orders.values()) {
+      if (order.order_id === orderId) {
+        return order;
+      }
+    }
+    // Fallback to existing getOrder method logic if needed
+    return undefined;
   }
 }
 
