@@ -507,7 +507,6 @@ export class OTAService {
         created_at: order.created_at.toISOString(),
         confirmation_code: order.confirmation_code
       }));
-    }
   }
 
   async getOrderTickets(orderId: string): Promise<any[]> {
@@ -531,7 +530,6 @@ export class OTAService {
         entitlements: ticket.entitlements,
         status: ticket.status
       }));
-    }
   }
 }
 
