@@ -191,8 +191,14 @@ stories:
     status: Done
     cards:
       - ota-channel-management
-    # Sequence dependencies (consolidated into single comprehensive card)
-    sequence: []
+      - ota-premade-tickets
+      - ota-reservation-management
+      - ota-order-retrieval
+    # Sequence dependencies
+    sequence:
+      - ota-channel-management → ota-premade-tickets
+      - ota-channel-management → ota-reservation-management
+      - ota-premade-tickets → ota-order-retrieval
     # Cross-story relationships
     enhances: [US-001, US-011]
     enhanced_by: []

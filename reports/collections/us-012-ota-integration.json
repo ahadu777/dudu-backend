@@ -449,6 +449,210 @@
           "path": ["api", "ota", "reservations", "cleanup"]
         }
       }
+    },
+    {
+      "name": "12. Bulk Generate Pre-made Tickets",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Tickets generated successfully', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Batch details correct', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.batch_id).to.eql('NEWMAN_TEST_BATCH');",
+              "    pm.expect(response.tickets).to.be.an('array');",
+              "    pm.expect(response.tickets.length).to.eql(2);",
+              "    pm.expect(response.total_generated).to.eql(2);",
+              "});",
+              "",
+              "pm.test('Tickets have correct structure', function () {",
+              "    const response = pm.response.json();",
+              "    const ticket = response.tickets[0];",
+              "    pm.expect(ticket.ticket_code).to.include('CRUISE-2025-FERRY-');",
+              "    pm.expect(ticket.status).to.eql('PRE_GENERATED');",
+              "    pm.expect(ticket.qr_code).to.include('data:image/png;base64,');",
+              "    pm.expect(ticket.entitlements).to.be.an('array');",
+              "    ",
+              "    // Store first ticket for activation test",
+              "    pm.collectionVariables.set('ticketCode', ticket.ticket_code);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 2,\n  \"batch_id\": \"NEWMAN_TEST_BATCH\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/tickets/bulk-generate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "tickets", "bulk-generate"]
+        }
+      }
+    },
+    {
+      "name": "13. Activate Pre-made Ticket",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Ticket activated successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Activation response correct', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.ticket_code).to.be.a('string');",
+              "    pm.expect(response.order_id).to.include('ORD-');",
+              "    pm.expect(response.customer_name).to.eql('Newman Test Customer');",
+              "    pm.expect(response.status).to.eql('ACTIVE');",
+              "    pm.expect(response.activated_at).to.be.a('string');",
+              "    ",
+              "    // Store order ID for retrieval tests",
+              "    pm.collectionVariables.set('orderId', response.order_id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_details\": {\n    \"name\": \"Newman Test Customer\",\n    \"email\": \"newman@example.com\",\n    \"phone\": \"+1234567890\"\n  },\n  \"payment_reference\": \"PAY-NEWMAN-TEST-001\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/tickets/{{ticketCode}}/activate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "tickets", "{{ticketCode}}", "activate"]
+        }
+      }
+    },
+    {
+      "name": "14. List OTA Orders",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Orders retrieved successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Orders list structure correct', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.orders).to.be.an('array');",
+              "    pm.expect(response.total_count).to.be.a('number');",
+              "    pm.expect(response.orders.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "pm.test('Order contains our activated ticket', function () {",
+              "    const response = pm.response.json();",
+              "    const orderId = pm.collectionVariables.get('orderId');",
+              "    const ourOrder = response.orders.find(o => o.order_id === orderId);",
+              "    pm.expect(ourOrder).to.not.be.undefined;",
+              "    pm.expect(ourOrder.customer_name).to.eql('Newman Test Customer');",
+              "    pm.expect(ourOrder.status).to.eql('confirmed');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/orders?limit=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "orders"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "15. Get Order Tickets with QR Codes",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Order tickets retrieved successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Tickets structure correct', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.tickets).to.be.an('array');",
+              "    pm.expect(response.tickets.length).to.eql(1);",
+              "});",
+              "",
+              "pm.test('Ticket details correct', function () {",
+              "    const response = pm.response.json();",
+              "    const ticket = response.tickets[0];",
+              "    const expectedCode = pm.collectionVariables.get('ticketCode');",
+              "    ",
+              "    pm.expect(ticket.ticket_code).to.eql(expectedCode);",
+              "    pm.expect(ticket.status).to.eql('ACTIVE');",
+              "    pm.expect(ticket.qr_code).to.include('data:image/png;base64,');",
+              "    pm.expect(ticket.entitlements).to.be.an('array');",
+              "    pm.expect(ticket.entitlements.length).to.be.greaterThan(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{otaApiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ota/orders/{{orderId}}/tickets",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ota", "orders", "{{orderId}}", "tickets"]
+        }
+      }
     }
   ]
 }

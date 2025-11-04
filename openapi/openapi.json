@@ -1550,6 +1550,360 @@
           }
         }
       }
+    },
+    "/api/ota/tickets/bulk-generate": {
+      "post": {
+        "tags": ["OTA Integration"],
+        "summary": "Generate pre-made tickets for OTA sales",
+        "description": "Create a batch of pre-generated tickets that can be activated later by customers",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["product_id", "quantity", "batch_id"],
+                "properties": {
+                  "product_id": {
+                    "type": "integer",
+                    "description": "Package product ID",
+                    "example": 106
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Number of pre-made tickets to generate",
+                    "example": 50
+                  },
+                  "batch_id": {
+                    "type": "string",
+                    "description": "Batch identifier for tracking",
+                    "example": "BATCH_2025_Q1_001"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pre-made tickets successfully generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "batch_id": {
+                      "type": "string",
+                      "example": "BATCH_2025_Q1_001"
+                    },
+                    "tickets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ticket_code": {
+                            "type": "string",
+                            "example": "CRUISE-2025-FERRY-1762274285982"
+                          },
+                          "qr_code": {
+                            "type": "string",
+                            "description": "Base64 encoded QR code"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": ["PRE_GENERATED"]
+                          },
+                          "entitlements": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "function_code": {
+                                  "type": "string"
+                                },
+                                "remaining_uses": {
+                                  "type": "integer"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "total_generated": {
+                      "type": "integer",
+                      "example": 50
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/tickets/{code}/activate": {
+      "post": {
+        "tags": ["OTA Integration"],
+        "summary": "Activate pre-made ticket with customer details",
+        "description": "Convert a PRE_GENERATED ticket to ACTIVE status with customer information",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "CRUISE-2025-FERRY-1762274285982"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["customer_details", "payment_reference"],
+                "properties": {
+                  "customer_details": {
+                    "type": "object",
+                    "required": ["name", "email", "phone"],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "example": "John Smith"
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john.smith@example.com"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "example": "+1234567890"
+                      }
+                    }
+                  },
+                  "payment_reference": {
+                    "type": "string",
+                    "description": "OTA payment transaction reference",
+                    "example": "PAY-OTA-2025-001"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket successfully activated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticket_code": {
+                      "type": "string",
+                      "example": "CRUISE-2025-FERRY-1762274285982"
+                    },
+                    "order_id": {
+                      "type": "string",
+                      "example": "ORD-1762274304824"
+                    },
+                    "customer_name": {
+                      "type": "string",
+                      "example": "John Smith"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["ACTIVE"]
+                    },
+                    "activated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/orders": {
+      "get": {
+        "tags": ["OTA Integration"],
+        "summary": "List all confirmed OTA orders",
+        "description": "Retrieve paginated list of orders created through OTA platform",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 100
+            },
+            "description": "Maximum number of orders to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Number of orders to skip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orders": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "order_id": {
+                            "type": "string",
+                            "example": "ORD-1762273241549"
+                          },
+                          "customer_name": {
+                            "type": "string",
+                            "example": "Maria Garcia"
+                          },
+                          "customer_email": {
+                            "type": "string",
+                            "example": "maria.garcia@example.com"
+                          },
+                          "total_amount": {
+                            "type": "string",
+                            "example": "382.00"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": ["confirmed", "completed", "cancelled"]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "confirmation_code": {
+                            "type": "string",
+                            "example": "CONF-1762273241549"
+                          }
+                        }
+                      }
+                    },
+                    "total_count": {
+                      "type": "integer",
+                      "example": 2
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/orders/{id}/tickets": {
+      "get": {
+        "tags": ["OTA Integration"],
+        "summary": "Get QR codes and ticket details for order",
+        "description": "Retrieve all tickets associated with a specific order for customer delivery",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "ORD-1762273241549"
+            },
+            "description": "Order ID to retrieve tickets for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tickets retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tickets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ticket_code": {
+                            "type": "string",
+                            "example": "CRUISE-2025-FERRY-1762273144582"
+                          },
+                          "qr_code": {
+                            "type": "string",
+                            "description": "Base64 encoded QR code for scanning"
+                          },
+                          "entitlements": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "function_code": {
+                                  "type": "string",
+                                  "example": "ferry"
+                                },
+                                "remaining_uses": {
+                                  "type": "integer",
+                                  "example": 1
+                                }
+                              }
+                            }
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": ["ACTIVE", "REDEEMED", "EXPIRED"],
+                            "example": "ACTIVE"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
