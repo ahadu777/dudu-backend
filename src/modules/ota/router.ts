@@ -10,6 +10,7 @@ router.use(otaAuthMiddleware());
 
 interface AuthenticatedRequest extends Request {
   ota_partner?: {
+    id: string;
     name: string;
     permissions: string[];
   };
@@ -298,7 +299,7 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
       });
     }
 
-    const result = await otaService.bulkGenerateTickets({
+    const result = await otaService.bulkGenerateTickets(req.ota_partner!.id, {
       product_id,
       quantity,
       batch_id
@@ -345,7 +346,7 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
       });
     }
 
-    const result = await otaService.activatePreMadeTicket(ticketCode, {
+    const result = await otaService.activatePreMadeTicket(ticketCode, req.ota_partner!.id, {
       customer_details,
       payment_reference
     });

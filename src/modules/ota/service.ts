@@ -584,7 +584,7 @@ export class OTAService {
       }));
   }
 
-  async bulkGenerateTickets(request: OTABulkGenerateRequest): Promise<OTABulkGenerateResponse> {
+  async bulkGenerateTickets(partnerId: string, request: OTABulkGenerateRequest): Promise<OTABulkGenerateResponse> {
     logger.info('ota.tickets.bulk_generation_requested', {
       product_id: request.product_id,
       quantity: request.quantity,
@@ -659,6 +659,7 @@ export class OTAService {
           ticket_code: ticketCode,
           product_id: product.id,
           batch_id: request.batch_id,
+          partner_id: partnerId,
           status: 'PRE_GENERATED' as const,
           entitlements,
           qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
@@ -725,6 +726,7 @@ export class OTAService {
         code: ticketCode,
         product_id: product.id,
         batch_id: request.batch_id,
+        partner_id: partnerId,
         status: 'PRE_GENERATED',
         entitlements: product.functions.map(func => ({
           function_code: func.function_code,
@@ -762,7 +764,7 @@ export class OTAService {
     };
   }
 
-  async activatePreMadeTicket(ticketCode: string, request: OTATicketActivateRequest): Promise<OTATicketActivateResponse> {
+  async activatePreMadeTicket(ticketCode: string, partnerId: string, request: OTATicketActivateRequest): Promise<OTATicketActivateResponse> {
     logger.info('ota.ticket.activation_requested', {
       ticket_code: ticketCode,
       customer_email: request.customer_details.email,
@@ -795,6 +797,7 @@ export class OTAService {
         // Use repository to activate ticket and create order atomically
         const result = await this.otaRepository!.activatePreGeneratedTicket(
           ticketCode,
+          partnerId,
           {
             customer_name: request.customer_details.name,
             customer_email: request.customer_details.email,
@@ -841,6 +844,13 @@ export class OTAService {
       throw {
         code: 'TICKET_NOT_FOUND',
         message: `Ticket ${ticketCode} not found`
+      };
+    }
+    // Check partner isolation
+    if (ticket.partner_id !== partnerId) {
+      throw {
+        code: 'TICKET_NOT_FOUND',
+        message: `Ticket ${ticketCode} not found or not available for activation`
       };
     }
 

@@ -354,6 +354,7 @@ export class OTARepository {
 
   async activatePreGeneratedTicket(
     ticketCode: string,
+    partnerId: string,
     customerData: {
       customer_name: string;
       customer_email: string;
@@ -367,9 +368,9 @@ export class OTARepository {
     await queryRunner.startTransaction();
 
     try {
-      // Find the pre-generated ticket
+      // Find the pre-generated ticket (with partner isolation)
       const ticket = await queryRunner.manager.findOne(PreGeneratedTicketEntity, {
-        where: { ticket_code: ticketCode, status: 'PRE_GENERATED' }
+        where: { ticket_code: ticketCode, status: 'PRE_GENERATED', partner_id: partnerId }
       });
 
       if (!ticket) {

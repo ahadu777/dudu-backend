@@ -8,6 +8,8 @@ export type OrderStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
 @Index(['payment_reference']) // For payment tracking
 @Index(['status']) // For order status filtering
 @Index(['created_at']) // For date range queries
+@Index(['partner_id']) // For partner isolation
+@Index(['partner_id', 'created_at']) // For partner analytics
 export class OTAOrderEntity {
   @PrimaryColumn({ type: 'varchar', length: 50 })
   order_id!: string;
@@ -17,6 +19,9 @@ export class OTAOrderEntity {
 
   @Column({ type: 'int', default: 2 }) // 2 = OTA channel
   channel_id!: number;
+
+  @Column({ type: 'varchar', length: 50 })
+  partner_id!: string;
 
   @Column({ type: 'varchar', length: 255 })
   customer_name!: string;

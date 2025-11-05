@@ -2,9 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 
 // Simple API key store - in production this would be in database
-const API_KEYS = new Map<string, { partner_name: string, permissions: string[], rate_limit: number }>([
-  ['ota_test_key_12345', { partner_name: 'Test OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 100 }],
-  ['ota_prod_key_67890', { partner_name: 'Production OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create'], rate_limit: 1000 }]
+const API_KEYS = new Map<string, { partner_id: string, partner_name: string, permissions: string[], rate_limit: number }>([
+  ['ota_test_key_12345', { partner_id: 'test_partner', partner_name: 'Test OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 100 }],
+  ['ota_prod_key_67890', { partner_id: 'prod_partner', partner_name: 'Production OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create'], rate_limit: 1000 }],
+  ['dudu_key_12345', { partner_id: 'dudu_partner', partner_name: 'DuDu Travel', permissions: ['inventory:read', 'tickets:bulk-generate', 'tickets:activate', 'orders:read'], rate_limit: 500 }],
+  ['ota251103_key_67890', { partner_id: 'ota251103_partner', partner_name: 'OTA251103 Travel Group', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 300 }]
 ]);
 
 // Rate limiting store (in production would use Redis)
@@ -12,6 +14,7 @@ const rateLimitStore = new Map<string, { count: number, resetTime: number }>();
 
 interface AuthenticatedRequest extends Request {
   ota_partner?: {
+    id: string;
     name: string;
     permissions: string[];
   };
@@ -85,6 +88,7 @@ export function otaAuthMiddleware(requiredPermission?: string) {
 
     // Attach partner info to request
     req.ota_partner = {
+      id: keyData.partner_id,
       name: keyData.partner_name,
       permissions: keyData.permissions
     };

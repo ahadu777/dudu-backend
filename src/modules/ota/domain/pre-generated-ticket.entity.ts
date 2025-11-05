@@ -7,6 +7,8 @@ export type TicketStatus = 'PRE_GENERATED' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 @Index(['product_id']) // For product queries
 @Index(['status']) // For status filtering
 @Index(['customer_email']) // For customer lookups
+@Index(['partner_id']) // For partner isolation
+@Index(['partner_id', 'status']) // For partner ticket queries
 export class PreGeneratedTicketEntity {
   @PrimaryColumn({ type: 'varchar', length: 100 })
   ticket_code!: string;
@@ -16,6 +18,9 @@ export class PreGeneratedTicketEntity {
 
   @Column({ type: 'varchar', length: 100 })
   batch_id!: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  partner_id!: string;
 
   @Column({
     type: 'enum',
