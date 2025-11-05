@@ -50,6 +50,11 @@ curl -H "X-API-Key: ota251103_key_67890" \
       "106": { "weekday": 288, "weekend": 318 },
       "107": { "weekday": 188, "weekend": 228 },
       "108": { "weekday": 788, "weekend": 868 }
+    },
+    "customer_types": ["adult", "child", "elderly"],
+    "special_dates": {
+      "2025-12-31": { "multiplier": 1.5 },
+      "2026-02-18": { "multiplier": 1.3 }
     }
   }
 }
