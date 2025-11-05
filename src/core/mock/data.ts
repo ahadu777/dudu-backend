@@ -60,6 +60,7 @@ export interface MockOrder {
   paid_at?: Date;
   // OTA-specific fields
   order_id?: string;
+  reservation_id?: string;
   product_id?: number;
   customer_name?: string;
   customer_email?: string;
@@ -522,6 +523,7 @@ class MockDataStore {
 
     // Generate tickets for each unit in the reservation
     const tickets = [];
+    const storedTickets: MockTicket[] = [];
     for (let i = 0; i < reservation.quantity; i++) {
       const ticketId = this.nextTicketId++;
       const ticketCode = `${product.sku}-${ticketId}`;
@@ -547,6 +549,7 @@ class MockDataStore {
 
       // Store the actual ticket
       this.tickets.set(ticketId, ticket);
+      storedTickets.push(ticket);
 
       // Add API response format to tickets array
       tickets.push({
@@ -576,6 +579,38 @@ class MockDataStore {
 
     // Calculate total amount
     const totalAmount = product.unit_price * reservation.quantity;
+
+    // Create and store the order
+    const orderData: MockOrder = {
+      id: orderId,
+      user_id: 1, // Default user for OTA orders
+      out_trade_no: confirmationCode,
+      channel_id: 2, // OTA channel
+      status: 'PAID',
+      subtotal: totalAmount,
+      discount: 0,
+      total: totalAmount,
+      payload_hash: '',
+      items: [{
+        product_id: product.id,
+        qty: reservation.quantity,
+        unit_price: product.unit_price
+      }],
+      created_at: new Date(),
+      paid_at: new Date(),
+      // OTA-specific fields
+      order_id: orderId.toString(),
+      reservation_id: reservationId,
+      product_id: product.id,
+      customer_name: customerDetails.name,
+      customer_email: customerDetails.email,
+      total_amount: totalAmount,
+      confirmation_code: confirmationCode,
+      tickets: storedTickets
+    };
+
+    // Store the order
+    this.orders.set(orderId.toString(), orderData);
 
     return {
       order_id: orderId.toString(),
