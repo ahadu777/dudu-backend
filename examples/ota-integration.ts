@@ -52,11 +52,11 @@ class OTAClient {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`API Error ${response.status}: ${error.message}`);
+      const error = await response.json() as { message?: string };
+      throw new Error(`API Error ${response.status}: ${error.message || 'Unknown error'}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   /**
@@ -126,7 +126,7 @@ async function demonstrateOTAIntegration() {
 
     // Step 3: Verify reservation details
     console.log('\n3. Verifying reservation details...');
-    const reservationDetails = await ota.getReservation(reservation.reservation_id);
+    const reservationDetails = await ota.getReservation(reservation.reservation_id) as any;
     console.log(`📋 Status: ${reservationDetails.status}`);
     console.log(`📦 Product: ${reservationDetails.product_id}`);
     console.log(`🔢 Quantity: ${reservationDetails.quantity}`);
@@ -138,7 +138,7 @@ async function demonstrateOTAIntegration() {
 
     // Step 5: List all active reservations
     console.log('\n5. Listing all active reservations...');
-    const activeReservations = await ota.getActiveReservations();
+    const activeReservations = await ota.getActiveReservations() as any;
     console.log(`Total active reservations: ${activeReservations.total_count}`);
 
     console.log('\n✅ OTA Integration Demo Completed Successfully!');
@@ -163,7 +163,8 @@ console.log(`
 - REST API with JSON request/response
 - API key authentication required
 - Rate limiting: 100-1000 requests/minute
-- Base URL: http://localhost:8080/api/ota/
+- Development: http://localhost:8080/api/ota/
+- Production: https://mesh.synque.ai/api/ota/
 
 📦 Product Catalog:
 - Product 106: Premium Plan - $288/$318 (weekday/weekend)
