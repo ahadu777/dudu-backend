@@ -17,11 +17,29 @@ A feature is **DONE** when:
 2. **Server runs** - No runtime crashes
 3. **Mock data updated** - Test data supports the feature
 4. **Pattern consistent** - Follows existing code patterns
+5. **Database queries validated** - All repository queries checked for:
+   - Correct use of TypeORM operators (In(), Like(), etc.)
+   - No undefined where clauses that bypass filtering
+   - Array parameters properly handled (use In() for arrays)
+   - Query result matches expected filter criteria
 
 ### ✅ Testing Requirements
 1. **Manual test passes** - Curl commands work as expected
 2. **Idempotency verified** - Second call returns same result
 3. **Error cases tested** - Invalid inputs handled correctly
+4. **Parameter variations tested** - All parameter combinations work correctly:
+   - Single values vs arrays/lists
+   - Empty/null vs populated
+   - Optional vs required parameters
+   - Query string variations (single value, comma-separated, etc.)
+5. **Query result validation** - Database queries actually filter correctly:
+   - Multi-value filters return only requested items (not all items)
+   - Single-value filters return only matching item
+   - Empty filters handled appropriately (all vs none)
+6. **Edge cases beyond happy path**:
+   - Boundary conditions (min/max values)
+   - Array operations (empty array, single item, multiple items)
+   - Database query edge cases (undefined where clauses, type mismatches)
 
 ### ✅ Documentation Requirements
 1. **Card status updated** - Marked as "Done" with timestamp
@@ -270,6 +288,8 @@ node scripts/progress-report.js
 3. It's idempotent (safe to retry)
 4. It's logged (observable)
 5. Card is updated (status: Done)
+6. **Parameter variations tested** (single vs multiple, empty vs populated)
+7. **Database queries verified** (filters actually work, no undefined where clauses)
 
 **"Done" does NOT mean**:
 - Perfect code
@@ -278,4 +298,140 @@ node scripts/progress-report.js
 - Fully optimized
 - Feature complete
 
-We're building an MVP - "Done" means it works reliably for the happy path and handles basic error cases.
+We're building an MVP - "Done" means it works reliably for the happy path **and all parameter variations** and handles basic error cases.
+
+## 🚨 Critical Testing Checklist
+
+### For Endpoints with Query Parameters
+- [ ] Test with single value: `?product_ids=106`
+- [ ] Test with multiple values: `?product_ids=106,107,108`
+- [ ] Test with empty parameter: `?product_ids=` (if allowed)
+- [ ] Test without parameter: (no query string) (if optional)
+- [ ] **Verify results match requested filters** - Don't return all items when filtering by specific IDs
+
+### For Database Queries with Arrays
+- [ ] Single value: `where: { id: value }` or `where: { id: In([value]) }`
+- [ ] Multiple values: `where: { id: In([value1, value2]) }` (NEVER use `undefined`)
+- [ ] Empty array: Handle appropriately (return empty or error)
+- [ ] **Code review**: Check for conditional `undefined` in where clauses (common bug pattern)
+
+### Bug Pattern to Watch For
+```typescript
+// ❌ BAD - Returns all items when array.length > 1
+where: { product_id: productIds.length === 1 ? productIds[0] : undefined }
+
+// ✅ GOOD - Always filters correctly
+where: { product_id: In(productIds) }
+```
+
+## 🔒 Security Standards (PRD-003)
+
+### Input Validation Requirements
+- [ ] **Email validation**: Reject invalid email formats (regex validation)
+- [ ] **HTML sanitization**: Strip or reject HTML tags in user inputs (prevent XSS)
+- [ ] **String length limits**: Enforce maximum lengths (customer_name: 200, email: 255, etc.)
+- [ ] **Integer validation**: Reject floats for integer fields (product_id, quantity)
+- [ ] **Content-Type validation**: Require `application/json` for POST/PUT/PATCH
+- [ ] **JSON parsing errors**: Handle malformed JSON gracefully
+
+### Security Checklist
+- [ ] **SQL Injection prevention**: Use parameterized queries (TypeORM handles this)
+- [ ] **XSS prevention**: Sanitize/reject HTML tags in inputs
+- [ ] **Rate limiting**: Implement per-session/operator rate limits (200 req/min for scanning)
+- [ ] **Authentication**: JWT verification for QR tokens
+- [ ] **Authorization**: Venue session validation
+- [ ] **Error messages**: Don't leak sensitive information (database errors, internal paths)
+
+### Security Test Cases
+- [ ] XSS injection attempts rejected
+- [ ] SQL injection attempts prevented
+- [ ] Email format validated
+- [ ] Integer fields reject floats
+- [ ] String length limits enforced
+- [ ] Rate limiting enforced
+
+## 🔄 Transaction & Concurrency Requirements (PRD-003)
+
+### Transaction Safety
+- [ ] **Atomic operations**: Critical flows wrapped in database transactions
+- [ ] **Pessimistic locking**: Use `SELECT FOR UPDATE` for JTI duplicate checks
+- [ ] **Rollback on error**: All database errors cause transaction rollback
+- [ ] **No partial state**: Failed operations don't leave inconsistent data
+
+### Concurrency Control
+- [ ] **Race condition prevention**: Concurrent scans of same QR token handled correctly
+- [ ] **JTI duplicate detection**: Pessimistic lock prevents duplicate redemptions
+- [ ] **Connection pool**: Configured appropriately (default: 10, production: 20+)
+- [ ] **Deadlock prevention**: Transaction ordering prevents deadlocks
+
+### Transaction Test Cases
+- [ ] Concurrent scanning: Same QR scanned simultaneously → only one succeeds
+- [ ] Transaction rollback: Database error during redemption → no partial state
+- [ ] JTI locking: Pessimistic lock prevents race conditions
+
+## ⚡ Performance Requirements (PRD-003)
+
+### Response Time Requirements
+- [ ] **Mean response time**: <1000ms
+- [ ] **95th percentile**: <2000ms
+- [ ] **Maximum response time**: <3000ms
+- [ ] **JTI lookup**: <100ms (indexed query)
+
+### Throughput Requirements
+- [ ] **Scanning capacity**: 1000+ scans/hour
+- [ ] **Concurrent operators**: Support 10+ simultaneous operators
+- [ ] **Error rate**: <1% under load
+
+### Performance Optimization Checklist
+- [ ] **Database indexes**: Created for frequently queried columns (jti, ticket_code, function_code)
+- [ ] **Query optimization**: No N+1 queries, efficient joins
+- [ ] **Connection pooling**: Configured appropriately
+- [ ] **Response compression**: Enabled (gzip)
+- [ ] **Logging optimization**: Non-blocking, structured logging
+- [ ] **Caching**: Implemented where appropriate (venue data, function mappings)
+
+### Performance Test Cases
+- [ ] Response time validation: 100 scans, 95% <2 seconds
+- [ ] Throughput validation: 1000+ scans/hour
+- [ ] Concurrent operator scenarios: 10 operators scanning simultaneously
+- [ ] Connection pool stress test: 50 concurrent requests
+
+## 📋 Business Logic Validation Requirements (PRD-003)
+
+### Multi-Function Package Validation
+- [ ] **UNLIMITED functions** (ferry_boarding): Always allow, don't check remaining_uses, don't decrement
+- [ ] **SINGLE_USE functions** (gift_redemption): Check redemption history (not remaining_uses), reject if already redeemed
+- [ ] **COUNTED functions** (playground_token): Check remaining_uses, decrement on success
+- [ ] **Function code translation**: Product codes mapped to PRD-003 standard codes
+
+### Location-Specific Validation
+- [ ] **Venue function support**: Check venue supports requested function code
+- [ ] **Location restrictions**: Validate location-specific rules (e.g., tea_set only at cheung-chau)
+- [ ] **Cross-terminal prevention**: Single-use functions checked globally (not per-venue)
+
+### Business Logic Test Cases
+- [ ] Unlimited ferry boarding: 5 scans, all succeed, no decrement
+- [ ] Single-use gift: First succeeds, second fails with ALREADY_REDEEMED
+- [ ] Counted tokens: 10 scans succeed, 11th fails with NO_REMAINING
+- [ ] Cross-terminal gift: Redeem at central-pier, try cheung-chau, fails
+- [ ] Location-specific: Tea set fails at central-pier, succeeds at cheung-chau
+
+## Real Example: PRD-002 Bug (Commit e23c9b14b5ca687a4b2e3e22dd4df7c0b361508f)
+
+**What was wrong**:
+- Original code: `where: { product_id: productIds.length === 1 ? productIds[0] : undefined }`
+- When `productIds = [106, 107, 108]`, the where clause became `undefined`
+- Result: Query returned ALL products instead of filtering by requested IDs
+- Impact: OTA inventory endpoint returned incorrect data for multi-product queries
+
+**How to catch it**:
+1. Test with multiple product IDs: `GET /api/ota/inventory?product_ids=106,107,108`
+2. Verify response only contains products 106, 107, 108 (not all products)
+3. Code review: Check for `undefined` in where clauses
+4. Verify TypeORM `In()` operator is used for array filtering
+
+**The fix**:
+```typescript
+// Fixed version
+where: { product_id: In(productIds) }
+```

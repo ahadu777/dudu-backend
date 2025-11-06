@@ -73,6 +73,18 @@ export class VenueRepository {
     return count > 0;
   }
 
+  // Check if a function has been successfully redeemed for a ticket (for single-use validation)
+  async hasFunctionBeenRedeemed(ticketCode: string, functionCode: string): Promise<boolean> {
+    const count = await this.redemptionRepo.count({
+      where: {
+        ticket_code: ticketCode,
+        function_code: functionCode,
+        result: 'success'
+      }
+    });
+    return count > 0;
+  }
+
   // Record redemption attempt (success or failure)
   async recordRedemption(redemptionData: {
     ticketCode: string;

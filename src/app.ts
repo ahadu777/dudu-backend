@@ -10,6 +10,7 @@ import { env, AppDataSource } from './config';
 import { errorHandler } from './middlewares/errorHandler';
 import { loggingMiddleware } from './middlewares/logging';
 import { reqIdMiddleware } from './middlewares/reqId';
+import { jsonErrorHandler } from './middlewares/inputValidator';
 import { logger } from './utils/logger';
 import { registerModuleRouters } from './modules';
 
@@ -48,6 +49,9 @@ class App {
     // Body parser
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
+
+    // JSON parsing error handler (must be after body parser)
+    this.app.use(jsonErrorHandler);
 
     // Compression
     this.app.use(compression());

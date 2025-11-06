@@ -1,0 +1,633 @@
+{
+  "info": {
+    "name": "PRD-003 Venue Operations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Complete test collection for PRD-003 Event Venue Operations including multi-function validation, fraud prevention, and analytics."
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Server is healthy', function () { pm.expect(pm.response.json().status).to.eql('ok'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/healthz",
+              "host": ["{{baseUrl}}"],
+              "path": ["healthz"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Venue Sessions",
+      "item": [
+        {
+          "name": "Create Session - Central Pier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Session code exists', function () { pm.expect(body.session_code).to.exist; });",
+                  "pm.test('Venue code is central-pier', function () { pm.expect(body.venue_code).to.eql('central-pier'); });",
+                  "pm.collectionVariables.set('sessionCodeCentral', body.session_code);",
+                  "pm.collectionVariables.set('venueCodeCentral', body.venue_code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "sessions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"central-pier\",\n  \"operator_id\": 1001,\n  \"operator_name\": \"Alice Chan\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\",\n  \"duration_hours\": 8\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Session - Cheung Chau",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('sessionCodeCC', body.session_code);",
+                  "pm.collectionVariables.set('venueCodeCC', body.venue_code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "sessions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"cheung-chau\",\n  \"operator_id\": 1002,\n  \"operator_name\": \"Bob Lee\",\n  \"terminal_device_id\": \"TERMINAL-CC-001\",\n  \"duration_hours\": 8\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Session - Gift Shop Central",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('sessionCodeGift', body.session_code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "sessions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"gift-shop-central\",\n  \"operator_id\": 1003,\n  \"operator_name\": \"Carol Wong\",\n  \"terminal_device_id\": \"TERMINAL-GIFT-001\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Multi-Function Validation",
+      "item": [
+        {
+          "name": "Test 1: Unlimited Ferry Boarding (5 scans)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set QR token - replace with actual token from ticket service",
+                  "pm.collectionVariables.set('qrToken', pm.collectionVariables.get('qrToken') || 'REPLACE_WITH_ACTUAL_QR_TOKEN');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Result is success', function () { pm.expect(body.result).to.eql('success'); });",
+                  "pm.test('Remaining uses unchanged (unlimited)', function () {",
+                  "  if (body.remaining_uses !== undefined) {",
+                  "    pm.expect(body.remaining_uses).to.be.at.least(999);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "scan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qrToken}}\",\n  \"function_code\": \"ferry_boarding\",\n  \"session_code\": \"{{sessionCodeCentral}}\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Test 2: Single-Use Gift Redemption (First)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Result is success', function () { pm.expect(body.result).to.eql('success'); });",
+                  "pm.collectionVariables.set('firstGiftScanSuccess', true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "scan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qrToken}}\",\n  \"function_code\": \"gift_redemption\",\n  \"session_code\": \"{{sessionCodeGift}}\",\n  \"terminal_device_id\": \"TERMINAL-GIFT-001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Test 3: Single-Use Gift Redemption (Second - Should Fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', function () { pm.response.to.have.status(422); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Result is reject', function () { pm.expect(body.result).to.eql('reject'); });",
+                  "pm.test('Reason is ALREADY_REDEEMED', function () { pm.expect(body.reason).to.eql('ALREADY_REDEEMED'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "scan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qrToken}}\",\n  \"function_code\": \"gift_redemption\",\n  \"session_code\": \"{{sessionCodeGift}}\",\n  \"terminal_device_id\": \"TERMINAL-GIFT-001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Test 4: Counted Playground Tokens (10 scans)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Result is success', function () { pm.expect(body.result).to.eql('success'); });",
+                  "pm.test('Remaining uses decrements', function () {",
+                  "  if (body.remaining_uses !== undefined) {",
+                  "    const currentUses = body.remaining_uses;",
+                  "    pm.expect(currentUses).to.be.below(10);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "scan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qrToken}}\",\n  \"function_code\": \"playground_token\",\n  \"session_code\": \"{{sessionCodeCC}}\",\n  \"terminal_device_id\": \"TERMINAL-CC-001\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fraud Prevention",
+      "item": [
+        {
+          "name": "Cross-Terminal JTI Duplicate Detection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', function () { pm.response.to.have.status(422); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Result is reject', function () { pm.expect(body.result).to.eql('reject'); });",
+                  "pm.test('Reason is ALREADY_REDEEMED', function () {",
+                  "  pm.expect(body.reason).to.be.oneOf(['ALREADY_REDEEMED', 'DUPLICATE_JTI']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "scan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qrToken}}\",\n  \"function_code\": \"ferry_boarding\",\n  \"session_code\": \"{{sessionCodeCC}}\",\n  \"terminal_device_id\": \"TERMINAL-CC-002\"\n}"
+            },
+            "description": "Scan same QR token at different terminal - should detect duplicate JTI"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Location-Specific Validation",
+      "item": [
+        {
+          "name": "Tea Set at Wrong Location (Should Fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', function () { pm.response.to.have.status(422); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Result is reject', function () { pm.expect(body.result).to.eql('reject'); });",
+                  "pm.test('Reason is WRONG_LOCATION', function () { pm.expect(body.reason).to.eql('WRONG_LOCATION'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "scan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qrToken}}\",\n  \"function_code\": \"tea_set\",\n  \"session_code\": \"{{sessionCodeCentral}}\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
+            },
+            "description": "Tea set should only work at cheung-chau, not central-pier"
+          }
+        },
+        {
+          "name": "Tea Set at Correct Location (Should Succeed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Result is success', function () { pm.expect(body.result).to.eql('success'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "scan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qrToken}}\",\n  \"function_code\": \"tea_set\",\n  \"session_code\": \"{{sessionCodeCC}}\",\n  \"terminal_device_id\": \"TERMINAL-CC-001\"\n}"
+            },
+            "description": "Tea set should work at cheung-chau"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Venue Analytics - Central Pier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Metrics exist', function () { pm.expect(body.metrics).to.exist; });",
+                  "pm.test('Total scans exists', function () { pm.expect(body.metrics.total_scans).to.exist; });",
+                  "pm.test('Success rate exists', function () { pm.expect(body.metrics.success_rate).to.exist; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/{{venueCodeCentral}}/analytics?hours=24",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "{{venueCodeCentral}}", "analytics"],
+              "query": [
+                {
+                  "key": "hours",
+                  "value": "24"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Venue Analytics - Cheung Chau",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Function breakdown exists', function () { pm.expect(body.metrics.function_breakdown).to.exist; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/{{venueCodeCC}}/analytics?hours=24",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "{{venueCodeCC}}", "analytics"],
+              "query": [
+                {
+                  "key": "hours",
+                  "value": "24"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security & Validation",
+      "item": [
+        {
+          "name": "XSS Injection Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', function () { pm.response.to.have.status(400); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Error is VALIDATION_ERROR', function () { pm.expect(body.error).to.eql('VALIDATION_ERROR'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "sessions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"central-pier\",\n  \"operator_id\": 1001,\n  \"operator_name\": \"<script>alert('XSS')</script>\",\n  \"terminal_device_id\": \"TERMINAL-001\"\n}"
+            },
+            "description": "Should reject HTML tags in operator_name"
+          }
+        },
+        {
+          "name": "Invalid Email Format",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ota/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ota", "orders"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"customer_details\": {\n    \"name\": \"Test Customer\",\n    \"email\": \"invalid-email\"\n  }\n}"
+            },
+            "description": "Should reject invalid email format"
+          }
+        },
+        {
+          "name": "Rate Limit Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 429) {",
+                  "  pm.test('Rate limit exceeded', function () { pm.expect(pm.response.code).to.eql(429); });",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Error is RATE_LIMIT_EXCEEDED', function () { pm.expect(body.error).to.eql('RATE_LIMIT_EXCEEDED'); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/venue/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "venue", "scan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qrToken}}\",\n  \"function_code\": \"ferry_boarding\",\n  \"session_code\": \"{{sessionCodeCentral}}\"\n}"
+            },
+            "description": "Send 201 requests rapidly to test rate limiting (200 req/min limit)"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "qrToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionCodeCentral",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionCodeCC",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionCodeGift",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "venueCodeCentral",
+      "value": "central-pier",
+      "type": "string"
+    },
+    {
+      "key": "venueCodeCC",
+      "value": "cheung-chau",
+      "type": "string"
+    }
+  ]
+}
+
+

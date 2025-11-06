@@ -5,6 +5,10 @@ import { dataSourceConfig } from '../../config/data-source';
 import { logger } from '../../utils/logger';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
+import { getFunctionType, isUnlimited, isSingleUse, isCounted } from './domain/function-types';
+import { translateFunctionCode, requiresLocationValidation, getRequiredVenueCode } from './utils/function-mapper';
+import { RedemptionEvent } from './domain/redemption-event.entity';
+import { ScanResult } from '../../types/domain';
 
 export interface VenueOperationsResponse {
   result: 'success' | 'reject';
@@ -186,147 +190,287 @@ export class VenueOperationsService {
     startTime: number
   ): Promise<VenueOperationsResponse> {
     const repo = await this.getRepository();
+    const queryRunner = AppDataSource.createQueryRunner();
+    
+    try {
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
-    // 1. Validate session with venue context
-    const session = await repo.findActiveSession(request.sessionCode);
-    if (!session) {
-      const response = this.createRejectResponse('INVALID_SESSION', startTime, request);
-      await this.recordRedemptionAttempt(request, ticketCode, 'reject', 'INVALID_SESSION');
-      return response;
-    }
-
-    // 2. CRITICAL: Cross-terminal fraud detection
-    const jtiAlreadyUsed = await repo.hasJtiBeenUsed(jti);
-    if (jtiAlreadyUsed) {
-      logger.info('venue.scan.fraud_detected', {
-        jti,
-        ticket_code: ticketCode,
-        venue_code: session.venue.venue_code,
-        function_code: request.functionCode
-      });
-
-      await repo.recordRedemption({
-        ticketCode,
-        functionCode: request.functionCode,
-        venueId: session.venue_id,
-        operatorId: session.operator_id,
-        sessionCode: request.sessionCode,
-        terminalDeviceId: request.terminalDeviceId,
-        jti,
-        result: 'reject',
-        reason: 'DUPLICATE_JTI'
-      });
-
-      return this.createRejectResponse('ALREADY_REDEEMED', startTime, {
-        session_code: request.sessionCode,
-        venue_code: session.venue.venue_code,
-        fraud_detected: true
-      });
-    }
-
-    // 3. Validate with existing ticket logic (fallback to mock for ticket data)
-    const ticket = mockStore.getTicket(ticketCode);
-    if (!ticket) {
-      await repo.recordRedemption({
-        ticketCode,
-        functionCode: request.functionCode,
-        venueId: session.venue_id,
-        operatorId: session.operator_id,
-        sessionCode: request.sessionCode,
-        terminalDeviceId: request.terminalDeviceId,
-        jti,
-        result: 'reject',
-        reason: 'TICKET_NOT_FOUND'
-      });
-
-      return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
-    }
-
-    // 4. Function validation
-    const entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);
-    if (!entitlement) {
-      await repo.recordRedemption({
-        ticketCode,
-        functionCode: request.functionCode,
-        venueId: session.venue_id,
-        operatorId: session.operator_id,
-        sessionCode: request.sessionCode,
-        terminalDeviceId: request.terminalDeviceId,
-        jti,
-        result: 'reject',
-        reason: 'WRONG_FUNCTION'
-      });
-
-      return this.createRejectResponse('WRONG_FUNCTION', startTime, request);
-    }
-
-    // 5. Check remaining uses
-    if (entitlement.remaining_uses <= 0) {
-      await repo.recordRedemption({
-        ticketCode,
-        functionCode: request.functionCode,
-        venueId: session.venue_id,
-        operatorId: session.operator_id,
-        sessionCode: request.sessionCode,
-        terminalDeviceId: request.terminalDeviceId,
-        jti,
-        result: 'reject',
-        reason: 'NO_REMAINING'
-      });
-
-      return this.createRejectResponse('NO_REMAINING', startTime, request);
-    }
-
-    // 6. SUCCESS: Process redemption
-    const success = mockStore.decrementEntitlement(ticketCode, request.functionCode);
-    if (!success) {
-      return this.createRejectResponse('INTERNAL_ERROR', startTime, request);
-    }
-
-    // Record successful redemption in database
-    await repo.recordRedemption({
-      ticketCode,
-      functionCode: request.functionCode,
-      venueId: session.venue_id,
-      operatorId: session.operator_id,
-      sessionCode: request.sessionCode,
-      terminalDeviceId: request.terminalDeviceId,
-      jti,
-      result: 'success',
-      remainingUsesAfter: entitlement.remaining_uses - 1,
-      additionalData: {
-        venue_code: session.venue.venue_code,
-        venue_name: session.venue.venue_name
+      // 1. Validate session with venue context (outside transaction for read)
+      const session = await repo.findActiveSession(request.sessionCode);
+      if (!session) {
+        await queryRunner.rollbackTransaction();
+        const response = this.createRejectResponse('INVALID_SESSION', startTime, request);
+        await this.recordRedemptionAttempt(request, ticketCode, 'reject', 'INVALID_SESSION');
+        return response;
       }
-    });
 
-    const updatedTicket = mockStore.getTicket(ticketCode);
-    const responseTime = Date.now() - startTime;
+      // 2. CRITICAL: Cross-terminal fraud detection with pessimistic locking (atomic)
+      const jtiAlreadyUsed = await queryRunner.manager
+        .createQueryBuilder(RedemptionEvent, 're')
+        .setLock('pessimistic_write')
+        .where('re.jti = :jti', { jti })
+        .getOne();
 
-    logger.info('venue.scan.success', {
-      ticket_code: ticketCode,
-      function_code: request.functionCode,
-      venue_code: session.venue.venue_code,
-      response_time_ms: responseTime,
-      remaining_uses: entitlement.remaining_uses - 1
-    });
+      if (jtiAlreadyUsed) {
+        await queryRunner.rollbackTransaction();
+        
+        logger.info('venue.scan.fraud_detected', {
+          jti,
+          ticket_code: ticketCode,
+          venue_code: session.venue.venue_code,
+          function_code: request.functionCode
+        });
 
-    return {
-      result: 'success',
-      ticket_status: updatedTicket?.status || 'unknown',
-      entitlements: updatedTicket?.entitlements || [],
-      remaining_uses: entitlement.remaining_uses - 1,
-      venue_info: {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId: session.venue_id,
+          operatorId: session.operator_id,
+          sessionCode: request.sessionCode,
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'DUPLICATE_JTI'
+        });
+
+        return this.createRejectResponse('ALREADY_REDEEMED', startTime, {
+          session_code: request.sessionCode,
+          venue_code: session.venue.venue_code,
+          fraud_detected: true
+        });
+      }
+
+      // 3. Translate function code from product code to PRD-003 standard
+      const translatedFunctionCode = translateFunctionCode(request.functionCode);
+      const functionType = getFunctionType(translatedFunctionCode);
+
+      // 4. Location-specific validation (tea_set only at cheung-chau)
+      if (requiresLocationValidation(translatedFunctionCode)) {
+        const requiredVenue = getRequiredVenueCode(translatedFunctionCode);
+        if (requiredVenue && session.venue.venue_code !== requiredVenue) {
+          await queryRunner.rollbackTransaction();
+          await repo.recordRedemption({
+            ticketCode,
+            functionCode: translatedFunctionCode,
+            venueId: session.venue_id,
+            operatorId: session.operator_id,
+            sessionCode: request.sessionCode,
+            terminalDeviceId: request.terminalDeviceId,
+            jti,
+            result: 'reject',
+            reason: 'WRONG_LOCATION'
+          });
+          return this.createRejectResponse('WRONG_LOCATION', startTime, {
+            ...request,
+            required_venue: requiredVenue,
+            actual_venue: session.venue.venue_code
+          });
+        }
+      }
+
+      // 5. Check venue supports function code
+      if (session.venue.supported_functions && 
+          !session.venue.supported_functions.includes(translatedFunctionCode)) {
+        await queryRunner.rollbackTransaction();
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: translatedFunctionCode,
+          venueId: session.venue_id,
+          operatorId: session.operator_id,
+          sessionCode: request.sessionCode,
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'WRONG_FUNCTION'
+        });
+        return this.createRejectResponse('WRONG_FUNCTION', startTime, {
+          ...request,
+          venue_supports: session.venue.supported_functions,
+          requested_function: translatedFunctionCode
+        });
+      }
+
+      // 6. Validate ticket (fallback to mock for ticket data - Phase 3.3 will fix this)
+      const ticket = mockStore.getTicket(ticketCode);
+      if (!ticket) {
+        await queryRunner.rollbackTransaction();
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: translatedFunctionCode,
+          venueId: session.venue_id,
+          operatorId: session.operator_id,
+          sessionCode: request.sessionCode,
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'TICKET_NOT_FOUND'
+        });
+        return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
+      }
+
+      // 7. Find entitlement (check both original and translated function codes)
+      let entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);
+      if (!entitlement) {
+        entitlement = ticket.entitlements.find(e => e.function_code === translatedFunctionCode);
+      }
+      
+      if (!entitlement) {
+        await queryRunner.rollbackTransaction();
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: translatedFunctionCode,
+          venueId: session.venue_id,
+          operatorId: session.operator_id,
+          sessionCode: request.sessionCode,
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'WRONG_FUNCTION'
+        });
+        return this.createRejectResponse('WRONG_FUNCTION', startTime, request);
+      }
+
+      // 8. Multi-function validation logic based on function type
+      let shouldAllow = false;
+      let remainingUsesAfter: number | null = null;
+      let rejectReason: string | null = null;
+
+      if (isUnlimited(translatedFunctionCode)) {
+        // UNLIMITED (ferry boarding): Always allow, don't check remaining_uses, don't decrement
+        shouldAllow = true;
+        remainingUsesAfter = entitlement.remaining_uses; // Unchanged
+      } else if (isSingleUse(translatedFunctionCode)) {
+        // SINGLE_USE (gift redemption): Check redemption history, not remaining_uses
+        // Check within transaction using queryRunner for consistency
+        const redemptionCount = await queryRunner.manager.count(RedemptionEvent, {
+          where: {
+            ticket_code: ticketCode,
+            function_code: translatedFunctionCode,
+            result: 'success'
+          }
+        });
+        const alreadyRedeemed = redemptionCount > 0;
+        
+        if (alreadyRedeemed) {
+          shouldAllow = false;
+          rejectReason = 'ALREADY_REDEEMED';
+        } else {
+          shouldAllow = true;
+          remainingUsesAfter = entitlement.remaining_uses; // Don't decrement for single-use
+        }
+      } else if (isCounted(translatedFunctionCode)) {
+        // COUNTED (playground tokens): Check remaining_uses and decrement
+        if (entitlement.remaining_uses <= 0) {
+          shouldAllow = false;
+          rejectReason = 'NO_REMAINING';
+        } else {
+          shouldAllow = true;
+          remainingUsesAfter = entitlement.remaining_uses - 1;
+          // Decrement in mock store (Phase 3.3 will move to database)
+          mockStore.decrementEntitlement(ticketCode, request.functionCode);
+        }
+      } else {
+        // Fallback: treat as counted
+        if (entitlement.remaining_uses <= 0) {
+          shouldAllow = false;
+          rejectReason = 'NO_REMAINING';
+        } else {
+          shouldAllow = true;
+          remainingUsesAfter = entitlement.remaining_uses - 1;
+          mockStore.decrementEntitlement(ticketCode, request.functionCode);
+        }
+      }
+
+      // 9. Record redemption result (success or reject) within transaction
+      if (!shouldAllow) {
+        await queryRunner.manager.save(RedemptionEvent, {
+          ticket_code: ticketCode,
+          function_code: translatedFunctionCode,
+          venue_id: session.venue_id,
+          operator_id: session.operator_id,
+          session_code: request.sessionCode,
+          terminal_device_id: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: rejectReason || 'VALIDATION_FAILED',
+          remaining_uses_after: undefined, // Use undefined instead of null
+          redeemed_at: new Date(),
+          additional_data: {
+            venue_code: session.venue.venue_code,
+            venue_name: session.venue.venue_name,
+            function_type: functionType
+          }
+        });
+
+        await queryRunner.commitTransaction();
+        return this.createRejectResponse(rejectReason || 'VALIDATION_FAILED', startTime, request);
+      }
+
+      // 10. SUCCESS: Record successful redemption within transaction
+      await queryRunner.manager.save(RedemptionEvent, {
+        ticket_code: ticketCode,
+        function_code: translatedFunctionCode,
+        venue_id: session.venue_id,
+        operator_id: session.operator_id,
+        session_code: request.sessionCode,
+        terminal_device_id: request.terminalDeviceId,
+        jti,
+        result: 'success',
+        remaining_uses_after: remainingUsesAfter ?? undefined, // Convert null to undefined
+        redeemed_at: new Date(),
+        additional_data: {
+          venue_code: session.venue.venue_code,
+          venue_name: session.venue.venue_name,
+          function_type: functionType,
+          original_function_code: request.functionCode
+        }
+      });
+
+      await queryRunner.commitTransaction();
+
+      const updatedTicket = mockStore.getTicket(ticketCode);
+      const responseTime = Date.now() - startTime;
+
+      logger.info('venue.scan.success', {
+        ticket_code: ticketCode,
+        function_code: translatedFunctionCode,
+        original_function_code: request.functionCode,
+        function_type: functionType,
         venue_code: session.venue.venue_code,
-        venue_name: session.venue.venue_name,
-        terminal_device: request.terminalDeviceId
-      },
-      performance_metrics: {
         response_time_ms: responseTime,
-        fraud_checks_passed: true
-      },
-      ts: new Date().toISOString()
-    };
+        remaining_uses: remainingUsesAfter
+      });
+
+      return {
+        result: 'success',
+        ticket_status: updatedTicket?.status || 'unknown',
+        entitlements: updatedTicket?.entitlements || [],
+        remaining_uses: remainingUsesAfter ?? undefined,
+        venue_info: {
+          venue_code: session.venue.venue_code,
+          venue_name: session.venue.venue_name,
+          terminal_device: request.terminalDeviceId
+        },
+        performance_metrics: {
+          response_time_ms: responseTime,
+          fraud_checks_passed: true
+        },
+        ts: new Date().toISOString()
+      };
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      logger.error('venue.scan.transaction_error', {
+        ticket_code: ticketCode,
+        jti,
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      return this.createRejectResponse('INTERNAL_ERROR', startTime, request);
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   private async handleMockModeValidation(
@@ -335,7 +479,7 @@ export class VenueOperationsService {
     jti: string,
     startTime: number
   ): Promise<VenueOperationsResponse> {
-    // Enhanced mock mode with venue context
+    // Enhanced mock mode with venue context and multi-function validation
     logger.warn('venue.scan.mock_mode', { session_code: request.sessionCode });
 
     // Use existing mock validation logic but with venue enhancements
@@ -352,17 +496,89 @@ export class VenueOperationsService {
       return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
     }
 
-    const entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);
-    if (!entitlement || entitlement.remaining_uses <= 0) {
-      return this.createRejectResponse(entitlement ? 'NO_REMAINING' : 'WRONG_FUNCTION', startTime, request);
+    // Translate function code
+    const translatedFunctionCode = translateFunctionCode(request.functionCode);
+    
+    // Find entitlement (check both original and translated codes)
+    let entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);
+    if (!entitlement) {
+      entitlement = ticket.entitlements.find(e => e.function_code === translatedFunctionCode);
     }
+    
+    if (!entitlement) {
+      return this.createRejectResponse('WRONG_FUNCTION', startTime, request);
+    }
+
+    // Multi-function validation logic (same as database mode)
+    let shouldAllow = false;
+    let remainingUsesAfter: number | null = null;
+    let rejectReason: string | null = null;
+
+    if (isUnlimited(translatedFunctionCode)) {
+      // UNLIMITED: Always allow, don't decrement
+      shouldAllow = true;
+      remainingUsesAfter = entitlement.remaining_uses;
+    } else if (isSingleUse(translatedFunctionCode)) {
+      // SINGLE_USE: Check if already redeemed in mock store
+      // Extract ticket_id from ticket_code (format: TKT-USER-PRODUCT)
+      const ticketIdMatch = ticketCode.match(/TKT-\d+-(\d+)/);
+      const ticketId = ticketIdMatch ? parseInt(ticketIdMatch[1]) : 0;
+      
+      const redemptions = mockStore.getRedemptions({ ticket_id: ticketId });
+      const alreadyRedeemed = redemptions.some(r => 
+        (r.function_code === translatedFunctionCode || r.function_code === request.functionCode) && 
+        r.result === 'success'
+      );
+      
+      if (alreadyRedeemed) {
+        shouldAllow = false;
+        rejectReason = 'ALREADY_REDEEMED';
+      } else {
+        shouldAllow = true;
+        remainingUsesAfter = entitlement.remaining_uses; // Don't decrement
+      }
+    } else if (isCounted(translatedFunctionCode)) {
+      // COUNTED: Check remaining_uses and decrement
+      if (entitlement.remaining_uses <= 0) {
+        shouldAllow = false;
+        rejectReason = 'NO_REMAINING';
+      } else {
+        shouldAllow = true;
+        remainingUsesAfter = entitlement.remaining_uses - 1;
+        mockStore.decrementEntitlement(ticketCode, request.functionCode);
+      }
+    } else {
+      // Fallback: treat as counted
+      if (entitlement.remaining_uses <= 0) {
+        shouldAllow = false;
+        rejectReason = 'NO_REMAINING';
+      } else {
+        shouldAllow = true;
+        remainingUsesAfter = entitlement.remaining_uses - 1;
+        mockStore.decrementEntitlement(ticketCode, request.functionCode);
+      }
+    }
+
+    if (!shouldAllow) {
+      return this.createRejectResponse(rejectReason || 'VALIDATION_FAILED', startTime, request);
+    }
+
+    // Record successful redemption in mock store (for single-use validation)
+    const ticketIdMatch = ticketCode.match(/TKT-\d+-(\d+)/);
+    const ticketId = ticketIdMatch ? parseInt(ticketIdMatch[1]) : 0;
+    mockStore.addRedemption({
+      ticket_id: ticketId,
+      function_code: translatedFunctionCode,
+      operator_id: 0, // Mock mode
+      session_id: request.sessionCode,
+      location_id: null,
+      jti: jti || null,
+      result: ScanResult.SUCCESS,
+      reason: null,
+      ts: new Date().toISOString()
+    });
 
     // SUCCESS in mock mode
-    const success = mockStore.decrementEntitlement(ticketCode, request.functionCode);
-    if (!success) {
-      return this.createRejectResponse('INTERNAL_ERROR', startTime, request);
-    }
-
     const session = mockStore.getSession(request.sessionCode);
     const responseTime = Date.now() - startTime;
 
@@ -370,7 +586,7 @@ export class VenueOperationsService {
       result: 'success',
       ticket_status: ticket.status,
       entitlements: ticket.entitlements,
-      remaining_uses: entitlement.remaining_uses - 1,
+      remaining_uses: remainingUsesAfter ?? undefined,
       venue_info: {
         venue_code: 'mock-venue',
         venue_name: this.getVenueDisplayName('mock-venue'),

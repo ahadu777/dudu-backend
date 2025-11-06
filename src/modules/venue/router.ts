@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { venueOperationsService } from './service';
 import { logger } from '../../utils/logger';
+import { inputValidatorMiddleware } from '../../middlewares/inputValidator';
+import { venueScanRateLimiter } from '../../middlewares/rateLimiter';
 
 const router = Router();
+
+// Apply input validation and rate limiting to all routes
+router.use(inputValidatorMiddleware);
 
 /**
  * @swagger
@@ -222,7 +227,7 @@ router.post('/sessions', async (req, res) => {
  *                 ts:
  *                   type: string
  */
-router.post('/scan', async (req, res) => {
+router.post('/scan', venueScanRateLimiter, async (req, res) => {
   const { qr_token, function_code, session_code, terminal_device_id } = req.body;
 
   if (!qr_token || !function_code || !session_code) {
