@@ -88,6 +88,7 @@ class MockDataStore {
   private tickets: Map<number, MockTicket> = new Map();
   private reservations: Map<string, ChannelReservation> = new Map(); // key: reservation_id
   public preGeneratedTickets: Map<string, any> = new Map(); // key: ticket_code
+  public ticketBatches: Map<string, any> = new Map(); // key: batch_id
   public nextOrderId = 10001;
   public nextTicketId = 50001;
   private nextReservationId = 1;
@@ -684,6 +685,39 @@ class MockDataStore {
   addOrder(orderId: string, orderData: any): void {
     // For OTA orders, we store them with order_id as key for easy retrieval
     this.orders.set(orderId, orderData);
+  }
+
+  // Batch management methods
+  addTicketBatch(batchData: any): void {
+    this.ticketBatches.set(batchData.batch_id, {
+      ...batchData,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+  }
+
+  getBatch(batchId: string): any {
+    return this.ticketBatches.get(batchId);
+  }
+
+  updateBatchCounters(batchId: string, counters: any): boolean {
+    const batch = this.ticketBatches.get(batchId);
+    if (!batch) return false;
+
+    Object.assign(batch, counters, { updated_at: new Date() });
+    return true;
+  }
+
+  getBatchesByReseller(resellerName: string): any[] {
+    return Array.from(this.ticketBatches.values()).filter(batch =>
+      batch.reseller_metadata?.intended_reseller === resellerName
+    );
+  }
+
+  getBatchesByCampaign(campaignType: string): any[] {
+    return Array.from(this.ticketBatches.values()).filter(batch =>
+      batch.batch_metadata?.campaign_type === campaignType
+    );
   }
 }
 
