@@ -1,555 +1,318 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="US-012 OTA Platform Integration" tests="15" time="0.000">
-  <testsuite name="1. Authentication Test (Should Fail)" id="9135707b-dc6c-428e-bac8-a26601266cf2" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
+<testsuites name="US-012: OTA平台完整集成测试2" tests="30" time="60.728">
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦" id="9c212903-d75a-43db-993e-1e3262cd3047" timestamp="2025-11-06T03:24:18.597Z" tests="3" failures="3" errors="1" time="0.011">
     <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
 
 ---
+testScriptError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+---
 ]]></system-err>
-    <testcase name="API key required" time="0.000" classname="1AuthenticationTestShouldFail">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+    <testcase name="状态码是200" time="0.011" classname="10">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 1. Authentication Test (Should Fail).]]>
-        <![CDATA[Test description: API key required.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
+        <![CDATA[Test description: 状态码是200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
    at Object.eval sandbox-script.js:1:1).]]>
       </failure>
     </testcase>
-    <testcase name="Error message correct" time="0.000" classname="1AuthenticationTestShouldFail">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+    <testcase name="返回产品列表" time="0.011" classname="10">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 1. Authentication Test (Should Fail).]]>
-        <![CDATA[Test description: Error message correct.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
+        <![CDATA[Test description: 返回产品列表.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
    at Object.eval sandbox-script.js:2:1).]]>
       </failure>
     </testcase>
-  </testsuite>
-  <testsuite name="2. Get OTA Inventory" id="aa19396f-dc64-4796-ad38-c0528f0aa914" timestamp="2025-11-04T17:24:13.243Z" tests="3" failures="3" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Status 200" time="0.000" classname="2GetOtaInventory">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+    <testcase name="产品包含完整信息" time="0.011" classname="10">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 2. Get OTA Inventory.]]>
-        <![CDATA[Test description: Status 200.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:2).]]>
-      </failure>
-    </testcase>
-    <testcase name="5000 total units available" time="0.000" classname="2GetOtaInventory">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 2. Get OTA Inventory.]]>
-        <![CDATA[Test description: 5000 total units available.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:2).]]>
-      </failure>
-    </testcase>
-    <testcase name="Pricing context included" time="0.000" classname="2GetOtaInventory">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 2. Get OTA Inventory.]]>
-        <![CDATA[Test description: Pricing context included.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:3:2).]]>
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
+        <![CDATA[Test description: 产品包含完整信息.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+   at Object.eval sandbox-script.js:3:1).]]>
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="3. Create Reservation (Premium Plan)" id="c2f87e11-1f64-4251-9540-9f12e4d1df32" timestamp="2025-11-04T17:24:13.243Z" tests="3" failures="3" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Reservation created" time="0.000" classname="3CreateReservationPremiumPlan">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 3. Create Reservation (Premium Plan).]]>
-        <![CDATA[Test description: Reservation created.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:3).]]>
-      </failure>
-    </testcase>
-    <testcase name="Reservation ID returned" time="0.000" classname="3CreateReservationPremiumPlan">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 3. Create Reservation (Premium Plan).]]>
-        <![CDATA[Test description: Reservation ID returned.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:3).]]>
-      </failure>
-    </testcase>
-    <testcase name="Pricing snapshot included" time="0.000" classname="3CreateReservationPremiumPlan">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 3. Create Reservation (Premium Plan).]]>
-        <![CDATA[Test description: Pricing snapshot included.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:3:3).]]>
-      </failure>
-    </testcase>
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.1 查询OTA库存" id="443d61b9-2514-4a30-a4ba-da3a5c477870" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.362">
+    <testcase name="状态码是200" time="0.362" classname="11ota"/>
+    <testcase name="返回库存数据" time="0.362" classname="11ota"/>
   </testsuite>
-  <testsuite name="4. Verify Inventory Reduction" id="25d55d36-328f-4e38-8d6b-a7af9c21e5fb" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Status 200" time="0.000" classname="4VerifyInventoryReduction">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 4. Verify Inventory Reduction.]]>
-        <![CDATA[Test description: Status 200.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:4).]]>
-      </failure>
-    </testcase>
-    <testcase name="Product 106 inventory reduced" time="0.000" classname="4VerifyInventoryReduction">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 4. Verify Inventory Reduction.]]>
-        <![CDATA[Test description: Product 106 inventory reduced.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:4).]]>
-      </failure>
-    </testcase>
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.2 创建预订" id="4a97995c-096e-4d99-aa8c-d07c90fc3137" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="3.457">
+    <testcase name="状态码是201" time="3.457" classname="12"/>
+    <testcase name="返回预订ID" time="3.457" classname="12"/>
   </testsuite>
-  <testsuite name="5. Get Reservation Details" id="e8d88cea-8679-45c5-b281-a3331efc0fc9" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.3 查询预订详情" id="0ee9bacd-b958-44b2-abc9-ebfdf2eaeca4" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.747">
+    <testcase name="状态码是200" time="0.747" classname="13"/>
+    <testcase name="预订状态为active" time="0.747" classname="13"/>
+  </testsuite>
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐" id="876581b8-9cc5-485e-8736-ef49101ba48b" timestamp="2025-11-06T03:24:18.597Z" tests="4" failures="4" errors="1" time="0.003">
     <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
 
 ---
+testScriptError: Cannot read properties of undefined (reading 'length')
+---
 ]]></system-err>
-    <testcase name="Status 200" time="0.000" classname="5GetReservationDetails">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+    <testcase name="状态码是201" time="0.003" classname="14">
+      <failure type="AssertionFailure" message="expected response to have status code 201 but got 403">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 5. Get Reservation Details.]]>
-        <![CDATA[Test description: Status 200.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
+        <![CDATA[Test description: 状态码是201.]]>
+        <![CDATA[Error message: expected response to have status code 201 but got 403.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 403
    at Object.eval sandbox-script.js:1:5).]]>
       </failure>
     </testcase>
-    <testcase name="Reservation details correct" time="0.000" classname="5GetReservationDetails">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+    <testcase name="订单创建成功" time="0.003" classname="14">
+      <failure type="AssertionFailure" message="expected { …(2) } to have property 'order_id'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 5. Get Reservation Details.]]>
-        <![CDATA[Test description: Reservation details correct.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
+        <![CDATA[Test description: 订单创建成功.]]>
+        <![CDATA[Error message: expected { …(2) } to have property 'order_id'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { …(2) } to have property 'order_id'
    at Object.eval sandbox-script.js:2:5).]]>
       </failure>
     </testcase>
-  </testsuite>
-  <testsuite name="6. Create Maximum Reservation (Pet Plan)" id="62e51c52-b8ab-4dc4-999c-b47b588cad84" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Maximum reservation allowed" time="0.000" classname="6CreateMaximumReservationPetPlan">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+    <testcase name="生成了25张票券" time="0.003" classname="14">
+      <failure type="AssertionFailure" message="Target cannot be null or undefined.">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 6. Create Maximum Reservation (Pet Plan).]]>
-        <![CDATA[Test description: Maximum reservation allowed.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:6).]]>
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
+        <![CDATA[Test description: 生成了25张票券.]]>
+        <![CDATA[Error message: Target cannot be null or undefined..]]>
+        <![CDATA[Stacktrace: AssertionError: Target cannot be null or undefined.
+   at Object.eval sandbox-script.js:3:5).]]>
       </failure>
     </testcase>
-    <testcase name="Correct pricing for Pet Plan" time="0.000" classname="6CreateMaximumReservationPetPlan">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+    <testcase name="票券包含entitlements" time="0.003" classname="14">
+      <failure type="AssertionFailure" message="Cannot read properties of undefined (reading '0')">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 6. Create Maximum Reservation (Pet Plan).]]>
-        <![CDATA[Test description: Correct pricing for Pet Plan.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:6).]]>
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
+        <![CDATA[Test description: 票券包含entitlements.]]>
+        <![CDATA[Error message: Cannot read properties of undefined (reading '0').]]>
+        <![CDATA[Stacktrace: TypeError: Cannot read properties of undefined (reading '0')
+   at Object.eval sandbox-script.js:4:5).]]>
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="7. Test Validation Limits (Should Fail)" id="6945877b-1ce9-4207-aa4d-1d9841783515" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Validation error for excessive quantity" time="0.000" classname="7TestValidationLimitsShouldFail">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.5 查询订单列表" id="19d20b31-7ed2-48e4-a81b-c410c7d3d19a" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.362">
+    <testcase name="状态码是200" time="0.362" classname="15"/>
+    <testcase name="返回订单列表" time="0.362" classname="15"/>
+  </testsuite>
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋" id="16d113b7-4cfc-4b00-b8fc-a724ab4a6e71" timestamp="2025-11-06T03:24:18.597Z" tests="3" failures="2" errors="0" time="0.355">
+    <testcase name="状态码是200" time="0.355" classname="151"/>
+    <testcase name="返回订单详情" time="0.355" classname="151">
+      <failure type="AssertionFailure" message="expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'order_id'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 7. Test Validation Limits (Should Fail).]]>
-        <![CDATA[Test description: Validation error for excessive quantity.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:7).]]>
-      </failure>
-    </testcase>
-    <testcase name="Correct error message" time="0.000" classname="7TestValidationLimitsShouldFail">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 7. Test Validation Limits (Should Fail).]]>
-        <![CDATA[Test description: Correct error message.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋.]]>
+        <![CDATA[Test description: 返回订单详情.]]>
+        <![CDATA[Error message: expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'order_id'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'order_id'
    at Object.eval sandbox-script.js:2:7).]]>
       </failure>
     </testcase>
+    <testcase name="订单包含预订关联" time="0.355" classname="151">
+      <failure type="AssertionFailure" message="expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'reservation_id'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋.]]>
+        <![CDATA[Test description: 订单包含预订关联.]]>
+        <![CDATA[Error message: expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'reservation_id'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'reservation_id'
+   at Object.eval sandbox-script.js:3:7).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="8. Test Invalid Product (Should Fail)" id="f8b0a6cf-7bf4-4ef7-be95-535e211a0e41" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码" id="66af35ae-8614-4a2c-a528-1586a3d854e0" timestamp="2025-11-06T03:24:18.597Z" tests="3" failures="3" errors="1" time="0.003">
     <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
 
 ---
+testScriptError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+---
 ]]></system-err>
-    <testcase name="Product not found error" time="0.000" classname="8TestInvalidProductShouldFail">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+    <testcase name="状态码是200" time="0.003" classname="16qr">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 8. Test Invalid Product (Should Fail).]]>
-        <![CDATA[Test description: Product not found error.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
+        <![CDATA[Test description: 状态码是200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
    at Object.eval sandbox-script.js:1:8).]]>
       </failure>
     </testcase>
-    <testcase name="Correct error message" time="0.000" classname="8TestInvalidProductShouldFail">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+    <testcase name="返回票券列表" time="0.003" classname="16qr">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 8. Test Invalid Product (Should Fail).]]>
-        <![CDATA[Test description: Correct error message.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
+        <![CDATA[Test description: 返回票券列表.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
    at Object.eval sandbox-script.js:2:8).]]>
       </failure>
     </testcase>
-  </testsuite>
-  <testsuite name="9. List Active Reservations" id="a8796a42-cdc2-4c71-8ece-b10e98b16cbf" timestamp="2025-11-04T17:24:13.243Z" tests="3" failures="3" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Status 200" time="0.000" classname="9ListActiveReservations">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+    <testcase name="票券包含QR码" time="0.003" classname="16qr">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 9. List Active Reservations.]]>
-        <![CDATA[Test description: Status 200.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:9).]]>
-      </failure>
-    </testcase>
-    <testcase name="Reservations array present" time="0.000" classname="9ListActiveReservations">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 9. List Active Reservations.]]>
-        <![CDATA[Test description: Reservations array present.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:9).]]>
-      </failure>
-    </testcase>
-    <testcase name="At least 2 reservations exist" time="0.000" classname="9ListActiveReservations">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 9. List Active Reservations.]]>
-        <![CDATA[Test description: At least 2 reservations exist.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:3:9).]]>
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
+        <![CDATA[Test description: 票券包含QR码.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+   at Object.eval sandbox-script.js:3:8).]]>
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="10. Test Invalid API Key (Should Fail)" id="66c2a9ad-7070-4a92-aa36-d83219ac1baa" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Invalid API key rejected" time="0.000" classname="10TestInvalidApiKeyShouldFail">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
+  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.1 批量生成预制票据" id="83b2d54c-b846-474f-9535-04e41286fb72" timestamp="2025-11-06T03:24:18.597Z" tests="4" failures="0" errors="0" time="10.040">
+    <testcase name="状态码是201" time="10.040" classname="21"/>
+    <testcase name="批量生成成功" time="10.040" classname="21"/>
+    <testcase name="票据状态为PRE_GENERATED" time="10.040" classname="21"/>
+    <testcase name="票据包含QR码和entitlements" time="10.040" classname="21"/>
+  </testsuite>
+  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.2 激活预制票据 → 生成订单 ⭐" id="bd97fe27-3f5d-4383-b7d8-162436cb4170" timestamp="2025-11-06T03:24:18.597Z" tests="4" failures="0" errors="0" time="4.584">
+    <testcase name="状态码是200" time="4.584" classname="22"/>
+    <testcase name="票据激活成功" time="4.584" classname="22"/>
+    <testcase name="状态转换为ACTIVE" time="4.584" classname="22"/>
+    <testcase name="客户信息已绑定" time="4.584" classname="22"/>
+  </testsuite>
+  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.3 验证订单已创建" id="590a2c8f-0918-44c5-b341-6b5d4cbfad87" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.345">
+    <testcase name="状态码是200" time="0.345" classname="23"/>
+    <testcase name="订单票据查询成功" time="0.345" classname="23"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次A" id="e5f8fb9d-25dc-45fb-9822-90d0c4864253" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="6.535">
+    <testcase name="票券生成成功" time="6.535" classname="A"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次B" id="f41a3cbf-9d51-49c4-9282-b3c2f02d47d9" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="5.221">
+    <testcase name="票券生成成功" time="5.221" classname="B"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.1 查询所有票券 ✅" id="967ec317-6270-4a4b-bc82-6daff9e26773" timestamp="2025-11-06T03:24:18.597Z" tests="3" failures="0" errors="0" time="1.049">
+    <testcase name="状态码是200" time="1.049" classname="31"/>
+    <testcase name="返回票券列表" time="1.049" classname="31"/>
+    <testcase name="票券包含完整字段" time="1.049" classname="31"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.2 按状态过滤 - PRE_GENERATED ✅" id="012845ec-414b-4023-b173-525248ec8614" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.877">
+    <testcase name="状态码是200" time="0.877" classname="32PreGenerated"/>
+    <testcase name="只返回PRE_GENERATED状态的票券" time="0.877" classname="32PreGenerated"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 激活一张票券" id="50379f6b-8986-4fed-a1a0-a1f617ea2abe" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="4.640">
+    <testcase name="激活成功" time="4.640" classname="Us012OtA2"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.3 按状态过滤 - ACTIVE ✅" id="39cd4732-c48f-4a45-9a34-0d0c3ca34008" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.693">
+    <testcase name="状态码是200" time="0.693" classname="33Active"/>
+    <testcase name="只返回ACTIVE状态的票券" time="0.693" classname="33Active"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.4 分页测试 - 第1页 ✅" id="e8c81b8a-1a69-4fd4-b747-a88bd2c797fb" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.688">
+    <testcase name="状态码是200" time="0.688" classname="341"/>
+    <testcase name="返回正确的分页信息" time="0.688" classname="341"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.5 分页测试 - 第2页 ✅" id="2436f416-dbbe-4a4e-b02b-c2559c39e992" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.690">
+    <testcase name="状态码是200" time="0.690" classname="352"/>
+    <testcase name="返回正确的分页信息" time="0.690" classname="352"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.6 按时间范围过滤 ✅" id="3b36ef3e-e4bd-4c6f-a416-cbb3eb12265c" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="1.485">
+    <testcase name="状态码是200" time="1.485" classname="36"/>
+    <testcase name="返回的票券都在时间范围内" time="1.485" classname="36"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.7 组合过滤 - 状态+分页 ✅" id="f39e382c-0637-4a90-b553-97b15f3c3c25" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.696">
+    <testcase name="状态码是200" time="0.696" classname="37"/>
+    <testcase name="组合过滤生效" time="0.696" classname="37"/>
+  </testsuite>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.8 错误测试 - 无效分页参数 ❌" id="aa06f66f-c358-4e9a-b521-89f6e38461e4" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="返回422验证错误" time="0.001" classname="38"/>
+    <testcase name="错误信息正确" time="0.001" classname="38"/>
+  </testsuite>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 准备: 生成测试票据" id="fc9143ff-0383-4c0c-a154-797f96417818" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="3.769">
+    <testcase name="票据生成成功" time="3.769" classname="Us012OtA2"/>
+  </testsuite>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 准备: 激活测试票据" id="3cc91d34-e04e-4404-a004-eb917d805016" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="4.477">
+    <testcase name="激活成功" time="4.477" classname="Us012OtA2"/>
+  </testsuite>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌" id="1c376e00-4992-4c43-b4e5-959bbad41839" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="2" errors="0" time="1.038">
+    <testcase name="返回409冲突错误" time="1.038" classname="31">
+      <failure type="AssertionFailure" message="expected response to have status code 409 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 10. Test Invalid API Key (Should Fail).]]>
-        <![CDATA[Test description: Invalid API key rejected.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:10).]]>
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌.]]>
+        <![CDATA[Test description: 返回409冲突错误.]]>
+        <![CDATA[Error message: expected response to have status code 409 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 409 but got 404
+   at Object.eval sandbox-script.js:1:25).]]>
       </failure>
     </testcase>
-    <testcase name="Correct error message" time="0.000" classname="10TestInvalidApiKeyShouldFail">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
+    <testcase name="错误信息正确" time="1.038" classname="31">
+      <failure type="AssertionFailure" message="expected 'TICKET_NOT_FOUND' to deeply equal 'TICKET_ALREADY_ACTIVATED'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 10. Test Invalid API Key (Should Fail).]]>
-        <![CDATA[Test description: Correct error message.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:10).]]>
+        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌.]]>
+        <![CDATA[Test description: 错误信息正确.]]>
+        <![CDATA[Error message: expected 'TICKET_NOT_FOUND' to deeply equal 'TICKET_ALREADY_ACTIVATED'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 'TICKET_NOT_FOUND' to deeply equal 'TICKET_ALREADY_ACTIVATED'
+   at Object.eval sandbox-script.js:2:25).]]>
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="11. Cleanup - Manual Expiry Test" id="e53f5b54-4407-4986-853c-7ec614745895" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Cleanup completed" time="0.000" classname="11CleanupManualExpiryTest">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 11. Cleanup - Manual Expiry Test.]]>
-        <![CDATA[Test description: Cleanup completed.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:11).]]>
-      </failure>
-    </testcase>
-    <testcase name="Expiry count returned" time="0.000" classname="11CleanupManualExpiryTest">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 11. Cleanup - Manual Expiry Test.]]>
-        <![CDATA[Test description: Expiry count returned.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:11).]]>
-      </failure>
-    </testcase>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.2 测试无效票据码 ❌" id="7f617031-fdd1-4c00-a199-f6cdc3b374d2" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="1.030">
+    <testcase name="返回404错误" time="1.030" classname="32"/>
+    <testcase name="错误信息正确" time="1.030" classname="32"/>
   </testsuite>
-  <testsuite name="12. Bulk Generate Pre-made Tickets" id="3d8fd070-aac3-42c0-a4fd-aceb5ddf9505" timestamp="2025-11-04T17:24:13.243Z" tests="3" failures="3" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Tickets generated successfully" time="0.000" classname="12BulkGeneratePreMadeTickets">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 12. Bulk Generate Pre-made Tickets.]]>
-        <![CDATA[Test description: Tickets generated successfully.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:12).]]>
-      </failure>
-    </testcase>
-    <testcase name="Batch details correct" time="0.000" classname="12BulkGeneratePreMadeTickets">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 12. Bulk Generate Pre-made Tickets.]]>
-        <![CDATA[Test description: Batch details correct.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:12).]]>
-      </failure>
-    </testcase>
-    <testcase name="Tickets have correct structure" time="0.000" classname="12BulkGeneratePreMadeTickets">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 12. Bulk Generate Pre-made Tickets.]]>
-        <![CDATA[Test description: Tickets have correct structure.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:3:12).]]>
-      </failure>
-    </testcase>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.3 创建预订用于取消测试" id="9042114e-2229-4599-8d40-9b2c15c39c83" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="3.433">
+    <testcase name="预订创建成功" time="3.433" classname="33"/>
   </testsuite>
-  <testsuite name="13. Activate Pre-made Ticket" id="b79dd6ea-ce93-4671-b07e-0e59aa147886" timestamp="2025-11-04T17:24:13.243Z" tests="2" failures="2" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Ticket activated successfully" time="0.000" classname="13ActivatePreMadeTicket">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 13. Activate Pre-made Ticket.]]>
-        <![CDATA[Test description: Ticket activated successfully.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:13).]]>
-      </failure>
-    </testcase>
-    <testcase name="Activation response correct" time="0.000" classname="13ActivatePreMadeTicket">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 13. Activate Pre-made Ticket.]]>
-        <![CDATA[Test description: Activation response correct.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:13).]]>
-      </failure>
-    </testcase>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.4 取消预订" id="8cd43a49-1e59-4411-ab79-bdb009600c11" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="4.135">
+    <testcase name="返回204 No Content" time="4.135" classname="34"/>
   </testsuite>
-  <testsuite name="14. List OTA Orders" id="6b52d9cd-9f26-4999-8cb1-477aac540947" timestamp="2025-11-04T17:24:13.243Z" tests="3" failures="3" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Orders retrieved successfully" time="0.000" classname="14ListOtaOrders">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 14. List OTA Orders.]]>
-        <![CDATA[Test description: Orders retrieved successfully.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:14).]]>
-      </failure>
-    </testcase>
-    <testcase name="Orders list structure correct" time="0.000" classname="14ListOtaOrders">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 14. List OTA Orders.]]>
-        <![CDATA[Test description: Orders list structure correct.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:14).]]>
-      </failure>
-    </testcase>
-    <testcase name="Order contains our activated ticket" time="0.000" classname="14ListOtaOrders">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 14. List OTA Orders.]]>
-        <![CDATA[Test description: Order contains our activated ticket.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:3:14).]]>
-      </failure>
-    </testcase>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.5 测试无效API Key ❌" id="3ce076ca-4cb2-40e0-87df-638766bd9e20" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="返回401未授权" time="0.001" classname="35apiKey"/>
+    <testcase name="错误信息正确" time="0.001" classname="35apiKey"/>
   </testsuite>
-  <testsuite name="15. Get Order Tickets with QR Codes" id="962ed651-2822-476a-bb12-b35d38da1d3a" timestamp="2025-11-04T17:24:13.243Z" tests="3" failures="3" errors="1" time="0.000">
-    <system-err><![CDATA[Iteration: 0
-RequestError: Error: getaddrinfo ENOTFOUND {{base_url}}
-    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
-
----
-]]></system-err>
-    <testcase name="Order tickets retrieved successfully" time="0.000" classname="15GetOrderTicketsWithQrCodes">
-      <failure type="AssertionFailure" message="expected PostmanResponse{ …(5) } to have property 'code'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 15. Get Order Tickets with QR Codes.]]>
-        <![CDATA[Test description: Order tickets retrieved successfully.]]>
-        <![CDATA[Error message: expected PostmanResponse{ …(5) } to have property 'code'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected PostmanResponse{ …(5) } to have property 'code'
-   at Object.eval sandbox-script.js:1:15).]]>
-      </failure>
-    </testcase>
-    <testcase name="Tickets structure correct" time="0.000" classname="15GetOrderTicketsWithQrCodes">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 15. Get Order Tickets with QR Codes.]]>
-        <![CDATA[Test description: Tickets structure correct.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:2:15).]]>
-      </failure>
-    </testcase>
-    <testcase name="Ticket details correct" time="0.000" classname="15GetOrderTicketsWithQrCodes">
-      <failure type="AssertionFailure" message="&quot;undefined&quot; is not valid JSON">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b070f634-35c9-4769-af53-fc89e2a9c319.]]>
-        <![CDATA[Collection name: US-012 OTA Platform Integration.]]>
-        <![CDATA[Request name: 15. Get Order Tickets with QR Codes.]]>
-        <![CDATA[Test description: Ticket details correct.]]>
-        <![CDATA[Error message: "undefined" is not valid JSON.]]>
-        <![CDATA[Stacktrace: JSONError: "undefined" is not valid JSON
-   at Object.eval sandbox-script.js:3:15).]]>
-      </failure>
-    </testcase>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.6 测试超量预订 ❌" id="9e977fff-92ee-4330-89e3-21defa0cf48c" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="返回422验证错误" time="0.001" classname="36"/>
+    <testcase name="错误信息正确" time="0.001" classname="36"/>
   </testsuite>
 </testsuites>

@@ -7,9 +7,9 @@ product_area: "Commerce"
 owner: "Product Manager"
 status: "Production Ready"
 created_date: "2025-11-03"
-last_updated: "2025-11-05"
+last_updated: "2025-11-06"
 related_stories: ["US-012"]
-implementation_cards: ["ota-channel-management", "ota-authentication-middleware", "ota-order-processing", "channel-inventory-tracking"]
+implementation_cards: ["ota-channel-management", "ota-authentication-middleware", "ota-order-processing", "channel-inventory-tracking", "ota-premade-tickets"]
 enhances: "PRD-001"
 deadline: "2025-11-15"
 ```
@@ -335,6 +335,23 @@ DELETE /api/ota/reservations/{reservation_id}:
 
 #### Order & Ticket Access
 ```yaml
+GET /api/ota/tickets:
+  summary: List pre-made tickets with optional filters
+  parameters:
+    - status: Filter by ticket status (PRE_GENERATED, ACTIVE)
+    - batch_id: Filter by batch identifier
+    - created_after: Date range start (ISO 8601)
+    - created_before: Date range end (ISO 8601)
+    - page: Page number (default: 1)
+    - limit: Results per page (default: 100, max: 1000)
+  responses:
+    200:
+      tickets: array[TicketSummary]
+      total_count: number
+      page: number
+      page_size: number
+    422: Invalid query parameters
+
 GET /api/ota/orders:
   summary: List confirmed orders for OTA
   responses:

@@ -444,4 +444,52 @@ export class OTARepository {
       where: { order_id: orderId, status: 'ACTIVE' }
     });
   }
+
+  // Query pre-generated tickets with filters and pagination
+  async findPreGeneratedTickets(
+    partnerId: string,
+    filters: {
+      status?: TicketStatus;
+      batch_id?: string;
+      created_after?: Date;
+      created_before?: Date;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ tickets: PreGeneratedTicketEntity[]; total: number }> {
+    const query = this.preGeneratedTicketRepo.createQueryBuilder('ticket')
+      .where('ticket.partner_id = :partnerId', { partnerId });
+
+    // Apply filters
+    if (filters.status) {
+      query.andWhere('ticket.status = :status', { status: filters.status });
+    }
+
+    if (filters.batch_id) {
+      query.andWhere('ticket.batch_id = :batch_id', { batch_id: filters.batch_id });
+    }
+
+    if (filters.created_after) {
+      query.andWhere('ticket.created_at >= :created_after', { created_after: filters.created_after });
+    }
+
+    if (filters.created_before) {
+      query.andWhere('ticket.created_at <= :created_before', { created_before: filters.created_before });
+    }
+
+    // Sort by created_at descending (newest first)
+    query.orderBy('ticket.created_at', 'DESC');
+
+    // Get total count before pagination
+    const total = await query.getCount();
+
+    // Apply pagination
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 100, 1000);
+    query.skip((page - 1) * limit).take(limit);
+
+    const tickets = await query.getMany();
+
+    return { tickets, total };
+  }
 }

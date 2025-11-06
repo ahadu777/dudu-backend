@@ -250,6 +250,7 @@ router.get('/orders', async (req: AuthenticatedRequest, res: Response) => {
   } catch (error: any) {
     logger.error('OTA orders list failed', {
       partner: req.ota_partner?.name,
+      order_id: req.params.id,
       error: error.message
     });
 
@@ -282,6 +283,70 @@ router.get('/orders/:id/tickets', async (req: AuthenticatedRequest, res: Respons
     res.status(statusCode).json({
       error: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve order tickets'
+    });
+  }
+});
+
+// GET /api/ota/tickets - List tickets with optional filters
+router.get('/tickets', otaAuthMiddleware('inventory:read'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { status, batch_id, created_after, created_before, page, limit } = req.query;
+
+    // Parse and validate query parameters
+    const filters: any = {};
+
+    if (status) {
+      filters.status = status as string;
+    }
+
+    if (batch_id) {
+      filters.batch_id = batch_id as string;
+    }
+
+    if (created_after) {
+      filters.created_after = created_after as string;
+    }
+
+    if (created_before) {
+      filters.created_before = created_before as string;
+    }
+
+    if (page) {
+      const pageNum = parseInt(page as string, 10);
+      if (isNaN(pageNum) || pageNum < 1) {
+        return res.status(422).json({
+          error: 'INVALID_PARAMETER',
+          message: 'page must be a positive integer'
+        });
+      }
+      filters.page = pageNum;
+    }
+
+    if (limit) {
+      const limitNum = parseInt(limit as string, 10);
+      if (isNaN(limitNum) || limitNum < 1) {
+        return res.status(422).json({
+          error: 'INVALID_PARAMETER',
+          message: 'limit must be a positive integer'
+        });
+      }
+      filters.limit = limitNum;
+    }
+
+    const result = await otaService.getTickets(req.ota_partner!.id, filters);
+
+    res.json(result);
+
+  } catch (error: any) {
+    logger.error('OTA tickets list failed', {
+      partner: req.ota_partner?.name,
+      error: error.message,
+      query: req.query
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve tickets'
     });
   }
 });

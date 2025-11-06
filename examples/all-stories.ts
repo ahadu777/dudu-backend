@@ -177,7 +177,7 @@ async function main() {
     console.log('');
     console.log('Examples:');
     console.log('  ts-node examples/all-stories.ts');
-    console.log('  API_BASE=https://api.example.com ts-node examples/all-stories.ts');
+    console.log('  API_BASE=https://mesh.synque.ai ts-node examples/all-stories.ts');
     return;
   }
 

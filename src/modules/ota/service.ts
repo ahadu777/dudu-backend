@@ -904,6 +904,146 @@ export class OTAService {
       activated_at: now.toISOString()
     };
   }
+  
+  async getTickets(partnerId: string, filters: {
+    status?: string;
+    batch_id?: string;
+    created_after?: string;
+    created_before?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ tickets: any[]; total_count: number; page: number; page_size: number }> {
+    logger.info('ota.tickets.list_requested', { partner_id: partnerId, filters });
+
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 100, 1000); // Max 1000 per page
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      // Database implementation
+      logger.info('ota.tickets.database_mode', { filters });
+
+      try {
+        // Prepare database filters
+        const dbFilters: any = {
+          page,
+          limit
+        };
+
+        if (filters.status) {
+          dbFilters.status = filters.status as any; // TypeORM will validate the enum
+        }
+
+        if (filters.batch_id) {
+          dbFilters.batch_id = filters.batch_id;
+        }
+
+        if (filters.created_after) {
+          dbFilters.created_after = new Date(filters.created_after);
+        }
+
+        if (filters.created_before) {
+          dbFilters.created_before = new Date(filters.created_before);
+        }
+
+        // Query from database with partner isolation
+        const result = await this.otaRepository!.findPreGeneratedTickets(partnerId, dbFilters);
+
+        logger.info('ota.tickets.list_response', {
+          source: 'database',
+          total_count: result.total,
+          page,
+          page_size: limit,
+          returned: result.tickets.length
+        });
+
+        return {
+          tickets: result.tickets.map(ticket => ({
+            ticket_code: ticket.ticket_code,
+            status: ticket.status,
+            batch_id: ticket.batch_id,
+            product_id: ticket.product_id,
+            created_at: ticket.created_at.toISOString(),
+            activated_at: ticket.activated_at ? ticket.activated_at.toISOString() : null,
+            order_id: ticket.order_id || null,
+            customer_name: ticket.customer_name || null,
+            customer_email: ticket.customer_email || null
+          })),
+          total_count: result.total,
+          page,
+          page_size: limit
+        };
+      } catch (error) {
+        logger.error('ota.tickets.database_query_failed', { error });
+        throw error;
+      }
+    }
+
+    // Mock implementation
+    let allTickets = Array.from(mockDataStore.preGeneratedTickets.values());
+
+    // IMPORTANT: Filter by partner_id first for security isolation
+    allTickets = allTickets.filter(ticket => ticket.partner_id === partnerId);
+
+    logger.info('ota.tickets.after_partner_filter', {
+      partner_id: partnerId,
+      total_tickets_for_partner: allTickets.length,
+      first_ticket: allTickets[0] ? { code: allTickets[0].code, status: allTickets[0].status, partner_id: allTickets[0].partner_id } : null
+    });
+
+    // Apply filters
+    if (filters.status) {
+      allTickets = allTickets.filter(ticket => ticket.status === filters.status);
+    }
+
+    if (filters.batch_id) {
+      allTickets = allTickets.filter(ticket => ticket.batch_id === filters.batch_id);
+    }
+
+    if (filters.created_after) {
+      const afterDate = new Date(filters.created_after);
+      allTickets = allTickets.filter(ticket => new Date(ticket.created_at) >= afterDate);
+    }
+
+    if (filters.created_before) {
+      const beforeDate = new Date(filters.created_before);
+      allTickets = allTickets.filter(ticket => new Date(ticket.created_at) <= beforeDate);
+    }
+
+    // Sort by created_at descending (newest first)
+    allTickets.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const totalCount = allTickets.length;
+
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedTickets = allTickets.slice(startIndex, endIndex);
+
+    logger.info('ota.tickets.list_response', {
+      source: 'mock',
+      total_count: totalCount,
+      page,
+      page_size: limit,
+      returned: paginatedTickets.length
+    });
+
+    return {
+      tickets: paginatedTickets.map(ticket => ({
+        ticket_code: ticket.code,
+        status: ticket.status,
+        batch_id: ticket.batch_id,
+        product_id: ticket.product_id,
+        created_at: ticket.created_at.toISOString(),
+        activated_at: ticket.activated_at ? ticket.activated_at.toISOString() : null,
+        order_id: ticket.order_id,
+        customer_name: ticket.customer_name,
+        customer_email: ticket.customer_email
+      })),
+      total_count: totalCount,
+      page,
+      page_size: limit
+    };
+  }
 }
 
 export const otaService = new OTAService();
