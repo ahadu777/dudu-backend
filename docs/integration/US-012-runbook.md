@@ -296,7 +296,58 @@ curl -X POST http://localhost:8080/api/ota/tickets/activate \
 # Save order_id for next tests
 ```
 
-### 16. List Customer Orders
+### 16. Query Ticket List with Filters
+```bash
+# Query all tickets (first page, default 100 items)
+curl -s "http://localhost:8080/api/ota/tickets?limit=10" \
+  -H "X-API-Key: ota_test_key_12345" | jq
+
+# Expected: Paginated list with tickets[], total_count, page, page_size
+
+# Query PRE_GENERATED tickets only
+curl -s "http://localhost:8080/api/ota/tickets?status=PRE_GENERATED&limit=5" \
+  -H "X-API-Key: ota_test_key_12345" | jq
+
+# Expected: Only tickets with status "PRE_GENERATED"
+
+# Query ACTIVE tickets only
+curl -s "http://localhost:8080/api/ota/tickets?status=ACTIVE&limit=5" \
+  -H "X-API-Key: ota_test_key_12345" | jq
+
+# Expected: Only tickets with status "ACTIVE"
+
+# Query specific batch
+curl -s "http://localhost:8080/api/ota/tickets?batch_id=BATCH-20251105-001" \
+  -H "X-API-Key: ota_test_key_12345" | jq
+
+# Expected: All tickets from that batch
+
+# Query with date range
+curl -s "http://localhost:8080/api/ota/tickets?created_after=2025-11-01T00:00:00Z&created_before=2025-12-31T23:59:59Z&limit=20" \
+  -H "X-API-Key: ota_test_key_12345" | jq
+
+# Expected: Tickets created within date range
+
+# Test pagination (page 2)
+curl -s "http://localhost:8080/api/ota/tickets?page=2&limit=5" \
+  -H "X-API-Key: ota_test_key_12345" | jq
+
+# Expected: Second page of results (items 6-10)
+
+# Combination filters: PRE_GENERATED + specific batch + pagination
+curl -s "http://localhost:8080/api/ota/tickets?status=PRE_GENERATED&batch_id=BATCH-20251105-001&page=1&limit=10" \
+  -H "X-API-Key: ota_test_key_12345" | jq
+
+# Expected: Filtered and paginated results
+
+# Use Cases:
+# - Monthly reconciliation: Query all generated tickets
+# - Inventory check: Filter by status=PRE_GENERATED
+# - Batch tracking: Filter by batch_id
+# - Disaster recovery: Retrieve full ticket list after database issues
+```
+
+### 17. List Customer Orders
 ```bash
 # List recent OTA orders with pagination
 curl -s "http://localhost:8080/api/ota/orders?limit=5&status=confirmed" \
@@ -305,7 +356,7 @@ curl -s "http://localhost:8080/api/ota/orders?limit=5&status=confirmed" \
 # Expected: Paginated list of orders with customer details
 ```
 
-### 17. Get Order Tickets with QR Codes
+### 18. Get Order Tickets with QR Codes
 ```bash
 # Get tickets for the most recent order
 ORDER_ID=$(curl -s "http://localhost:8080/api/ota/orders?limit=1" \
@@ -319,7 +370,7 @@ curl -s "http://localhost:8080/api/ota/orders/$ORDER_ID/tickets" \
 # Expected: Tickets with QR codes and entitlements for customer delivery
 ```
 
-### 18. Test Error Handling
+### 19. Test Error Handling
 ```bash
 # Try to activate non-existent ticket
 curl -X POST http://localhost:8080/api/ota/tickets/activate \
@@ -340,7 +391,7 @@ curl -s "http://localhost:8080/api/ota/orders/INVALID-ORDER-ID/tickets" \
 # Expected: {"error":"ORDER_NOT_FOUND","message":"Order not found"}
 ```
 
-### 19. Test Bulk Generation Limits
+### 20. Test Bulk Generation Limits
 ```bash
 # Try to generate maximum allowed tickets (100)
 curl -X POST http://localhost:8080/api/ota/tickets/bulk-generate \
@@ -367,7 +418,7 @@ curl -X POST http://localhost:8080/api/ota/tickets/bulk-generate \
 # Expected: Validation error about quantity limits
 ```
 
-### 20. End-to-End Workflow Test
+### 21. End-to-End Workflow Test
 ```bash
 # Complete workflow: Generate → Activate → Retrieve
 echo "🚀 Running complete OTA workflow..."
@@ -427,6 +478,14 @@ echo "✅ Complete workflow successful!"
 - [ ] Entitlements match product functions
 - [ ] Activation creates database records
 
+### ✅ Ticket Query & Management
+- [ ] Ticket list query supports status filtering (PRE_GENERATED, ACTIVE)
+- [ ] Batch ID filtering works correctly
+- [ ] Date range filtering (created_after, created_before)
+- [ ] Pagination works (page, limit parameters)
+- [ ] Partner isolation verified (only own tickets visible)
+- [ ] Invalid parameters return proper 422 errors
+
 ### ✅ Order Management
 - [ ] Order listing supports pagination and filtering
 - [ ] Ticket retrieval includes QR codes for delivery
@@ -477,7 +536,8 @@ echo "✅ Complete workflow successful!"
 
 **Pre-made Tickets:**
 - `POST /api/ota/tickets/bulk-generate` - Generate tickets in bulk
-- `POST /api/ota/tickets/activate` - Activate ticket for customer
+- `GET /api/ota/tickets` - Query tickets with filters (status, batch_id, dates, pagination)
+- `POST /api/ota/tickets/:code/activate` - Activate ticket for customer
 - `GET /api/ota/orders` - List customer orders
 - `GET /api/ota/orders/:id/tickets` - Get order tickets with QR codes
 

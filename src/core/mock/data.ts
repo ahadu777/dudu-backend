@@ -288,6 +288,15 @@ class MockDataStore {
     return Array.from(this.products.values());
   }
 
+  getProducts(productIds?: number[]): MockProduct[] {
+    if (productIds && productIds.length > 0) {
+      return productIds
+        .map(id => this.products.get(id))
+        .filter((p): p is MockProduct => p !== undefined);
+    }
+    return Array.from(this.products.values());
+  }
+
   getActiveProducts(): MockProduct[] {
     return Array.from(this.products.values()).filter(p => p.active);
   }

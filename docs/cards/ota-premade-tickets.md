@@ -9,7 +9,7 @@ readiness: "mvp"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/ota-premade-tickets.xml"
-last_update: "2025-11-04T16:40:00+08:00"
+last_update: "2025-11-06T00:00:00+08:00"
 related_stories: ["US-012"]
 relationships:
   depends_on: ["ota-channel-management"]
@@ -62,6 +62,127 @@ sequenceDiagram
 ## 2) Contract (OAS 3.0.3)
 ```yaml
 paths:
+  /api/ota/tickets:
+    get:
+      tags: ["OTA Integration"]
+      summary: List pre-made tickets with optional filters
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PRE_GENERATED, ACTIVE]
+          description: Filter by ticket status
+          example: PRE_GENERATED
+        - name: batch_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by batch ID
+          example: "BATCH-20251105-001"
+        - name: created_after
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter tickets created after this date (ISO 8601)
+          example: "2025-11-01T00:00:00Z"
+        - name: created_before
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter tickets created before this date (ISO 8601)
+          example: "2025-12-31T23:59:59Z"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+          example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+          description: Results per page (max 1000)
+          example: 100
+      responses:
+        200:
+          description: Ticket list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tickets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ticket_code:
+                          type: string
+                          example: "CRUISE-2025-FERRY-1762330663284"
+                        status:
+                          type: string
+                          enum: [PRE_GENERATED, ACTIVE]
+                        batch_id:
+                          type: string
+                          example: "BATCH-20251105-001"
+                        product_id:
+                          type: integer
+                          example: 106
+                        created_at:
+                          type: string
+                          format: date-time
+                        activated_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        order_id:
+                          type: string
+                          nullable: true
+                        customer_name:
+                          type: string
+                          nullable: true
+                        customer_email:
+                          type: string
+                          nullable: true
+                  total_count:
+                    type: integer
+                    example: 100
+                  page:
+                    type: integer
+                    example: 1
+                  page_size:
+                    type: integer
+                    example: 100
+        422:
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "INVALID_PARAMETER"
+                  message:
+                    type: string
+                    example: "page must be a positive integer"
+
   /api/ota/tickets/bulk-generate:
     post:
       tags: ["OTA Integration"]
@@ -271,6 +392,9 @@ paths:
 - **NEW**: Reseller batches have extended expiry periods (configurable)
 - **NEW**: Reseller metadata is preserved through activation chain
 - **NEW**: Distribution mode cannot be changed after batch creation
+- Ticket list queries are partner-isolated (only show tickets owned by requesting partner)
+- Pagination limit cannot exceed 1000 tickets per request
+- Page number must be positive integer (minimum 1)
 
 ## 4) Validations, Idempotency & Concurrency
 - Validate product exists and has available inventory
@@ -346,6 +470,10 @@ paths:
 - Alert on high unused ticket counts or low activation rates
 
 ## 8) Acceptance — Given / When / Then
+**Given** authenticated OTA partner with inventory:read permission
+**When** GET /api/ota/tickets with optional filters (status, batch_id, dates, pagination)
+**Then** returns paginated list of tickets matching filters with total count
+
 **Given** authenticated OTA partner with tickets:bulk-generate permission
 **When** POST /api/ota/tickets/bulk-generate with valid product_id and quantity
 **Then** creates specified number of PRE_GENERATED tickets with unique codes and QR codes
@@ -362,9 +490,15 @@ paths:
 **When** activation attempt
 **Then** returns 400 Bad Request with validation details
 
+**Given** invalid pagination parameters (page=0 or negative limit)
+**When** GET /api/ota/tickets with invalid params
+**Then** returns 422 Unprocessable Entity with clear validation error
+
 ## 9) Postman Coverage
+- Ticket list query: Test all filter combinations (status, batch_id, date range, pagination)
 - Bulk generation: Test various quantities and batch tracking
 - Activation flow: Test complete customer onboarding
-- Error cases: Test double activation, invalid tickets, incomplete data
+- Error cases: Test double activation, invalid tickets, incomplete data, invalid pagination
 - Permissions: Test API key permission requirements
 - Database verification: Check status transitions and order creation
+- Multi-partner isolation: Verify tickets are filtered by partner_id

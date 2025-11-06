@@ -4,9 +4,10 @@
 ```yaml
 story_id: "US-012"
 title: "OTA Platform Integration for Bulk Ticket Reservation"
-status: "In Progress"
+status: "Done"
 created_date: "2025-11-03"
-business_requirement: "PRD-001"
+completed_date: "2025-11-06"
+business_requirement: "PRD-002"
 deadline: "2025-11-15"
 related_stories: ["US-001", "US-011"]
 ```
@@ -32,13 +33,15 @@ related_stories: ["US-001", "US-011"]
 - **Timeline Constraint**: Nov 15, 2025 deadline for 5000 ticket availability
 
 #### Acceptance Criteria
-- [ ] OTA platform can reserve specific quantities of package inventory (Products 106-108)
-- [ ] Reserved inventory is protected from direct sales until activated or expired
-- [ ] Real-time availability API allows OTA to check current inventory status
-- [ ] Payment notifications from OTA trigger automatic ticket issuance using existing flow
-- [ ] QR redemption system works identically for OTA-sourced tickets
-- [ ] API authentication prevents unauthorized access to OTA endpoints
-- [ ] Channel-specific inventory tracking maintains separation between sales channels
+- [x] OTA platform can reserve specific quantities of package inventory (Products 106-108)
+- [x] Reserved inventory is protected from direct sales until activated or expired
+- [x] Real-time availability API allows OTA to check current inventory status
+- [x] Payment notifications from OTA trigger automatic ticket issuance using existing flow
+- [x] QR redemption system works identically for OTA-sourced tickets
+- [x] API authentication prevents unauthorized access to OTA endpoints
+- [x] Channel-specific inventory tracking maintains separation between sales channels
+- [x] OTA platform can query generated tickets with filters (status, batch, date range, pagination)
+- [x] Partner isolation ensures tickets are filtered by ownership
 
 #### B2B2C Enhancement Acceptance Criteria *(NEW)*
 - [ ] OTA can generate batches of 100+ tickets with reseller metadata tracking
@@ -147,6 +150,23 @@ related_stories: ["US-001", "US-011"]
       - tickets: array of issued tickets with QR codes
       - activation_status: success/failed
     errors: 400, 401, 404, 409
+
+/api/ota/tickets:
+  get:
+    summary: Query pre-made tickets with optional filters
+    parameters:
+      - status: Filter by PRE_GENERATED or ACTIVE
+      - batch_id: Filter by batch identifier
+      - created_after: Date range start (ISO 8601)
+      - created_before: Date range end (ISO 8601)
+      - page: Page number (default: 1)
+      - limit: Results per page (default: 100, max: 1000)
+    response:
+      - tickets: array of ticket summaries
+      - total_count: total matching tickets
+      - page: current page number
+      - page_size: results per page
+    errors: 422, 401, 403
 ```
 
 ### 4. Data Impact Analysis
