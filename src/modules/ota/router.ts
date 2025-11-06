@@ -289,7 +289,14 @@ router.get('/orders/:id/tickets', async (req: AuthenticatedRequest, res: Respons
 // POST /api/ota/tickets/bulk-generate - Generate pre-made tickets for OTA
 router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate'), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { product_id, quantity, batch_id } = req.body;
+    const {
+      product_id,
+      quantity,
+      batch_id,
+      distribution_mode,
+      reseller_metadata,
+      batch_metadata
+    } = req.body;
 
     // Validate required fields
     if (typeof product_id !== 'number' || typeof quantity !== 'number' || !batch_id) {
@@ -299,10 +306,21 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
       });
     }
 
+    // Validate reseller metadata if reseller_batch mode
+    if (distribution_mode === 'reseller_batch' && !reseller_metadata?.intended_reseller) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'reseller_metadata.intended_reseller is required for reseller_batch mode'
+      });
+    }
+
     const result = await otaService.bulkGenerateTickets(req.ota_partner!.id, {
       product_id,
       quantity,
-      batch_id
+      batch_id,
+      distribution_mode: distribution_mode || 'direct_sale',
+      reseller_metadata,
+      batch_metadata
     });
 
     res.status(201).json(result);
@@ -366,6 +384,122 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
     res.status(statusCode).json({
       error: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to activate ticket'
+    });
+  }
+});
+
+// GET /api/ota/batches/:id/analytics - Real-time batch performance analytics
+router.get('/batches/:id/analytics', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const batchId = req.params.id;
+    const analytics = await otaService.getBatchAnalytics(batchId);
+
+    if (!analytics) {
+      return res.status(404).json({
+        error: 'BATCH_NOT_FOUND',
+        message: 'Batch not found'
+      });
+    }
+
+    res.json(analytics);
+
+  } catch (error: any) {
+    logger.error('OTA batch analytics failed', {
+      partner: req.ota_partner?.name,
+      batch_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve batch analytics'
+    });
+  }
+});
+
+// GET /api/ota/billing/summary - Billing summary for reseller
+router.get('/billing/summary', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { period, reseller } = req.query;
+
+    if (!period || typeof period !== 'string') {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'period parameter is required (YYYY-MM format)'
+      });
+    }
+
+    const summary = await otaService.getResellerBillingSummary(
+      reseller as string || 'all',
+      period
+    );
+
+    res.json(summary);
+
+  } catch (error: any) {
+    logger.error('OTA billing summary failed', {
+      partner: req.ota_partner?.name,
+      query: req.query,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve billing summary'
+    });
+  }
+});
+
+// GET /api/ota/batches/:id/redemptions - Get redemption events for specific batch
+router.get('/batches/:id/redemptions', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const batchId = req.params.id;
+    const redemptions = await otaService.getBatchRedemptions(batchId);
+
+    res.json({
+      batch_id: batchId,
+      total_redemptions: redemptions.length,
+      redemption_events: redemptions
+    });
+
+  } catch (error: any) {
+    logger.error('OTA batch redemptions failed', {
+      partner: req.ota_partner?.name,
+      batch_id: req.params.id,
+      error: error.message
+    });
+
+    const statusCode = error.code === 'BATCH_NOT_FOUND' ? 404 : 500;
+
+    res.status(statusCode).json({
+      error: error.code || 'INTERNAL_ERROR',
+      message: error.message || 'Failed to retrieve batch redemptions'
+    });
+  }
+});
+
+// GET /api/ota/campaigns/analytics - Campaign performance analytics
+router.get('/campaigns/analytics', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { campaign_type, date_range } = req.query;
+
+    const analytics = await otaService.getCampaignAnalytics(
+      campaign_type as string,
+      date_range as string
+    );
+
+    res.json(analytics);
+
+  } catch (error: any) {
+    logger.error('OTA campaign analytics failed', {
+      partner: req.ota_partner?.name,
+      query: req.query,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve campaign analytics'
     });
   }
 });

@@ -4,6 +4,7 @@ import { ProductInventoryEntity } from './product-inventory.entity';
 import { ChannelReservationEntity, ReservationStatus } from './channel-reservation.entity';
 import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
+import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
@@ -11,6 +12,7 @@ export class OTARepository {
   private reservationRepo: Repository<ChannelReservationEntity>;
   private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
   private otaOrderRepo: Repository<OTAOrderEntity>;
+  private batchRepo: Repository<OTATicketBatchEntity>;
 
   constructor(private dataSource: DataSource) {
     this.productRepo = dataSource.getRepository(ProductEntity);
@@ -18,6 +20,7 @@ export class OTARepository {
     this.reservationRepo = dataSource.getRepository(ChannelReservationEntity);
     this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
     this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
+    this.batchRepo = dataSource.getRepository(OTATicketBatchEntity);
   }
 
   // Product operations
@@ -443,5 +446,100 @@ export class OTARepository {
     return this.preGeneratedTicketRepo.find({
       where: { order_id: orderId, status: 'ACTIVE' }
     });
+  }
+
+  // OTA Ticket Batch Operations
+  async createTicketBatch(batchData: Partial<OTATicketBatchEntity>): Promise<OTATicketBatchEntity> {
+    const batch = this.batchRepo.create(batchData);
+    return this.batchRepo.save(batch);
+  }
+
+  async findBatchById(batchId: string): Promise<OTATicketBatchEntity | null> {
+    return this.batchRepo.findOne({
+      where: { batch_id: batchId }
+    });
+  }
+
+  async findBatchesByPartner(partnerId: string, status?: BatchStatus): Promise<OTATicketBatchEntity[]> {
+    const query = this.batchRepo.createQueryBuilder('batch')
+      .where('batch.partner_id = :partnerId', { partnerId });
+
+    if (status) {
+      query.andWhere('batch.status = :status', { status });
+    }
+
+    return query.orderBy('batch.created_at', 'DESC').getMany();
+  }
+
+  async findBatchesByReseller(resellerName: string): Promise<OTATicketBatchEntity[]> {
+    return this.batchRepo.createQueryBuilder('batch')
+      .where("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller')) = :resellerName",
+        { resellerName })
+      .orderBy('batch.created_at', 'DESC')
+      .getMany();
+  }
+
+  async findBatchesByCampaignType(campaignType: string): Promise<OTATicketBatchEntity[]> {
+    return this.batchRepo.createQueryBuilder('batch')
+      .where("JSON_UNQUOTE(JSON_EXTRACT(batch.batch_metadata, '$.campaign_type')) = :campaignType",
+        { campaignType })
+      .orderBy('batch.created_at', 'DESC')
+      .getMany();
+  }
+
+  async updateBatchCounters(batchId: string, updates: {
+    tickets_generated?: number;
+    tickets_activated?: number;
+    tickets_redeemed?: number;
+    revenue_realized?: number;
+  }): Promise<boolean> {
+    const batch = await this.batchRepo.findOne({ where: { batch_id: batchId } });
+    if (!batch) return false;
+
+    if (updates.tickets_generated !== undefined) {
+      batch.tickets_generated = updates.tickets_generated;
+    }
+    if (updates.tickets_activated !== undefined) {
+      batch.tickets_activated = updates.tickets_activated;
+    }
+    if (updates.tickets_redeemed !== undefined) {
+      batch.tickets_redeemed = updates.tickets_redeemed;
+    }
+    if (updates.revenue_realized !== undefined) {
+      batch.total_revenue_realized = updates.revenue_realized;
+    }
+
+    await this.batchRepo.save(batch);
+    return true;
+  }
+
+  async getBatchAnalytics(batchId: string): Promise<any | null> {
+    const batch = await this.findBatchById(batchId);
+    return batch ? batch.getBillingSummary() : null;
+  }
+
+  async getResellerBillingSummary(resellerName: string, period: string): Promise<any> {
+    const batches = await this.findBatchesByReseller(resellerName);
+
+    // Filter by period (YYYY-MM format)
+    const periodBatches = batches.filter(batch => {
+      return batch.created_at.toISOString().slice(0, 7) === period;
+    });
+
+    const summary = {
+      billing_period: period,
+      reseller_name: resellerName,
+      total_batches: periodBatches.length,
+      total_redemptions: periodBatches.reduce((sum, b) => sum + b.tickets_redeemed, 0),
+      total_amount_due: periodBatches.reduce((sum, b) => sum + b.total_revenue_realized, 0),
+      batches: periodBatches.map(batch => ({
+        batch_id: batch.batch_id,
+        redemptions_count: batch.tickets_redeemed,
+        wholesale_rate: batch.pricing_snapshot.base_price,
+        amount_due: batch.total_revenue_realized
+      }))
+    };
+
+    return summary;
   }
 }
