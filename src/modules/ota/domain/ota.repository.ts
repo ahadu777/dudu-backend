@@ -1,4 +1,4 @@
-import { Repository, DataSource, QueryRunner } from 'typeorm';
+import { Repository, DataSource, QueryRunner, In } from 'typeorm';
 import { ProductEntity } from './product.entity';
 import { ProductInventoryEntity } from './product-inventory.entity';
 import { ChannelReservationEntity, ReservationStatus } from './channel-reservation.entity';
@@ -43,7 +43,7 @@ export class OTARepository {
   // Inventory operations
   async getInventoryByProductIds(productIds: number[]): Promise<ProductInventoryEntity[]> {
     return this.inventoryRepo.find({
-      where: { product_id: productIds.length === 1 ? productIds[0] : undefined },
+      where: { product_id: In(productIds) },
       relations: ['product']
     });
   }
