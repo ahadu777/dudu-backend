@@ -18,7 +18,12 @@ related_stories: ["US-001", "US-011"]
 #### Core Story
 **As an** external OTA (Online Travel Agency) platform
 **I want** to reserve 5000 ticket package units from the cruise ticketing system
-**So that** I can sell packages to my customers and have guaranteed inventory availability
+**So that** I can sell packages to my customers and distribute batches to sub-resellers for expanded market reach
+
+#### B2B2C Enhancement Story *(NEW)*
+**As an** OTA platform operator
+**I want** to generate batches of 100+ tickets for distribution to other sellers
+**So that** I can expand my distribution network without direct partnership management overhead
 
 #### Business Context
 - **Business Driver**: PRD-001 cruise package expansion through external sales channels
@@ -34,6 +39,13 @@ related_stories: ["US-001", "US-011"]
 - [ ] QR redemption system works identically for OTA-sourced tickets
 - [ ] API authentication prevents unauthorized access to OTA endpoints
 - [ ] Channel-specific inventory tracking maintains separation between sales channels
+
+#### B2B2C Enhancement Acceptance Criteria *(NEW)*
+- [ ] OTA can generate batches of 100+ tickets with reseller metadata tracking
+- [ ] Batch tickets include intended reseller information for audit trails
+- [ ] Reseller batches have extended expiry periods (configurable beyond 24h)
+- [ ] Ticket activation includes reseller-to-customer chain tracking
+- [ ] Batch distribution doesn't affect direct OTA sales inventory allocation
 
 ### 2. Business Rules Extraction
 
@@ -52,7 +64,12 @@ related_stories: ["US-001", "US-011"]
 3. **Pricing Rules**:
    - OTA uses same complex pricing engine (weekend/weekday, customer types)
    - Package compositions remain identical (function codes unchanged)
-   - No special OTA pricing discounts in Phase 1
+   - Customer discount information exposed via inventory API for dynamic pricing
+   - Customer pricing scenarios:
+     * Product 106 (Premium): Adult $288/$318, Child $188/$218 (saves $100), Elderly $238/$268 (saves $50), Student $238/$268 (saves $50)
+     * Product 107 (Standard): Adult $188/$228, Child $38/$78 (saves $150), Family $88/$128 (saves $100), Elderly $113/$153 (saves $75)
+     * Product 108 (Luxury): Adult $788/$868, VIP $588/$668 (saves $200), Elderly $688/$768 (saves $100)
+   - OTA partners receive complete discount matrix for implementing their own pricing logic
 
 #### Authentication & Security Rules
 1. **API Access**: OTA endpoints require API key authentication
@@ -67,6 +84,22 @@ related_stories: ["US-001", "US-011"]
 ### 3. API Endpoints Needed
 
 ```yaml
+# Enhanced endpoint for reseller batch support
+/api/ota/tickets/bulk-generate:                          # NEW ENDPOINT
+  post:
+    summary: Generate ticket batches for reseller distribution
+    request:
+      - product_id: package to generate
+      - quantity: number of tickets (1-5000)
+      - distribution_mode: "direct_sale" | "reseller_batch"
+      - reseller_metadata: { intended_reseller, batch_purpose }
+    response:
+      - batch_id: unique batch identifier
+      - tickets: array of pre-generated tickets with QR codes
+      - reseller_metadata: distribution tracking info
+      - expires_at: batch expiry timestamp
+    errors: 400, 401, 403, 422
+
 /api/ota/inventory:
   get:
     summary: Get real-time package availability for OTA

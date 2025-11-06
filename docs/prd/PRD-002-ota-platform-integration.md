@@ -63,16 +63,19 @@ deadline: "2025-11-15"
 - **Revenue Goals**:
   - Maintain existing direct sales revenue (baseline protection)
   - Generate additional revenue through OTA channel (incremental growth)
+  - **NEW**: Enable B2B2C revenue streams through reseller distribution
   - Preserve complex pricing model across all channels
 - **Operational Constraints**:
   - Nov 15, 2025 hard deadline for OTA partner launch
   - Must maintain existing cruise platform functionality (PRD-001)
   - Channel inventory separation to prevent overselling
+  - **NEW**: Support for 100+ ticket batch distribution to sub-resellers
 - **Partnership Requirements**:
   - Secure API access for external platforms with partner isolation
   - Real-time inventory synchronization
   - Automated reservation expiry to prevent inventory blocking
   - Multi-partner support with segregated ticket management
+  - **NEW**: Batch tracking and audit trail for reseller distribution
 
 ## Product Specification
 
@@ -108,6 +111,28 @@ deadline: "2025-11-15"
   - Up to 100 units per reservation request (prevents abuse)
   - Reservation activation converts holds to sales
   - Inventory immediately released on expiry
+- **Priority**: High
+
+**B2B2C Reseller Batch Management** *(NEW)*
+- **Description**: Bulk ticket generation for OTA partners to distribute to sub-resellers
+- **Business Value**: Expands market reach through reseller networks without direct partnership overhead
+- **User Value**: OTA partners can efficiently distribute tickets to multiple downstream sellers
+- **Acceptance Criteria**:
+  - Support for 100+ ticket batches with reseller tracking metadata
+  - Batch-level expiry management (longer expiry for reseller distribution)
+  - Audit trail for ticket distribution from OTA to reseller to end customer
+  - Reseller-specific batch identification and tracking
+- **Priority**: Medium
+
+**Usage-Based Reseller Billing** *(NEW)*
+- **Description**: Charge resellers based on actual ticket redemption events, not purchase events
+- **Business Value**: Revenue recognition aligned with actual value delivery, reduces reseller risk
+- **User Value**: Resellers only pay for tickets that customers actually use
+- **Acceptance Criteria**:
+  - Track redemption events back to originating batch and reseller
+  - Generate billing summaries per reseller per billing period
+  - Real-time redemption counts per batch for reseller analytics
+  - Automated billing event generation when tickets are redeemed at venues
 - **Priority**: High
 
 ### Technical Requirements
@@ -225,6 +250,11 @@ Admin Dashboard Views:
   - Weekend premiums apply equally (+$30 for adults)
   - Customer type discounts consistent ($188 for child/elderly regardless of channel)
   - Special event pricing synchronized across channels
+- **Customer Discount System**:
+  - Real-time discount information exposed via inventory API
+  - Product-specific discount matrices (child, elderly, student, family, VIP tiers)
+  - OTA partners receive complete pricing context for dynamic pricing implementation
+  - Discount amounts: Product 106 (child: $100, elderly: $50, student: $50), Product 107 (child: $150, family: $100, elderly: $75), Product 108 (vip: $200, elderly: $100)
 - **Currency**: HKD maintained across all channels
 
 ### Reservation Management
@@ -244,8 +274,49 @@ Admin Dashboard Views:
 
 ### Phase 1: Inventory & Reservations (✅ Implemented)
 ```yaml
-# GET /api/ota/inventory - Get available quantities
+# GET /api/ota/inventory - Get available quantities with pricing context
+# Response includes: available_quantities, base_prices, customer_types, special_dates, customer_discounts
 # POST /api/ota/reserve - Create reservation
+```
+
+#### Enhanced Inventory API Response
+```json
+GET /api/ota/inventory
+{
+  "available_quantities": {
+    "106": 1884,
+    "107": 1480,
+    "108": 1490
+  },
+  "pricing_context": {
+    "base_prices": {
+      "106": { "weekday": 288, "weekend": 318 },
+      "107": { "weekday": 188, "weekend": 228 },
+      "108": { "weekday": 788, "weekend": 868 }
+    },
+    "customer_types": ["adult", "child", "elderly"],
+    "special_dates": {
+      "2025-12-31": { "multiplier": 1.5 },
+      "2026-02-18": { "multiplier": 1.3 }
+    },
+    "customer_discounts": {
+      "106": {
+        "child": 100,
+        "elderly": 50,
+        "student": 50
+      },
+      "107": {
+        "child": 150,
+        "family": 100,
+        "elderly": 75
+      },
+      "108": {
+        "vip": 200,
+        "elderly": 100
+      }
+    }
+  }
+}
 ```
 
 ### Phase 2: Order Fulfillment (✅ Implementation Complete)
@@ -273,26 +344,42 @@ POST /api/ota/reservations/{reservation_id}/activate:
     422: "Invalid customer details"
 ```
 
-### Phase 2.5: Pre-Made Ticket Support (🔄 New Implementation)
+### Phase 2.5: Pre-Made Ticket Support & B2B2C Reseller Model (🔄 Enhanced Implementation)
 
-#### Bulk Ticket Generation
+#### Bulk Ticket Generation for B2B2C Resale
 ```yaml
 POST /api/ota/tickets/bulk-generate:
-  summary: Generate pre-made tickets for OTA offline sales
+  summary: Generate pre-made tickets for OTA offline sales and B2B2C reseller distribution
   requestBody:
     product_id: number
     quantity: number (1-5000)
     batch_id: string
+    distribution_mode: "direct_sale" | "reseller_batch"  # NEW: Specify intended use
+    reseller_metadata?: {                                # NEW: For B2B2C distribution
+      intended_reseller: string
+      batch_purpose: string
+      distribution_notes?: string
+    }
+    batch_metadata?: {                                   # NEW: Campaign and marketing metadata
+      campaign_type: "early_bird" | "flash_sale" | "group_discount" | "seasonal" | "standard"
+      campaign_name: string                             # e.g., "Spring 2025 Early Bird"
+      special_conditions?: string[]                     # e.g., ["valid_weekends_only"]
+      marketing_tags?: string[]                         # e.g., ["premium", "family_friendly"]
+      promotional_code?: string                         # Associated promo code
+    }
   responses:
     201:
       batch_id: string
+      distribution_mode: string                          # NEW: Confirms distribution intent
       tickets: array[
         ticket_code: string
         qr_code: string (base64 image)
         status: "PRE_GENERATED"
         entitlements: array[FunctionEntitlement]
+        reseller_metadata?: object                       # NEW: Includes distribution info
       ]
       total_generated: number
+      expires_at: string                                # NEW: Batch-level expiry for reseller batches
     422: "Invalid quantity or product not available"
 
 #### Individual Ticket Activation
@@ -352,6 +439,83 @@ GET /api/ota/orders/{order_id}/tickets:
         entitlements: array[FunctionEntitlement]
         status: string
       ]
+
+#### Reseller Billing & Analytics *(NEW)*
+```yaml
+GET /api/ota/batches/{batch_id}/redemptions:
+  summary: Get redemption events for specific batch
+  responses:
+    200:
+      batch_id: string
+      total_redemptions: number
+      redemption_events: array[
+        ticket_code: string
+        function_code: string
+        redeemed_at: string
+        venue_name: string
+        wholesale_price: number
+      ]
+
+GET /api/ota/billing/summary:
+  summary: Get billing summary for reseller
+  parameters:
+    - period: "2025-11" (YYYY-MM format)
+    - reseller: string (optional filter)
+  responses:
+    200:
+      billing_period: string
+      reseller_summaries: array[
+        reseller_name: string
+        total_redemptions: number
+        total_amount_due: number
+        batches: array[
+          batch_id: string
+          redemptions_count: number
+          wholesale_rate: number
+          amount_due: number
+        ]
+      ]
+
+GET /api/ota/batches/{batch_id}/analytics:
+  summary: Real-time batch performance analytics
+  responses:
+    200:
+      batch_id: string
+      reseller_name: string
+      campaign_type: string      # NEW: e.g., "early_bird", "flash_sale"
+      campaign_name: string      # NEW: e.g., "Spring 2025 Early Bird"
+      generated_at: string
+      tickets_generated: number
+      tickets_activated: number
+      tickets_redeemed: number
+      conversion_rates:
+        activation_rate: number  # activated/generated
+        redemption_rate: number  # redeemed/activated
+        overall_utilization: number  # redeemed/generated
+      revenue_metrics:
+        potential_revenue: number  # all tickets * wholesale_price
+        realized_revenue: number   # redeemed tickets * wholesale_price
+      batch_metadata:            # NEW: Complete campaign context
+        marketing_tags: string[]
+        special_conditions: string[]
+        promotional_code: string
+
+GET /api/ota/campaigns/analytics:                        # NEW: Campaign performance
+  summary: Analytics by campaign type across all batches
+  parameters:
+    - campaign_type: "early_bird" | "flash_sale" | "seasonal" (optional)
+    - date_range: "2025-11" (YYYY-MM format)
+  responses:
+    200:
+      campaign_summaries: array[
+        campaign_type: string
+        total_batches: number
+        total_tickets_generated: number
+        total_tickets_redeemed: number
+        average_conversion_rate: number
+        top_performing_resellers: string[]
+      ]
+```
 ```
 
 ### Business Logic
@@ -359,6 +523,14 @@ GET /api/ota/orders/{order_id}/tickets:
 - **Real-time Sync**: Reservations immediately impact available inventory
 - **Automatic Cleanup**: Expired reservations release inventory without manual intervention
 - **Error Recovery**: System continues operating if individual reservations fail
+
+### Reseller Billing Logic *(NEW)*
+- **Billing Trigger**: Charge events generated when tickets are redeemed at venues (not when purchased)
+- **Batch Traceability**: Every redemption event links back to originating batch and reseller
+- **Billing Periods**: Monthly billing cycles with real-time redemption tracking
+- **Revenue Recognition**: Payment due when end customer uses the service
+- **Pricing Model**: Resellers pay wholesale price from batch `pricing_snapshot` at redemption time
+- **Settlement**: Automated billing summaries generated per reseller per month
 
 ### System Architecture Flows
 

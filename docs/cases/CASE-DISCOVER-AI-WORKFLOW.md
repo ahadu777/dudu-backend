@@ -1,0 +1,287 @@
+# CASE-DISCOVER-AI-WORKFLOW.md
+
+## Goal: AI-Guided Human Development
+
+**Primary Objective**: Enable AI to guide human developers rather than just follow instructions.
+
+**Context**: Through building the OTA platform integration (US-012), we discovered that PRD-code synchronization is a critical challenge for AI-driven development. The question is how to make AI reliably maintain consistency between business requirements and implementation.
+
+## Experience Log
+
+### 2025-11-06: Initial Discovery
+
+**Problem Identified**:
+- PRDs become stale as requirements evolve
+- Code implements features not documented in PRDs
+- AI lacks systematic way to know when to update documentation vs when to implement
+
+**First Attempt - Theoretical Synchronization**:
+- Added complex PRD-Code synchronization section to CLAUDE.md
+- Included theoretical scripts (prd-sync-check.js, sync-prd-from-code.js)
+- Added elaborate metadata tracking for PRD evolution
+
+**Result**: User feedback: "we had cleaned up claude.md to be effective in building context for ai driven workflow. whenever we update the claude.md, we need to be sure the update is for the true foundation of ai workflow."
+
+**Learning**: Theoretical additions dilute proven workflow foundations. CLAUDE.md should focus on what actually works, not what we think should work.
+
+### 2025-11-06: Constraint Analysis Approach
+
+**Second Attempt - Systematic Constraints**:
+- Analyzed core AI limitations: no persistent memory, context window limits, pattern matching vs reasoning
+- Proposed constraint-based rules: Information Flow, Context Window, Verification, Scope Drift
+- Suggested mandatory search commands before any src/ changes
+
+**Realization**: Still trying to fight AI limitations rather than work with them.
+
+**Third Attempt - Information Architecture**:
+- Shift focus from workflow rules to structural design
+- Make documentation naturally visible to AI
+- Use TypeScript/tooling to enforce correctness automatically
+- Design so correct path is easiest path
+
+### Current Understanding
+
+**What Actually Works** (Proven through US-012):
+1. When human explicitly says "update PRD/Story/Card first" - AI does it correctly
+2. Human-guided synchronization is reliable
+3. AI can implement complex requirements when documentation is clear
+
+**What Doesn't Work**:
+- Expecting AI to remember to check documentation
+- Complex theoretical synchronization systems
+- Automated sync without human guidance
+
+**Core Insight**: Maybe the problem isn't solvable with current AI limitations. The goal should be making human guidance as efficient as possible.
+
+## Open Questions
+
+1. **Can AI reliably detect when requirements evolution needs documentation updates?**
+   - Current evidence: No, AI needs explicit guidance
+
+2. **Should we focus on human-guided sync vs automated sync?**
+   - Leaning toward: Human-guided is more reliable
+
+3. **What's the minimal viable sync pattern?**
+   - Hypothesis: Simple prompts like "check if this requirement exists in docs first"
+
+4. **Information architecture vs workflow rules?**
+   - Unknown: Whether structural changes help more than process changes
+
+## Next Experiments
+
+### Experiment 1: Minimal Sync Pattern
+Test adding one simple rule to CLAUDE.md: "Before implementing new requirements, check if they exist in relevant documentation"
+
+**Hypothesis**: Simple, actionable rules work better than complex systems
+
+### Experiment 2: Context Injection
+Structure project so requirements are always visible in AI context when implementing
+
+**Hypothesis**: Information architecture matters more than workflow rules
+
+### Experiment 3: Human-AI Collaboration Pattern
+Focus on making it easy for humans to guide AI synchronization rather than making AI do it automatically
+
+**Hypothesis**: AI-guided human development means AI suggests when sync is needed, human decides what to update
+
+## Success Metrics
+
+**For AI Workflow Effectiveness**:
+- Can AI detect when a requirement needs documentation updates?
+- Does AI consistently update the right documentation layer?
+- Do future AI sessions maintain context from previous decisions?
+
+**For Human Efficiency**:
+- How quickly can human understand what needs to be synced?
+- How easy is it to guide AI to make the right updates?
+- Does the system reduce cognitive load on human developers?
+
+### 2025-11-06: Reality Check Failure
+
+**Fourth Attempt - Implementation Exercise**:
+- Picked "order-create database persistence" as next priority using "systematic constraint analysis"
+- Analysis claimed it was "ready for database implementation"
+- Followed CLAUDE.md workflow step by step
+
+**Reality Check Revealed**:
+- Database implementation already exists (`service.ts`)
+- Migration file already exists (`0002_orders.sql`)
+- **BUT controller imports `service.centralized.ts` (mock mode)**
+- Real issue: switch from hard-coded mock to dual-mode pattern
+
+**Workflow Failure Points**:
+1. **"Check what exists first"** - I read docs but never verified actual running code
+2. **PRD sync check** - Performative, didn't help understand real state
+3. **Missing basic verification** - Never ran `grep -r "service.centralized" src/`
+
+**30-second command would have caught this**:
+```bash
+grep -r "OrderService" src/modules/orders/
+# Shows: controller imports service.centralized, not database service
+```
+
+**Critical Insight**: **Elaborate analysis was procrastination to avoid basic investigation**
+
+### Key Realizations
+
+**What CLAUDE.md Gets Wrong**:
+1. **"Knowledge Graph Analysis"** - Complex but inaccurate
+2. **"Systematic Constraint Discovery"** - Sounds systematic, produces wrong results
+3. **Missing "Reality Check"** - No verification of actual running code
+4. **Documentation bias** - Assumes cards/PRDs reflect reality
+
+**What Actually Works**:
+1. **Basic verification commands** - curl, grep, ls
+2. **"5-minute rule"** - If you can't understand current state quickly, complex analysis will be wrong
+3. **Trust but verify** - Documentation status is irrelevant if reality doesn't match
+
+**Proposed CLAUDE.md Fix**:
+```markdown
+## Step 1: Reality Check (Before Any Analysis)
+
+# What's actually running?
+curl http://localhost:8080/[endpoint]
+
+# What's actually imported?
+grep -r "import.*Service" src/modules/[name]/
+
+# What files exist vs what's used?
+ls src/modules/[name]/ && grep -r "from.*[name]" src/
+
+Rule: Documentation status is irrelevant if reality doesn't match.
+```
+
+### 2025-11-06: Overcorrection and Balance Recovery
+
+**Initial Reaction - Overcorrection**:
+- Completely removed Knowledge Graph Patterns from CLAUDE.md
+- Threw out systematic analysis approaches entirely
+- Generalized from one failure case
+
+**User Pushback**: "I'm not sure if the stuff removed was good idea. You based it off this experience. But what about other experience?"
+
+**Reality Check on My Analysis**:
+- **US-011 Success**: Constraint discovery DID work for complex pricing
+- **US-012 Success**: Knowledge graph patterns helped OTA integration design
+- **US-013 Success**: Systematic analysis identified real technical requirements
+- **My failure**: Used elaborate analysis as substitute for, not addition to, basic verification
+
+**Key Insight**: The problem wasn't systematic analysis being inherently bad - it was **skipping basic verification first**.
+
+**Two Potential Approaches Identified**:
+
+**Option A - Simple Verification Only**:
+- Remove Knowledge Graph Patterns entirely
+- Focus on Reality Check + basic implementation
+- Rationale: Prevents elaborate procrastination
+
+**Option B - Hierarchical Approach**:
+- Keep both Reality Check and Knowledge Graph Patterns
+- Make Reality Check mandatory Step 0
+- Use systematic analysis only for complex scenarios
+- Rationale: Preserves tools that worked for US-011, US-012, US-013
+
+### 2025-11-06: Reality Check Pattern Success
+
+**CLAUDE.md Updated to Option B - Hierarchical Approach**:
+- Made Reality Check mandatory Step 0 before any analysis
+- Preserved Knowledge Graph Patterns for complex scenarios
+- Added "ALWAYS START HERE" navigation to Reality Check
+- Clear hierarchy: Simple verification first, systematic analysis for complex cases
+
+**Test Case: Orders Database Implementation**:
+- **Reality Check commands (30 seconds)**:
+  ```bash
+  curl http://localhost:8080/healthz          # ✅ Server running
+  curl http://localhost:8080/api/orders       # ❌ 404 error
+  ls src/modules/orders/                      # ✅ Files exist
+  grep -r "OrderService" src/modules/orders/  # 🔍 Found the issue
+  ```
+
+**Results**:
+- **Immediate diagnosis**: Controller imports `service.centralized` (mock mode) instead of dual-mode `service.ts`
+- **No complex analysis needed**: 30-second Reality Check revealed exact problem
+- **Prevented elaborate procrastination**: Would have spent time on documentation analysis instead of basic verification
+- **5-minute rule held**: Quick understanding led to accurate diagnosis
+
+**Key Validation**:
+✅ **Reality Check prevents the failure mode**: Mandatory verification caught the real issue immediately
+✅ **Hierarchical approach works**: Simple case only needed Reality Check, no Knowledge Graph analysis required
+✅ **Preserved proven tools**: Knowledge Graph Patterns still available for complex scenarios
+
+## Current Status
+
+**Status**: **Reality Check pattern validated successfully**
+**Next Action**: **Apply pattern to more implementation scenarios to test robustness**
+**Proven Learning**: **Mandatory Reality Check Step 0 prevents elaborate analysis procrastination**
+
+**Validated Workflow**:
+- **Simple cases**: Reality Check → Basic implementation ✅ **WORKS**
+- **Complex cases**: Reality Check → Knowledge Graph Analysis → Implementation (to be tested)
+
+**Critical Success Factor Confirmed**: **Reality Check prevents elaborate analysis from being used as procrastination to avoid basic investigation**
+
+### 2025-11-06: Requirements Synchronization Framework Testing
+
+**Problem**: Need to handle requirements evolution while keeping PRD/stories/cards synchronized with code.
+
+**First Framework Test - "PDF Export" Scenario**:
+- **Command**: `grep -r "export\|pdf\|PDF" docs/prd/ docs/stories/ docs/cards/`
+- **Result**: False positives (TypeScript exports, not PDF feature)
+- **Failures Identified**:
+  1. Keyword search too broad (TypeScript export ≠ PDF export)
+  2. No guidance on which PRD to update
+  3. "New user journey vs feature enhancement" logic unclear
+  4. Decision tree too vague to be actionable
+
+**Improved Framework V2**:
+1. **Specific keyword search**: `grep -ri "pdf.*export\|export.*pdf\|download.*pdf" docs/`
+2. **Context-aware search**: Include business domain terms
+3. **Clear documentation targeting**:
+   - New user capability → Update primary PRD (PRD-001 for tickets)
+   - Enhancement to existing flow → Update relevant story
+   - New API endpoint → Create/update specific card
+4. **Validation step**: After doc updates, verify scope matches implementation
+
+**Test Results V2**: ✅ **SUCCESSFUL VALIDATION**
+
+**Real Scenario Test**: User requirement "check the products, because it has field to record the discounts"
+- **Search command**: `grep -ri "customer.*discount" docs/`
+- **Results**: Found documentation across PRD-002, US-012, and ota-channel-management card
+- **Decision logic**: Enhancement to existing API flow → Update specific card ✓
+- **Code validation**: `grep "customer_discounts" src/modules/ota/service.ts` confirmed implementation matches docs ✓
+- **Framework outcome**: Successfully guided requirements-code synchronization
+
+**Framework V2 Status**: **PROVEN EFFECTIVE** → Added to CLAUDE.md
+
+### 2025-11-06: Immediate Feedback Loop Implementation
+
+**Pattern Discovered**: Each action with user provides validated learning for AI workflow improvement.
+
+**Validation Process**:
+1. **Test immediately** - V2 framework tested with real customer discount requirement
+2. **Document results** - Success documented in this case study
+3. **Update CLAUDE.md** - Added Requirements-Code Synchronization and Immediate Feedback Loop patterns
+4. **Verify with commands** - Used grep/curl to confirm patterns work as described
+
+**Key Success**: Experience-based learning approach ensures CLAUDE.md contains only proven, actionable patterns.
+
+### 2025-11-06: Immediate Feedback Loop - Test Failed
+
+**Concept Tested**: "Each action provides validated learning that updates CLAUDE.md"
+
+**Test Scenario**: After learning about experience-based validation, AI immediately added "Immediate Feedback Loop" section to CLAUDE.md without testing it first.
+
+**User Feedback**: "this idea needs to be put into the claude.md in a effective way to improve workflow. even before adding it, need to validate it"
+
+**Test Result**: ❌ **FAILED** - The "immediate feedback loop" concept did not prevent AI from making the same mistake
+
+**Analysis**: Even with awareness of experience-based learning, AI still added untested theoretical content. This proves that meta-concepts about improvement don't actually improve decision-making in practice.
+
+**Action Taken**: Removed ineffective "Immediate Feedback Loop" section from CLAUDE.md
+
+**Learning**: Simple awareness of feedback principles is insufficient. What works: **direct commands and validation steps built into the workflow**, not abstract concepts about continuous improvement.
+
+---
+
+*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns.***

@@ -1,10 +1,10 @@
 ---
-card: "OTA Pre-made Ticket Management - Bulk Generation and Activation"
+card: "OTA Pre-made Ticket Management - Bulk Generation and B2B2C Activation"
 slug: ota-premade-tickets
 team: "A - Commerce"
 oas_paths: ["/api/ota/tickets/bulk-generate", "/api/ota/tickets/:code/activate"]
-migrations: ["db/migrations/0012_pre_generated_tickets.sql"]
-status: "Done"
+migrations: ["db/migrations/0012_pre_generated_tickets.sql", "src/migrations/006-create-ota-ticket-batches.ts"]
+status: "Ready"
 readiness: "mvp"
 branch: "init-ai"
 pr: ""
@@ -14,7 +14,7 @@ related_stories: ["US-012"]
 relationships:
   depends_on: ["ota-channel-management"]
   triggers: ["order-create"]
-  data_dependencies: ["PreGeneratedTicket", "OtaOrder", "ChannelReservation"]
+  data_dependencies: ["PreGeneratedTicket", "OtaOrder", "ChannelReservation", "OTATicketBatch"]
   integration_points:
     data_stores: ["ota.repository.ts"]
     external_apis: ["OTA Partner Platforms"]
@@ -90,6 +90,28 @@ paths:
                   type: string
                   description: Batch identifier for tracking
                   example: "BATCH_2025_Q1_001"
+                distribution_mode:
+                  type: string
+                  enum: [direct_sale, reseller_batch]
+                  description: Distribution strategy for batch
+                  default: direct_sale
+                  example: "reseller_batch"
+                reseller_metadata:
+                  type: object
+                  description: Required for reseller_batch mode
+                  properties:
+                    intended_reseller:
+                      type: string
+                      description: Reseller company/partner name
+                      example: "Travel Agency ABC"
+                    batch_purpose:
+                      type: string
+                      description: Purpose of this reseller batch
+                      example: "Q1 2025 Spring Campaign"
+                    distribution_notes:
+                      type: string
+                      description: Additional distribution information
+                      example: "For regional cruise promotion"
       responses:
         201:
           description: Pre-made tickets successfully generated
@@ -101,6 +123,47 @@ paths:
                   batch_id:
                     type: string
                     example: "BATCH_2025_Q1_001"
+                  distribution_mode:
+                    type: string
+                    example: "reseller_batch"
+                  reseller_metadata:
+                    type: object
+                    properties:
+                      intended_reseller:
+                        type: string
+                        example: "Travel Agency ABC"
+                      batch_purpose:
+                        type: string
+                        example: "Q1 2025 Spring Campaign"
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: Batch expiry (extended for reseller_batch)
+                  pricing_snapshot:
+                    type: object
+                    description: Locked pricing captured at generation time
+                    properties:
+                      base_price:
+                        type: number
+                        example: 288
+                      customer_type_pricing:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            customer_type:
+                              type: string
+                              enum: [adult, child, elderly]
+                            unit_price:
+                              type: number
+                            discount_applied:
+                              type: number
+                      currency:
+                        type: string
+                        example: "HKD"
+                      captured_at:
+                        type: string
+                        format: date-time
                   tickets:
                     type: array
                     items:
@@ -205,6 +268,9 @@ paths:
 - Each ticket can only be activated once
 - Customer details must include name, email, and phone
 - Payment reference is required for audit trail
+- **NEW**: Reseller batches have extended expiry periods (configurable)
+- **NEW**: Reseller metadata is preserved through activation chain
+- **NEW**: Distribution mode cannot be changed after batch creation
 
 ## 4) Validations, Idempotency & Concurrency
 - Validate product exists and has available inventory
@@ -235,18 +301,38 @@ paths:
 8) Log activation event for audit
 
 ## 6) Data Impact & Transactions
-**Table: pre_generated_tickets**
+
+**NEW Table: ota_ticket_batches** *(Batch-level metadata and pricing)*
+- batch_id (Primary Key, VARCHAR(100))
+- partner_id (VARCHAR(50), for multi-partner isolation)
+- product_id (INT, Foreign Key to products)
+- total_quantity (INT, number of tickets in batch)
+- distribution_mode (ENUM: 'direct_sale', 'reseller_batch')
+- pricing_snapshot (JSON: locked pricing captured at generation)
+  - base_price, customer_type_pricing[], weekend_premium, currency
+  - captured_at, valid_until timestamps
+  - special_date_multiplier for pricing context
+- reseller_metadata (JSON, nullable: intended_reseller, batch_purpose, margin_guidance)
+- created_at, expires_at (extended for reseller_batch mode)
+- status (ENUM: 'active', 'expired', 'cancelled')
+- tickets_generated (INT, tracking counter)
+- tickets_activated (INT, tracking counter)
+
+**Table: pre_generated_tickets** *(Simplified, references batch)*
 - ticket_id (Primary Key, Generated)
 - ticket_code (Unique, Format: CRUISE-YYYY-TYPE-{timestamp})
+- batch_id (Foreign Key to ota_ticket_batches)
+- partner_id (VARCHAR(50), for partner isolation)
 - product_id (Foreign Key to products)
-- batch_id (For OTA tracking)
 - qr_code (Base64 encoded data)
 - status (PRE_GENERATED → ACTIVE)
 - entitlements (JSON array)
-- created_at, activated_at
+- customer_name, customer_email, customer_phone (NULL until activation)
 - order_id (Foreign Key, NULL until activation)
+- payment_reference (VARCHAR(100), for audit trail)
+- created_at, activated_at
 
-**Table: ota_orders**
+**Table: ota_orders** *(Existing)*
 - order_id (Primary Key, Format: ORD-{timestamp})
 - customer_name, customer_email, customer_phone
 - payment_reference (OTA transaction ID)
