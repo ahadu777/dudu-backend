@@ -235,4 +235,28 @@ stories:
       runbook: docs/integration/US-013-runbook.md
       newman:
         - reports/collections/us-013-venue-operations.json
+  - id: US-014
+    title: 微信小程序用户认证
+    status: Draft
+    cards:
+      - wechat-auth-login
+      - wechat-phone-binding
+    # Sequence dependencies
+    sequence:
+      - wechat-auth-login → wechat-phone-binding
+      - wechat-auth-login → user-profile-endpoint
+      - wechat-auth-login → order-create
+      - wechat-auth-login → wechat-payment-session
+    # Cross-story relationships
+    enhances: [US-001, US-009, US-010A]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-004"
+    deadline: "2025-01-20"
+    implicit_dependencies: [user-profile-endpoint, order-create]
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-014-runbook.md
+      newman:
+        - reports/collections/us-014-wechat-auth.json
 

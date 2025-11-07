@@ -11,6 +11,7 @@ import policiesRouter from './policies/router';
 import profileRouter from './profile/router';
 import usersRouter from './users/router';
 import authDemoRouter from './auth/demo';
+import wechatAuthRouter from './auth/wechat.router';
 import adminRouter from './admin/router';
 import travelRouter from './travel/router';
 import reservationsRouter from './reservations/router';
@@ -23,6 +24,7 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
 
   apiRouter.use('/users', usersRouter);
   apiRouter.use('/auth', authDemoRouter);
+  apiRouter.use('/auth', wechatAuthRouter); // WeChat authentication endpoints
 
   app.use(apiPrefix, apiRouter);
 

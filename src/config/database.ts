@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import path from 'path';
 import dotenv from 'dotenv';
+import { SHARED_ENTITIES } from '../models';
 
 dotenv.config();
 
@@ -15,7 +16,10 @@ export const AppDataSource = new DataSource({
   synchronize: false, // Disabled - tables already exist
   // logging: process.env.NODE_ENV === 'development', // 显示所有 SQL（调试用）
   logging: ['error', 'warn'], // 只显示错误和警告（推荐）
-  entities: [path.resolve(__dirname, '../modules/**/domain/*.{ts,js}')],
+  entities: [
+    ...SHARED_ENTITIES, // Shared models (explicitly registered in models/index.ts)
+    path.resolve(__dirname, '../modules/**/domain/**/*.entity.{ts,js}'), // Module-specific models
+  ],
   migrations: [__dirname + '/../migrations/*.{ts,js}'],
   subscribers: [],
   charset: 'utf8mb4',

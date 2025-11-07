@@ -32,4 +32,8 @@ export const env = cleanEnv(process.env, {
   QR_SIGNER_SECRET: str({ default: 'qr-signing-secret-change-in-production' }),
   // QR token TTL in seconds (default 5 minutes)
   QR_TOKEN_TTL_SECONDS: num({ default: 300 }),
+
+  // WeChat Mini-Program Configuration
+  WECHAT_APPID: str({ default: 'wx39a36fbaaefacd42' }), // WeChat mini-program AppID
+  WECHAT_APP_SECRET: str({ default: '6afcba50d4b53ebc6034e213a8bd8592' }), // WeChat mini-program AppSecret
 });

@@ -1,7 +1,7 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config/database';
 import { AppError } from '../../../middlewares/errorHandler';
-import { UserEntity } from '../domain/user.entity';
+import { UserEntity } from '../../../models';
 import { CreateUserDto, UpdateUserDto } from './dto';
 
 export class UserService {
