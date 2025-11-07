@@ -1,0 +1,69 @@
+# Bug 注册表
+# 系统中所有 bug 的主索引
+# 镜像 docs/stories/_index.yaml 的结构以保持一致性
+
+bugs:
+  - id: BUG-001
+    title: 库存为零时返回 null 导致订单创建失败
+    slug: inventory-filter-null-check
+    severity: High
+    status: Open
+    affected_cards:
+      - order-create
+      - ota-premade-tickets
+      - ota-reservation-management
+    affected_stories:
+      - US-001
+      - US-012
+    team: A - Commerce
+    discovered_at: "2025-11-06T14:15:00+0800"
+    discovered_in_mode: both
+    discovered_in_commit: e23c9b1
+    pr: null
+    resolved_at: null
+
+# 在下面添加更多 bug
+# 示例:
+#   - id: BUG-002
+#     title: TypeScript 5.x 构建错误
+#     slug: typescript-build-error
+#     severity: Medium
+#     status: In Progress
+#     affected_cards: []
+#     affected_stories: []
+#     team: A - Commerce
+#     discovered_at: "2025-11-05T14:30:00+0800"
+#     pr: "https://github.com/yourorg/express/pull/123"
+#     resolved_at: null
+
+# 严重性定义：
+# - Critical（关键）: 系统宕机、数据丢失、安全问题、阻塞部署
+# - High（高）: 功能损坏、阻塞用户故事、无临时解决方案
+# - Medium（中）: 功能问题但有临时方案、影响单个功能
+# - Low（低）: 小的 UI、文档、代码质量问题
+
+# 状态生命周期：
+# Open（待处理）→ In Progress（进行中）→ PR（代码审查）→ Resolved（已解决）→ Closed（已关闭）
+
+# 命名规范：
+# - 活跃 bug: docs/bugs/ACTIVE/BUG-[ID]-[kebab-case-标题].md
+# - 已解决 bug: docs/bugs/RESOLVED/BUG-[ID]-[kebab-case-标题].md
+
+# 快速查询命令：
+# 列出所有关键/高危 bug:
+#   grep "severity: Critical\|High" docs/bugs/_index.yaml
+#
+# 查找影响某个故事的 bug:
+#   grep "US-001" docs/bugs/_index.yaml
+#
+# 列出待处理的 bug:
+#   grep "status: Open" docs/bugs/_index.yaml
+#
+# 查找分配给某个团队的 bug:
+#   grep "team: A - Commerce" docs/bugs/_index.yaml
+#
+# 统计活跃 bug 数量:
+#   ls docs/bugs/ACTIVE/ | wc -l
+#
+# 按严重性统计:
+#   grep "severity:" docs/bugs/_index.yaml | sort | uniq -c
