@@ -1287,6 +1287,324 @@
         }
       }
     },
+    "/api/v1/auth/wechat/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "WeChat mini-program login",
+        "description": "Exchange WeChat temporary code for JWT token and user profile. Supports both Mock mode (development) and Database mode (production) with identical API contract.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "Temporary code from wx.login() (5-minute validity)",
+                    "example": "081AbcDef2GHIJK3lmnOpq4RS56TuVw7x8yZ9",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "JWT token (7-day validity)",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1001
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "WeChat User ABC123"
+                        },
+                        "wechat_openid": {
+                          "type": "string",
+                          "example": "oMockdGVzdDEyMw=="
+                        },
+                        "phone": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": null,
+                          "description": "Phone number (null if not bound yet)"
+                        },
+                        "auth_type": {
+                          "type": "string",
+                          "example": "wechat"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-11-07T03:55:11.148Z"
+                        }
+                      }
+                    },
+                    "needs_phone": {
+                      "type": "boolean",
+                      "description": "Indicates if user needs to bind phone number",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (code missing or invalid format)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid request"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": ["code is required"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "WeChat authentication failed (code expired/invalid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "WECHAT_AUTH_FAILED"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "WeChat code expired or already used"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid code format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "INVALID_CODE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid code format"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/wechat/phone": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Bind WeChat user phone number",
+        "description": "Exchange phone authorization code for user phone number. Protected endpoint requiring JWT authentication. Supports both Mock mode (deterministic phone generation) and Database mode (real WeChat API).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "Phone authorization code from getPhoneNumber button",
+                    "example": "9f8e7d6c5b4a3g2h1i0j",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Phone binding successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "phone": {
+                      "type": "string",
+                      "description": "Phone number in E.164 format",
+                      "example": "+8613800138000"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1001
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "WeChat User ABC123"
+                        },
+                        "wechat_openid": {
+                          "type": "string",
+                          "example": "oMockdGVzdDEyMw=="
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": "+8613800138000"
+                        },
+                        "auth_type": {
+                          "type": "string",
+                          "example": "wechat"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-11-07T03:55:11.148Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (code missing or invalid format)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "VALIDATION_ERROR"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid request"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": ["code is required"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (JWT token missing/invalid) or phone code invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "USER_NOT_FOUND"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "User not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ota/inventory": {
       "get": {
         "tags": ["OTA Integration"],
