@@ -1903,6 +1903,89 @@
                     "type": "string",
                     "description": "Batch identifier for tracking",
                     "example": "BATCH_2025_Q1_001"
+                  },
+                  "distribution_mode": {
+                    "type": "string",
+                    "enum": ["direct_sale", "reseller_batch"],
+                    "description": "Distribution mode - affects expiration time and validation",
+                    "example": "direct_sale",
+                    "default": "direct_sale"
+                  },
+                  "special_pricing": {
+                    "type": "object",
+                    "description": "Custom pricing override for this batch (optional)",
+                    "properties": {
+                      "base_price": {
+                        "type": "number",
+                        "description": "Custom base price override",
+                        "example": 500
+                      },
+                      "customer_type_pricing": {
+                        "type": "array",
+                        "description": "Custom pricing per customer type",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "customer_type": {
+                              "type": "string",
+                              "enum": ["adult", "child", "elderly"],
+                              "example": "adult"
+                            },
+                            "unit_price": {
+                              "type": "number",
+                              "example": 500
+                            },
+                            "discount_applied": {
+                              "type": "number",
+                              "example": 0
+                            }
+                          }
+                        }
+                      },
+                      "weekend_premium": {
+                        "type": "number",
+                        "description": "Custom weekend premium override",
+                        "example": 50
+                      },
+                      "currency": {
+                        "type": "string",
+                        "description": "Pricing currency",
+                        "example": "HKD"
+                      }
+                    }
+                  },
+                  "reseller_metadata": {
+                    "type": "object",
+                    "description": "Required for reseller_batch mode",
+                    "properties": {
+                      "intended_reseller": {
+                        "type": "string",
+                        "description": "Name of the intended reseller (required for reseller_batch)",
+                        "example": "ABC Travel Agency"
+                      },
+                      "wholesale_agreement_id": {
+                        "type": "string",
+                        "example": "WS-2025-001"
+                      },
+                      "commission_rate": {
+                        "type": "number",
+                        "example": 0.15
+                      }
+                    }
+                  },
+                  "batch_metadata": {
+                    "type": "object",
+                    "description": "Additional batch information (optional)",
+                    "properties": {
+                      "campaign": {
+                        "type": "string",
+                        "example": "holiday_promotion"
+                      },
+                      "notes": {
+                        "type": "string",
+                        "example": "Special pricing for VIP customers"
+                      }
+                    }
                   }
                 }
               }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Auto-Generated Tests - US-012" tests="4" time="4.795">
+  <testsuite name="Business Rule: B2B2C Commission Tracking" id="07545478-c96a-4efa-aa43-29640ab21da8" timestamp="2025-11-08T05:46:14.645Z" tests="2" failures="0" errors="0" time="1.100">
+    <testcase name="Commission rate preserved in reseller metadata" time="1.100" classname="BusinessRuleB2B2CCommissionTracking"/>
+    <testcase name="Business rule: Commission rate between 0 and 1" time="1.100" classname="BusinessRuleB2B2CCommissionTracking"/>
+  </testsuite>
+  <testsuite name="API Contract: OpenAPI Schema Validation" id="1bccac5d-a4ea-434e-b4d9-356b0e23b108" timestamp="2025-11-08T05:46:14.645Z" tests="2" failures="0" errors="0" time="1.246">
+    <testcase name="Response matches OpenAPI specification" time="1.246" classname="ApiContractOpenApiSchemaValidation"/>
+    <testcase name="Required fields present per card specification" time="1.246" classname="ApiContractOpenApiSchemaValidation"/>
+  </testsuite>
+  <testsuite name="Data Persistence: Database vs Mock Validation" id="96128a9b-963c-493d-9c18-77e3d6bca9c8" timestamp="2025-11-08T05:46:14.645Z" tests="2" failures="0" errors="0" time="1.106">
+    <testcase name="Database mode: Random ticket IDs generated" time="1.106" classname="DataPersistenceDatabaseVsMockValidation"/>
+    <testcase name="Pricing snapshot captured with timestamp" time="1.106" classname="DataPersistenceDatabaseVsMockValidation"/>
+  </testsuite>
+  <testsuite name="Integration: Complete B2B2C Workflow" id="14ee54b6-647a-427e-8483-24e6dab7f276" timestamp="2025-11-08T05:46:14.645Z" tests="2" failures="0" errors="0" time="1.343">
+    <testcase name="End-to-end workflow: Generation → Activation" time="1.343" classname="IntegrationCompleteB2B2CWorkflow"/>
+    <testcase name="Business value chain: Revenue tracking enabled" time="1.343" classname="IntegrationCompleteB2B2CWorkflow"/>
+  </testsuite>
+</testsuites>

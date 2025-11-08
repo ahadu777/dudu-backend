@@ -53,6 +53,16 @@ export interface OTABulkGenerateRequest {
   quantity: number;
   batch_id: string;
   distribution_mode?: 'direct_sale' | 'reseller_batch';
+  special_pricing?: {
+    base_price: number;
+    customer_type_pricing: Array<{
+      customer_type: 'adult' | 'child' | 'elderly';
+      unit_price: number;
+      discount_applied: number;
+    }>;
+    weekend_premium: number;
+    currency: string;
+  };
   reseller_metadata?: {
     intended_reseller: string;
     batch_purpose: string;
@@ -639,7 +649,68 @@ export class OTAService {
 
       const repo = await this.getRepository();
 
-      // Create batch record first
+      // Get product from database first (needed for pricing and inventory)
+      const product = await this.otaRepository!.findProductById(request.product_id);
+      if (!product) {
+        throw {
+          code: ERR.PRODUCT_NOT_FOUND,
+          message: `Product ${request.product_id} not found`
+        };
+      }
+
+      // Build pricing snapshot from product or special pricing
+      let pricingSnapshot;
+      if (request.special_pricing) {
+        // Use custom special pricing
+        pricingSnapshot = {
+          base_product_id: request.product_id,
+          base_price: request.special_pricing.base_price,
+          customer_type_pricing: request.special_pricing.customer_type_pricing,
+          weekend_premium: request.special_pricing.weekend_premium,
+          currency: request.special_pricing.currency,
+          captured_at: new Date().toISOString()
+        };
+      } else {
+        // Use pricing from product entity
+        const basePrice = Number(product.base_price);
+        const weekendPremium = Number(product.weekend_premium || 30);
+        const currency = 'HKD';
+
+        // Get customer type pricing from product or calculate defaults
+        const customerTypePricing = product.customer_discounts ? [
+          {
+            customer_type: 'adult' as const,
+            unit_price: basePrice,
+            discount_applied: 0
+          },
+          {
+            customer_type: 'child' as const,
+            unit_price: basePrice - (product.customer_discounts.child || 100),
+            discount_applied: product.customer_discounts.child || 100
+          },
+          {
+            customer_type: 'elderly' as const,
+            unit_price: basePrice - (product.customer_discounts.elderly || 50),
+            discount_applied: product.customer_discounts.elderly || 50
+          }
+        ] : [
+          // Fallback defaults if no customer discounts defined
+          { customer_type: 'adult' as const, unit_price: basePrice, discount_applied: 0 },
+          { customer_type: 'child' as const, unit_price: Math.round(basePrice * 0.65), discount_applied: Math.round(basePrice * 0.35) },
+          { customer_type: 'elderly' as const, unit_price: Math.round(basePrice * 0.83), discount_applied: Math.round(basePrice * 0.17) }
+        ];
+
+        pricingSnapshot = {
+          base_product_id: request.product_id,
+          base_price: basePrice,
+          customer_type_pricing: customerTypePricing,
+          weekend_premium: weekendPremium,
+          currency,
+          captured_at: new Date().toISOString()
+        };
+      }
+
+      // Create batch record
       const expiresAt = request.distribution_mode === 'reseller_batch'
         ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days for reseller
         : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);  // 7 days for direct
@@ -653,30 +724,10 @@ export class OTAService {
         expires_at: expiresAt,
         reseller_metadata: request.reseller_metadata,
         batch_metadata: request.batch_metadata,
-        pricing_snapshot: {
-          base_product_id: request.product_id,
-          base_price: 288, // Will be filled from product data
-          customer_type_pricing: [
-            { customer_type: 'adult' as const, unit_price: 288, discount_applied: 0 },
-            { customer_type: 'child' as const, unit_price: 188, discount_applied: 100 },
-            { customer_type: 'elderly' as const, unit_price: 238, discount_applied: 50 }
-          ],
-          weekend_premium: 30,
-          currency: 'HKD',
-          captured_at: new Date().toISOString()
-        }
+        pricing_snapshot: pricingSnapshot
       };
 
       const batch = await repo.createTicketBatch(batchData);
-
-      // Get product from database
-      const product = await this.otaRepository!.findProductById(request.product_id);
-      if (!product) {
-        throw {
-          code: ERR.PRODUCT_NOT_FOUND,
-          message: `Product ${request.product_id} not found`
-        };
-      }
 
       // Check inventory availability - inventory should be included with the product
       const inventory = product.inventory[0]; // There should be one inventory per product
@@ -824,13 +875,20 @@ export class OTAService {
     const mockBatch = {
       batch_id: request.batch_id,
       distribution_mode: request.distribution_mode || 'direct_sale',
-      pricing_snapshot: {
+      pricing_snapshot: request.special_pricing ? {
         base_product_id: request.product_id,
-        base_price: 288,
+        base_price: request.special_pricing.base_price,
+        customer_type_pricing: request.special_pricing.customer_type_pricing,
+        weekend_premium: request.special_pricing.weekend_premium,
+        currency: request.special_pricing.currency,
+        captured_at: new Date().toISOString()
+      } : {
+        base_product_id: request.product_id,
+        base_price: Number(product.unit_price),
         customer_type_pricing: [
-          { customer_type: 'adult', unit_price: 288, discount_applied: 0 },
-          { customer_type: 'child', unit_price: 188, discount_applied: 100 },
-          { customer_type: 'elderly', unit_price: 238, discount_applied: 50 }
+          { customer_type: 'adult', unit_price: Number(product.unit_price), discount_applied: 0 },
+          { customer_type: 'child', unit_price: Number(product.unit_price) - 100, discount_applied: 100 },
+          { customer_type: 'elderly', unit_price: Number(product.unit_price) - 50, discount_applied: 50 }
         ],
         weekend_premium: 30,
         currency: 'HKD',

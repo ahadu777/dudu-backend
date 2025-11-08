@@ -1,0 +1,2624 @@
+{
+  "prd": [
+    {
+      "file": "PRD-001-cruise-ticketing-platform.md",
+      "businessRules": [
+        {
+          "text": "- **Business Impact**: Enable revenue optimization through sophisticated pricing strategies",
+          "type": "business_rule"
+        }
+      ],
+      "apiEndpoints": [],
+      "businessValue": [
+        {
+          "text": "- Revenue optimization through dynamic pricing (target: 15%",
+          "type": "business_value"
+        },
+        {
+          "text": "revenue increase)",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Business Impact**: Enable revenue optimization through sophisticated pricing strate",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Revenue Goals**:",
+          "type": "business_value"
+        },
+        {
+          "text": "- Dynamic pricing to maximize revenue per customer segment",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Business Value**: Revenue optimization through demand-based pricing",
+          "type": "business_value"
+        },
+        {
+          "text": "- Real-time redemption tracking and reporting",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Inventory**: Real-time availability tracking per package and date",
+          "type": "business_value"
+        },
+        {
+          "text": "emption Data**: QR scan events and function usage tracking",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Revenue Metrics**:",
+          "type": "business_value"
+        },
+        {
+          "text": "- Revenue per customer segment",
+          "type": "business_value"
+        },
+        {
+          "text": "- Weekend vs weekday revenue optimization",
+          "type": "business_value"
+        }
+      ]
+    },
+    {
+      "file": "PRD-002-ota-platform-integration.md",
+      "businessRules": [
+        {
+          "text": "- **NEW**: Enable B2B2C revenue streams through reseller distribution",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Must maintain existing cruise platform functionality (PRD-001)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **Business Value**: Enables guaranteed inventory allocation to OTA partners while protecting direct sales",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **Business Value**: Enables OTA platforms to guarantee inventory during customer purchase flow",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Approval: Business stakeholder sign-off required",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Expired reservation frequency (should be <10%)",
+          "type": "business_rule"
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "text": "GET /api/ota/inventory",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/inventory",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/reserve",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/inventory",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/reservations/{reservation_id}/activate:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/tickets/bulk-generate:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/tickets/{ticket_code}/activate:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/reservations:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "DELETE /api/ota/reservations/{reservation_id}:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/tickets:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/orders:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/orders/{order_id}/tickets:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/batches/{batch_id}/redemptions:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/billing/summary:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/batches/{batch_id}/analytics:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/campaigns/analytics:",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/tickets/bulk-generate",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/tickets/{code}/activate",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/inventory",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/reserve",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/reservations/{id}/activate",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/inventory",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/tickets/bulk-generate",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/tickets/{ticket_code}/activate",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/orders",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "GET /api/ota/orders/{order_id}/tickets",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/reservations/{id}/activate",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/tickets/bulk-generate",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /api/ota/tickets/{code}/activate",
+          "type": "api_endpoint"
+        }
+      ],
+      "businessValue": [
+        {
+          "text": "ware\", \"ota-order-processing\", \"channel-inventory-tracking\", \"ota-premade-tickets\"]",
+          "type": "business_value"
+        },
+        {
+          "text": "s direct sales channel, limiting market reach and revenue potential.",
+          "type": "business_value"
+        },
+        {
+          "text": "- Revenue expansion through external channel partnerships",
+          "type": "business_value"
+        },
+        {
+          "text": "- Revenue expansion through new sales channels",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Revenue Goals**:",
+          "type": "business_value"
+        },
+        {
+          "text": "- Maintain existing direct sales revenue (baseline protection)",
+          "type": "business_value"
+        },
+        {
+          "text": "- Generate additional revenue through OTA channel (incremental growth)",
+          "type": "business_value"
+        },
+        {
+          "text": "- **NEW**: Enable B2B2C revenue streams through reseller distribution",
+          "type": "business_value"
+        },
+        {
+          "text": "- **NEW**: Batch tracking and audit trail for reseller distribution",
+          "type": "business_value"
+        },
+        {
+          "text": "- Real-time availability tracking prevents overselling",
+          "type": "business_value"
+        },
+        {
+          "text": "**B2B2C Reseller Batch Management** *(NEW)*",
+          "type": "business_value"
+        },
+        {
+          "text": "- Support for 100+ ticket batches with reseller tracking metadata",
+          "type": "business_value"
+        },
+        {
+          "text": "- Reseller-specific batch identification and tracking",
+          "type": "business_value"
+        },
+        {
+          "text": "**Usage-Based Reseller Billing** *(NEW)*",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Business Value**: Revenue recognition aligned with actual value delivery, r",
+          "type": "business_value"
+        },
+        {
+          "text": "- Generate billing summaries per reseller per billing period",
+          "type": "business_value"
+        },
+        {
+          "text": "- Automated billing event generation when tickets are redeemed at ven",
+          "type": "business_value"
+        },
+        {
+          "text": "llocation per product with real-time availability tracking",
+          "type": "business_value"
+        },
+        {
+          "text": "### Phase 2.5: Pre-Made Ticket Support & B2B2C Reseller Model (🔄 Enhanced Implementation)",
+          "type": "business_value"
+        },
+        {
+          "text": "#### Bulk Ticket Generation for B2B2C Resale",
+          "type": "business_value"
+        },
+        {
+          "text": "nerate pre-made tickets for OTA offline sales and B2B2C reseller distribution",
+          "type": "business_value"
+        },
+        {
+          "text": "ata?: {                                # NEW: For B2B2C distribution",
+          "type": "business_value"
+        },
+        {
+          "text": "#### Reseller Billing & Analytics *(NEW)*",
+          "type": "business_value"
+        },
+        {
+          "text": "GET /api/ota/billing/summary:",
+          "type": "business_value"
+        },
+        {
+          "text": "summary: Get billing summary for reseller",
+          "type": "business_value"
+        },
+        {
+          "text": "billing_period: string",
+          "type": "business_value"
+        },
+        {
+          "text": "revenue_metrics:",
+          "type": "business_value"
+        },
+        {
+          "text": "potential_revenue: number  # all tickets * wholesale_price",
+          "type": "business_value"
+        },
+        {
+          "text": "realized_revenue: number   # redeemed tickets * wholesale_price",
+          "type": "business_value"
+        },
+        {
+          "text": "### Reseller Billing Logic *(NEW)*",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Billing Trigger**: Charge events generated when tickets a",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Billing Periods**: Monthly billing cycles with real-time redemption tracking",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Revenue Recognition**: Payment due when end customer uses",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Settlement**: Automated billing summaries generated per reseller per month",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Revenue Metrics**:",
+          "type": "business_value"
+        },
+        {
+          "text": "- OTA channel revenue contribution (target: 15% increase in total reven",
+          "type": "business_value"
+        },
+        {
+          "text": "- Real-time availability tracking",
+          "type": "business_value"
+        },
+        {
+          "text": "ddleware, ota-order-processing, channel-inventory-tracking",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Operational**: Real-time inventory tracking working with automatic expiry cleanup",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Monitoring**: Request logging and error tracking implemented",
+          "type": "business_value"
+        },
+        {
+          "text": "- Revenue tracking: OTA transactions flow through existing order sys",
+          "type": "business_value"
+        }
+      ]
+    },
+    {
+      "file": "PRD-003-event-venue-operations.md",
+      "businessRules": [
+        {
+          "text": "- **Foundation Stories**: US-001 (ticket purchase), US-004 (payment → issuance) must remain functional",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **Enhanced Stories**: US-002 (scanning) will be significantly enhanced with venue operations features",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **New Implementation**: US-013 (venue operations platform) will implement the complete PRD-003 vision",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **User Experience**: Mobile-first operator interface, clear validation feedback, minimal training required",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **Operator Session Rules**: Terminal operators must have active session before scanning, sessions tied to specific location (Central/Cheung Chau), expi",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **Database Driver**: Audit logs must persist beyond session/device restarts",
+          "type": "business_rule"
+        },
+        {
+          "text": "technical_dependencies_resolved: false  # Database mode required, multi-terminal setup",
+          "type": "business_rule"
+        },
+        {
+          "text": "- [x] Required APIs/services available (existing redeem module)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- [ ] Engineering team has required skills (database operations, performance optimization)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Stories US-001, US-002, US-004 must be functional",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Database mode required: `USE_DATABASE=true`",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Scan QR at Central Pier for ferry boarding → Should succeed",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Scan same QR multiple times → Should succeed each time",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Scan QR at gift shop → Should succeed first time",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Scan same QR at gift shop again → Should fail with \"ALREADY_REDEEMED\"",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Scan at different gift location → Should still fail (cross-terminal tracking)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Scan QR at playground → Should succeed, decrement from 10 to 9",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Repeat 9 more times → Should succeed each time, reaching 0",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Scan when tokens = 0 → Should fail with \"NO_REMAINING_USES\"",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Operator B scans identical JTI at Cheung Chau → Should fail \"DUPLICATE_JTI\"",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Two operators scan same QR simultaneously → Only one should succeed",
+          "type": "business_rule"
+        }
+      ],
+      "apiEndpoints": [],
+      "businessValue": [
+        {
+          "text": "onds, eliminate 100% of package fraud through JTI tracking, process 500+ daily ferry boardings with 99.9% up",
+          "type": "business_value"
+        },
+        {
+          "text": "time, generate $145K Y1 revenue from 2 pilot terminals.",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Business Impact**: $145K Y1 → $800K Y2 revenue, $250K annual fraud prevention savings per venue",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Revenue Goals**: $2K/month/venue + $0.10/scan, target 5 v",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Description**: Persistent JTI (JWT Token ID) tracking prevents same QR token reuse across Central Pier,",
+          "type": "business_value"
+        },
+        {
+          "text": "ex entitlement validation - Premium Plan requires tracking ferry boardings (unlimited), gift redemptions (on",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Revenue Metrics**: $145K Y1 ARR from Central Pier + Cheun",
+          "type": "business_value"
+        },
+        {
+          "text": "**Compliance Need**: Regulatory audit trails for revenue verification",
+          "type": "business_value"
+        },
+        {
+          "text": "- $500K+ annual recurring revenue",
+          "type": "business_value"
+        },
+        {
+          "text": "- Revenue impact and cost savings",
+          "type": "business_value"
+        },
+        {
+          "text": "### Appendix C: Revenue Model Details",
+          "type": "business_value"
+        },
+        {
+          "text": "hema changes identified (venue_id, cross-terminal tracking)",
+          "type": "business_value"
+        },
+        {
+          "text": "gift location → Should still fail (cross-terminal tracking)",
+          "type": "business_value"
+        },
+        {
+          "text": "dation for transforming US-002 QR validation into revenue-generating venue operations platform",
+          "type": "business_value"
+        }
+      ]
+    },
+    {
+      "file": "PRD-004-wechat-miniprogram-auth.md",
+      "businessRules": [
+        {
+          "text": "- Enable WeChat payment integration (requires openid)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Enable mobile ticket sales (target: 40% of total GMV within 3 months)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Must comply with WeChat platform rules (no unauthorized data collection)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- WeChat mini-program certified (enterprise account required)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **Business Value**: Eliminates registration friction, enables instant purchases, unlocks mobile commerce channel",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Token enables authenticated API calls (orders, tickets, profile)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- **Business Value**: Enables customer service contact, order notifications, reduces fraud risk",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Backend exchanges code for phone number via WeChat API (access_token required)",
+          "type": "business_rule"
+        },
+        {
+          "text": "- Verify JWT token (user must be logged in)",
+          "type": "business_rule"
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "text": "GET /sns/jscode2session",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /wxa/business/getuserphonenumber",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /auth/wechat/login",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /auth/wechat/phone",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /auth/wechat/login",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST /auth/wechat/phone",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST http://localhost:8080/auth/wechat/login",
+          "type": "api_endpoint"
+        },
+        {
+          "text": "POST http://localhost:8080/auth/wechat/phone",
+          "type": "api_endpoint"
+        }
+      ],
+      "businessValue": [
+        {
+          "text": "- **Revenue Goals**:",
+          "type": "business_value"
+        },
+        {
+          "text": "- Support WeChat Pay integration (estimated 15% revenue uplift)",
+          "type": "business_value"
+        },
+        {
+          "text": "- **Revenue Impact**:",
+          "type": "business_value"
+        }
+      ]
+    }
+  ],
+  "stories": [],
+  "cards": [
+    {
+      "file": "admin-package-config.md",
+      "card": "admin-package-config",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "bundle-ticket-engine.md",
+      "card": "bundle-ticket-engine",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "5. 记录 `issued_ticket_batches`（order_id、issued_at、checksum）。",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- `issued_ticket_batches`（order_id PK, issued_at, checksum, version）。",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Audit：记录 checksum 以便对账；失败场景开启告警。",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "cancellation-policies.md",
+      "card": "cancellation-policies",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "- No input validation required (GET endpoint, no parameters)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- No database changes required",
+          "type": "validation_rule"
+        },
+        {
+          "text": "// Validate policy structure",
+          "type": "validation_rule"
+        },
+        {
+          "text": "pm.test('Policies have required fields', () => {",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "catalog-endpoint.md",
+      "card": "catalog-endpoint",
+      "apiPaths": [],
+      "validationRules": [],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "catalog.md",
+      "card": "catalog",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "4) No authentication required (public endpoint).",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "complex-pricing-engine.md",
+      "card": "complex-pricing-engine",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [product_id, booking_dates, customer_breakdown]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate product_id exists and has complex pricing enabled",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate booking_dates are valid future dates",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate customer_breakdown has valid types and positive counts",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate addon_ids exist in catalog",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "db-baseline.md",
+      "card": "db-baseline",
+      "apiPaths": [],
+      "validationRules": [],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "merchant-redemption-console.md",
+      "card": "merchant-redemption-console",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [code, session_id]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "my-tickets.md",
+      "card": "my-tickets",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "- Auth required; no idempotency for GET.",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "notification-orchestrator.md",
+      "card": "notification-orchestrator",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [event, channel, template_id]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [event, data]",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "operators-login.md",
+      "card": "operators-login",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [username, password]",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "order-create.md",
+      "card": "order-create",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "- data_stores: [\"data.ts\", \"store.ts\"] # dual store synchronization required",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) **Idempotency check** & payload hash → return same order or 409",
+          "type": "validation_rule"
+        },
+        {
+          "text": "4) **Stock validation**: Check both product inventory and add-on availability",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": [
+        {
+          "text": "106: Premium Plan ($288/$318)",
+          "type": "response_code"
+        },
+        {
+          "text": "107: Pet Plan ($188)",
+          "type": "response_code"
+        },
+        {
+          "text": "108: Deluxe Tea Set ($788/$888)",
+          "type": "response_code"
+        }
+      ]
+    },
+    {
+      "file": "ota-channel-management.md",
+      "card": "ota-channel-management",
+      "apiPaths": [
+        {
+          "text": "/api/ota/inventory",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reserve",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/inventory",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reserve",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/inventory",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reserve",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/inventory:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reserve:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/inventory:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reserve:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/inventory",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reserve",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/inventory:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reserve:",
+          "type": "api_path"
+        }
+      ],
+      "validationRules": [
+        {
+          "text": "AUTH->>+CHANNEL: validateApiKey(key)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "description: Comma-separated list of product IDs to check",
+          "type": "validation_rule"
+        },
+        {
+          "text": "description: Optional date range for availability check",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [product_id, quantity]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate product exists and has OTA allocation configured",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check requested quantity against available OTA inventory",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Authenticate API key and validate permissions",
+          "type": "validation_rule"
+        },
+        {
+          "text": "2) Parse and validate product_ids parameter",
+          "type": "validation_rule"
+        },
+        {
+          "text": "3) Validate product_id exists and has OTA allocation",
+          "type": "validation_rule"
+        },
+        {
+          "text": "4) Check requested quantity against available OTA inventory",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [
+        {
+          "text": "CREATE TABLE channel_reservations (",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": [
+        {
+          "text": "106: 1800, 107: 1200, 108: 1300}",
+          "type": "response_code"
+        },
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "401:",
+          "type": "response_code"
+        },
+        {
+          "text": "403:",
+          "type": "response_code"
+        },
+        {
+          "text": "422:",
+          "type": "response_code"
+        },
+        {
+          "text": "201:",
+          "type": "response_code"
+        },
+        {
+          "text": "400:",
+          "type": "response_code"
+        },
+        {
+          "text": "401:",
+          "type": "response_code"
+        },
+        {
+          "text": "403:",
+          "type": "response_code"
+        },
+        {
+          "text": "409:",
+          "type": "response_code"
+        },
+        {
+          "text": "422:",
+          "type": "response_code"
+        },
+        {
+          "text": "108:",
+          "type": "response_code"
+        },
+        {
+          "text": "106: 2000 units allocated to \"ota\" channel",
+          "type": "response_code"
+        },
+        {
+          "text": "107: 1500 units allocated to \"ota\" channel",
+          "type": "response_code"
+        },
+        {
+          "text": "108: 1500 units allocated to \"ota\" channel",
+          "type": "response_code"
+        }
+      ]
+    },
+    {
+      "file": "ota-order-retrieval.md",
+      "card": "ota-order-retrieval",
+      "apiPaths": [
+        {
+          "text": "/api/ota/orders",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders/:id/tickets",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders/:id/tickets",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders/:id/tickets",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders/{id}/tickets:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders/:id/tickets:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders/:id/tickets",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders/:id/tickets",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/orders",
+          "type": "api_path"
+        }
+      ],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate order belongs to requesting OTA partner",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Ensure QR codes are only provided for active tickets",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Authenticate and validate order access",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": [
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "404:",
+          "type": "response_code"
+        },
+        {
+          "text": "403:",
+          "type": "response_code"
+        }
+      ]
+    },
+    {
+      "file": "ota-premade-tickets.md",
+      "card": "ota-premade-tickets",
+      "apiPaths": [
+        {
+          "text": "/api/ota/tickets/bulk-generate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/:code/activate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/bulk-generate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/:code/activate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/bulk-generate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/:code/activate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/bulk-generate:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/{code}/activate:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/bulk-generate:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/:code/activate:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/bulk-generate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/{code}/activate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/bulk-generate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/{TICKET_CODE}/activate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/bulk-generate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/tickets/bulk-generate",
+          "type": "api_path"
+        }
+      ],
+      "validationRules": [
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [product_id, quantity, batch_id]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "description: Required for reseller_batch mode",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [customer_details, payment_reference]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [name, email, phone]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Payment reference is required for audit trail",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate product exists and has available inventory",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check batch_id uniqueness for tracking",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Ensure ticket_code uniqueness across all tickets",
+          "type": "validation_rule"
+        },
+        {
+          "text": "2) Validate product_id exists and has inventory",
+          "type": "validation_rule"
+        },
+        {
+          "text": "3) Validate customer details completeness",
+          "type": "validation_rule"
+        },
+        {
+          "text": "# Expected: 401 {\"error\": \"API_KEY_REQUIRED\"}",
+          "type": "validation_rule"
+        },
+        {
+          "text": "# Expected: 400 {\"error\": \"INVALID_REQUEST\", \"message\": \"reseller_metadata.intended_reseller is required for reseller_batch mode\"}",
+          "type": "validation_rule"
+        },
+        {
+          "text": "**Check batch persistence:**",
+          "type": "validation_rule"
+        },
+        {
+          "text": "### AI Workflow Validation Checklist",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- [ ] **Reality Check**: Can curl the endpoint successfully",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [
+        {
+          "text": "Table: ota_ticket_batches** *(Batch-level metadata and pricing)*",
+          "type": "database_schema"
+        },
+        {
+          "text": "Table: pre_generated_tickets** *(Simplified, references batch)*",
+          "type": "database_schema"
+        },
+        {
+          "text": "Table: ota_orders** *(Existing)*",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": [
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "422:",
+          "type": "response_code"
+        },
+        {
+          "text": "201:",
+          "type": "response_code"
+        },
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "400:",
+          "type": "response_code"
+        },
+        {
+          "text": "404:",
+          "type": "response_code"
+        },
+        {
+          "text": "409:",
+          "type": "response_code"
+        }
+      ]
+    },
+    {
+      "file": "ota-reservation-management.md",
+      "card": "ota-reservation-management",
+      "apiPaths": [
+        {
+          "text": "/api/ota/reservations",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id/activate",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/cleanup",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id/",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/{id}:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/{id}/activate:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/cleanup:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/cleanup:",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/cleanup",
+          "type": "api_path"
+        },
+        {
+          "text": "/api/ota/reservations/:id/activate",
+          "type": "api_path"
+        }
+      ],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [customer_name, customer_email]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Authenticate and validate reservation access",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": [
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "404:",
+          "type": "response_code"
+        },
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "404:",
+          "type": "response_code"
+        },
+        {
+          "text": "409:",
+          "type": "response_code"
+        },
+        {
+          "text": "200:",
+          "type": "response_code"
+        },
+        {
+          "text": "403:",
+          "type": "response_code"
+        },
+        {
+          "text": "404:",
+          "type": "response_code"
+        },
+        {
+          "text": "409:",
+          "type": "response_code"
+        },
+        {
+          "text": "200:",
+          "type": "response_code"
+        }
+      ]
+    },
+    {
+      "file": "payment-webhook.md",
+      "card": "payment-webhook",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "1) Validate signature (mock validation for now)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "3) Check order status is PENDING",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "promotion-detail-endpoint.md",
+      "card": "promotion-detail-endpoint",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate product ID is numeric and positive (400 if invalid)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Parse and validate product ID from path parameter",
+          "type": "validation_rule"
+        },
+        {
+          "text": "**No Database Changes Required**",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "qr-token.md",
+      "card": "qr-token",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Auth required; ticket must belong to user and not be `void/expired`.",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Validate ownership and status.",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "refund-processing.md",
+      "card": "refund-processing",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [order_id, amount, reason]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate order exists and is in PAID status",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check refund amount <= (order total - previous refunds)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Validate request (order_id, amount, reason)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "6) Validate new refund amount",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [
+        {
+          "text": "table:",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": []
+    },
+    {
+      "file": "reports-redemptions.md",
+      "card": "reports-redemptions",
+      "apiPaths": [],
+      "validationRules": [],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "seat-lock-service.md",
+      "card": "seat-lock-service",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [route_id, travel_date, seats]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "ticket-cancellation.md",
+      "card": "ticket-cancellation",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "API->>API: Validate ownership & cancellation rules",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check ticket status allows cancellation (not REDEEMED, EXPIRED, VOID)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "4) Validate ticket status is cancellable (ACTIVE or PARTIALLY_REDEEMED)",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [
+        {
+          "text": "table:",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": []
+    },
+    {
+      "file": "ticket-lifecycle-daemon.md",
+      "card": "ticket-lifecycle-daemon",
+      "apiPaths": [],
+      "validationRules": [],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "tickets-issuance.md",
+      "card": "tickets-issuance",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "- Validate order exists and status is PAID",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate all products in order exist and are active",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check for existing tickets for orderId (idempotency)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Use transaction boundaries to ensure atomicity",
+          "type": "validation_rule"
+        },
+        {
+          "text": "4) Check if tickets already exist for this order (return existing if found)",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [
+        {
+          "text": "CREATE TABLE tickets (",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": []
+    },
+    {
+      "file": "tickets-scan.md",
+      "card": "tickets-scan",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "card: \"Scan redeem — atomic validate & redeem\"",
+          "type": "validation_rule"
+        },
+        {
+          "text": "summary: Validate + redeem in one atomic call",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "5) Validate remaining > 0 and ticket status.",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "travel-search-hub.md",
+      "card": "travel-search-hub",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "user-activity-endpoint.md",
+      "card": "user-activity-endpoint",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "API->>API: Validate JWT token",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate query parameters (limit, offset, date ranges)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Ensure date ranges are logical (from_date < to_date)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Validate JWT token and extract user_id",
+          "type": "validation_rule"
+        },
+        {
+          "text": "2) Parse and validate query parameters",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [
+        {
+          "text": "CREATE TABLE user_activity_log (",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": []
+    },
+    {
+      "file": "user-profile-endpoint.md",
+      "card": "user-profile-endpoint",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "API->>API: Validate JWT token",
+          "type": "validation_rule"
+        },
+        {
+          "text": "API->>API: Validate input and ownership",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- All profile modifications must be validated before saving",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate email format and uniqueness (excluding current user)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Validate JWT token and extract user_id",
+          "type": "validation_rule"
+        },
+        {
+          "text": "2) Validate JWT token and extract user_id",
+          "type": "validation_rule"
+        },
+        {
+          "text": "4) Validate input data (email uniqueness, format validation)",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "user-settings-endpoint.md",
+      "card": "user-settings-endpoint",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "API->>API: Validate JWT token",
+          "type": "validation_rule"
+        },
+        {
+          "text": "API->>API: Validate input and ownership",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate enum values for language, timezone, date format",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Validate boolean values for notification preferences",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1) Validate JWT token and extract user_id",
+          "type": "validation_rule"
+        },
+        {
+          "text": "2) Validate JWT token and extract user_id",
+          "type": "validation_rule"
+        },
+        {
+          "text": "4) Validate input data (enum values, data types)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "**No Migration Required** - Uses existing `preferences` JSON field from user-profile-endpoint",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "validators-sessions.md",
+      "card": "validators-sessions",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [device_id]",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [
+        {
+          "text": "CREATE TABLE IF NOT EXISTS validator_sessions (",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": []
+    },
+    {
+      "file": "venue-analytics-reporting.md",
+      "card": "venue-analytics-reporting",
+      "apiPaths": [],
+      "validationRules": [],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "venue-enhanced-scanning.md",
+      "card": "venue-enhanced-scanning",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "- **Venue-specific restrictions**: Function codes validated per venue",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- **Performance optimized**: Sub-second response times with fraud checks",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1. **Session Validation**: Active venue session required",
+          "type": "validation_rule"
+        },
+        {
+          "text": "5. **Entitlement Check**: Remaining uses must be > 0",
+          "type": "validation_rule"
+        },
+        {
+          "text": "\"fraud_checks_passed\": true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "\"fraud_checks_passed\": false",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Response time: 1-3ms for fraud checks",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [
+        {
+          "text": "table:**",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": []
+    },
+    {
+      "file": "venue-session-management.md",
+      "card": "venue-session-management",
+      "apiPaths": [],
+      "validationRules": [],
+      "databaseSchemas": [
+        {
+          "text": "table:**",
+          "type": "database_schema"
+        },
+        {
+          "text": "table:**",
+          "type": "database_schema"
+        }
+      ],
+      "responseCodes": []
+    },
+    {
+      "file": "wechat-auth-login.md",
+      "card": "wechat-auth-login",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "security: []  # Public endpoint (no authentication required)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required:",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required:",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required:",
+          "type": "validation_rule"
+        },
+        {
+          "text": "example: \"WeChat code is required\"",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- **code** (required):",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1. Validate request body",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check: code is non-empty string",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check: errcode absent OR errcode === 0",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Required: openid must be present",
+          "type": "validation_rule"
+        },
+        {
+          "text": "**When** Backend validates request body",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Message: \"WeChat code is required\"",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- ✅ **Validate JWT_SECRET** is strong and not default value",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- ✅ Migration script validated",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": [
+        {
+          "text": "029: Invalid code (expired or already used)",
+          "type": "response_code"
+        },
+        {
+          "text": "163: Invalid code format",
+          "type": "response_code"
+        }
+      ]
+    },
+    {
+      "file": "wechat-payment-session.md",
+      "card": "wechat-payment-session",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: [orderId, amount, currency]",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": []
+    },
+    {
+      "file": "wechat-phone-binding.md",
+      "card": "wechat-phone-binding",
+      "apiPaths": [],
+      "validationRules": [
+        {
+          "text": "BACKEND->>BACKEND: Validate JWT token (authenticate middleware)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- BearerAuth: []  # JWT token required",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required: true",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required:",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required:",
+          "type": "validation_rule"
+        },
+        {
+          "text": "required:",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- User MUST be logged in (valid JWT token required)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- **code** (required):",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- **JWT token** (required in Authorization header):",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Expiry: Checked by JWT library",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Caching: Required to avoid hitting daily 2000 request limit",
+          "type": "validation_rule"
+        },
+        {
+          "text": "1. Validate JWT token (authenticate middleware)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "2. Validate request body",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check: code is non-empty string",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check cache: access_token exists and not expired?",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- Check: errcode === 0",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- ✅ **JWT token validation** (authenticate middleware ensures user is logged in)",
+          "type": "validation_rule"
+        },
+        {
+          "text": "- [ ] Access token caching validated (hit rate >95%)",
+          "type": "validation_rule"
+        }
+      ],
+      "databaseSchemas": [],
+      "responseCodes": [
+        {
+          "text": "013: Invalid appid",
+          "type": "response_code"
+        },
+        {
+          "text": "001: Invalid or expired access_token",
+          "type": "response_code"
+        },
+        {
+          "text": "029: Invalid phone authorization code",
+          "type": "response_code"
+        },
+        {
+          "text": "001: API unauthorized (mini-program not certified)",
+          "type": "response_code"
+        }
+      ]
+    }
+  ],
+  "implementation": [
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/admin/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/packages/templates",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "PUT",
+          "path": "/routes/fares/:routeCode",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/packages/templates",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/packages/templates/:templateId/versions",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/packages/templates/:templateId",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/routes/fares/:routeCode",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/routes/fares/:routeCode/history",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/routes/fares/:routeCode/restore",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/auth/wechat.router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/wechat/login",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/wechat/phone",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/catalog/router.ts",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/promotions/:id",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/dev/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/reset",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/operators/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/login",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/orders/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/ota/router.ts",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/inventory",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/reserve",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/reservations/:id",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/reservations",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/reservations/:id/activate",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/reservations/cleanup",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "DELETE",
+          "path": "/reservations/:id",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/orders",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/orders/:id/tickets",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/tickets",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/tickets/bulk-generate",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/tickets/:code/activate",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/batches/:id/analytics",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/billing/summary",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/batches/:id/redemptions",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/campaigns/analytics",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/payments/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/wechat/session",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/notify",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/policies/router.ts",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/cancellation-policies",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/profile/router.ts",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "PUT",
+          "path": "/",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/settings",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "PUT",
+          "path": "/settings",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/activity",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/redeem/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/:code/qr-token",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/scan",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/refunds/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/refund",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/my/refunds",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/reports/router.ts",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/redemptions",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/reservations/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "DELETE",
+          "path": "/:reservationId",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/tickets/router.ts",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/tickets",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/:code/cancel",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/travel/router.ts",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/hot-cities",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/blackout-dates",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/search",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/users/router.ts",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/:id",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "PUT",
+          "path": "/:id",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "type": "implementation_endpoint"
+        }
+      ]
+    },
+    {
+      "file": "/Users/mac/projects/synque/express/src/modules/venue/router.ts",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/sessions",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "POST",
+          "path": "/scan",
+          "type": "implementation_endpoint"
+        },
+        {
+          "method": "GET",
+          "path": "/:venue_code/analytics",
+          "type": "implementation_endpoint"
+        }
+      ]
+    }
+  ]
+}

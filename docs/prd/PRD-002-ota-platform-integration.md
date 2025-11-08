@@ -64,6 +64,7 @@ deadline: "2025-11-15"
   - Maintain existing direct sales revenue (baseline protection)
   - Generate additional revenue through OTA channel (incremental growth)
   - **NEW**: Enable B2B2C revenue streams through reseller distribution
+  - **NEW**: Support custom pricing overrides for special batch campaigns
   - Preserve complex pricing model across all channels
 - **Operational Constraints**:
   - Nov 15, 2025 hard deadline for OTA partner launch
@@ -133,6 +134,18 @@ deadline: "2025-11-15"
   - Generate billing summaries per reseller per billing period
   - Real-time redemption counts per batch for reseller analytics
   - Automated billing event generation when tickets are redeemed at venues
+- **Priority**: High
+
+**Special Batch Pricing Override** *(NEW)*
+- **Description**: Enable custom pricing for specific ticket batches independent of standard product pricing
+- **Business Value**: Supports promotional campaigns, volume discounts, and partner-specific pricing strategies
+- **User Value**: OTA partners can offer competitive pricing for special campaigns while maintaining locked-in pricing contracts
+- **Acceptance Criteria**:
+  - Override standard product pricing with custom pricing_snapshot per batch
+  - Maintain pricing consistency within batch regardless of when tickets are activated
+  - Support all pricing components (base_price, customer_type_pricing, weekend_premium, currency)
+  - Default to product pricing when no special pricing is specified
+  - Locked-in pricing survives product price changes during batch lifecycle
 - **Priority**: High
 
 ### Technical Requirements
@@ -354,9 +367,9 @@ POST /api/ota/tickets/bulk-generate:
     product_id: number
     quantity: number (1-5000)
     batch_id: string
-    distribution_mode: "direct_sale" | "reseller_batch"  # NEW: Specify intended use
-    reseller_metadata?: {                                # NEW: For B2B2C distribution
-      intended_reseller: string
+    distribution_mode: "direct_sale" | "reseller_batch"  # NEW: Specify intended use (affects expiry: 7 days vs 30 days)
+    reseller_metadata?: {                                # NEW: For B2B2C distribution (REQUIRED for reseller_batch mode)
+      intended_reseller: string                        # REQUIRED when distribution_mode = "reseller_batch"
       batch_purpose: string
       distribution_notes?: string
     }
@@ -366,6 +379,15 @@ POST /api/ota/tickets/bulk-generate:
       special_conditions?: string[]                     # e.g., ["valid_weekends_only"]
       marketing_tags?: string[]                         # e.g., ["premium", "family_friendly"]
       promotional_code?: string                         # Associated promo code
+    }
+    special_pricing?: {                                  # NEW: Custom pricing override
+      base_price: number                                # Override product base price
+      customer_type_pricing: array[{                    # Override customer discounts
+        customer_type: string                           # e.g., "child", "elderly"
+        price: number                                   # Custom price for this batch
+      }]
+      weekend_premium: number                           # Override weekend premium
+      currency: string                                  # Pricing currency (default: HKD)
     }
   responses:
     201:
@@ -380,6 +402,7 @@ POST /api/ota/tickets/bulk-generate:
       ]
       total_generated: number
       expires_at: string                                # NEW: Batch-level expiry for reseller batches
+      pricing_snapshot: object                          # NEW: Locked pricing used for this batch
     422: "Invalid quantity or product not available"
 
 #### Individual Ticket Activation
@@ -541,12 +564,26 @@ GET /api/ota/campaigns/analytics:                        # NEW: Campaign perform
 - **Automatic Cleanup**: Expired reservations release inventory without manual intervention
 - **Error Recovery**: System continues operating if individual reservations fail
 
+### Distribution Mode Behavior *(NEW)*
+- **Direct Sale Mode (`direct_sale`)**:
+  - **Expiry Period**: 7 days from batch generation
+  - **Use Case**: OTA platform sells directly to end customers
+  - **Metadata Requirements**: No special requirements
+  - **Target Scenario**: Quick turnaround consumer sales
+- **Reseller Batch Mode (`reseller_batch`)**:
+  - **Expiry Period**: 30 days from batch generation (4x longer for B2B2C workflow)
+  - **Use Case**: OTA distributes tickets to sub-resellers who then sell to end customers
+  - **Metadata Requirements**: `reseller_metadata.intended_reseller` is REQUIRED
+  - **Target Scenario**: B2B2C distribution networks requiring extended sales cycles
+- **Common Behavior**: Both modes use same `ota_ticket_batches` table with `distribution_mode` field differentiation
+
 ### Reseller Billing Logic *(NEW)*
 - **Billing Trigger**: Charge events generated when tickets are redeemed at venues (not when purchased)
 - **Batch Traceability**: Every redemption event links back to originating batch and reseller
 - **Billing Periods**: Monthly billing cycles with real-time redemption tracking
 - **Revenue Recognition**: Payment due when end customer uses the service
 - **Pricing Model**: Resellers pay wholesale price from batch `pricing_snapshot` at redemption time
+- **Special Pricing Support**: Custom batch pricing overrides locked-in at generation time
 - **Settlement**: Automated billing summaries generated per reseller per month
 
 ### System Architecture Flows
@@ -645,10 +682,20 @@ Headers: x-api-key: ota_test_key_12345
 Body: {
   "product_id": 106,
   "quantity": 5,
-  "batch_id": "TEST-BATCH-001"
+  "batch_id": "TEST-BATCH-001",
+  "special_pricing": {
+    "base_price": 250,
+    "customer_type_pricing": [
+      {"customer_type": "child", "price": 150},
+      {"customer_type": "elderly", "price": 200}
+    ],
+    "weekend_premium": 25,
+    "currency": "HKD"
+  }
 }
 Expected: 201 response with 5 ticket codes and QR codes
 Verify: Each ticket has status "PRE_GENERATED"
+Verify: pricing_snapshot includes custom special_pricing values
 
 Step 3: Activate Individual Ticket
 POST /api/ota/tickets/{ticket_code}/activate
@@ -678,6 +725,8 @@ Test Scenarios:
 - Invalid ticket: Try activating non-existent code → 404 error
 - Inventory validation: Generate more tickets than available → 409 error
 - Missing permissions: Use wrong API key → 403 error
+- Special pricing override: Generate batch with custom pricing → Verify pricing_snapshot locked-in
+- Default pricing fallback: Generate batch without special_pricing → Use product pricing
 ```
 
 ## Success Metrics & KPIs

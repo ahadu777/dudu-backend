@@ -360,7 +360,8 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
       batch_id,
       distribution_mode,
       reseller_metadata,
-      batch_metadata
+      batch_metadata,
+      special_pricing
     } = req.body;
 
     // Validate required fields
@@ -385,7 +386,8 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
       batch_id,
       distribution_mode: distribution_mode || 'direct_sale',
       reseller_metadata,
-      batch_metadata
+      batch_metadata,
+      special_pricing
     });
 
     res.status(201).json(result);

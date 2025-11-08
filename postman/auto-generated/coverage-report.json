@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-11-08T05:45:48.420Z",
+  "summary": {
+    "total_requirements": 403,
+    "total_tests": 4,
+    "coverage_percentage": 30
+  },
+  "requirement_traceability": {
+    "prd_coverage": {
+      "total": 107,
+      "covered": 1,
+      "percentage": 1
+    },
+    "story_coverage": {
+      "total": 0,
+      "covered": 0,
+      "percentage": 0
+    },
+    "card_coverage": {
+      "total": 70,
+      "covered": 70,
+      "percentage": 100
+    },
+    "implementation_coverage": {
+      "total": 60,
+      "covered": 0,
+      "percentage": 0
+    }
+  },
+  "test_categories": {
+    "business_rules": 1,
+    "api_contracts": 1,
+    "data_persistence": 1,
+    "integration": 1
+  },
+  "gaps_identified": []
+}
