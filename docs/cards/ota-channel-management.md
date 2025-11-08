@@ -114,6 +114,13 @@ paths:
                         type: object
                         example:
                           "2025-12-31": {"multiplier": 1.5}
+                      customer_discounts:
+                        type: object
+                        description: Product-specific customer type discounts
+                        example:
+                          "106": {"child": 100, "elderly": 50, "student": 50}
+                          "107": {"child": 150, "family": 100, "elderly": 75}
+                          "108": {"vip": 200, "elderly": 100}
         401:
           description: Invalid or missing API key
         403:

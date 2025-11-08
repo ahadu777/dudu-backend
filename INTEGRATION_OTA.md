@@ -41,9 +41,9 @@ curl -H "X-API-Key: ota251103_key_67890" \
 ```json
 {
   "available_quantities": {
-    "106": 1882,
-    "107": 1490,
-    "108": 1500
+    "106": 1884,
+    "107": 1480,
+    "108": 1490
   },
   "pricing_context": {
     "base_prices": {
@@ -55,6 +55,22 @@ curl -H "X-API-Key: ota251103_key_67890" \
     "special_dates": {
       "2025-12-31": { "multiplier": 1.5 },
       "2026-02-18": { "multiplier": 1.3 }
+    },
+    "customer_discounts": {
+      "106": {
+        "child": 100,
+        "elderly": 50,
+        "student": 50
+      },
+      "107": {
+        "child": 150,
+        "family": 100,
+        "elderly": 75
+      },
+      "108": {
+        "vip": 200,
+        "elderly": 100
+      }
     }
   }
 }

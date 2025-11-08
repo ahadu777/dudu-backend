@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="OTA B2B2C Billing - E2E Tests" tests="5" time="0.039">
+  <testsuite name="Health Check" id="950b22cf-c590-4a0d-a3f8-ad0ca9d5bc95" timestamp="2025-11-08T05:25:20.897Z" tests="1" failures="0" errors="0" time="0.019">
+    <testcase name="Server is healthy" time="0.019" classname="HealthCheck"/>
+  </testsuite>
+  <testsuite name="Generate B2B2C Reseller Batch" id="7c82c6a6-02db-4169-a507-9c5ad9b09622" timestamp="2025-11-08T05:25:20.897Z" tests="5" failures="0" errors="0" time="0.010">
+    <testcase name="Bulk generation successful" time="0.010" classname="GenerateB2B2CResellerBatch"/>
+    <testcase name="Response has required fields" time="0.010" classname="GenerateB2B2CResellerBatch"/>
+    <testcase name="Pricing snapshot captured" time="0.010" classname="GenerateB2B2CResellerBatch"/>
+    <testcase name="Reseller metadata preserved" time="0.010" classname="GenerateB2B2CResellerBatch"/>
+    <testcase name="Tickets have valid structure" time="0.010" classname="GenerateB2B2CResellerBatch"/>
+  </testsuite>
+  <testsuite name="Activate Pre-Generated Ticket" id="f1ab222e-fb99-45fe-aeb8-ef4ca50876fb" timestamp="2025-11-08T05:25:20.897Z" tests="3" failures="0" errors="0" time="0.004">
+    <testcase name="Activation successful" time="0.004" classname="ActivatePreGeneratedTicket"/>
+    <testcase name="Activation response valid" time="0.004" classname="ActivatePreGeneratedTicket"/>
+    <testcase name="Customer details preserved" time="0.004" classname="ActivatePreGeneratedTicket"/>
+  </testsuite>
+  <testsuite name="Test API Key Required" id="a2e98d83-c597-4614-b4df-559d0dcc1be3" timestamp="2025-11-08T05:25:20.897Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="API key required error" time="0.003" classname="TestApiKeyRequired"/>
+    <testcase name="Error message correct" time="0.003" classname="TestApiKeyRequired"/>
+  </testsuite>
+  <testsuite name="Test Missing Intended Reseller" id="a3fe1f1d-675f-464e-a133-cbf5e2b20436" timestamp="2025-11-08T05:25:20.897Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Validation error for missing intended_reseller" time="0.003" classname="TestMissingIntendedReseller"/>
+    <testcase name="Error message mentions intended_reseller" time="0.003" classname="TestMissingIntendedReseller"/>
+  </testsuite>
+</testsuites>

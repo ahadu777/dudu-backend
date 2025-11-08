@@ -4,12 +4,13 @@ slug: ota-premade-tickets
 team: "A - Commerce"
 oas_paths: ["/api/ota/tickets/bulk-generate", "/api/ota/tickets/:code/activate"]
 migrations: ["db/migrations/0012_pre_generated_tickets.sql", "src/migrations/006-create-ota-ticket-batches.ts"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: "init-ai"
 pr: ""
-newman_report: "reports/newman/ota-premade-tickets.xml"
-last_update: "2025-11-06T00:00:00+08:00"
+newman_report: "reports/newman/ota-b2b2c-billing.xml"
+integration_runbook: "docs/integration/ota-b2b2c-billing-runbook.md"
+last_update: "2025-11-08T05:15:00+08:00"
 related_stories: ["US-012"]
 relationships:
   depends_on: ["ota-channel-management"]
@@ -494,11 +495,120 @@ paths:
 **When** GET /api/ota/tickets with invalid params
 **Then** returns 422 Unprocessable Entity with clear validation error
 
-## 9) Postman Coverage
-- Ticket list query: Test all filter combinations (status, batch_id, date range, pagination)
-- Bulk generation: Test various quantities and batch tracking
-- Activation flow: Test complete customer onboarding
-- Error cases: Test double activation, invalid tickets, incomplete data, invalid pagination
-- Permissions: Test API key permission requirements
-- Database verification: Check status transitions and order creation
-- Multi-partner isolation: Verify tickets are filtered by partner_id
+## 9) Testing & Validation
+
+### Valid API Keys & Permissions
+```bash
+# Available test API keys (from src/middlewares/otaAuth.ts)
+# ota_test_key_12345 - permissions: ['tickets:bulk-generate', 'tickets:activate']
+# ota_full_access_key_99999 - permissions: ['tickets:bulk-generate', 'tickets:activate'] + others
+```
+
+### Concrete Test Examples
+
+**✅ Valid Bulk Generation Request:**
+```bash
+curl -X POST http://localhost:8080/api/ota/tickets/bulk-generate \
+-H "Content-Type: application/json" \
+-H "X-API-Key: ota_test_key_12345" \
+-d '{
+  "batch_id": "TEST_BATCH_001",
+  "partner_id": "test_partner",
+  "product_id": 106,
+  "quantity": 5,
+  "distribution_mode": "reseller_batch",
+  "reseller_metadata": {
+    "intended_reseller": "Test Travel Agency",
+    "commission_rate": 0.15,
+    "markup_percentage": 0.25,
+    "payment_terms": "net_30",
+    "auto_invoice": true,
+    "billing_contact": "billing@testagency.com"
+  },
+  "batch_metadata": {
+    "campaign_type": "flash_sale",
+    "campaign_name": "Test Campaign",
+    "promotion_code": "TEST2024",
+    "target_demographic": "test_users",
+    "geographic_focus": "Test Region"
+  }
+}'
+
+# Expected Response: 201 with batch_id, tickets[], total_generated: 5
+```
+
+**✅ Valid Activation Request:**
+```bash
+# Use ticket_code from bulk generation response
+curl -X POST http://localhost:8080/api/ota/tickets/{TICKET_CODE}/activate \
+-H "Content-Type: application/json" \
+-H "X-API-Key: ota_test_key_12345" \
+-d '{
+  "customer_details": {
+    "name": "John Smith",
+    "email": "john.smith@example.com",
+    "phone": "+1234567890"
+  },
+  "payment_reference": "PAY-TEST-001"
+}'
+
+# Expected Response: 200 with ticket_code, order_id, status: "ACTIVE"
+```
+
+### Error Case Validation
+
+**❌ Missing API Key:**
+```bash
+curl -X POST http://localhost:8080/api/ota/tickets/bulk-generate \
+-H "Content-Type: application/json" \
+-d '{"batch_id": "TEST", "product_id": 106, "quantity": 1}'
+
+# Expected: 401 {"error": "API_KEY_REQUIRED"}
+```
+
+**❌ Missing intended_reseller for reseller_batch:**
+```bash
+curl -X POST http://localhost:8080/api/ota/tickets/bulk-generate \
+-H "Content-Type: application/json" \
+-H "X-API-Key: ota_test_key_12345" \
+-d '{
+  "batch_id": "TEST_BATCH_002",
+  "product_id": 106,
+  "quantity": 1,
+  "distribution_mode": "reseller_batch",
+  "reseller_metadata": {
+    "commission_rate": 0.15
+  }
+}'
+
+# Expected: 400 {"error": "INVALID_REQUEST", "message": "reseller_metadata.intended_reseller is required for reseller_batch mode"}
+```
+
+### Database Verification Commands
+
+**Check batch persistence:**
+```bash
+# Database mode (USE_DATABASE=true)
+mysql -h $DB_HOST -u $DB_USERNAME -p$DB_PASSWORD $DB_DATABASE \
+-e "SELECT batch_id, partner_id, total_quantity, tickets_generated, status FROM ota_ticket_batches WHERE batch_id = 'TEST_BATCH_001';"
+
+# Expected: 1 row with matching data
+```
+
+**Verify mock vs database behavior:**
+```bash
+# Mock mode: export USE_DATABASE=false && npm start
+# Database mode: export USE_DATABASE=true && npm start
+# Compare response formats and database persistence
+```
+
+### AI Workflow Validation Checklist
+
+- [ ] **Reality Check**: Can curl the endpoint successfully
+- [ ] **Database Mode**: Data persists in ota_ticket_batches table
+- [ ] **Mock Mode**: No database persistence, predictable ticket IDs
+- [ ] **API Contract**: Response matches OpenAPI specification
+- [ ] **Error Handling**: Proper 4xx responses for invalid inputs
+- [ ] **Authentication**: API key validation works
+- [ ] **Business Logic**: Pricing snapshots, reseller metadata preserved
+- [ ] **Concurrent Safety**: No duplicate batch_ids or ticket_codes
