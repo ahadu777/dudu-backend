@@ -8,12 +8,39 @@ const router = Router();
 // Apply OTA authentication to all routes
 router.use(otaAuthMiddleware());
 
+// Use the same interface as the middleware
 interface AuthenticatedRequest extends Request {
   ota_partner?: {
     id: string;
     name: string;
     permissions: string[];
   };
+}
+
+/**
+ * Extract partner ID with fallback logic
+ * 1. Primary: Use partner ID from middleware (req.ota_partner.id)
+ * 2. Fallback: Default to 'ota' if middleware didn't set partner info
+ *
+ * The middleware should always set req.ota_partner.id after successful authentication.
+ * If it's not set, that indicates an issue with the middleware or authentication.
+ */
+function getPartnerIdWithFallback(req: AuthenticatedRequest): string {
+  // Primary: Use partner ID from middleware
+  if (req.ota_partner?.id) {
+    return req.ota_partner.id;
+  }
+
+  // Log when fallback is used - this indicates a middleware issue
+  logger.warn('ota.partner_id.fallback_to_ota', {
+    has_ota_partner: !!req.ota_partner,
+    partner_name: req.ota_partner?.name,
+    api_key_present: !!(req.headers['x-api-key']),
+    reason: 'req.ota_partner.id not available - middleware may have failed'
+  });
+
+  // Fallback to 'ota' channel
+  return 'ota';
 }
 
 // GET /api/ota/inventory - Get real-time package availability
@@ -32,7 +59,8 @@ router.get('/inventory', otaAuthMiddleware('inventory:read'), async (req: Authen
       });
     }
 
-    const inventory = await otaService.getInventory(productIds);
+    const partnerId = getPartnerIdWithFallback(req);
+    const inventory = await otaService.getInventory(productIds, partnerId);
 
     res.json(inventory);
 
@@ -70,11 +98,12 @@ router.post('/reserve', otaAuthMiddleware('reserve:create'), async (req: Authent
       });
     }
 
+    const partnerId = getPartnerIdWithFallback(req);
     const reservation = await otaService.createReservation({
       product_id,
       quantity,
       reservation_expires_at
-    });
+    }, partnerId);
 
     res.status(201).json(reservation);
 
@@ -120,10 +149,11 @@ router.get('/reservations/:id', async (req: AuthenticatedRequest, res: Response)
   }
 });
 
-// GET /api/ota/reservations - List active reservations (for debugging/monitoring)
+// GET /api/ota/reservations - List active reservations for specific partner
 router.get('/reservations', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const reservations = await otaService.getActiveReservations();
+    const partnerId = getPartnerIdWithFallback(req);
+    const reservations = await otaService.getActiveReservations(partnerId);
 
     res.json({
       reservations,
@@ -333,7 +363,8 @@ router.get('/tickets', otaAuthMiddleware('inventory:read'), async (req: Authenti
       filters.limit = limitNum;
     }
 
-    const result = await otaService.getTickets(req.ota_partner!.id, filters);
+    const partnerId = getPartnerIdWithFallback(req);
+    const result = await otaService.getTickets(partnerId, filters);
 
     res.json(result);
 
@@ -380,7 +411,8 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
       });
     }
 
-    const result = await otaService.bulkGenerateTickets(req.ota_partner!.id, {
+    const partnerId = getPartnerIdWithFallback(req);
+    const result = await otaService.bulkGenerateTickets(partnerId, {
       product_id,
       quantity,
       batch_id,
@@ -431,7 +463,8 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
       });
     }
 
-    const result = await otaService.activatePreMadeTicket(ticketCode, req.ota_partner!.id, {
+    const partnerId = getPartnerIdWithFallback(req);
+    const result = await otaService.activatePreMadeTicket(ticketCode, partnerId, {
       customer_details,
       payment_reference
     });

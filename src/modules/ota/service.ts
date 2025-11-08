@@ -130,8 +130,8 @@ export class OTAService {
     }
   }
 
-  async getInventory(productIds?: number[]): Promise<OTAInventoryResponse> {
-    logger.info('ota.inventory.requested', { product_ids: productIds });
+  async getInventory(productIds?: number[], partnerId?: string): Promise<OTAInventoryResponse> {
+    logger.info('ota.inventory.requested', { product_ids: productIds, partner_id: partnerId });
 
     const targetProducts = productIds || [106, 107, 108]; // Default to cruise packages
 
@@ -152,9 +152,10 @@ export class OTAService {
       };
 
       for (const inventory of inventories) {
-        const otaAvailable = inventory.getChannelAvailable('ota');
-        if (otaAvailable > 0) {
-          availability[inventory.product_id] = otaAvailable;
+        const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback to 'ota'
+        const available = inventory.getChannelAvailable(channelId);
+        if (available > 0) {
+          availability[inventory.product_id] = available;
 
           // Get pricing from product
           if (inventory.product) {
@@ -184,7 +185,8 @@ export class OTAService {
       // Fallback to mock data
       logger.warn('ota.inventory.fallback_to_mock', { reason: 'database_unavailable' });
 
-      const availability = mockDataStore.getChannelAvailability('ota', targetProducts);
+      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback to 'ota'
+      const availability = mockDataStore.getChannelAvailability(channelId, targetProducts);
       const pricing_context = {
         base_prices: {} as { [productId: number]: { weekday: number; weekend: number } },
         customer_types: ['adult', 'child', 'elderly'],
@@ -215,10 +217,11 @@ export class OTAService {
     }
   }
 
-  async createReservation(request: OTAReserveRequest): Promise<OTAReserveResponse> {
+  async createReservation(request: OTAReserveRequest, partnerId?: string): Promise<OTAReserveResponse> {
     logger.info('ota.reservation.requested', {
       product_id: request.product_id,
-      quantity: request.quantity
+      quantity: request.quantity,
+      partner_id: partnerId
     });
 
     // Validate quantity
@@ -261,9 +264,10 @@ export class OTAService {
         };
 
         // Create reservation with database transaction
+        const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback
         const reservation = await repo.createReservation(
           request.product_id,
-          'ota',
+          channelId,
           request.quantity,
           expiresAt,
           pricing_snapshot
@@ -272,7 +276,7 @@ export class OTAService {
         if (!reservation) {
           // Get current availability for error message
           const inventory = await repo.getInventoryByProductId(request.product_id);
-          const available = inventory ? inventory.getChannelAvailable('ota') : 0;
+          const available = inventory ? inventory.getChannelAvailable(partnerId || 'ota') : 0;
 
           logger.info('ota.reservation.insufficient_inventory', {
             product_id: request.product_id,
@@ -323,23 +327,25 @@ export class OTAService {
         };
       }
 
-      if (!product.channel_allocations.ota) {
+      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback
+      if (!product.channel_allocations[channelId]) {
         throw {
-          code: 'OTA_NOT_AVAILABLE',
-          message: `Product ${request.product_id} is not available for OTA sales`
+          code: 'CHANNEL_NOT_AVAILABLE',
+          message: `Product ${request.product_id} is not available for channel ${channelId}`
         };
       }
 
       const ttlHours = (expiresAt.getTime() - Date.now()) / (60 * 60 * 1000);
       const reservation = mockDataStore.createChannelReservation(
         request.product_id,
-        'ota',
+        channelId,
         request.quantity,
         ttlHours
       );
 
       if (!reservation) {
-        const availability = mockDataStore.getChannelAvailability('ota', [request.product_id]);
+        const channelId = partnerId || 'ota';
+        const availability = mockDataStore.getChannelAvailability(channelId, [request.product_id]);
         throw {
           code: ERR.SOLD_OUT,
           message: `Insufficient OTA inventory. Available: ${availability[request.product_id] || 0}, Requested: ${request.quantity}`
@@ -430,10 +436,12 @@ export class OTAService {
     }
   }
 
-  async getActiveReservations() {
+  async getActiveReservations(partnerId?: string) {
+    const channelId = partnerId || 'ota';
+
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
-      const reservations = await repo.findActiveReservations('ota');
+      const reservations = await repo.findActiveReservations(channelId);
       return reservations.map(r => ({
         reservation_id: r.reservation_id,
         product_id: r.product_id,
@@ -442,7 +450,7 @@ export class OTAService {
         created_at: r.created_at.toISOString()
       }));
     } else {
-      const reservations = mockDataStore.getActiveReservations('ota');
+      const reservations = mockDataStore.getActiveReservations(channelId);
       return reservations.map(r => ({
         reservation_id: r.reservation_id,
         product_id: r.product_id,
@@ -738,11 +746,12 @@ export class OTAService {
         };
       }
 
-      const otaAvailable = inventory.getChannelAvailable('ota');
-      if (otaAvailable < request.quantity) {
+      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback
+      const available = inventory.getChannelAvailable(channelId);
+      if (available < request.quantity) {
         throw {
           code: ERR.SOLD_OUT,
-          message: `Insufficient OTA inventory. Available: ${otaAvailable}, Requested: ${request.quantity}`
+          message: `Insufficient inventory for channel ${channelId}. Available: ${available}, Requested: ${request.quantity}`
         };
       }
 
@@ -784,7 +793,7 @@ export class OTAService {
       }
 
       // Save to database with inventory update
-      const savedTickets = await this.otaRepository!.createPreGeneratedTickets(tickets);
+      const savedTickets = await this.otaRepository!.createPreGeneratedTickets(tickets, channelId);
 
       // Update batch with actual tickets generated
       await repo.updateBatchCounters(batch.batch_id, {
@@ -824,12 +833,13 @@ export class OTAService {
       };
     }
 
-    // Check if we have enough OTA allocation
-    const availability = mockDataStore.getChannelAvailability('ota', [request.product_id]);
+    // Check if we have enough channel allocation
+    const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback
+    const availability = mockDataStore.getChannelAvailability(channelId, [request.product_id]);
     if (availability[request.product_id] < request.quantity) {
       throw {
         code: ERR.SOLD_OUT,
-        message: `Insufficient OTA inventory. Available: ${availability[request.product_id]}, Requested: ${request.quantity}`
+        message: `Insufficient inventory for channel ${channelId}. Available: ${availability[request.product_id]}, Requested: ${request.quantity}`
       };
     }
 
@@ -869,7 +879,7 @@ export class OTAService {
     }
 
     // Reserve inventory for this batch
-    mockDataStore.reserveChannelInventory('ota', request.product_id, request.quantity);
+    mockDataStore.reserveChannelInventory(channelId, request.product_id, request.quantity);
 
     // Create and store mock batch data
     const mockBatch = {

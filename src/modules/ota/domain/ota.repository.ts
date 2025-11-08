@@ -304,7 +304,7 @@ export class OTARepository {
   }
 
   // Pre-Generated Ticket Operations
-  async createPreGeneratedTickets(tickets: Partial<PreGeneratedTicketEntity>[]): Promise<PreGeneratedTicketEntity[]> {
+  async createPreGeneratedTickets(tickets: Partial<PreGeneratedTicketEntity>[], channelId: string = 'ota'): Promise<PreGeneratedTicketEntity[]> {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -324,7 +324,7 @@ export class OTARepository {
         });
 
         if (inventory) {
-          if (!inventory.reserveInventory('ota', quantity)) {
+          if (!inventory.reserveInventory(channelId, quantity)) {
             throw new Error('Insufficient inventory for reservation');
           }
           await queryRunner.manager.save(ProductInventoryEntity, inventory);
@@ -408,7 +408,7 @@ export class OTARepository {
       });
 
       if (inventory) {
-        inventory.activateReservation('ota', 1);
+        inventory.activateReservation(partnerId, 1);
         await queryRunner.manager.save(ProductInventoryEntity, inventory);
       }
 

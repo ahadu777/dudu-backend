@@ -225,7 +225,11 @@ class MockDataStore {
         },
         channel_allocations: {
           direct: { allocated: 1000, reserved: 0, sold: 0 },
-          ota: { allocated: 2000, reserved: 0, sold: 0 } // 2000 units for OTA
+          test_partner: { allocated: 800, reserved: 0, sold: 0 },
+          dudu_partner: { allocated: 500, reserved: 0, sold: 0 },
+          ota251103_partner: { allocated: 400, reserved: 0, sold: 0 },
+          prod_partner: { allocated: 300, reserved: 0, sold: 0 },
+          ota_full_access_partner: { allocated: 350, reserved: 0, sold: 0 }
         }
       },
       {
@@ -246,7 +250,11 @@ class MockDataStore {
         },
         channel_allocations: {
           direct: { allocated: 500, reserved: 0, sold: 0 },
-          ota: { allocated: 1500, reserved: 0, sold: 0 } // 1500 units for OTA
+          test_partner: { allocated: 600, reserved: 0, sold: 0 },
+          dudu_partner: { allocated: 400, reserved: 0, sold: 0 },
+          ota251103_partner: { allocated: 300, reserved: 0, sold: 0 },
+          prod_partner: { allocated: 200, reserved: 0, sold: 0 },
+          ota_full_access_partner: { allocated: 250, reserved: 0, sold: 0 }
         }
       },
       {
@@ -269,7 +277,11 @@ class MockDataStore {
         },
         channel_allocations: {
           direct: { allocated: 300, reserved: 0, sold: 0 },
-          ota: { allocated: 1500, reserved: 0, sold: 0 } // 1500 units for OTA
+          test_partner: { allocated: 600, reserved: 0, sold: 0 },
+          dudu_partner: { allocated: 400, reserved: 0, sold: 0 },
+          ota251103_partner: { allocated: 300, reserved: 0, sold: 0 },
+          prod_partner: { allocated: 200, reserved: 0, sold: 0 },
+          ota_full_access_partner: { allocated: 250, reserved: 0, sold: 0 }
         }
       }
     ];

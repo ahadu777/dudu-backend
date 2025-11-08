@@ -1461,6 +1461,516 @@ curl https://express-jdpny.ondigitalocean.app/healthz
 
 ---
 
+---
+
+## 🏢 OTA Bulk Generation with Special Pricing (B2B2C)
+
+**New Feature:** As an OTA partner, I want to generate ticket batches with custom pricing for reseller billing.
+
+### **API Integration**
+
+#### **Endpoint**
+```
+POST /api/ota/tickets/bulk-generate
+```
+
+#### **Authentication**
+```typescript
+headers: {
+  'X-API-Key': 'your_ota_api_key',
+  'Content-Type': 'application/json'
+}
+```
+
+#### **Request Parameters**
+```typescript
+interface OTABulkGenerateRequest {
+  // Required fields
+  product_id: number;        // Product ID (106, 107, 108)
+  quantity: number;          // Number of tickets (1-100)
+  batch_id: string;          // Unique batch identifier
+
+  // Optional distribution mode
+  distribution_mode?: 'direct_sale' | 'reseller_batch';  // default: 'direct_sale'
+
+  // Special pricing override (B2B2C feature)
+  special_pricing?: {
+    base_price: number;
+    customer_type_pricing: Array<{
+      customer_type: 'adult' | 'child' | 'elderly';
+      unit_price: number;
+      discount_applied: number;
+    }>;
+    weekend_premium: number;
+    currency: string;
+  };
+
+  // Required for reseller_batch mode
+  reseller_metadata?: {
+    intended_reseller: string;     // Required for reseller_batch
+    wholesale_agreement_id?: string;
+    commission_rate?: number;
+  };
+
+  // Optional batch information
+  batch_metadata?: {
+    campaign?: string;
+    notes?: string;
+    [key: string]: any;
+  };
+}
+```
+
+#### **Distribution Mode Differences**
+| Mode | Expiration | Use Case | Validation |
+|------|------------|----------|------------|
+| `direct_sale` | 7 days | Direct consumer purchase | Basic fields only |
+| `reseller_batch` | 30 days | Wholesale to resellers | Requires `intended_reseller` |
+
+### **Integration Examples**
+
+#### **1. Standard Product Pricing**
+```typescript
+const standardRequest = {
+  product_id: 106,
+  quantity: 5,
+  batch_id: `BATCH_${Date.now()}`,
+  batch_metadata: {
+    campaign: 'standard_pricing_batch'
+  }
+};
+
+const response = await fetch('/api/ota/tickets/bulk-generate', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'ota_test_key_12345',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(standardRequest)
+});
+// Uses dynamic product pricing from database
+```
+
+#### **2. Special Pricing Override**
+```typescript
+const specialPricingRequest = {
+  product_id: 106,
+  quantity: 10,
+  batch_id: 'VIP_BATCH_001',
+  special_pricing: {
+    base_price: 500,
+    customer_type_pricing: [
+      { customer_type: 'adult', unit_price: 500, discount_applied: 0 },
+      { customer_type: 'child', unit_price: 350, discount_applied: 150 },
+      { customer_type: 'elderly', unit_price: 400, discount_applied: 100 }
+    ],
+    weekend_premium: 80,
+    currency: 'HKD'
+  },
+  batch_metadata: {
+    campaign: 'vip_customer_pricing',
+    notes: 'Custom pricing for premium reseller'
+  }
+};
+
+const response = await fetch('/api/ota/tickets/bulk-generate', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'ota_test_key_12345',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(specialPricingRequest)
+});
+```
+
+#### **3. Reseller Batch Mode**
+```typescript
+const resellerRequest = {
+  product_id: 107,
+  quantity: 20,
+  batch_id: 'RESELLER_BATCH_001',
+  distribution_mode: 'reseller_batch',
+  reseller_metadata: {
+    intended_reseller: 'ABC Travel Agency',
+    wholesale_agreement_id: 'WS-2025-001',
+    commission_rate: 0.15
+  },
+  special_pricing: {
+    base_price: 400,
+    customer_type_pricing: [
+      { customer_type: 'adult', unit_price: 400, discount_applied: 0 }
+    ],
+    weekend_premium: 60,
+    currency: 'HKD'
+  }
+};
+```
+
+### **Response Format**
+```typescript
+interface OTABulkGenerateResponse {
+  batch_id: string;
+  distribution_mode: 'direct_sale' | 'reseller_batch';
+  pricing_snapshot: {
+    base_product_id: number;
+    base_price: number;
+    customer_type_pricing: Array<{
+      customer_type: string;
+      unit_price: number;
+      discount_applied: number;
+    }>;
+    weekend_premium: number;
+    currency: string;
+    captured_at: string;
+  };
+  reseller_metadata?: any;
+  batch_metadata?: any;
+  expires_at: string;    // 7 days (direct_sale) or 30 days (reseller_batch)
+  tickets: Array<{
+    ticket_code: string;
+    qr_code: string;      // Base64 encoded QR data
+    status: 'PRE_GENERATED';
+    entitlements: Array<{
+      function_code: string;
+      remaining_uses: number;
+    }>;
+  }>;
+  total_generated: number;
+}
+```
+
+### **React Component: OTA Batch Generator**
+
+```typescript
+const OTABatchGenerator = ({ apiKey }) => {
+  const [formData, setFormData] = useState({
+    product_id: 106,
+    quantity: 5,
+    batch_id: '',
+    distribution_mode: 'direct_sale',
+    special_pricing: null,
+    reseller_metadata: null,
+    batch_metadata: {}
+  });
+
+  const [useSpecialPricing, setUseSpecialPricing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const generateBatchId = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).slice(2, 8);
+    return `BATCH_${timestamp}_${random}`;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const requestData = {
+        ...formData,
+        batch_id: formData.batch_id || generateBatchId(),
+        special_pricing: useSpecialPricing ? formData.special_pricing : undefined
+      };
+
+      const response = await fetch('/api/ota/tickets/bulk-generate', {
+        method: 'POST',
+        headers: {
+          'X-API-Key': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Generation failed');
+      }
+
+      const result = await response.json();
+      setResult(result);
+    } catch (error) {
+      alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="ota-batch-generator">
+      <h2>OTA Batch Generation</h2>
+
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Product ID:</label>
+          <select
+            value={formData.product_id}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              product_id: parseInt(e.target.value)
+            }))}
+          >
+            <option value={106}>106 - Premium Plan</option>
+            <option value={107}>107 - Pet Plan</option>
+            <option value={108}>108 - Standard Plan</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Quantity:</label>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={formData.quantity}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              quantity: parseInt(e.target.value)
+            }))}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Batch ID:</label>
+          <input
+            type="text"
+            value={formData.batch_id}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              batch_id: e.target.value
+            }))}
+            placeholder="Leave blank to auto-generate"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Distribution Mode:</label>
+          <select
+            value={formData.distribution_mode}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              distribution_mode: e.target.value
+            }))}
+          >
+            <option value="direct_sale">Direct Sale (7 days)</option>
+            <option value="reseller_batch">Reseller Batch (30 days)</option>
+          </select>
+        </div>
+
+        {formData.distribution_mode === 'reseller_batch' && (
+          <div className="form-group">
+            <label>Intended Reseller (Required):</label>
+            <input
+              type="text"
+              value={formData.reseller_metadata?.intended_reseller || ''}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                reseller_metadata: {
+                  ...prev.reseller_metadata,
+                  intended_reseller: e.target.value
+                }
+              }))}
+              placeholder="e.g., ABC Travel Agency"
+              required
+            />
+          </div>
+        )}
+
+        <div className="form-group">
+          <label>
+            <input
+              type="checkbox"
+              checked={useSpecialPricing}
+              onChange={(e) => setUseSpecialPricing(e.target.checked)}
+            />
+            Use Special Pricing (B2B2C)
+          </label>
+        </div>
+
+        {useSpecialPricing && (
+          <div className="special-pricing-section">
+            <h3>Custom Pricing Override</h3>
+
+            <div className="form-group">
+              <label>Base Price (HKD):</label>
+              <input
+                type="number"
+                value={formData.special_pricing?.base_price || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  special_pricing: {
+                    ...prev.special_pricing,
+                    base_price: parseFloat(e.target.value) || 0,
+                    currency: 'HKD'
+                  }
+                }))}
+                placeholder="e.g., 500"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Weekend Premium (HKD):</label>
+              <input
+                type="number"
+                value={formData.special_pricing?.weekend_premium || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  special_pricing: {
+                    ...prev.special_pricing,
+                    weekend_premium: parseFloat(e.target.value) || 0
+                  }
+                }))}
+                placeholder="e.g., 80"
+              />
+            </div>
+
+            <div className="customer-pricing">
+              <h4>Customer Type Pricing</h4>
+              {['adult', 'child', 'elderly'].map(type => (
+                <div key={type} className="pricing-row">
+                  <label>{type.charAt(0).toUpperCase() + type.slice(1)}:</label>
+                  <input
+                    type="number"
+                    placeholder="Unit Price"
+                    value={formData.special_pricing?.customer_type_pricing?.find(
+                      p => p.customer_type === type
+                    )?.unit_price || ''}
+                    onChange={(e) => {
+                      const unitPrice = parseFloat(e.target.value) || 0;
+                      const basePrice = formData.special_pricing?.base_price || 0;
+                      const discount = Math.max(0, basePrice - unitPrice);
+
+                      setFormData(prev => ({
+                        ...prev,
+                        special_pricing: {
+                          ...prev.special_pricing,
+                          customer_type_pricing: [
+                            ...(prev.special_pricing?.customer_type_pricing?.filter(
+                              p => p.customer_type !== type
+                            ) || []),
+                            {
+                              customer_type: type,
+                              unit_price: unitPrice,
+                              discount_applied: discount
+                            }
+                          ]
+                        }
+                      }));
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || (formData.distribution_mode === 'reseller_batch' && !formData.reseller_metadata?.intended_reseller)}
+          className="generate-button"
+        >
+          {loading ? 'Generating...' : `Generate ${formData.quantity} Tickets`}
+        </button>
+      </form>
+
+      {result && (
+        <div className="generation-result">
+          <h3>✅ Generation Successful</h3>
+          <div className="result-summary">
+            <p><strong>Batch ID:</strong> {result.batch_id}</p>
+            <p><strong>Distribution Mode:</strong> {result.distribution_mode}</p>
+            <p><strong>Expires:</strong> {new Date(result.expires_at).toLocaleString()}</p>
+            <p><strong>Total Generated:</strong> {result.total_generated}</p>
+          </div>
+
+          <div className="pricing-info">
+            <h4>Pricing Snapshot</h4>
+            <p><strong>Base Price:</strong> {result.pricing_snapshot.currency} {result.pricing_snapshot.base_price}</p>
+            <p><strong>Weekend Premium:</strong> {result.pricing_snapshot.currency} {result.pricing_snapshot.weekend_premium}</p>
+
+            <div className="customer-prices">
+              {result.pricing_snapshot.customer_type_pricing.map(pricing => (
+                <div key={pricing.customer_type}>
+                  <strong>{pricing.customer_type}:</strong> {result.pricing_snapshot.currency} {pricing.unit_price}
+                  {pricing.discount_applied > 0 && ` (${pricing.discount_applied} discount)`}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="tickets-list">
+            <h4>Generated Tickets ({result.tickets.length})</h4>
+            <div className="tickets-grid">
+              {result.tickets.map(ticket => (
+                <div key={ticket.ticket_code} className="ticket-card">
+                  <div className="ticket-code">{ticket.ticket_code}</div>
+                  <div className="ticket-entitlements">
+                    {ticket.entitlements.map(ent => (
+                      <span key={ent.function_code} className="entitlement-tag">
+                        {ent.function_code}: {ent.remaining_uses}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+### **Error Handling**
+```typescript
+// Common error responses
+const OTAErrorHandler = {
+  400: (error) => `Invalid request: ${error.message}`,
+  401: () => 'API key required or invalid',
+  404: () => 'Product not found',
+  409: () => 'Insufficient inventory or conflict',
+
+  handle: (response, errorData) => {
+    return OTAErrorHandler[response.status]?.(errorData) ||
+           errorData?.message ||
+           'Unknown error occurred';
+  }
+};
+```
+
+### **Batch Analytics Integration**
+```typescript
+// GET /api/ota/batches/{batch_id}/analytics
+const fetchBatchAnalytics = async (batchId: string, apiKey: string) => {
+  const response = await fetch(`/api/ota/batches/${batchId}/analytics`, {
+    headers: { 'X-API-Key': apiKey }
+  });
+  return response.json();
+};
+
+// Response includes revenue metrics based on pricing_snapshot
+interface BatchAnalytics {
+  batch_id: string;
+  reseller_name: string;
+  tickets_generated: number;
+  tickets_activated: number;
+  tickets_redeemed: number;
+  conversion_rates: {
+    activation_rate: number;
+    redemption_rate: number;
+  };
+  revenue_metrics: {
+    potential_revenue: number;  // Uses special pricing if set
+    realized_revenue: string;
+    wholesale_rate: number;     // From pricing_snapshot
+  };
+}
+```
+
+---
+
 **🎉 Complete Integration Guide - Ready for Frontend Development!**
 
-This guide covers all 7 user stories with complete API contracts, React components, and integration patterns. Frontend teams can now build the complete ticketing experience with confidence!
+This guide covers all user stories plus the new **OTA B2B2C special pricing feature** with complete API contracts, React components, and integration patterns. Frontend teams can now build the complete ticketing experience including advanced reseller billing scenarios!
