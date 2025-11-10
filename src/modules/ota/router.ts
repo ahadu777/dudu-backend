@@ -270,7 +270,8 @@ router.delete('/reservations/:id', async (req: AuthenticatedRequest, res: Respon
 // GET /api/ota/orders - List confirmed orders for OTA
 router.get('/orders', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const orders = await otaService.getOrders();
+    const partnerId = getPartnerIdWithFallback(req);
+    const orders = await otaService.getOrders(partnerId);
 
     res.json({
       orders,

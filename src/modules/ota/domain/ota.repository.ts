@@ -565,9 +565,13 @@ export class OTARepository {
     return this.otaOrderRepo.save(order);
   }
 
-  async findOTAOrdersByChannel(): Promise<OTAOrderEntity[]> {
+  async findOTAOrdersByChannel(partnerId?: string): Promise<OTAOrderEntity[]> {
+    const whereClause: any = { channel_id: 2 }; // OTA channel
+    if (partnerId) {
+      whereClause.partner_id = partnerId;
+    }
     return this.otaOrderRepo.find({
-      where: { channel_id: 2 }, // OTA channel
+      where: whereClause,
       order: { created_at: 'DESC' }
     });
   }

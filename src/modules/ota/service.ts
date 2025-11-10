@@ -603,10 +603,10 @@ export class OTAService {
     }
   }
 
-  async getOrders(): Promise<any[]> {
+  async getOrders(partnerId?: string): Promise<any[]> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       // Database implementation
-      const orders = await this.otaRepository!.findOTAOrdersByChannel();
+      const orders = await this.otaRepository!.findOTAOrdersByChannel(partnerId);
       return orders.map((order: any) => ({
         order_id: order.order_id,
         product_id: order.product_id,
@@ -620,7 +620,8 @@ export class OTAService {
     }
 
     // Mock implementation
-    const orders = mockDataStore.getOrdersByChannel('ota');
+    const channelId = partnerId || 'ota';
+    const orders = mockDataStore.getOrdersByChannel(channelId);
     return orders.map((order: any) => ({
         order_id: order.order_id,
         product_id: order.product_id,
