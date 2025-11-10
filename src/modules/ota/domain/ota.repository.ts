@@ -303,6 +303,142 @@ export class OTARepository {
     }
   }
 
+  // Activate reservation with order and ticket generation
+  async activateReservationWithOrder(
+    reservationId: string,
+    customerData: {
+      name: string;
+      email: string;
+      phone: string;
+    },
+    paymentReference: string,
+    specialRequests?: string
+  ): Promise<{ order: OTAOrderEntity; tickets: PreGeneratedTicketEntity[] }> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Lock and validate reservation
+      const reservation = await queryRunner.manager
+        .createQueryBuilder(ChannelReservationEntity, 'reservation')
+        .setLock('pessimistic_write')
+        .leftJoinAndSelect('reservation.product_inventory', 'inventory')
+        .leftJoinAndSelect('inventory.product', 'product')
+        .where('reservation.reservation_id = :reservationId', { reservationId })
+        .getOne();
+
+      if (!reservation) {
+        throw new Error(`Reservation ${reservationId} not found`);
+      }
+
+      if (!reservation.canActivate()) {
+        throw new Error(`Reservation ${reservationId} cannot be activated (status: ${reservation.status})`);
+      }
+
+      const product = reservation.product_inventory?.product;
+      if (!product) {
+        throw new Error(`Product ${reservation.product_id} not found for reservation`);
+      }
+
+      // 2. Update inventory (move from reserved to sold)
+      const inventory = await queryRunner.manager
+        .createQueryBuilder(ProductInventoryEntity, 'inventory')
+        .setLock('pessimistic_write')
+        .where('inventory.product_id = :productId', { productId: reservation.product_id })
+        .getOne();
+
+      if (!inventory) {
+        throw new Error(`Inventory for product ${reservation.product_id} not found`);
+      }
+
+      inventory.activateReservation(reservation.channel_id, reservation.quantity);
+      await queryRunner.manager.save(ProductInventoryEntity, inventory);
+
+      // 3. Create order
+      const orderId = `ORD-${Date.now()}`;
+      const confirmationCode = `CONF-${Date.now()}`;
+
+      // Calculate total amount based on pricing snapshot
+      const basePrice = reservation.pricing_snapshot?.base_price || Number(product.base_price);
+      const totalAmount = basePrice * reservation.quantity;
+
+      const order = queryRunner.manager.create(OTAOrderEntity, {
+        order_id: orderId,
+        product_id: reservation.product_id,
+        channel_id: 2, // OTA channel
+        partner_id: reservation.channel_id,
+        customer_name: customerData.name,
+        customer_email: customerData.email,
+        customer_phone: customerData.phone,
+        payment_reference: paymentReference,
+        total_amount: totalAmount,
+        status: 'confirmed' as OrderStatus,
+        confirmation_code: confirmationCode,
+        special_requests: specialRequests
+      });
+
+      const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
+
+      // 4. Generate tickets
+      const tickets: PreGeneratedTicketEntity[] = [];
+      const entitlements = product.entitlements?.map((e: any) => ({
+        function_code: e.type || e.function_code,
+        remaining_uses: 1
+      })) || [
+        { function_code: 'ferry', remaining_uses: 1 },
+        { function_code: 'deck_access', remaining_uses: 1 },
+        { function_code: 'dining', remaining_uses: 1 }
+      ];
+
+      for (let i = 0; i < reservation.quantity; i++) {
+        const ticketId = Date.now() + (Math.random() * 1000) + i;
+        const ticketCode = `${product.category?.toUpperCase() || 'TICKET'}-${new Date().getFullYear()}-P${product.id}-${Math.floor(ticketId)}`;
+
+        const qrData = JSON.stringify({
+          ticket_id: ticketId,
+          product_id: product.id,
+          order_id: orderId,
+          issued_at: new Date().toISOString()
+        });
+
+        const ticket = queryRunner.manager.create(PreGeneratedTicketEntity, {
+          ticket_code: ticketCode,
+          product_id: reservation.product_id,
+          batch_id: `RESERVATION-${reservationId}`,
+          partner_id: reservation.channel_id,
+          status: 'ACTIVE' as TicketStatus,
+          qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+          entitlements: entitlements,
+          customer_name: customerData.name,
+          customer_email: customerData.email,
+          customer_phone: customerData.phone,
+          order_id: orderId,
+          payment_reference: paymentReference,
+          activated_at: new Date()
+        });
+
+        tickets.push(ticket);
+      }
+
+      const savedTickets = await queryRunner.manager.save(PreGeneratedTicketEntity, tickets);
+
+      // 5. Update reservation status
+      reservation.activate(Number(orderId.split('-')[1])); // Extract numeric part for order_id field
+      reservation.order_id = Number(orderId.split('-')[1]);
+      await queryRunner.manager.save(ChannelReservationEntity, reservation);
+
+      await queryRunner.commitTransaction();
+      return { order: savedOrder, tickets: savedTickets };
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   // Pre-Generated Ticket Operations
   async createPreGeneratedTickets(tickets: Partial<PreGeneratedTicketEntity>[], channelId: string = 'ota'): Promise<PreGeneratedTicketEntity[]> {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();

@@ -489,41 +489,80 @@ export class OTAService {
     }
 
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
-      // Database implementation - TODO: Implement database activation method
-      logger.warn('ota.reservation.database_activation_not_implemented', {
-        reservation_id: reservationId
-      });
-      // Fall through to mock implementation for now
-    }
+      // Database implementation
+      try {
+        const repo = await this.getRepository();
+        const result = await repo.activateReservationWithOrder(
+          reservationId,
+          {
+            name: request.customer_details.name,
+            email: request.customer_details.email,
+            phone: request.customer_details.phone
+          },
+          request.payment_reference,
+          request.special_requests
+        );
 
-    // Mock implementation (always used for now)
-    const order = mockDataStore.activateReservation(
-        reservationId,
-        request.customer_details,
-        request.payment_reference
-      );
+        logger.info('ota.reservation.activated', {
+          source: 'database',
+          reservation_id: reservationId,
+          order_id: result.order.order_id,
+          total_amount: result.order.total_amount,
+          tickets_generated: result.tickets.length
+        });
 
-      if (!order) {
+        return {
+          order_id: result.order.order_id,
+          tickets: result.tickets.map(ticket => ({
+            code: ticket.ticket_code,
+            qr_code: ticket.qr_code,
+            entitlements: ticket.entitlements,
+            status: ticket.status
+          })),
+          total_amount: Number(result.order.total_amount),
+          confirmation_code: result.order.confirmation_code
+        };
+
+      } catch (error: any) {
+        logger.error('ota.reservation.database_activation_failed', {
+          reservation_id: reservationId,
+          error: error.message
+        });
         throw {
           code: ERR.VALIDATION_ERROR,
-          message: 'Failed to activate reservation'
+          message: error.message || 'Failed to activate reservation'
         };
       }
+    }
 
-      logger.info('ota.reservation.activated', {
-        source: 'mock',
-        reservation_id: reservationId,
-        order_id: order.order_id,
-        total_amount: order.total_amount
-      });
+    // Mock implementation (fallback when database not available)
+    const order = mockDataStore.activateReservation(
+      reservationId,
+      request.customer_details,
+      request.payment_reference
+    );
 
-      return {
-        order_id: order.order_id,
-        tickets: order.tickets,
-        total_amount: order.total_amount,
-        confirmation_code: order.confirmation_code
+    if (!order) {
+      throw {
+        code: ERR.VALIDATION_ERROR,
+        message: 'Failed to activate reservation'
       };
     }
+
+    logger.info('ota.reservation.activated', {
+      source: 'mock',
+      reservation_id: reservationId,
+      order_id: order.order_id,
+      total_amount: order.total_amount
+    });
+
+    return {
+      order_id: order.order_id,
+      tickets: order.tickets,
+      total_amount: order.total_amount,
+      confirmation_code: order.confirmation_code
+    };
+  }
 
   async cancelReservation(reservationId: string): Promise<void> {
     logger.info('ota.reservation.cancellation_requested', {
