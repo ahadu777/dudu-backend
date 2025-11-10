@@ -33,6 +33,13 @@ export const env = cleanEnv(process.env, {
   // QR token TTL in seconds (default 5 minutes)
   QR_TOKEN_TTL_SECONDS: num({ default: 300 }),
 
+  // QR Code Encryption Configuration
+  // Must be 64 hex characters (32 bytes) for AES-256
+  // Generate with: openssl rand -hex 32
+  QR_ENCRYPTION_KEY: str({ default: 'a'.repeat(64) }), // MUST change in production
+  // QR code expiration time in minutes (default 30 minutes)
+  QR_EXPIRY_MINUTES: num({ default: 30 }),
+
   // WeChat Mini-Program Configuration
   WECHAT_APPID: str({ default: 'wx39a36fbaaefacd42' }), // WeChat mini-program AppID
   WECHAT_APP_SECRET: str({ default: '6afcba50d4b53ebc6034e213a8bd8592' }), // WeChat mini-program AppSecret

@@ -18,6 +18,7 @@ import reservationsRouter from './reservations/router';
 import devRouter from './dev/router';
 import otaRouter from './ota/router';
 import venueRouter from './venue/router';
+import qrGenerationRouter from './qr-generation/router';
 
 export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
   const apiRouter = Router();
@@ -43,6 +44,7 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/dev', devRouter);
   app.use('/api/ota', otaRouter);
   app.use('/venue', venueRouter);
+  app.use('/qr', qrGenerationRouter); // Unified QR generation for OTA and normal tickets
 
   app.use('/payments', refundsRouter);
   app.use('/', refundsRouter);
