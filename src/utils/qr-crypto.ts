@@ -7,6 +7,7 @@ import { logger } from './logger';
  * QR Code Data Structure
  */
 export interface QRTicketData {
+  jti: string;        // JWT ID - Unique identifier for tracking
   ticket_code: string;
   product_id: number;
   ticket_type: 'OTA' | 'NORMAL';
@@ -28,6 +29,7 @@ export interface EncryptedQRResult {
   qr_image: string;       // data:image/png;base64,...
   expires_at: string;     // ISO 8601
   ticket_code: string;
+  jti: string;            // JWT ID for tracking and logging
 }
 
 /**
@@ -195,22 +197,27 @@ export function getRemainingSeconds(data: QRTicketData): number {
  * @returns Encrypted QR result with image
  */
 export async function generateSecureQR(
-  ticketData: Omit<QRTicketData, 'expires_at' | 'nonce' | 'version' | 'issued_at'>,
+  ticketData: Omit<QRTicketData, 'jti' | 'expires_at' | 'nonce' | 'version' | 'issued_at'>,
   expiryMinutes?: number
 ): Promise<EncryptedQRResult> {
   const now = new Date();
   const expiryTime = expiryMinutes || Number(env.QR_EXPIRY_MINUTES) || 30;
   const expiresAt = new Date(now.getTime() + expiryTime * 60 * 1000);
 
+  // Generate unique JTI for tracking
+  const jti = crypto.randomUUID();
+
   const fullData: QRTicketData = {
+    jti,
     ...ticketData,
     issued_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
-    nonce: crypto.randomUUID(),
+    nonce: crypto.randomBytes(16).toString('hex'), // 32-char hex string for encryption
     version: 1 // Format version for future compatibility
   };
 
   logger.info('qr.generation.started', {
+    jti,
     ticket_code: fullData.ticket_code,
     ticket_type: fullData.ticket_type,
     expires_in_minutes: expiryTime
@@ -229,6 +236,7 @@ export async function generateSecureQR(
   const qrImage = await generateQRImage(signedData);
 
   logger.info('qr.generation.success', {
+    jti,
     ticket_code: fullData.ticket_code,
     expires_at: expiresAt.toISOString()
   });
@@ -237,7 +245,8 @@ export async function generateSecureQR(
     encrypted_data: signedData,
     qr_image: qrImage,
     expires_at: expiresAt.toISOString(),
-    ticket_code: fullData.ticket_code
+    ticket_code: fullData.ticket_code,
+    jti
   };
 }
 

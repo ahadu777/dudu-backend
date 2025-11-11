@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { otaAuthMiddleware } from '../../middlewares/otaAuth';
+import { otaAuthMiddleware, adminAuthMiddleware } from '../../middlewares/otaAuth';
 import { otaService } from './service';
 import { logger } from '../../utils/logger';
 
@@ -447,13 +447,13 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
 router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const ticketCode = req.params.code;
-    const { customer_details, payment_reference } = req.body;
+    const { customer_details, customer_type, payment_reference } = req.body;
 
     // Validate required fields
-    if (!customer_details || !payment_reference) {
+    if (!customer_details || !customer_type || !payment_reference) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details and payment_reference are required'
+        message: 'customer_details, customer_type, and payment_reference are required'
       });
     }
 
@@ -464,9 +464,17 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
       });
     }
 
+    if (!['adult', 'child', 'elderly'].includes(customer_type)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'customer_type must be one of: adult, child, elderly'
+      });
+    }
+
     const partnerId = getPartnerIdWithFallback(req);
     const result = await otaService.activatePreMadeTicket(ticketCode, partnerId, {
       customer_details,
+      customer_type,
       payment_reference
     });
 
@@ -601,6 +609,88 @@ router.get('/campaigns/analytics', async (req: AuthenticatedRequest, res: Respon
     res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Failed to retrieve campaign analytics'
+    });
+  }
+});
+
+// ============= ADMIN MANAGEMENT ENDPOINTS =============
+// These endpoints require admin privileges (admin:read permission)
+
+// GET /api/ota/admin/partners - Get all OTA partners
+router.get('/admin/partners', adminAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const partners = await otaService.getAllPartners();
+
+    res.json({
+      partners,
+      total_count: partners.length
+    });
+
+  } catch (error: any) {
+    logger.error('OTA admin get partners failed', {
+      admin: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve partners list'
+    });
+  }
+});
+
+// GET /api/ota/admin/partners/:partnerId/statistics - Get partner statistics
+router.get('/admin/partners/:partnerId/statistics', adminAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { partnerId } = req.params;
+    const { start_date, end_date } = req.query;
+
+    const stats = await otaService.getPartnerStatistics(
+      partnerId,
+      {
+        start_date: start_date as string,
+        end_date: end_date as string
+      }
+    );
+
+    res.json(stats);
+
+  } catch (error: any) {
+    logger.error('OTA admin get partner statistics failed', {
+      admin: req.ota_partner?.name,
+      partner_id: req.params.partnerId,
+      error: error.message
+    });
+
+    const status = error.code === 'VALIDATION_ERROR' ? 404 : 500;
+    res.status(status).json({
+      error: error.code || 'INTERNAL_ERROR',
+      message: error.message || 'Failed to retrieve partner statistics'
+    });
+  }
+});
+
+// GET /api/ota/admin/dashboard - Get platform dashboard summary
+router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { start_date, end_date } = req.query;
+
+    const summary = await otaService.getDashboardSummary({
+      start_date: start_date as string,
+      end_date: end_date as string
+    });
+
+    res.json(summary);
+
+  } catch (error: any) {
+    logger.error('OTA admin get dashboard failed', {
+      admin: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve dashboard summary'
     });
   }
 });

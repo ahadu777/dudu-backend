@@ -5,6 +5,7 @@ import { ChannelReservationEntity, ReservationStatus } from './channel-reservati
 import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
+import { generateSecureQR } from '../../../utils/qr-crypto';
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
@@ -395,11 +396,14 @@ export class OTARepository {
         const ticketId = Date.now() + (Math.random() * 1000) + i;
         const ticketCode = `${product.category?.toUpperCase() || 'TICKET'}-${new Date().getFullYear()}-P${product.id}-${Math.floor(ticketId)}`;
 
-        const qrData = JSON.stringify({
-          ticket_id: ticketId,
+        // Generate secure QR code with encryption + signature
+        const qrResult = await generateSecureQR({
+          ticket_code: ticketCode,
           product_id: product.id,
-          order_id: orderId,
-          issued_at: new Date().toISOString()
+          ticket_type: 'OTA',
+          batch_id: `RESERVATION-${reservationId}`,
+          partner_id: reservation.channel_id,
+          order_id: orderId
         });
 
         const ticket = queryRunner.manager.create(PreGeneratedTicketEntity, {
@@ -408,7 +412,7 @@ export class OTARepository {
           batch_id: `RESERVATION-${reservationId}`,
           partner_id: reservation.channel_id,
           status: 'ACTIVE' as TicketStatus,
-          qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+          qr_code: qrResult.qr_image,
           entitlements: entitlements,
           customer_name: customerData.name,
           customer_email: customerData.email,
@@ -498,6 +502,7 @@ export class OTARepository {
       customer_name: string;
       customer_email: string;
       customer_phone?: string;
+      customer_type: 'adult' | 'child' | 'elderly';
       payment_reference: string;
     },
     orderData: Partial<OTAOrderEntity>
@@ -531,6 +536,8 @@ export class OTARepository {
       ticket.customer_name = customerData.customer_name;
       ticket.customer_email = customerData.customer_email;
       ticket.customer_phone = customerData.customer_phone;
+      ticket.customer_type = customerData.customer_type;
+      ticket.raw = {};  // Initialize raw field for future metadata
       ticket.payment_reference = customerData.payment_reference;
       ticket.order_id = savedOrder.order_id;
       ticket.status = 'ACTIVE';
@@ -729,5 +736,205 @@ export class OTARepository {
     };
 
     return summary;
+  }
+
+  // ============= ADMIN MANAGEMENT QUERIES =============
+
+  /**
+   * Get orders summary for a specific partner
+   */
+  async getPartnerOrdersSummary(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
+    const query = this.otaOrderRepo.createQueryBuilder('order')
+      .where('order.partner_id = :partnerId', { partnerId });
+
+    if (dateRange?.start_date) {
+      query.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
+    }
+    if (dateRange?.end_date) {
+      query.andWhere('order.created_at <= :endDate', { endDate: dateRange.end_date });
+    }
+
+    const orders = await query.getMany();
+
+    const byStatus: any = {};
+    orders.forEach(order => {
+      byStatus[order.status] = (byStatus[order.status] || 0) + 1;
+    });
+
+    return {
+      total_count: orders.length,
+      total_revenue: orders.reduce((sum, o) => sum + Number(o.total_amount), 0),
+      avg_order_value: orders.length > 0
+        ? orders.reduce((sum, o) => sum + Number(o.total_amount), 0) / orders.length
+        : 0,
+      by_status: byStatus
+    };
+  }
+
+  /**
+   * Get reservations summary for a specific partner
+   */
+  async getPartnerReservationsSummary(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
+    const query = this.reservationRepo.createQueryBuilder('reservation')
+      .where('reservation.channel_id = :partnerId', { partnerId });
+
+    if (dateRange?.start_date) {
+      query.andWhere('reservation.created_at >= :startDate', { startDate: dateRange.start_date });
+    }
+    if (dateRange?.end_date) {
+      query.andWhere('reservation.created_at <= :endDate', { endDate: dateRange.end_date });
+    }
+
+    const reservations = await query.getMany();
+
+    const byStatus: any = {};
+    reservations.forEach(res => {
+      byStatus[res.status] = (byStatus[res.status] || 0) + 1;
+    });
+
+    return {
+      total_count: reservations.length,
+      total_quantity: reservations.reduce((sum, r) => sum + r.quantity, 0),
+      by_status: byStatus
+    };
+  }
+
+  /**
+   * Get tickets summary for a specific partner
+   */
+  async getPartnerTicketsSummary(partnerId: string) {
+    const tickets = await this.preGeneratedTicketRepo.find({
+      where: { partner_id: partnerId }
+    });
+
+    const byStatus: any = {};
+    const byProduct: any = {};
+
+    tickets.forEach((ticket: PreGeneratedTicketEntity) => {
+      byStatus[ticket.status] = (byStatus[ticket.status] || 0) + 1;
+      byProduct[ticket.product_id] = (byProduct[ticket.product_id] || 0) + 1;
+    });
+
+    return {
+      total_generated: tickets.length,
+      by_status: byStatus,
+      by_product: byProduct
+    };
+  }
+
+  /**
+   * Get inventory usage for a specific partner
+   */
+  async getPartnerInventoryUsage(partnerId: string) {
+    const inventories = await this.inventoryRepo.find({
+      relations: ['product']
+    });
+
+    const usage: any = {};
+
+    for (const inventory of inventories) {
+      const allocation = inventory.channel_allocations[partnerId];
+      if (allocation) {
+        const total = allocation.allocated;
+        const used = allocation.reserved + allocation.sold;
+        const utilization = total > 0 ? ((used / total) * 100).toFixed(2) + '%' : '0%';
+
+        usage[inventory.product_id] = {
+          product_name: inventory.product?.name || `Product ${inventory.product_id}`,
+          allocated: allocation.allocated,
+          reserved: allocation.reserved,
+          sold: allocation.sold,
+          available: allocation.allocated - allocation.reserved - allocation.sold,
+          utilization_rate: utilization
+        };
+      }
+    }
+
+    return usage;
+  }
+
+  /**
+   * Get platform-wide summary
+   */
+  async getPlatformSummary(dateRange?: { start_date?: string; end_date?: string }) {
+    const orderQuery = this.otaOrderRepo.createQueryBuilder('order');
+
+    if (dateRange?.start_date) {
+      orderQuery.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
+    }
+    if (dateRange?.end_date) {
+      orderQuery.andWhere('order.created_at <= :endDate', { endDate: dateRange.end_date });
+    }
+
+    const orders = await orderQuery.getMany();
+    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
+    const totalTickets = await this.preGeneratedTicketRepo.count();
+    const activeTickets = await this.preGeneratedTicketRepo.count({ where: { status: 'ACTIVE' } });
+
+    return {
+      total_orders: orders.length,
+      total_revenue: totalRevenue,
+      total_tickets_generated: totalTickets,
+      total_tickets_activated: activeTickets
+    };
+  }
+
+  /**
+   * Get top partners by revenue
+   */
+  async getTopPartners(limit: number = 5, dateRange?: { start_date?: string; end_date?: string }) {
+    const query = this.otaOrderRepo.createQueryBuilder('order')
+      .select('order.partner_id', 'partner_id')
+      .addSelect('COUNT(order.order_id)', 'orders_count')
+      .addSelect('SUM(order.total_amount)', 'revenue')
+      .groupBy('order.partner_id')
+      .orderBy('revenue', 'DESC')
+      .limit(limit);
+
+    if (dateRange?.start_date) {
+      query.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
+    }
+    if (dateRange?.end_date) {
+      query.andWhere('order.created_at <= :endDate', { endDate: dateRange.end_date });
+    }
+
+    const results = await query.getRawMany();
+
+    return results.map((r: any) => ({
+      partner_id: r.partner_id,
+      orders_count: parseInt(r.orders_count),
+      revenue: parseFloat(r.revenue)
+    }));
+  }
+
+  /**
+   * Get inventory overview across all partners
+   */
+  async getInventoryOverview() {
+    const inventories = await this.inventoryRepo.find();
+
+    let totalAllocated = 0;
+    let totalReserved = 0;
+    let totalSold = 0;
+
+    inventories.forEach(inv => {
+      Object.values(inv.channel_allocations).forEach((allocation: any) => {
+        totalAllocated += allocation.allocated;
+        totalReserved += allocation.reserved;
+        totalSold += allocation.sold;
+      });
+    });
+
+    const overallUtilization = totalAllocated > 0
+      ? ((totalSold / totalAllocated) * 100).toFixed(2) + '%'
+      : '0%';
+
+    return {
+      total_allocated: totalAllocated,
+      total_reserved: totalReserved,
+      total_sold: totalSold,
+      overall_utilization: overallUtilization
+    };
   }
 }

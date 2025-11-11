@@ -12,8 +12,8 @@ import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
  * - Add wechat_extra JSON NULL (additional WeChat user data: nickname, gender, city, etc.)
  * - Add INDEX idx_wechat_openid for performance
  */
-export class AddWeChatAuthFields1736064000006 implements MigrationInterface {
-  name = 'AddWeChatAuthFields1736064000006';
+export class AddWeChatAuthFields1736064000008 implements MigrationInterface {
+  name = 'AddWeChatAuthFields1736064000008';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Add wechat_openid column (unique identifier for WeChat users)

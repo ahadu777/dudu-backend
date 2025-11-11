@@ -44,7 +44,7 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/dev', devRouter);
   app.use('/api/ota', otaRouter);
   app.use('/venue', venueRouter);
-  app.use('/qr', qrGenerationRouter); // Unified QR generation for OTA and normal tickets
+  app.use('/qr', qrGenerationRouter); // Unified QR generation and verification
 
   app.use('/payments', refundsRouter);
   app.use('/', refundsRouter);

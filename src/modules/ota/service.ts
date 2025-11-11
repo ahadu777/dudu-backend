@@ -4,6 +4,8 @@ import { AppDataSource } from '../../config/database';
 import { OTARepository } from './domain/ota.repository';
 import { mockDataStore } from '../../core/mock/data';
 import { dataSourceConfig } from '../../config/data-source';
+import { API_KEYS } from '../../middlewares/otaAuth';
+import { generateSecureQR } from '../../utils/qr-crypto';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -96,6 +98,7 @@ export interface OTATicketActivateRequest {
     email: string;
     phone: string;
   };
+  customer_type: 'adult' | 'child' | 'elderly';  // Required: determines pricing
   payment_reference: string;
 }
 
@@ -103,6 +106,9 @@ export interface OTATicketActivateResponse {
   ticket_code: string;
   order_id: string;
   customer_name: string;
+  customer_type: 'adult' | 'child' | 'elderly';
+  ticket_price: number;
+  currency: string;
   status: string;
   activated_at: string;
 }
@@ -648,6 +654,7 @@ export class OTAService {
       return tickets.map((ticket: any) => ({
         ticket_code: ticket.ticket_code,
         qr_code: ticket.qr_code,
+        customer_type: ticket.customer_type,
         entitlements: ticket.entitlements,
         status: ticket.status
       }));
@@ -665,6 +672,7 @@ export class OTAService {
     return (order.tickets || []).map((ticket: any) => ({
         ticket_code: ticket.code,
         qr_code: `data:image/png;base64,${Buffer.from(JSON.stringify({ticket_id: ticket.id, product_id: order.product_id})).toString('base64')}`,
+        customer_type: ticket.customer_type,
         entitlements: ticket.entitlements,
         status: ticket.status
       }));
@@ -728,18 +736,18 @@ export class OTAService {
         const customerTypePricing = product.customer_discounts ? [
           {
             customer_type: 'adult' as const,
-            unit_price: basePrice,
-            discount_applied: 0
+            unit_price: Math.round(basePrice * (1 - (product.customer_discounts.adult || 0))),
+            discount_applied: Math.round(basePrice * (product.customer_discounts.adult || 0))
           },
           {
             customer_type: 'child' as const,
-            unit_price: basePrice - (product.customer_discounts.child || 100),
-            discount_applied: product.customer_discounts.child || 100
+            unit_price: Math.round(basePrice * (1 - (product.customer_discounts.child || 0.35))),
+            discount_applied: Math.round(basePrice * (product.customer_discounts.child || 0.35))
           },
           {
             customer_type: 'elderly' as const,
-            unit_price: basePrice - (product.customer_discounts.elderly || 50),
-            discount_applied: product.customer_discounts.elderly || 50
+            unit_price: Math.round(basePrice * (1 - (product.customer_discounts.elderly || 0.17))),
+            discount_applied: Math.round(basePrice * (product.customer_discounts.elderly || 0.17))
           }
         ] : [
           // Fallback defaults if no customer discounts defined
@@ -801,11 +809,13 @@ export class OTAService {
         const ticketId = Date.now() + (Math.random() * 1000) + i; // Unique ID with index
         const ticketCode = `CRUISE-${new Date().getFullYear()}-${product.category.toUpperCase()}-${Math.floor(ticketId)}`;
 
-        const qrData = JSON.stringify({
-          ticket_id: ticketId,
+        // Generate secure QR code with encryption + signature
+        const qrResult = await generateSecureQR({
+          ticket_code: ticketCode,
           product_id: product.id,
+          ticket_type: 'OTA',
           batch_id: request.batch_id,
-          issued_at: new Date().toISOString()
+          partner_id: partnerId
         });
 
         // Use entitlements from product or default cruise functions
@@ -825,7 +835,7 @@ export class OTAService {
           partner_id: partnerId,
           status: 'PRE_GENERATED' as const,
           entitlements,
-          qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+          qr_code: qrResult.qr_image,
           created_at: new Date()
         };
 
@@ -889,11 +899,13 @@ export class OTAService {
       const ticketId = mockDataStore.nextTicketId++;
       const ticketCode = `${product.sku}-${ticketId}`;
 
-      const qrData = JSON.stringify({
-        ticket_id: ticketId,
+      // Generate secure QR code with encryption + signature
+      const qrResult = await generateSecureQR({
+        ticket_code: ticketCode,
         product_id: product.id,
+        ticket_type: 'OTA',
         batch_id: request.batch_id,
-        issued_at: new Date().toISOString()
+        partner_id: partnerId
       });
 
       const ticket = {
@@ -907,7 +919,7 @@ export class OTAService {
           function_code: func.function_code,
           remaining_uses: 1
         })),
-        qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+        qr_code: qrResult.qr_image,
         created_at: new Date(),
         customer_name: null,
         customer_email: null,
@@ -935,10 +947,26 @@ export class OTAService {
       } : {
         base_product_id: request.product_id,
         base_price: Number(product.unit_price),
-        customer_type_pricing: [
+        customer_type_pricing: product.customer_discounts ? [
+          {
+            customer_type: 'adult',
+            unit_price: Math.round(Number(product.unit_price) * (1 - (product.customer_discounts.adult || 0))),
+            discount_applied: Math.round(Number(product.unit_price) * (product.customer_discounts.adult || 0))
+          },
+          {
+            customer_type: 'child',
+            unit_price: Math.round(Number(product.unit_price) * (1 - (product.customer_discounts.child || 0.35))),
+            discount_applied: Math.round(Number(product.unit_price) * (product.customer_discounts.child || 0.35))
+          },
+          {
+            customer_type: 'elderly',
+            unit_price: Math.round(Number(product.unit_price) * (1 - (product.customer_discounts.elderly || 0.17))),
+            discount_applied: Math.round(Number(product.unit_price) * (product.customer_discounts.elderly || 0.17))
+          }
+        ] : [
           { customer_type: 'adult', unit_price: Number(product.unit_price), discount_applied: 0 },
-          { customer_type: 'child', unit_price: Number(product.unit_price) - 100, discount_applied: 100 },
-          { customer_type: 'elderly', unit_price: Number(product.unit_price) - 50, discount_applied: 50 }
+          { customer_type: 'child', unit_price: Math.round(Number(product.unit_price) * 0.65), discount_applied: Math.round(Number(product.unit_price) * 0.35) },
+          { customer_type: 'elderly', unit_price: Math.round(Number(product.unit_price) * 0.83), discount_applied: Math.round(Number(product.unit_price) * 0.17) }
         ],
         weekend_premium: 30,
         currency: 'HKD',
@@ -1019,21 +1047,31 @@ export class OTAService {
             customer_name: request.customer_details.name,
             customer_email: request.customer_details.email,
             customer_phone: request.customer_details.phone,
+            customer_type: request.customer_type,
             payment_reference: request.payment_reference
           },
           orderData
         );
 
+        // Get pricing from order data
+        const ticketPrice = Number(orderData.total_amount);
+        const currency = 'HKD';
+
         logger.info('ota.ticket.activation_database_completed', {
           ticket_code: ticketCode,
           order_id: result.order.order_id,
-          customer_name: result.ticket.customer_name
+          customer_name: result.ticket.customer_name,
+          customer_type: request.customer_type,
+          ticket_price: ticketPrice
         });
 
         return {
           ticket_code: ticketCode,
           order_id: result.order.order_id,
           customer_name: result.ticket.customer_name!,
+          customer_type: request.customer_type,
+          ticket_price: ticketPrice,
+          currency: currency,
           status: 'ACTIVE',
           activated_at: result.ticket.activated_at!.toISOString()
         };
@@ -1078,6 +1116,30 @@ export class OTAService {
       };
     }
 
+    // Get batch pricing information
+    const batch = mockDataStore.getBatch(ticket.batch_id);
+    if (!batch) {
+      throw {
+        code: 'BATCH_NOT_FOUND',
+        message: `Batch ${ticket.batch_id} not found`
+      };
+    }
+
+    // Find price for customer type
+    const customerTypePricing = batch.pricing_snapshot.customer_type_pricing.find(
+      (p: any) => p.customer_type === request.customer_type
+    );
+
+    if (!customerTypePricing) {
+      throw {
+        code: 'INVALID_CUSTOMER_TYPE',
+        message: `Customer type ${request.customer_type} not available for this batch`
+      };
+    }
+
+    const ticketPrice = customerTypePricing.unit_price;
+    const currency = batch.pricing_snapshot.currency || 'HKD';
+
     // Create order for this ticket
     const orderId = `ORD-${mockDataStore.nextOrderId++}`;
     const now = new Date();
@@ -1090,7 +1152,7 @@ export class OTAService {
       customer_email: request.customer_details.email,
       customer_phone: request.customer_details.phone,
       payment_reference: request.payment_reference,
-      total_amount: 382, // Base price for simplicity
+      total_amount: ticketPrice, // Use actual price based on customer type
       status: 'confirmed',
       created_at: now,
       confirmation_code: `CONF-${mockDataStore.nextOrderId}`,
@@ -1100,6 +1162,8 @@ export class OTAService {
     // Update ticket with customer details
     ticket.customer_name = request.customer_details.name;
     ticket.customer_email = request.customer_details.email;
+    ticket.customer_type = request.customer_type;
+    ticket.raw = {};  // Initialize raw field for future metadata
     ticket.order_id = orderId;
     ticket.status = 'ACTIVE';
     ticket.activated_at = now;
@@ -1110,13 +1174,18 @@ export class OTAService {
     logger.info('ota.ticket.activation_completed', {
       ticket_code: ticketCode,
       order_id: orderId,
-      customer_name: request.customer_details.name
+      customer_name: request.customer_details.name,
+      customer_type: request.customer_type,
+      ticket_price: ticketPrice
     });
 
     return {
       ticket_code: ticketCode,
       order_id: orderId,
       customer_name: request.customer_details.name,
+      customer_type: request.customer_type,
+      ticket_price: ticketPrice,
+      currency: currency,
       status: 'ACTIVE',
       activated_at: now.toISOString()
     };
@@ -1404,6 +1473,144 @@ export class OTAService {
       page,
       page_size: limit
     };
+  }
+
+  // ============= ADMIN MANAGEMENT METHODS =============
+
+  /**
+   * Get all OTA partners
+   * Admin only - requires admin:read permission
+   */
+  async getAllPartners() {
+    logger.info('ota.admin.get_all_partners');
+
+    const partners = Array.from(API_KEYS.entries()).map(([apiKey, data]) => ({
+      partner_id: data.partner_id,
+      partner_name: data.partner_name,
+      api_key_prefix: apiKey.substring(0, 10) + '...', // Security: only show prefix
+      permissions: data.permissions,
+      rate_limit: data.rate_limit,
+      status: 'active' // All current partners are active (hardcoded)
+    }));
+
+    logger.info('ota.admin.partners_retrieved', { count: partners.length });
+
+    return partners;
+  }
+
+  /**
+   * Get statistics for a specific partner
+   * Admin only - requires admin:read permission
+   */
+  async getPartnerStatistics(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
+    logger.info('ota.admin.get_partner_statistics', { partner_id: partnerId, date_range: dateRange });
+
+    // Find partner info
+    const partnerEntry = Array.from(API_KEYS.entries()).find(([_, data]) => data.partner_id === partnerId);
+    if (!partnerEntry) {
+      throw {
+        code: ERR.VALIDATION_ERROR,
+        message: `Partner ${partnerId} not found`
+      };
+    }
+
+    const [_, partnerData] = partnerEntry;
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+
+      // Get aggregated statistics from repository
+      const [ordersSummary, reservationsSummary, ticketsSummary, inventoryUsage] = await Promise.all([
+        repo.getPartnerOrdersSummary(partnerId, dateRange),
+        repo.getPartnerReservationsSummary(partnerId, dateRange),
+        repo.getPartnerTicketsSummary(partnerId),
+        repo.getPartnerInventoryUsage(partnerId)
+      ]);
+
+      return {
+        partner_id: partnerId,
+        partner_name: partnerData.partner_name,
+        date_range: dateRange || { start_date: null, end_date: null },
+        orders: ordersSummary,
+        reservations: reservationsSummary,
+        tickets: ticketsSummary,
+        inventory_usage: inventoryUsage
+      };
+    } else {
+      // Mock mode - return empty statistics
+      return {
+        partner_id: partnerId,
+        partner_name: partnerData.partner_name,
+        date_range: dateRange || { start_date: null, end_date: null },
+        orders: {
+          total_count: 0,
+          total_revenue: 0,
+          avg_order_value: 0,
+          by_status: {}
+        },
+        reservations: {
+          total_count: 0,
+          total_quantity: 0,
+          by_status: {}
+        },
+        tickets: {
+          total_generated: 0,
+          by_status: {}
+        },
+        inventory_usage: {}
+      };
+    }
+  }
+
+  /**
+   * Get platform-wide dashboard summary
+   * Admin only - requires admin:read permission
+   */
+  async getDashboardSummary(dateRange?: { start_date?: string; end_date?: string }) {
+    logger.info('ota.admin.get_dashboard_summary', { date_range: dateRange });
+
+    const totalPartners = API_KEYS.size;
+    const activePartners = totalPartners; // All current partners are active
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+
+      // Get aggregated statistics across all partners
+      const [platformSummary, topPartners, inventoryOverview] = await Promise.all([
+        repo.getPlatformSummary(dateRange),
+        repo.getTopPartners(5, dateRange),
+        repo.getInventoryOverview()
+      ]);
+
+      return {
+        summary: {
+          total_partners: totalPartners,
+          active_partners: activePartners,
+          ...platformSummary
+        },
+        top_partners: topPartners,
+        inventory_overview: inventoryOverview
+      };
+    } else {
+      // Mock mode
+      return {
+        summary: {
+          total_partners: totalPartners,
+          active_partners: activePartners,
+          total_orders: 0,
+          total_revenue: 0,
+          total_tickets_generated: 0,
+          total_tickets_activated: 0
+        },
+        top_partners: [],
+        inventory_overview: {
+          total_allocated: 0,
+          total_reserved: 0,
+          total_sold: 0,
+          overall_utilization: '0%'
+        }
+      };
+    }
   }
 }
 

@@ -25,6 +25,11 @@ export interface MockProduct {
   name: string;
   description: string;
   unit_price: number;
+  customer_discounts?: {
+    adult?: number;    // Discount ratio (0-1) for adult tickets
+    child?: number;    // Discount ratio (0-1) for child tickets
+    elderly?: number;  // Discount ratio (0-1) for elderly tickets
+  };
   active: boolean;
   functions: Array<{
     function_code: string;
@@ -212,6 +217,11 @@ class MockDataStore {
         name: 'Premium Plan - 中環長洲來回船票',
         description: 'Premium cruise experience with ferry, gifts, and playground tokens',
         unit_price: 288.00, // Base weekday adult price
+        customer_discounts: {
+          adult: 0,      // No discount for adults (100% of base price)
+          child: 0.35,   // 35% discount for children (65% of base price)
+          elderly: 0.17  // 17% discount for elderly (83% of base price)
+        },
         active: true,
         functions: [
           { function_code: 'ferry', function_name: '中環(五號碼頭)至長洲來回船票', max_uses: 1 },

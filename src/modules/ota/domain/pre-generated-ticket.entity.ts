@@ -47,6 +47,16 @@ export class PreGeneratedTicketEntity {
   @Column({ type: 'varchar', length: 20, nullable: true })
   customer_phone?: string;
 
+  @Column({
+    type: 'enum',
+    enum: ['adult', 'child', 'elderly'],
+    nullable: true
+  })
+  customer_type?: 'adult' | 'child' | 'elderly';
+
+  @Column({ type: 'json', nullable: true })
+  raw?: Record<string, any>;
+
   @Column({ type: 'varchar', length: 50, nullable: true })
   order_id?: string;
 

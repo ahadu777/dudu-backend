@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { unifiedAuth } from '../../middlewares/unified-auth';
 import { unifiedQRService } from './service';
 import { logger } from '../../utils/logger';
+import { decryptAndVerifyQR } from '../../utils/qr-crypto';
+import { mockDataStore } from '../../core/mock/data';
 
 const router = Router();
 
@@ -61,13 +63,45 @@ router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: N
     const now = new Date();
     const validForSeconds = Math.floor((expiresAt.getTime() - now.getTime()) / 1000);
 
+    // Check if client wants URL-based QR code (for WeChat scanning)
+    const qrType = req.query.type || req.body?.qr_type || 'encrypted';
+
+    if (qrType === 'url') {
+      // Generate URL-based QR code for WeChat scanning
+      // Users can scan with WeChat to verify ticket
+      // Simplified: only pass encrypted token (contains all info including ticket_code)
+      const verifyUrl = `${req.protocol}://${req.get('host')}/qr/verify?t=${qrResult.encrypted_data}`;
+      const QRCode = require('qrcode');
+      const urlQrImage = await QRCode.toDataURL(verifyUrl, {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        width: 200,
+        margin: 1
+      });
+
+      return res.status(200).json({
+        success: true,
+        qr_image: urlQrImage,
+        qr_type: 'url',
+        verify_url: verifyUrl,
+        ticket_code: qrResult.ticket_code,
+        expires_at: qrResult.expires_at,
+        valid_for_seconds: validForSeconds,
+        issued_at: new Date().toISOString(),
+        note: 'This QR code can be scanned with WeChat to verify ticket'
+      });
+    }
+
+    // Default: encrypted QR code for redemption system
     return res.status(200).json({
       success: true,
       qr_image: qrResult.qr_image,
+      qr_type: 'encrypted',
       ticket_code: qrResult.ticket_code,
       expires_at: qrResult.expires_at,
       valid_for_seconds: validForSeconds,
-      issued_at: new Date().toISOString()
+      issued_at: new Date().toISOString(),
+      note: 'This QR code is for redemption system use only'
     });
   } catch (error) {
     logger.error('qr.router.error', {
@@ -152,5 +186,381 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
     next(error);
   }
 });
+
+/**
+ * GET /qr/verify
+ *
+ * Verify ticket QR code scanned by WeChat
+ * This endpoint is designed for WeChat in-app browser display
+ *
+ * @query t - Encrypted token (contains all ticket info)
+ * @returns HTML page showing ticket verification status
+ */
+router.get('/verify', async (req: Request, res: Response) => {
+  try {
+    const encryptedToken = req.query.t as string;
+
+    logger.info('qr.verify.request', {
+      has_token: !!encryptedToken,
+      user_agent: req.headers['user-agent'],
+      ip: req.ip
+    });
+
+    // Validate parameters
+    if (!encryptedToken) {
+      return res.status(400).send(generateErrorHTML(
+        '参数错误',
+        '二维码格式不正确，请重新扫描',
+        'INVALID_PARAMETERS'
+      ));
+    }
+
+    // Decrypt and verify token (contains all info including ticket_code)
+    let decryptResult;
+    try {
+      decryptResult = await decryptAndVerifyQR(encryptedToken);
+    } catch (error) {
+      logger.warn('qr.verify.decryption_failed', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return res.status(401).send(generateErrorHTML(
+        '验证失败',
+        '二维码已过期或无效，请重新生成',
+        'TOKEN_EXPIRED_OR_INVALID'
+      ));
+    }
+
+    const decryptedData = decryptResult.data;
+    const ticketCode = decryptedData.ticket_code; // Get ticket code from decrypted data
+
+    // Check token expiration
+    if (decryptResult.is_expired) {
+      const expiredAt = new Date(decryptedData.expires_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+      return res.status(401).send(generateErrorHTML(
+        '二维码已过期',
+        `此二维码已于 ${expiredAt} 过期，请重新生成`,
+        'QR_EXPIRED'
+      ));
+    }
+
+    // Fetch ticket information
+    let ticket;
+    let ticketType = 'NORMAL';
+
+    // Try OTA tickets first
+    const otaTicket = mockDataStore.preGeneratedTickets.get(ticketCode);
+    if (otaTicket) {
+      ticket = {
+        code: otaTicket.ticket_code,
+        product_id: otaTicket.product_id,
+        status: otaTicket.status,
+        order_id: otaTicket.order_id,
+        batch_id: otaTicket.batch_id,
+        partner_id: otaTicket.partner_id
+      };
+      ticketType = 'OTA';
+    } else {
+      // Try normal tickets
+      const normalTicket = mockDataStore.getTicketByCode(ticketCode);
+      if (normalTicket) {
+        ticket = {
+          code: normalTicket.code,
+          status: normalTicket.status,
+          order_id: normalTicket.order_id?.toString()
+        };
+      }
+    }
+
+    if (!ticket) {
+      return res.status(404).send(generateErrorHTML(
+        '票券不存在',
+        '未找到此票券，请联系客服',
+        'TICKET_NOT_FOUND'
+      ));
+    }
+
+    // Get product information
+    const product = mockDataStore.getProduct(ticket.product_id || 0);
+
+    // Generate success HTML
+    const expiresAt = new Date(decryptedData.expires_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+    const timeRemaining = decryptResult.remaining_seconds > 0
+      ? Math.floor(decryptResult.remaining_seconds / 60)
+      : 0;
+
+    logger.info('qr.verify.success', {
+      ticket_code: ticketCode,
+      ticket_type: ticketType,
+      status: ticket.status,
+      product_name: product?.name
+    });
+
+    return res.status(200).send(generateSuccessHTML(
+      ticketCode,
+      ticket,
+      product,
+      expiresAt,
+      timeRemaining,
+      ticketType
+    ));
+
+  } catch (error) {
+    logger.error('qr.verify.error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
+    return res.status(500).send(generateErrorHTML(
+      '系统错误',
+      '验证过程中发生错误，请稍后重试',
+      'INTERNAL_ERROR'
+    ));
+  }
+});
+
+// Helper functions for HTML generation
+function generateSuccessHTML(
+  ticketCode: string,
+  ticket: any,
+  product: any,
+  expiresAt: string,
+  timeRemaining: number,
+  ticketType: string
+): string {
+  const statusText = getStatusText(ticket.status);
+  const statusColor = getStatusColor(ticket.status);
+
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>票券验证成功</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+      border-radius: 20px 20px 0 0;
+    }
+    .checkmark {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: white;
+      margin: 0 auto 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+    .content {
+      padding: 30px;
+    }
+    .ticket-code {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+      font-family: monospace;
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #667eea;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .label { color: #666; font-size: 14px; }
+    .value { color: #333; font-weight: 600; font-size: 16px; text-align: right; }
+    .status {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .status-active { background: #d4edda; color: #155724; }
+    .status-used { background: #f8d7da; color: #721c24; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .timer {
+      background: #e7f3ff;
+      color: #0066cc;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 12px;
+      background: #f8f9fa;
+      border-radius: 0 0 20px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="checkmark">✓</div>
+      <h1>票券验证成功</h1>
+    </div>
+    <div class="content">
+      <div class="ticket-code">${ticketCode}</div>
+      ${product ? `<div class="info-row"><span class="label">产品名称</span><span class="value">${product.name}</span></div>` : ''}
+      <div class="info-row"><span class="label">票券状态</span><span class="value"><span class="status ${statusColor}">${statusText}</span></span></div>
+      <div class="info-row"><span class="label">票券类型</span><span class="value">${ticketType === 'OTA' ? 'OTA合作伙伴' : '直销票券'}</span></div>
+      ${ticket.order_id ? `<div class="info-row"><span class="label">订单编号</span><span class="value">${ticket.order_id}</span></div>` : ''}
+      <div class="info-row"><span class="label">验证时间</span><span class="value">${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span></div>
+      ${timeRemaining > 0 ? `<div class="timer">⏱️ 此二维码将在 ${timeRemaining} 分钟后过期</div>` : ''}
+    </div>
+    <div class="footer">
+      <p>此页面仅供验证使用</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+function generateErrorHTML(title: string, message: string, code: string): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+    .header {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 20px 20px 0 0;
+    }
+    .error-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: white;
+      margin: 0 auto 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+    .content { padding: 30px; }
+    .message {
+      font-size: 16px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .error-code {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #999;
+    }
+    .footer {
+      padding: 20px;
+      background: #f8f9fa;
+      color: #999;
+      font-size: 12px;
+      border-radius: 0 0 20px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="error-icon">✕</div>
+      <h1>${title}</h1>
+    </div>
+    <div class="content">
+      <p class="message">${message}</p>
+      <div class="error-code">错误代码: ${code}</div>
+    </div>
+    <div class="footer">
+      <p>如有疑问，请联系客服</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+function getStatusText(status: string): string {
+  const statusMap: { [key: string]: string } = {
+    'PRE_GENERATED': '待激活',
+    'ACTIVE': '可使用',
+    'pending': '待激活',
+    'active': '可使用',
+    'used': '已使用',
+    'expired': '已过期',
+    'partially_redeemed': '部分使用'
+  };
+  return statusMap[status] || status;
+}
+
+function getStatusColor(status: string): string {
+  const colorMap: { [key: string]: string } = {
+    'PRE_GENERATED': 'status-pending',
+    'ACTIVE': 'status-active',
+    'pending': 'status-pending',
+    'active': 'status-active',
+    'used': 'status-used',
+    'expired': 'status-used',
+    'partially_redeemed': 'status-active'
+  };
+  return colorMap[status] || 'status-pending';
+}
 
 export default router;
