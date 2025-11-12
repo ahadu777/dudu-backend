@@ -524,6 +524,7 @@ export class OTARepository {
       // Create the order
       const order = queryRunner.manager.create(OTAOrderEntity, {
         ...orderData,
+        partner_id: partnerId,  // Add partner_id for order isolation
         customer_name: customerData.customer_name,
         customer_email: customerData.customer_email,
         customer_phone: customerData.customer_phone,
