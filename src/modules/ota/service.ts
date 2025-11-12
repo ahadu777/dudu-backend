@@ -1296,9 +1296,29 @@ export class OTAService {
       const repo = await this.getRepository();
       return await repo.getBatchAnalytics(batchId);
     } else {
-      // Mock implementation - use stored batch data
+      // Mock implementation - dynamically calculate from actual ticket statuses
       const storedBatch = mockDataStore.getBatch(batchId);
       if (!storedBatch) return null;
+
+      // Dynamically count tickets by status
+      const tickets = Array.from(mockDataStore.preGeneratedTickets.values())
+        .filter(t => t.batch_id === batchId);
+
+      const tickets_generated = tickets.length;
+      const tickets_activated = tickets.filter(t => t.status === 'ACTIVE' || t.status === 'REDEEMED').length;
+      const tickets_redeemed = tickets.filter(t => t.status === 'REDEEMED').length;
+
+      const basePrice = storedBatch.pricing_snapshot?.base_price || 288;
+
+      // DEBUG: Log created_at details
+      logger.info('batch.analytics.created_at_debug', {
+        batch_id: batchId,
+        created_at_type: typeof storedBatch.created_at,
+        created_at_value: storedBatch.created_at,
+        created_at_iso: storedBatch.created_at?.toISOString?.(),
+        has_getMilliseconds: typeof storedBatch.created_at?.getMilliseconds === 'function',
+        milliseconds: storedBatch.created_at?.getMilliseconds?.()
+      });
 
       return {
         batch_id: batchId,
@@ -1306,23 +1326,21 @@ export class OTAService {
         campaign_type: storedBatch.batch_metadata?.campaign_type || "standard",
         campaign_name: storedBatch.batch_metadata?.campaign_name || "Standard Batch",
         generated_at: storedBatch.created_at?.toISOString() || new Date().toISOString(),
-        tickets_generated: storedBatch.tickets_generated || 0,
-        tickets_activated: storedBatch.tickets_activated || 0,
-        tickets_redeemed: storedBatch.tickets_redeemed || 0,
+        tickets_generated,
+        tickets_activated,
+        tickets_redeemed,
         conversion_rates: {
-          activation_rate: storedBatch.tickets_generated > 0 ?
-            (storedBatch.tickets_activated || 0) / storedBatch.tickets_generated : 0,
-          redemption_rate: storedBatch.tickets_activated > 0 ?
-            (storedBatch.tickets_redeemed || 0) / storedBatch.tickets_activated : 0,
-          overall_utilization: storedBatch.tickets_generated > 0 ?
-            (storedBatch.tickets_redeemed || 0) / storedBatch.tickets_generated : 0
+          activation_rate: tickets_generated > 0 ? tickets_activated / tickets_generated : 0,
+          redemption_rate: tickets_activated > 0 ? tickets_redeemed / tickets_activated : 0,
+          overall_utilization: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
         },
         revenue_metrics: {
-          potential_revenue: storedBatch.tickets_generated * (storedBatch.pricing_snapshot?.base_price || 288),
-          realized_revenue: (storedBatch.tickets_redeemed || 0) * (storedBatch.pricing_snapshot?.base_price || 288),
-          realization_rate: storedBatch.tickets_generated > 0 ?
-            (storedBatch.tickets_redeemed || 0) / storedBatch.tickets_generated : 0
+          potential_revenue: tickets_generated * basePrice,
+          realized_revenue: tickets_redeemed * basePrice,
+          realization_rate: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
         },
+        wholesale_rate: basePrice,
+        amount_due: (tickets_redeemed * basePrice).toFixed(2),
         batch_metadata: storedBatch.batch_metadata || {}
       };
     }

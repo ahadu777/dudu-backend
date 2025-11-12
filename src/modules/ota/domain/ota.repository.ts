@@ -711,7 +711,48 @@ export class OTARepository {
 
   async getBatchAnalytics(batchId: string): Promise<any | null> {
     const batch = await this.findBatchById(batchId);
-    return batch ? batch.getBillingSummary() : null;
+    if (!batch) return null;
+
+    // Dynamically calculate ticket counts from actual ticket statuses
+    const ticketStats = await this.dataSource.query(`
+      SELECT
+        COUNT(*) as tickets_generated,
+        SUM(CASE WHEN status IN ('ACTIVE', 'REDEEMED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN status = 'REDEEMED' THEN 1 ELSE 0 END) as tickets_redeemed
+      FROM pre_generated_tickets
+      WHERE batch_id = ?
+    `, [batchId]);
+
+    const stats = ticketStats[0];
+    const tickets_generated = parseInt(stats.tickets_generated) || 0;
+    const tickets_activated = parseInt(stats.tickets_activated) || 0;
+    const tickets_redeemed = parseInt(stats.tickets_redeemed) || 0;
+
+    const basePrice = batch.pricing_snapshot.base_price;
+
+    return {
+      batch_id: batch.batch_id,
+      reseller_name: batch.reseller_metadata?.intended_reseller || 'Direct Sale',
+      campaign_type: batch.batch_metadata?.campaign_type || 'standard',
+      campaign_name: batch.batch_metadata?.campaign_name || 'Standard Batch',
+      generated_at: batch.created_at,
+      tickets_generated,
+      tickets_activated,
+      tickets_redeemed,
+      conversion_rates: {
+        activation_rate: tickets_generated > 0 ? tickets_activated / tickets_generated : 0,
+        redemption_rate: tickets_activated > 0 ? tickets_redeemed / tickets_activated : 0,
+        overall_utilization: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
+      },
+      revenue_metrics: {
+        potential_revenue: tickets_generated * basePrice,
+        realized_revenue: tickets_redeemed * basePrice,
+        realization_rate: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
+      },
+      wholesale_rate: basePrice,
+      amount_due: (tickets_redeemed * basePrice).toFixed(2),
+      batch_metadata: batch.batch_metadata || {}
+    };
   }
 
   async getResellerBillingSummary(resellerName: string, period: string): Promise<any> {
