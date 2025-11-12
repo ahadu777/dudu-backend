@@ -733,21 +733,22 @@ export class OTAService {
         const currency = 'HKD';
 
         // Get customer type pricing from product or calculate defaults
+        // Note: customer_discounts are stored as absolute amounts, not percentages
         const customerTypePricing = product.customer_discounts ? [
           {
             customer_type: 'adult' as const,
-            unit_price: Math.round(basePrice * (1 - (product.customer_discounts.adult || 0))),
-            discount_applied: Math.round(basePrice * (product.customer_discounts.adult || 0))
+            unit_price: Math.round(basePrice - (product.customer_discounts.adult || 0)),
+            discount_applied: Math.round(product.customer_discounts.adult || 0)
           },
           {
             customer_type: 'child' as const,
-            unit_price: Math.round(basePrice * (1 - (product.customer_discounts.child || 0.35))),
-            discount_applied: Math.round(basePrice * (product.customer_discounts.child || 0.35))
+            unit_price: Math.round(basePrice - (product.customer_discounts.child || Math.round(basePrice * 0.35))),
+            discount_applied: Math.round(product.customer_discounts.child || Math.round(basePrice * 0.35))
           },
           {
             customer_type: 'elderly' as const,
-            unit_price: Math.round(basePrice * (1 - (product.customer_discounts.elderly || 0.17))),
-            discount_applied: Math.round(basePrice * (product.customer_discounts.elderly || 0.17))
+            unit_price: Math.round(basePrice - (product.customer_discounts.elderly || Math.round(basePrice * 0.17))),
+            discount_applied: Math.round(product.customer_discounts.elderly || Math.round(basePrice * 0.17))
           }
         ] : [
           // Fallback defaults if no customer discounts defined
@@ -950,18 +951,18 @@ export class OTAService {
         customer_type_pricing: product.customer_discounts ? [
           {
             customer_type: 'adult',
-            unit_price: Math.round(Number(product.unit_price) * (1 - (product.customer_discounts.adult || 0))),
-            discount_applied: Math.round(Number(product.unit_price) * (product.customer_discounts.adult || 0))
+            unit_price: Math.round(Number(product.unit_price) - (product.customer_discounts.adult || 0)),
+            discount_applied: Math.round(product.customer_discounts.adult || 0)
           },
           {
             customer_type: 'child',
-            unit_price: Math.round(Number(product.unit_price) * (1 - (product.customer_discounts.child || 0.35))),
-            discount_applied: Math.round(Number(product.unit_price) * (product.customer_discounts.child || 0.35))
+            unit_price: Math.round(Number(product.unit_price) - (product.customer_discounts.child || Math.round(Number(product.unit_price) * 0.35))),
+            discount_applied: Math.round(product.customer_discounts.child || Math.round(Number(product.unit_price) * 0.35))
           },
           {
             customer_type: 'elderly',
-            unit_price: Math.round(Number(product.unit_price) * (1 - (product.customer_discounts.elderly || 0.17))),
-            discount_applied: Math.round(Number(product.unit_price) * (product.customer_discounts.elderly || 0.17))
+            unit_price: Math.round(Number(product.unit_price) - (product.customer_discounts.elderly || Math.round(Number(product.unit_price) * 0.17))),
+            discount_applied: Math.round(product.customer_discounts.elderly || Math.round(Number(product.unit_price) * 0.17))
           }
         ] : [
           { customer_type: 'adult', unit_price: Number(product.unit_price), discount_applied: 0 },
@@ -1023,22 +1024,57 @@ export class OTAService {
         customer_email: request.customer_details.email
       });
 
-      // Generate order ID
-      const orderId = `ORD-${Date.now()}`;
-      const now = new Date();
-
-      // Prepare order data
-      const orderData = {
-        order_id: orderId,
-        product_id: 0, // Will be set from ticket
-        channel_id: 2, // OTA channel
-        total_amount: 382, // Base price for simplicity
-        status: 'confirmed' as const,
-        confirmation_code: `CONF-${Date.now()}`,
-        created_at: now
-      };
-
       try {
+        const repo = await this.getRepository();
+
+        // First, get the ticket to access batch pricing information
+        const ticket = await repo.findPreGeneratedTicket(ticketCode);
+        if (!ticket || ticket.status !== 'PRE_GENERATED' || ticket.partner_id !== partnerId) {
+          throw {
+            code: 'TICKET_NOT_FOUND',
+            message: `Ticket ${ticketCode} not found or already activated`
+          };
+        }
+
+        // Get batch to retrieve pricing snapshot
+        const batch = await repo.findBatchById(ticket.batch_id);
+        if (!batch) {
+          throw {
+            code: 'BATCH_NOT_FOUND',
+            message: `Batch ${ticket.batch_id} not found`
+          };
+        }
+
+        // Find price for customer type from batch pricing snapshot
+        const customerTypePricing = batch.pricing_snapshot.customer_type_pricing.find(
+          (p: any) => p.customer_type === request.customer_type
+        );
+
+        if (!customerTypePricing) {
+          throw {
+            code: 'INVALID_CUSTOMER_TYPE',
+            message: `Customer type ${request.customer_type} not available for this batch`
+          };
+        }
+
+        const ticketPrice = customerTypePricing.unit_price;
+        const currency = batch.pricing_snapshot.currency || 'HKD';
+
+        // Generate order ID
+        const orderId = `ORD-${Date.now()}`;
+        const now = new Date();
+
+        // Prepare order data with correct pricing
+        const orderData = {
+          order_id: orderId,
+          product_id: ticket.product_id,
+          channel_id: 2, // OTA channel
+          total_amount: ticketPrice, // Use actual price based on customer type
+          status: 'confirmed' as const,
+          confirmation_code: `CONF-${Date.now()}`,
+          created_at: now
+        };
+
         // Use repository to activate ticket and create order atomically
         const result = await this.otaRepository!.activatePreGeneratedTicket(
           ticketCode,
@@ -1052,10 +1088,6 @@ export class OTAService {
           },
           orderData
         );
-
-        // Get pricing from order data
-        const ticketPrice = Number(orderData.total_amount);
-        const currency = 'HKD';
 
         logger.info('ota.ticket.activation_database_completed', {
           ticket_code: ticketCode,
@@ -1392,6 +1424,7 @@ export class OTAService {
             status: ticket.status,
             batch_id: ticket.batch_id,
             product_id: ticket.product_id,
+            qr_code: ticket.qr_code,
             created_at: ticket.created_at.toISOString(),
             activated_at: ticket.activated_at ? ticket.activated_at.toISOString() : null,
             order_id: ticket.order_id || null,
@@ -1463,6 +1496,7 @@ export class OTAService {
         status: ticket.status,
         batch_id: ticket.batch_id,
         product_id: ticket.product_id,
+        qr_code: ticket.qr_code,
         created_at: ticket.created_at.toISOString(),
         activated_at: ticket.activated_at ? ticket.activated_at.toISOString() : null,
         order_id: ticket.order_id,

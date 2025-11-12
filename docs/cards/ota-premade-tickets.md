@@ -10,15 +10,16 @@ branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/ota-b2b2c-billing.xml"
 integration_runbook: "docs/integration/ota-b2b2c-billing-runbook.md"
-last_update: "2025-11-08T05:15:00+08:00"
+last_update: "2025-11-12T13:00:00+08:00"
 related_stories: ["US-012"]
 relationships:
   depends_on: ["ota-channel-management"]
-  triggers: ["order-create"]
+  triggers: ["order-create", "qr-generation-api"]
   data_dependencies: ["PreGeneratedTicket", "OtaOrder", "ChannelReservation", "OTATicketBatch"]
   integration_points:
     data_stores: ["ota.repository.ts"]
     external_apis: ["OTA Partner Platforms"]
+    downstream_services: ["qr-generation-api"]
 ---
 
 # OTA Pre-made Ticket Management — Dev Notes
@@ -29,13 +30,18 @@ relationships:
 - Spec Paths: /api/ota/tickets/bulk-generate, /api/ota/tickets/:code/activate
 - Migrations: db/migrations/0012_pre_generated_tickets.sql
 - Newman: Tested • reports/newman/ota-premade-tickets.xml
-- Last Update: 2025-11-04T16:40:00+08:00
+- Last Update: 2025-11-12T13:00:00+08:00 (Added: qr_code in tickets list response)
 
 ## 0) Prerequisites
 - ota-channel-management card implemented (inventory management)
 - order-create card implemented (order creation patterns)
 - Product catalog with function definitions available
 - Database with pre_generated_tickets table
+
+**QR Code Generation:**
+- Pre-generated tickets receive static QR codes during bulk generation (for display purposes)
+- For actual redemption, use `qr-generation-api` card to generate secure, time-limited encrypted QR codes
+- See [qr-generation-api.md](qr-generation-api.md) for on-demand QR generation with configurable expiry
 
 ## 1) API Sequence (Context)
 ```mermaid
@@ -161,6 +167,11 @@ paths:
                         customer_email:
                           type: string
                           nullable: true
+                        qr_code:
+                          type: string
+                          format: base64
+                          description: Base64-encoded QR code image (data URI format)
+                          example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
                   total_count:
                     type: integer
                     example: 100
@@ -386,13 +397,15 @@ paths:
 ## 3) Invariants
 - Pre-made tickets start with status PRE_GENERATED
 - Only PRE_GENERATED tickets can be activated
-- Activation creates corresponding OTA order record
+- Activation creates corresponding OTA order record with correct product_id and partner_id
 - Each ticket can only be activated once
 - Customer details must include name, email, and phone
 - Payment reference is required for audit trail
+- **Order amount must match customer_type pricing from batch pricing_snapshot**
 - **NEW**: Reseller batches have extended expiry periods (configurable)
 - **NEW**: Reseller metadata is preserved through activation chain
 - **NEW**: Distribution mode cannot be changed after batch creation
+- **NEW**: Customer discounts in products table are stored as absolute amounts (e.g., child: 150 means HKD 150 off)
 - Ticket list queries are partner-isolated (only show tickets owned by requesting partner)
 - Pagination limit cannot exceed 1000 tickets per request
 - Page number must be positive integer (minimum 1)
@@ -417,13 +430,19 @@ paths:
 
 **POST /api/ota/tickets/:code/activate:**
 1) Begin transaction with row locking
-2) Find ticket by code with status PRE_GENERATED
-3) Validate customer details completeness
-4) Create OTA order record with customer details
-5) Update ticket status to ACTIVE and link to order
-6) Set activated_at timestamp
-7) Commit transaction
-8) Log activation event for audit
+2) Find ticket by code with status PRE_GENERATED (with partner_id isolation)
+3) Retrieve batch record to access pricing_snapshot
+4) Find pricing for requested customer_type from batch pricing_snapshot
+5) Validate customer details completeness
+6) Create OTA order record with:
+   - Correct product_id from ticket
+   - Partner_id from authenticated partner
+   - Total_amount from customer_type pricing in batch snapshot
+   - Customer details and payment reference
+7) Update ticket status to ACTIVE and link to order
+8) Set activated_at timestamp
+9) Commit transaction
+10) Log activation event for audit
 
 ## 6) Data Impact & Transactions
 
@@ -458,10 +477,18 @@ paths:
 - created_at, activated_at
 
 **Table: ota_orders** *(Existing)*
-- order_id (Primary Key, Format: ORD-{timestamp})
-- customer_name, customer_email, customer_phone
-- payment_reference (OTA transaction ID)
-- total_amount, status, created_at
+- order_id (Primary Key, VARCHAR(50), Format: ORD-{timestamp})
+- product_id (INT, Foreign Key to products)
+- channel_id (INT, default: 2 for OTA channel)
+- partner_id (VARCHAR(50), for partner isolation and multi-tenant support)
+- customer_name (VARCHAR(255), customer full name)
+- customer_email (VARCHAR(255), customer email address)
+- customer_phone (VARCHAR(20), nullable, customer phone number)
+- payment_reference (VARCHAR(100), OTA payment transaction ID for audit trail)
+- total_amount (DECIMAL(10,2), order total amount based on customer_type pricing)
+- status (ENUM: 'pending', 'confirmed', 'cancelled', 'refunded', default: 'confirmed')
+- confirmation_code (VARCHAR(50), order confirmation code)
+- created_at, updated_at (Timestamps)
 
 ## 7) Observability
 - Log `ota.tickets.bulk_generated` with `{batch_id, product_id, quantity}`
@@ -494,6 +521,14 @@ paths:
 **Given** invalid pagination parameters (page=0 or negative limit)
 **When** GET /api/ota/tickets with invalid params
 **Then** returns 422 Unprocessable Entity with clear validation error
+
+**Given** pre-generated tickets with pricing_snapshot
+**When** activating with different customer_types (adult, child, elderly)
+**Then** order total_amount matches customer_type pricing from batch snapshot
+
+**Given** tickets from batch with custom special_pricing
+**When** activating any ticket from that batch
+**Then** order uses locked-in special_pricing, not current product pricing
 
 ## 9) Testing & Validation
 
@@ -611,4 +646,7 @@ mysql -h $DB_HOST -u $DB_USERNAME -p$DB_PASSWORD $DB_DATABASE \
 - [ ] **Error Handling**: Proper 4xx responses for invalid inputs
 - [ ] **Authentication**: API key validation works
 - [ ] **Business Logic**: Pricing snapshots, reseller metadata preserved
+- [ ] **Pricing Accuracy**: Order amounts match customer_type pricing from batch snapshot
+- [ ] **Partner Isolation**: Orders include correct partner_id and product_id
+- [ ] **Discount Calculation**: Customer discounts applied as absolute amounts (not percentages)
 - [ ] **Concurrent Safety**: No duplicate batch_ids or ticket_codes

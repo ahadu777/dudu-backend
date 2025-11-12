@@ -7,9 +7,9 @@ product_area: "Commerce"
 owner: "Product Manager"
 status: "Production Ready"
 created_date: "2025-11-03"
-last_updated: "2025-11-06"
+last_updated: "2025-11-12"
 related_stories: ["US-012"]
-implementation_cards: ["ota-channel-management", "ota-authentication-middleware", "ota-order-processing", "channel-inventory-tracking", "ota-premade-tickets"]
+implementation_cards: ["ota-channel-management", "ota-authentication-middleware", "ota-order-processing", "channel-inventory-tracking", "ota-premade-tickets", "qr-generation-api"]
 enhances: "PRD-001"
 deadline: "2025-11-15"
 ```
@@ -147,6 +147,31 @@ deadline: "2025-11-15"
   - Default to product pricing when no special pricing is specified
   - Locked-in pricing survives product price changes during batch lifecycle
 - **Priority**: High
+
+**Unified QR Code Generation API** *(NEW)*
+- **Description**: On-demand secure QR code generation for both OTA and normal tickets
+- **Business Value**: Enables flexible ticket delivery and reduces storage costs by generating QR codes when needed
+- **User Value**: Users receive secure, time-limited QR codes optimized for venue scanning and WeChat verification
+- **Acceptance Criteria**:
+  - Support both encrypted QR codes (for redemption) and URL-based QR codes (for WeChat scanning)
+  - API key authentication for OTA partners, JWT authentication for normal users
+  - Configurable expiry time (1-1440 minutes, default 30 minutes)
+  - Base64 PNG image output for direct display in applications
+  - AES-256-GCM encryption with HMAC-SHA256 signature for security
+  - Partner isolation ensures OTA partners can only generate QR for their tickets
+- **Priority**: High
+
+**WeChat QR Code Verification** *(NEW)*
+- **Description**: Browser-based ticket verification endpoint for WeChat users
+- **Business Value**: Improves user experience within WeChat ecosystem without requiring separate app
+- **User Value**: Users can verify ticket validity by scanning QR code within WeChat
+- **Acceptance Criteria**:
+  - HTML page rendering optimized for WeChat in-app browser
+  - Decryption and verification of encrypted QR tokens
+  - Display ticket details (code, product, status, validity)
+  - Support for both Chinese and English bilingual interface
+  - Clear expiry and error messaging
+- **Priority**: Medium
 
 ### Technical Requirements
 - **Performance**:
@@ -556,6 +581,45 @@ GET /api/ota/campaigns/analytics:                        # NEW: Campaign perform
         top_performing_resellers: string[]
       ]
 ```
+
+#### QR Code Generation *(NEW - Phase 4)*
+```yaml
+POST /qr/{ticket_code}:
+  summary: Generate secure QR code for ticket (OTA or normal)
+  security:
+    - ApiKeyAuth: []  # For OTA partners
+    - BearerAuth: []  # For normal users
+  parameters:
+    - ticket_code: string (path) - Ticket code to generate QR for
+    - type: "encrypted" | "url" (query, optional) - QR type
+  requestBody:
+    expiry_minutes: number (optional, 1-1440, default: 30)
+    qr_type: "encrypted" | "url" (optional, default: "encrypted")
+  responses:
+    200:
+      success: boolean
+      qr_image: string (Base64 PNG)
+      qr_type: string
+      ticket_code: string
+      expires_at: string (ISO 8601)
+      valid_for_seconds: number
+      verify_url: string (only for qr_type=url)
+      note: string (usage instructions)
+    400: Invalid ticket code or expiry parameters
+    401: Authentication required
+    403: Ticket type mismatch or unauthorized access
+    404: Ticket not found
+    409: Invalid ticket status
+    500: Server configuration error
+
+GET /qr/verify:
+  summary: Verify QR code for WeChat users
+  parameters:
+    - t: string (query) - Encrypted token from QR code
+  responses:
+    200: HTML page with ticket verification details
+    400: Invalid or missing token (HTML error page)
+```
 ```
 
 ### Business Logic
@@ -809,6 +873,16 @@ Test Scenarios:
 - ✅ Database migration successfully applied
 - ✅ Live production testing completed
 - ✅ Launch readiness confirmation - **10 days early delivery**
+
+**Phase 4** (Nov 10-12, 2025): QR Code Enhancement - ✅ **COMPLETED**
+- ✅ Unified QR generation API (`POST /qr/:code`)
+- ✅ WeChat verification endpoint (`GET /qr/verify`)
+- ✅ AES-256-GCM encryption with HMAC-SHA256 signature
+- ✅ Support for both encrypted and URL-based QR codes
+- ✅ Configurable expiry times (1-1440 minutes)
+- ✅ Partner isolation for OTA ticket QR generation
+- ✅ Integration guide for OTA partners (OTA_QR_CODE_GUIDE.md)
+- ✅ Database migration for tickets.raw field
 
 ### Resource Requirements
 - **Engineering**: 1 AI developer (full-stack implementation)
