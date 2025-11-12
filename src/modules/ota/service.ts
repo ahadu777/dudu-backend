@@ -726,6 +726,13 @@ export class OTAService {
           currency: request.special_pricing.currency,
           captured_at: new Date().toISOString()
         };
+
+        // DEBUG: Log special pricing before saving
+        logger.info('ota.batch.special_pricing_applied', {
+          batch_id: request.batch_id,
+          product_id: request.product_id,
+          pricing_snapshot: pricingSnapshot
+        });
       } else {
         // Use pricing from product entity
         const basePrice = Number(product.base_price);
@@ -1045,6 +1052,14 @@ export class OTAService {
           };
         }
 
+        // DEBUG: Log complete pricing snapshot from database
+        logger.info('ota.ticket.activation_pricing_debug', {
+          ticket_code: ticketCode,
+          batch_id: ticket.batch_id,
+          pricing_snapshot: batch.pricing_snapshot,
+          requested_customer_type: request.customer_type
+        });
+
         // Find price for customer type from batch pricing snapshot
         const customerTypePricing = batch.pricing_snapshot.customer_type_pricing.find(
           (p: any) => p.customer_type === request.customer_type
@@ -1059,6 +1074,28 @@ export class OTAService {
 
         const ticketPrice = customerTypePricing.unit_price;
         const currency = batch.pricing_snapshot.currency || 'HKD';
+
+        // DEBUG: Log extracted price details
+        logger.info('ota.ticket.activation_price_extracted', {
+          ticket_code: ticketCode,
+          customer_type: request.customer_type,
+          customer_type_pricing: customerTypePricing,
+          final_ticket_price: ticketPrice,
+          currency: currency
+        });
+
+        // VALIDATION: Check for anomalous pricing
+        const basePrice = batch.pricing_snapshot.base_price || 0;
+        if (ticketPrice > basePrice * 2) {
+          logger.warn('ota.ticket.pricing_anomaly_detected', {
+            ticket_code: ticketCode,
+            batch_id: ticket.batch_id,
+            ticket_price: ticketPrice,
+            base_price: basePrice,
+            ratio: ticketPrice / basePrice,
+            message: 'Ticket price exceeds 2x base price - possible pricing error'
+          });
+        }
 
         // Generate order ID
         const orderId = `ORD-${Date.now()}`;
@@ -1157,6 +1194,14 @@ export class OTAService {
       };
     }
 
+    // DEBUG: Log complete pricing snapshot from mock store
+    logger.info('ota.ticket.activation_pricing_debug_mock', {
+      ticket_code: ticketCode,
+      batch_id: ticket.batch_id,
+      pricing_snapshot: batch.pricing_snapshot,
+      requested_customer_type: request.customer_type
+    });
+
     // Find price for customer type
     const customerTypePricing = batch.pricing_snapshot.customer_type_pricing.find(
       (p: any) => p.customer_type === request.customer_type
@@ -1171,6 +1216,28 @@ export class OTAService {
 
     const ticketPrice = customerTypePricing.unit_price;
     const currency = batch.pricing_snapshot.currency || 'HKD';
+
+    // DEBUG: Log extracted price details
+    logger.info('ota.ticket.activation_price_extracted_mock', {
+      ticket_code: ticketCode,
+      customer_type: request.customer_type,
+      customer_type_pricing: customerTypePricing,
+      final_ticket_price: ticketPrice,
+      currency: currency
+    });
+
+    // VALIDATION: Check for anomalous pricing
+    const basePrice = batch.pricing_snapshot.base_price || 0;
+    if (ticketPrice > basePrice * 2) {
+      logger.warn('ota.ticket.pricing_anomaly_detected_mock', {
+        ticket_code: ticketCode,
+        batch_id: ticket.batch_id,
+        ticket_price: ticketPrice,
+        base_price: basePrice,
+        ratio: ticketPrice / basePrice,
+        message: 'Ticket price exceeds 2x base price - possible pricing error'
+      });
+    }
 
     // Create order for this ticket
     const orderId = `ORD-${mockDataStore.nextOrderId++}`;
@@ -1300,9 +1367,8 @@ export class OTAService {
 
   async getBatchRedemptions(batchId: string): Promise<any[]> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
-      // Would need to join with redemption_events table
-      // This is a complex query that links batch -> tickets -> redemption_events
-      return [];
+      const repo = await this.getRepository();
+      return await repo.getBatchRedemptions(batchId);
     } else {
       // Mock implementation
       return [
@@ -1329,10 +1395,20 @@ export class OTAService {
       const repo = await this.getRepository();
       if (campaignType) {
         const batches = await repo.findBatchesByCampaignType(campaignType);
+
+        // Filter batches by date_range if provided
+        let filteredBatches = batches;
+        if (dateRange) {
+          filteredBatches = batches.filter((batch: any) => {
+            const batchDate = batch.created_at.toISOString().slice(0, 7); // YYYY-MM
+            return batchDate === dateRange;
+          });
+        }
+
         // Aggregate analytics for this campaign type
-        const totalBatches = batches.length;
-        const totalGenerated = batches.reduce((sum, b) => sum + b.tickets_generated, 0);
-        const totalRedeemed = batches.reduce((sum, b) => sum + b.tickets_redeemed, 0);
+        const totalBatches = filteredBatches.length;
+        const totalGenerated = filteredBatches.reduce((sum, b) => sum + b.tickets_generated, 0);
+        const totalRedeemed = filteredBatches.reduce((sum, b) => sum + b.tickets_redeemed, 0);
 
         return {
           campaign_summaries: [
@@ -1347,8 +1423,46 @@ export class OTAService {
           ]
         };
       } else {
-        // Return all campaign types
-        return { campaign_summaries: [] };
+        // Return all campaign types aggregated
+        // Use findBatchesByPartner with 'all' to get all batches
+        const allBatches = await repo.findBatchesByPartner('all');
+
+        // Filter by date_range if provided
+        let filteredBatches = allBatches;
+        if (dateRange) {
+          filteredBatches = allBatches.filter((batch: any) => {
+            const batchDate = batch.created_at.toISOString().slice(0, 7); // YYYY-MM
+            return batchDate === dateRange;
+          });
+        }
+
+        // Group by campaign_type
+        const campaignGroups: { [key: string]: any[] } = {};
+        filteredBatches.forEach((batch: any) => {
+          const type = batch.batch_metadata?.campaign_type || 'standard';
+          if (!campaignGroups[type]) {
+            campaignGroups[type] = [];
+          }
+          campaignGroups[type].push(batch);
+        });
+
+        // Generate summaries for each campaign type
+        const summaries = Object.keys(campaignGroups).map(type => {
+          const batches = campaignGroups[type];
+          const totalGenerated = batches.reduce((sum, b) => sum + b.tickets_generated, 0);
+          const totalRedeemed = batches.reduce((sum, b) => sum + b.tickets_redeemed, 0);
+
+          return {
+            campaign_type: type,
+            total_batches: batches.length,
+            total_tickets_generated: totalGenerated,
+            total_tickets_redeemed: totalRedeemed,
+            average_conversion_rate: totalGenerated > 0 ? totalRedeemed / totalGenerated : 0,
+            top_performing_resellers: []
+          };
+        });
+
+        return { campaign_summaries: summaries };
       }
     } else {
       // Mock implementation
