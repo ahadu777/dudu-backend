@@ -2305,6 +2305,451 @@
           }
         }
       }
+    },
+    "/api/ota/batches/{batch_id}/redemptions": {
+      "get": {
+        "tags": ["OTA Integration", "Analytics"],
+        "summary": "Get redemption events for specific batch",
+        "description": "Retrieve all redemption events for tickets in a specific batch, used for reseller billing and performance tracking",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "BATCH-20251107-TEST-001"
+            },
+            "description": "Batch ID to retrieve redemptions for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Redemption events retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "batch_id": {
+                      "type": "string",
+                      "example": "BATCH-20251107-TEST-001"
+                    },
+                    "total_redemptions": {
+                      "type": "integer",
+                      "example": 45
+                    },
+                    "redemption_events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ticket_code": {
+                            "type": "string",
+                            "example": "CRUISE-2025-FERRY-001"
+                          },
+                          "function_code": {
+                            "type": "string",
+                            "example": "ferry_boarding"
+                          },
+                          "redeemed_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2025-11-07T14:30:00Z"
+                          },
+                          "venue_name": {
+                            "type": "string",
+                            "example": "Central Ferry Terminal"
+                          },
+                          "wholesale_price": {
+                            "type": "number",
+                            "example": 288.00
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Batch not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "BATCH_NOT_FOUND"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Batch with ID BATCH-20251107-TEST-001 not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/billing/summary": {
+      "get": {
+        "tags": ["OTA Integration", "Analytics"],
+        "summary": "Get billing summary for reseller",
+        "description": "Generate billing summary for OTA resellers based on ticket redemptions in a specified period",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}$",
+              "example": "2025-11"
+            },
+            "description": "Billing period in YYYY-MM format"
+          },
+          {
+            "name": "reseller",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "Premium Travel Partners Ltd"
+            },
+            "description": "Optional reseller name filter (defaults to 'all')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing summary retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "billing_period": {
+                      "type": "string",
+                      "example": "2025-11"
+                    },
+                    "reseller_summaries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "reseller_name": {
+                            "type": "string",
+                            "example": "Premium Travel Partners Ltd"
+                          },
+                          "total_redemptions": {
+                            "type": "integer",
+                            "example": 45
+                          },
+                          "total_amount_due": {
+                            "type": "number",
+                            "example": 12960.00
+                          },
+                          "batches": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "batch_id": {
+                                  "type": "string",
+                                  "example": "BATCH-20251107-TEST-001"
+                                },
+                                "redemptions_count": {
+                                  "type": "integer",
+                                  "example": 45
+                                },
+                                "wholesale_rate": {
+                                  "type": "number",
+                                  "example": 288.00
+                                },
+                                "amount_due": {
+                                  "type": "number",
+                                  "example": 12960.00
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "INVALID_REQUEST"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "period parameter is required (YYYY-MM format)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/batches/{batch_id}/analytics": {
+      "get": {
+        "tags": ["OTA Integration", "Analytics"],
+        "summary": "Real-time batch performance analytics",
+        "description": "Get detailed performance metrics for a specific batch including conversion rates and revenue tracking",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "BATCH-20251107-TEST-001"
+            },
+            "description": "Batch ID to retrieve analytics for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch analytics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "batch_id": {
+                      "type": "string",
+                      "example": "BATCH-20251107-TEST-001"
+                    },
+                    "reseller_name": {
+                      "type": "string",
+                      "example": "Premium Travel Partners Ltd"
+                    },
+                    "campaign_type": {
+                      "type": "string",
+                      "example": "flash_sale"
+                    },
+                    "campaign_name": {
+                      "type": "string",
+                      "example": "Hong Kong Harbor Premium Flash Sale"
+                    },
+                    "generated_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2025-11-07T10:00:00Z"
+                    },
+                    "tickets_generated": {
+                      "type": "integer",
+                      "example": 100
+                    },
+                    "tickets_activated": {
+                      "type": "integer",
+                      "example": 75
+                    },
+                    "tickets_redeemed": {
+                      "type": "integer",
+                      "example": 45
+                    },
+                    "conversion_rates": {
+                      "type": "object",
+                      "properties": {
+                        "activation_rate": {
+                          "type": "number",
+                          "example": 0.75,
+                          "description": "activated/generated"
+                        },
+                        "redemption_rate": {
+                          "type": "number",
+                          "example": 0.60,
+                          "description": "redeemed/activated"
+                        },
+                        "overall_utilization": {
+                          "type": "number",
+                          "example": 0.45,
+                          "description": "redeemed/generated"
+                        }
+                      }
+                    },
+                    "revenue_metrics": {
+                      "type": "object",
+                      "properties": {
+                        "potential_revenue": {
+                          "type": "number",
+                          "example": 28800.00,
+                          "description": "all tickets * wholesale_price"
+                        },
+                        "realized_revenue": {
+                          "type": "number",
+                          "example": 12960.00,
+                          "description": "redeemed tickets * wholesale_price"
+                        }
+                      }
+                    },
+                    "batch_metadata": {
+                      "type": "object",
+                      "properties": {
+                        "marketing_tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": ["luxury_travelers", "asia_pacific"]
+                        },
+                        "special_conditions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": ["limited_time_offer"]
+                        },
+                        "promotional_code": {
+                          "type": "string",
+                          "example": "HK2024FLASH"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Batch not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "BATCH_NOT_FOUND"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Batch with ID BATCH-20251107-TEST-001 not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/campaigns/analytics": {
+      "get": {
+        "tags": ["OTA Integration", "Analytics"],
+        "summary": "Analytics by campaign type across all batches",
+        "description": "Get aggregated performance analytics across all batches grouped by campaign type",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "campaign_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["early_bird", "flash_sale", "seasonal", "group_booking", "ALL"],
+              "example": "flash_sale"
+            },
+            "description": "Optional campaign type filter"
+          },
+          {
+            "name": "date_range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "7d"
+            },
+            "description": "Date range filter (e.g., '7d', '30d', '2025-11')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign analytics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "campaign_summaries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "campaign_type": {
+                            "type": "string",
+                            "example": "flash_sale"
+                          },
+                          "total_batches": {
+                            "type": "integer",
+                            "example": 5
+                          },
+                          "total_tickets_generated": {
+                            "type": "integer",
+                            "example": 500
+                          },
+                          "total_tickets_redeemed": {
+                            "type": "integer",
+                            "example": 225
+                          },
+                          "average_conversion_rate": {
+                            "type": "number",
+                            "example": 0.45
+                          },
+                          "top_performing_resellers": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "example": ["Travel Agency ABC", "Resort Partners Ltd"]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

@@ -264,6 +264,8 @@ export class OTATicketBatchEntity {
     return {
       batch_id: this.batch_id,
       reseller_name: this.reseller_metadata?.intended_reseller || 'Direct Sale',
+      campaign_type: this.batch_metadata?.campaign_type || 'standard',
+      campaign_name: this.batch_metadata?.campaign_name || 'Standard Batch',
       generated_at: this.created_at,
       tickets_generated: this.tickets_generated,
       tickets_activated: this.tickets_activated,

@@ -194,13 +194,15 @@ stories:
       - ota-premade-tickets
       - ota-reservation-management
       - ota-order-retrieval
+      - qr-generation-api
     # Sequence dependencies
     sequence:
       - ota-channel-management → ota-premade-tickets
       - ota-channel-management → ota-reservation-management
-      - ota-premade-tickets → ota-order-retrieval
+      - ota-premade-tickets → qr-generation-api
+      - qr-generation-api → ota-order-retrieval
     # Cross-story relationships
-    enhances: [US-001, US-011]
+    enhances: [US-001, US-011, US-003]
     enhanced_by: []
     # Business requirements
     business_requirement: "PRD-002"

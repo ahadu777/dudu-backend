@@ -722,21 +722,50 @@ export class OTARepository {
       return batch.created_at.toISOString().slice(0, 7) === period;
     });
 
-    const summary = {
-      billing_period: period,
+    const resellerSummary = {
       reseller_name: resellerName,
       total_batches: periodBatches.length,
       total_redemptions: periodBatches.reduce((sum, b) => sum + b.tickets_redeemed, 0),
-      total_amount_due: periodBatches.reduce((sum, b) => sum + b.total_revenue_realized, 0),
+      total_amount_due: periodBatches.reduce((sum, b) => sum + b.total_revenue_realized, 0).toFixed(2),
       batches: periodBatches.map(batch => ({
         batch_id: batch.batch_id,
         redemptions_count: batch.tickets_redeemed,
         wholesale_rate: batch.pricing_snapshot.base_price,
-        amount_due: batch.total_revenue_realized
+        amount_due: batch.total_revenue_realized.toFixed(2)
       }))
     };
 
-    return summary;
+    return {
+      billing_period: period,
+      reseller_summaries: [resellerSummary]
+    };
+  }
+
+  async getBatchRedemptions(batchId: string): Promise<any[]> {
+    // Complex JOIN query: redemption_events -> tickets -> batch -> venue
+    const result = await this.dataSource.query(`
+      SELECT
+        r.ticket_code,
+        r.function_code,
+        r.redeemed_at,
+        v.name as venue_name,
+        JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) as wholesale_price
+      FROM redemption_events r
+      INNER JOIN pre_generated_tickets t ON r.ticket_code = t.ticket_code
+      INNER JOIN ota_ticket_batches b ON t.batch_id = b.batch_id
+      LEFT JOIN venues v ON r.venue_id = v.venue_id
+      WHERE b.batch_id = ?
+        AND r.result = 'success'
+      ORDER BY r.redeemed_at DESC
+    `, [batchId]);
+
+    return result.map((row: any) => ({
+      ticket_code: row.ticket_code,
+      function_code: row.function_code,
+      redeemed_at: row.redeemed_at,
+      venue_name: row.venue_name || 'Unknown Venue',
+      wholesale_price: parseFloat(row.wholesale_price) || 0
+    }));
   }
 
   // ============= ADMIN MANAGEMENT QUERIES =============
