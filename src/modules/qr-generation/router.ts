@@ -8,6 +8,90 @@ import { mockDataStore } from '../../core/mock/data';
 const router = Router();
 
 /**
+ * POST /qr/decrypt
+ *
+ * Decrypt and verify QR code without redemption
+ * Used by frontend apps to validate QR before showing to operators
+ *
+ * @body encrypted_data - Encrypted QR token string
+ * @returns Decrypted ticket data with expiration status
+ */
+router.post('/decrypt', async (req: Request, res: Response) => {
+  try {
+    const { encrypted_data } = req.body;
+
+    logger.info('qr.decrypt.request', {
+      has_data: !!encrypted_data,
+      ip: req.ip
+    });
+
+    // Validate input
+    if (!encrypted_data || typeof encrypted_data !== 'string') {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'encrypted_data (string) is required'
+      });
+    }
+
+    // Decrypt and verify QR code
+    const result = await decryptAndVerifyQR(encrypted_data);
+
+    logger.info('qr.decrypt.success', {
+      jti: result.data.jti,
+      ticket_code: result.data.ticket_code,
+      is_expired: result.is_expired
+    });
+
+    // Return decrypted data
+    return res.status(200).json({
+      jti: result.data.jti,
+      ticket_code: result.data.ticket_code,
+      expires_at: result.data.expires_at,
+      version: result.data.version,
+      is_expired: result.is_expired,
+      remaining_seconds: result.remaining_seconds
+    });
+
+  } catch (error) {
+    logger.error('qr.decrypt.error', {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    // Handle specific QR errors
+    if (error instanceof Error) {
+      const message = error.message;
+
+      if (message.includes('QR_SIGNATURE_INVALID')) {
+        return res.status(401).json({
+          error: 'QR_SIGNATURE_INVALID',
+          message: 'QR code has been tampered with'
+        });
+      }
+
+      if (message.includes('QR_DECRYPTION_FAILED')) {
+        return res.status(401).json({
+          error: 'QR_DECRYPTION_FAILED',
+          message: 'Unable to decrypt QR code'
+        });
+      }
+
+      if (message.includes('QR_INVALID_FORMAT')) {
+        return res.status(400).json({
+          error: 'QR_INVALID_FORMAT',
+          message: 'Invalid QR code format'
+        });
+      }
+    }
+
+    // Generic error
+    return res.status(500).json({
+      error: 'DECRYPT_ERROR',
+      message: 'Failed to decrypt QR code'
+    });
+  }
+});
+
+/**
  * POST /qr/:code
  *
  * Generate secure QR code for a ticket
@@ -122,90 +206,6 @@ router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: N
 
     // Generic error
     next(error);
-  }
-});
-
-/**
- * POST /qr/decrypt
- *
- * Decrypt and verify QR code without redemption
- * Used by frontend apps to validate QR before showing to operators
- *
- * @body encrypted_data - Encrypted QR token string
- * @returns Decrypted ticket data with expiration status
- */
-router.post('/decrypt', async (req: Request, res: Response) => {
-  try {
-    const { encrypted_data } = req.body;
-
-    logger.info('qr.decrypt.request', {
-      has_data: !!encrypted_data,
-      ip: req.ip
-    });
-
-    // Validate input
-    if (!encrypted_data || typeof encrypted_data !== 'string') {
-      return res.status(400).json({
-        error: 'INVALID_REQUEST',
-        message: 'encrypted_data (string) is required'
-      });
-    }
-
-    // Decrypt and verify QR code
-    const result = await decryptAndVerifyQR(encrypted_data);
-
-    logger.info('qr.decrypt.success', {
-      jti: result.data.jti,
-      ticket_code: result.data.ticket_code,
-      is_expired: result.is_expired
-    });
-
-    // Return decrypted data
-    return res.status(200).json({
-      jti: result.data.jti,
-      ticket_code: result.data.ticket_code,
-      expires_at: result.data.expires_at,
-      version: result.data.version,
-      is_expired: result.is_expired,
-      remaining_seconds: result.remaining_seconds
-    });
-
-  } catch (error) {
-    logger.error('qr.decrypt.error', {
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-
-    // Handle specific QR errors
-    if (error instanceof Error) {
-      const message = error.message;
-
-      if (message.includes('QR_SIGNATURE_INVALID')) {
-        return res.status(401).json({
-          error: 'QR_SIGNATURE_INVALID',
-          message: 'QR code has been tampered with'
-        });
-      }
-
-      if (message.includes('QR_DECRYPTION_FAILED')) {
-        return res.status(401).json({
-          error: 'QR_DECRYPTION_FAILED',
-          message: 'Unable to decrypt QR code'
-        });
-      }
-
-      if (message.includes('QR_INVALID_FORMAT')) {
-        return res.status(400).json({
-          error: 'QR_INVALID_FORMAT',
-          message: 'Invalid QR code format'
-        });
-      }
-    }
-
-    // Generic error
-    return res.status(500).json({
-      error: 'DECRYPT_ERROR',
-      message: 'Failed to decrypt QR code'
-    });
   }
 });
 

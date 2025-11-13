@@ -848,7 +848,7 @@ export class OTAService {
           partner_id: partnerId,
           status: 'PRE_GENERATED' as const,
           entitlements,
-          qr_code: qrResult.encrypted_data, // Store for printing/PDF generation
+          qr_code: qrResult.qr_image, // Store QR image for printing/PDF generation
           raw: rawMetadata,
           created_at: new Date()
         };
@@ -937,7 +937,7 @@ export class OTAService {
           function_code: func.function_code,
           remaining_uses: 1
         })),
-        qr_code: qrResult.encrypted_data, // Store for printing/PDF generation
+        qr_code: qrResult.qr_image, // Store QR image for printing/PDF generation
         raw: rawMetadata,
         created_at: new Date(),
         customer_name: null,
