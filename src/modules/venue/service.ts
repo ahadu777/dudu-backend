@@ -242,6 +242,46 @@ export class VenueOperationsService {
       return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
     }
 
+    // 3.5. SECURITY: Validate JTI matches ticket's current_jti (for OTA tickets with raw field)
+    const ticketRaw = (ticket as any).raw;
+    if (ticketRaw && ticketRaw.jti) {
+      const currentJti = ticketRaw.jti.current_jti;
+      const preGeneratedJti = ticketRaw.jti.pre_generated_jti;
+
+      if (currentJti && currentJti !== jti) {
+        logger.warn('venue.scan.jti_mismatch', {
+          ticket_code: ticketCode,
+          qr_jti: jti,
+          ticket_current_jti: currentJti,
+          is_old_pre_generated: jti === preGeneratedJti,
+          venue_code: session.venue.venue_code
+        });
+
+        const reason = jti === preGeneratedJti ? 'QR_CODE_OUTDATED' : 'JTI_MISMATCH';
+        const message = jti === preGeneratedJti
+          ? 'Old pre-generated QR code detected. Please use the QR code received after activation.'
+          : 'QR code does not match current ticket JTI.';
+
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId: session.venue_id,
+          operatorId: session.operator_id,
+          sessionCode: request.sessionCode,
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason
+        });
+
+        return this.createRejectResponse(reason as any, startTime, {
+          ...request,
+          message,
+          hint: jti === preGeneratedJti ? 'REFRESH_QR_CODE' : undefined
+        });
+      }
+    }
+
     // 4. Function validation
     const entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);
     if (!entitlement) {
@@ -350,6 +390,33 @@ export class VenueOperationsService {
     const ticket = mockStore.getTicket(ticketCode);
     if (!ticket) {
       return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
+    }
+
+    // SECURITY: Validate JTI matches ticket's current_jti (for OTA tickets with raw field)
+    const ticketRaw = (ticket as any).raw;
+    if (ticketRaw && ticketRaw.jti) {
+      const currentJti = ticketRaw.jti.current_jti;
+      const preGeneratedJti = ticketRaw.jti.pre_generated_jti;
+
+      if (currentJti && currentJti !== jti) {
+        logger.warn('venue.scan.jti_mismatch_mock', {
+          ticket_code: ticketCode,
+          qr_jti: jti,
+          ticket_current_jti: currentJti,
+          is_old_pre_generated: jti === preGeneratedJti
+        });
+
+        const reason = jti === preGeneratedJti ? 'QR_CODE_OUTDATED' : 'JTI_MISMATCH';
+        const message = jti === preGeneratedJti
+          ? 'Old pre-generated QR code detected. Please use the QR code received after activation.'
+          : 'QR code does not match current ticket JTI.';
+
+        return this.createRejectResponse(reason as any, startTime, {
+          ...request,
+          message,
+          hint: jti === preGeneratedJti ? 'REFRESH_QR_CODE' : undefined
+        });
+      }
     }
 
     const entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);

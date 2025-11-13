@@ -155,6 +155,45 @@ router.post('/scan', (req, res) => {
       });
     }
 
+    // 4.5. SECURITY: Validate JTI matches ticket's current_jti (for OTA tickets with raw field)
+    const ticketRaw = (ticket as any).raw;
+    if (ticketRaw && ticketRaw.jti) {
+      const currentJti = ticketRaw.jti.current_jti;
+      const preGeneratedJti = ticketRaw.jti.pre_generated_jti;
+
+      if (currentJti && currentJti !== jti) {
+        logger.warn('scan.jti_mismatch', {
+          ticket_code: ticketCode,
+          qr_jti: jti,
+          ticket_current_jti: currentJti,
+          is_old_pre_generated: jti === preGeneratedJti
+        });
+
+        const error = jti === preGeneratedJti ? 'QR_CODE_OUTDATED' : 'JTI_MISMATCH';
+        const message = jti === preGeneratedJti
+          ? 'Old pre-generated QR code detected. Please use the QR code received after activation.'
+          : 'QR code does not match current ticket JTI.';
+
+        mockStore.addRedemption({
+          ticket_id: parseInt(ticketCode.split('-')[2]) || 0,
+          function_code,
+          operator_id: session.operator_id,
+          session_id,
+          location_id: location_id || null,
+          jti,
+          result: 'reject' as any,
+          reason: error,
+          ts: new Date().toISOString()
+        });
+
+        return res.status(422).json({
+          error,
+          message,
+          hint: jti === preGeneratedJti ? 'REFRESH_QR_CODE' : undefined
+        });
+      }
+    }
+
     // 5. Validate ticket status
     if (ticket.status === 'expired' || ticket.status === 'void') {
       logger.info('scan.reject', {

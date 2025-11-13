@@ -6,6 +6,7 @@ import { mockDataStore } from '../../core/mock/data';
 import { dataSourceConfig } from '../../config/data-source';
 import { API_KEYS } from '../../middlewares/otaAuth';
 import { generateSecureQR } from '../../utils/qr-crypto';
+import { TicketRawMetadata } from '../../types/domain';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -817,14 +818,14 @@ export class OTAService {
         const ticketId = Date.now() + (Math.random() * 1000) + i; // Unique ID with index
         const ticketCode = `CRUISE-${new Date().getFullYear()}-${product.category.toUpperCase()}-${Math.floor(ticketId)}`;
 
-        // Generate secure QR code with encryption + signature
+        // Generate secure QR code with long expiry for pre-generated tickets (90 days)
         const qrResult = await generateSecureQR({
           ticket_code: ticketCode,
           product_id: product.id,
           ticket_type: 'OTA',
           batch_id: request.batch_id,
           partner_id: partnerId
-        });
+        }, 90 * 24 * 60); // 90 days in minutes
 
         // Use entitlements from product or default cruise functions
         const entitlements = product.entitlements?.map((entitlement: any) => ({
@@ -836,6 +837,23 @@ export class OTAService {
           { function_code: 'dining', remaining_uses: 1 }
         ];
 
+        // Store JTI in raw field for security tracking
+        const rawMetadata: TicketRawMetadata = {
+          jti: {
+            pre_generated_jti: qrResult.jti,
+            current_jti: qrResult.jti,
+            jti_history: [{
+              jti: qrResult.jti,
+              issued_at: new Date().toISOString(),
+              status: 'PRE_GENERATED'
+            }]
+          },
+          qr_metadata: {
+            issued_at: new Date().toISOString(),
+            expires_at: qrResult.expires_at
+          }
+        };
+
         const ticket = {
           ticket_code: ticketCode,
           product_id: product.id,
@@ -844,6 +862,7 @@ export class OTAService {
           status: 'PRE_GENERATED' as const,
           entitlements,
           qr_code: qrResult.qr_image,
+          raw: rawMetadata,
           created_at: new Date()
         };
 
@@ -907,14 +926,31 @@ export class OTAService {
       const ticketId = mockDataStore.nextTicketId++;
       const ticketCode = `${product.sku}-${ticketId}`;
 
-      // Generate secure QR code with encryption + signature
+      // Generate secure QR code with long expiry for pre-generated tickets (90 days)
       const qrResult = await generateSecureQR({
         ticket_code: ticketCode,
         product_id: product.id,
         ticket_type: 'OTA',
         batch_id: request.batch_id,
         partner_id: partnerId
-      });
+      }, 90 * 24 * 60); // 90 days in minutes
+
+      // Store JTI in raw field for security tracking
+      const rawMetadata: TicketRawMetadata = {
+        jti: {
+          pre_generated_jti: qrResult.jti,
+          current_jti: qrResult.jti,
+          jti_history: [{
+            jti: qrResult.jti,
+            issued_at: new Date().toISOString(),
+            status: 'PRE_GENERATED'
+          }]
+        },
+        qr_metadata: {
+          issued_at: new Date().toISOString(),
+          expires_at: qrResult.expires_at
+        }
+      };
 
       const ticket = {
         id: ticketId,
@@ -928,6 +964,7 @@ export class OTAService {
           remaining_uses: 1
         })),
         qr_code: qrResult.qr_image,
+        raw: rawMetadata,
         created_at: new Date(),
         customer_name: null,
         customer_email: null,
@@ -1258,14 +1295,47 @@ export class OTAService {
       tickets: [ticket]
     };
 
-    // Update ticket with customer details
+    // Generate new QR code with new JTI for activation (90 days expiry)
+    const newQrResult = await generateSecureQR({
+      ticket_code: ticketCode,
+      product_id: ticket.product_id,
+      ticket_type: 'OTA',
+      batch_id: ticket.batch_id,
+      partner_id: partnerId,
+      order_id: orderId
+    }, 90 * 24 * 60); // 90 days in minutes
+
+    // Update raw field: preserve pre_generated_jti, update current_jti
+    const existingRaw = ticket.raw as TicketRawMetadata || {};
+    const updatedRaw: TicketRawMetadata = {
+      ...existingRaw,
+      jti: {
+        pre_generated_jti: existingRaw.jti?.pre_generated_jti || existingRaw.jti?.current_jti,
+        current_jti: newQrResult.jti,
+        jti_history: [
+          ...(existingRaw.jti?.jti_history || []),
+          {
+            jti: newQrResult.jti,
+            issued_at: now.toISOString(),
+            status: 'ACTIVE'
+          }
+        ]
+      },
+      qr_metadata: {
+        issued_at: now.toISOString(),
+        expires_at: newQrResult.expires_at
+      }
+    };
+
+    // Update ticket with customer details and new QR code
     ticket.customer_name = request.customer_details.name;
     ticket.customer_email = request.customer_details.email;
     ticket.customer_type = request.customer_type;
-    ticket.raw = {};  // Initialize raw field for future metadata
+    ticket.raw = updatedRaw;
     ticket.order_id = orderId;
     ticket.status = 'ACTIVE';
     ticket.activated_at = now;
+    ticket.qr_code = newQrResult.qr_image;  // Update with new QR code
 
     // Store the order
     mockDataStore.addOrder(orderId, order);
