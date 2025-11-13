@@ -5,6 +5,8 @@ import { OTARepository } from './domain/ota.repository';
 import { mockDataStore } from '../../core/mock/data';
 import { dataSourceConfig } from '../../config/data-source';
 import { API_KEYS } from '../../middlewares/otaAuth';
+import { generateSecureQR } from '../../utils/qr-crypto';
+import { TicketRawMetadata } from '../../types/domain';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -826,8 +828,19 @@ export class OTAService {
           { function_code: 'dining', remaining_uses: 1 }
         ];
 
-        // Note: QR codes are NOT pre-generated for security reasons
-        // They will be generated on-demand when requested via POST /qr/{code}
+        // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
+        const qrResult = await generateSecureQR(ticketCode);
+        const rawMetadata: TicketRawMetadata = {
+          jti: {
+            pre_generated_jti: qrResult.jti,
+            current_jti: qrResult.jti
+          },
+          qr_metadata: {
+            issued_at: new Date().toISOString(),
+            expires_at: qrResult.expires_at
+          }
+        };
+
         const ticket = {
           ticket_code: ticketCode,
           product_id: product.id,
@@ -835,8 +848,8 @@ export class OTAService {
           partner_id: partnerId,
           status: 'PRE_GENERATED' as const,
           entitlements,
-          // qr_code removed - will be generated on-demand
-          raw: {},
+          qr_code: qrResult.encrypted_data, // Store for printing/PDF generation
+          raw: rawMetadata,
           created_at: new Date()
         };
 
@@ -900,8 +913,19 @@ export class OTAService {
       const ticketId = mockDataStore.nextTicketId++;
       const ticketCode = `${product.sku}-${ticketId}`;
 
-      // Note: QR codes are NOT pre-generated for security reasons
-      // They will be generated on-demand when requested via POST /qr/{code}
+      // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
+      const qrResult = await generateSecureQR(ticketCode);
+      const rawMetadata: TicketRawMetadata = {
+        jti: {
+          pre_generated_jti: qrResult.jti,
+          current_jti: qrResult.jti
+        },
+        qr_metadata: {
+          issued_at: new Date().toISOString(),
+          expires_at: qrResult.expires_at
+        }
+      };
+
       const ticket = {
         id: ticketId,
         code: ticketCode,
@@ -913,8 +937,8 @@ export class OTAService {
           function_code: func.function_code,
           remaining_uses: 1
         })),
-        // qr_code removed - will be generated on-demand
-        raw: {},
+        qr_code: qrResult.encrypted_data, // Store for printing/PDF generation
+        raw: rawMetadata,
         created_at: new Date(),
         customer_name: null,
         customer_email: null,
