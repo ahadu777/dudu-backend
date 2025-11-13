@@ -63,45 +63,14 @@ router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: N
     const now = new Date();
     const validForSeconds = Math.floor((expiresAt.getTime() - now.getTime()) / 1000);
 
-    // Check if client wants URL-based QR code (for WeChat scanning)
-    const qrType = req.query.type || req.body?.qr_type || 'encrypted';
-
-    if (qrType === 'url') {
-      // Generate URL-based QR code for WeChat scanning
-      // Users can scan with WeChat to verify ticket
-      // Simplified: only pass encrypted token (contains all info including ticket_code)
-      const verifyUrl = `${req.protocol}://${req.get('host')}/qr/verify?t=${qrResult.encrypted_data}`;
-      const QRCode = require('qrcode');
-      const urlQrImage = await QRCode.toDataURL(verifyUrl, {
-        errorCorrectionLevel: 'M',
-        type: 'image/png',
-        width: 200,
-        margin: 1
-      });
-
-      return res.status(200).json({
-        success: true,
-        qr_image: urlQrImage,
-        qr_type: 'url',
-        verify_url: verifyUrl,
-        ticket_code: qrResult.ticket_code,
-        expires_at: qrResult.expires_at,
-        valid_for_seconds: validForSeconds,
-        issued_at: new Date().toISOString(),
-        note: 'This QR code can be scanned with WeChat to verify ticket'
-      });
-    }
-
-    // Default: encrypted QR code for redemption system
+    // Return encrypted QR code for redemption system
     return res.status(200).json({
       success: true,
       qr_image: qrResult.qr_image,
-      qr_type: 'encrypted',
       ticket_code: qrResult.ticket_code,
       expires_at: qrResult.expires_at,
       valid_for_seconds: validForSeconds,
-      issued_at: new Date().toISOString(),
-      note: 'This QR code is for redemption system use only'
+      issued_at: new Date().toISOString()
     });
   } catch (error) {
     logger.error('qr.router.error', {
@@ -153,6 +122,90 @@ router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: N
 
     // Generic error
     next(error);
+  }
+});
+
+/**
+ * POST /qr/decrypt
+ *
+ * Decrypt and verify QR code without redemption
+ * Used by frontend apps to validate QR before showing to operators
+ *
+ * @body encrypted_data - Encrypted QR token string
+ * @returns Decrypted ticket data with expiration status
+ */
+router.post('/decrypt', async (req: Request, res: Response) => {
+  try {
+    const { encrypted_data } = req.body;
+
+    logger.info('qr.decrypt.request', {
+      has_data: !!encrypted_data,
+      ip: req.ip
+    });
+
+    // Validate input
+    if (!encrypted_data || typeof encrypted_data !== 'string') {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'encrypted_data (string) is required'
+      });
+    }
+
+    // Decrypt and verify QR code
+    const result = await decryptAndVerifyQR(encrypted_data);
+
+    logger.info('qr.decrypt.success', {
+      jti: result.data.jti,
+      ticket_code: result.data.ticket_code,
+      is_expired: result.is_expired
+    });
+
+    // Return decrypted data
+    return res.status(200).json({
+      jti: result.data.jti,
+      ticket_code: result.data.ticket_code,
+      expires_at: result.data.expires_at,
+      version: result.data.version,
+      is_expired: result.is_expired,
+      remaining_seconds: result.remaining_seconds
+    });
+
+  } catch (error) {
+    logger.error('qr.decrypt.error', {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    // Handle specific QR errors
+    if (error instanceof Error) {
+      const message = error.message;
+
+      if (message.includes('QR_SIGNATURE_INVALID')) {
+        return res.status(401).json({
+          error: 'QR_SIGNATURE_INVALID',
+          message: 'QR code has been tampered with'
+        });
+      }
+
+      if (message.includes('QR_DECRYPTION_FAILED')) {
+        return res.status(401).json({
+          error: 'QR_DECRYPTION_FAILED',
+          message: 'Unable to decrypt QR code'
+        });
+      }
+
+      if (message.includes('QR_INVALID_FORMAT')) {
+        return res.status(400).json({
+          error: 'QR_INVALID_FORMAT',
+          message: 'Invalid QR code format'
+        });
+      }
+    }
+
+    // Generic error
+    return res.status(500).json({
+      error: 'DECRYPT_ERROR',
+      message: 'Failed to decrypt QR code'
+    });
   }
 });
 

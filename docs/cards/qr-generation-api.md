@@ -2,7 +2,7 @@
 card: "Unified QR Code Generation API"
 slug: qr-generation-api
 team: "A - Commerce"
-oas_paths: ["/qr/:code", "/qr/verify"]
+oas_paths: ["/qr/:code", "/qr/decrypt", "/qr/verify"]
 migrations: ["src/migrations/007-add-raw-field-to-tickets.ts"]
 status: "Done"
 readiness: "mvp"
@@ -10,7 +10,7 @@ branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/qr-generation-api.xml"
 integration_runbook: "docs/OTA_QR_CODE_GUIDE.md"
-last_update: "2025-11-12T14:00:00+08:00"
+last_update: "2025-11-13T19:00:00+08:00"
 related_stories: ["US-012", "US-001", "US-003"]
 relationships:
   depends_on: ["ota-premade-tickets", "tickets-issuance"]
@@ -27,10 +27,10 @@ relationships:
 ## Status & Telemetry
 - Status: Done
 - Readiness: mvp
-- Spec Paths: /qr/:code, /qr/verify
+- Spec Paths: /qr/:code, /qr/decrypt, /qr/verify
 - Migrations: src/migrations/007-add-raw-field-to-tickets.ts
 - Integration Guide: docs/OTA_QR_CODE_GUIDE.md
-- Last Update: 2025-11-12T14:00:00+08:00
+- Last Update: 2025-11-13T19:00:00+08:00
 
 ## 0) Prerequisites
 - Unified authentication middleware (OTA API Key + User JWT)
@@ -221,6 +221,107 @@ paths:
                   error:
                     type: string
                     example: "CONFIGURATION_ERROR"
+
+  /qr/decrypt:
+    post:
+      tags: ["QR Code Generation"]
+      summary: Decrypt and verify QR code without redemption
+      description: |
+        Decrypts encrypted QR token and returns ticket information without performing redemption.
+        Used by frontend applications to validate QR codes before showing to operators.
+
+        This endpoint supports the optimized QR data structure containing only:
+        - jti (unique ID for replay prevention)
+        - ticket_code (for ticket lookup)
+        - expires_at (QR expiration time)
+        - version (format version)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - encrypted_data
+              properties:
+                encrypted_data:
+                  type: string
+                  description: Encrypted QR token string (format: iv:encrypted:authTag:signature)
+                  example: "a1b2c3d4e5f6:1a2b3c4d5e6f7a8b9c0d:e1f2a3b4c5d6e7f8a9b0c1d2e3f4:a1b2c3d4e5f6a7b8"
+      responses:
+        200:
+          description: QR code decrypted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jti:
+                    type: string
+                    format: uuid
+                    description: Unique JWT ID for replay prevention
+                    example: "550e8400-e29b-41d4-a716-446655440000"
+                  ticket_code:
+                    type: string
+                    description: Ticket code to lookup full ticket details
+                    example: "CRUISE-2025-FERRY-1762330663284"
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: QR code expiration time
+                    example: "2025-11-13T20:00:00.000Z"
+                  version:
+                    type: integer
+                    description: QR data format version
+                    example: 1
+                  is_expired:
+                    type: boolean
+                    description: Whether QR code has expired
+                    example: false
+                  remaining_seconds:
+                    type: integer
+                    description: Seconds until expiration (negative if expired)
+                    example: 1800
+        400:
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "INVALID_REQUEST"
+                  message:
+                    type: string
+                    example: "encrypted_data (string) is required"
+        401:
+          description: QR validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum: ["QR_SIGNATURE_INVALID", "QR_DECRYPTION_FAILED", "QR_INVALID_FORMAT"]
+                    example: "QR_SIGNATURE_INVALID"
+                  message:
+                    type: string
+                    example: "QR code has been tampered with"
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "DECRYPT_ERROR"
+                  message:
+                    type: string
+                    example: "Failed to decrypt QR code"
 
   /qr/verify:
     get:

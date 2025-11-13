@@ -56,6 +56,23 @@ export class VenueOperationsService {
     }
   }
 
+  /**
+   * Detect QR code format
+   * @param qrToken - QR token string
+   * @returns 'ENCRYPTED' for new encrypted format, 'JWT' for old format, 'UNKNOWN' otherwise
+   */
+  private detectQRFormat(qrToken: string): 'ENCRYPTED' | 'JWT' | 'UNKNOWN' {
+    // Encrypted format: iv:encrypted:authTag:signature (4 parts separated by colons)
+    if (qrToken.split(':').length >= 4) {
+      return 'ENCRYPTED';
+    }
+    // JWT format: header.payload.signature (3 parts separated by dots)
+    if (qrToken.split('.').length === 3) {
+      return 'JWT';
+    }
+    return 'UNKNOWN';
+  }
+
   // Create venue operator session (replaces basic operator login)
   async createVenueSession(sessionData: {
     venueCode: string;
@@ -144,20 +161,67 @@ export class VenueOperationsService {
     });
 
     try {
-      // 1. Parse and verify QR token
-      let tokenPayload;
-      try {
-        tokenPayload = jwt.verify(request.qrToken, env.QR_SIGNER_SECRET) as any;
-      } catch (jwtError) {
-        const response = this.createRejectResponse('TOKEN_EXPIRED', startTime, {
+      // 1. Parse and verify QR token (support both encrypted and JWT formats)
+      let ticketCode: string;
+      let jti: string;
+
+      // Detect QR format: encrypted (4+ colons) or JWT (2 dots)
+      const qrFormat = this.detectQRFormat(request.qrToken);
+
+      if (qrFormat === 'ENCRYPTED') {
+        // New encrypted format: use decryptAndVerifyQR
+        try {
+          const { decryptAndVerifyQR } = await import('../../utils/qr-crypto');
+          const decryptResult = await decryptAndVerifyQR(request.qrToken);
+
+          if (decryptResult.is_expired) {
+            const response = this.createRejectResponse('QR_EXPIRED', startTime, {
+              session_code: request.sessionCode,
+              function_code: request.functionCode
+            });
+            await this.recordRedemptionAttempt(request, null, 'reject', 'QR_EXPIRED');
+            return response;
+          }
+
+          ticketCode = decryptResult.data.ticket_code;
+          jti = decryptResult.data.jti;
+
+        } catch (decryptError) {
+          const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown';
+          const reason = errorMsg.includes('QR_SIGNATURE_INVALID') ? 'QR_TAMPERED' : 'QR_INVALID';
+
+          const response = this.createRejectResponse(reason, startTime, {
+            session_code: request.sessionCode,
+            function_code: request.functionCode
+          });
+          await this.recordRedemptionAttempt(request, null, 'reject', reason);
+          return response;
+        }
+
+      } else if (qrFormat === 'JWT') {
+        // Old JWT format: maintain backward compatibility
+        try {
+          const tokenPayload = jwt.verify(request.qrToken, env.QR_SIGNER_SECRET) as any;
+          ticketCode = tokenPayload.tid;
+          jti = tokenPayload.jti;
+        } catch (jwtError) {
+          const response = this.createRejectResponse('TOKEN_EXPIRED', startTime, {
+            session_code: request.sessionCode,
+            function_code: request.functionCode
+          });
+          await this.recordRedemptionAttempt(request, null, 'reject', 'TOKEN_EXPIRED');
+          return response;
+        }
+
+      } else {
+        // Unknown format
+        const response = this.createRejectResponse('QR_FORMAT_INVALID', startTime, {
           session_code: request.sessionCode,
           function_code: request.functionCode
         });
-        await this.recordRedemptionAttempt(request, null, 'reject', 'TOKEN_EXPIRED');
+        await this.recordRedemptionAttempt(request, null, 'reject', 'QR_FORMAT_INVALID');
         return response;
       }
-
-      const { tid: ticketCode, jti } = tokenPayload;
 
       if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
         return this.handleDatabaseModeValidation(request, ticketCode, jti, startTime);

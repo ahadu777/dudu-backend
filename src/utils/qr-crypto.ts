@@ -4,21 +4,17 @@ import { env } from '../config/env';
 import { logger } from './logger';
 
 /**
- * QR Code Data Structure
+ * QR Code Data Structure (Minimized for optimal QR density)
+ *
+ * Only essential data is stored in QR code.
+ * All other ticket details (product_id, ticket_type, order_id, etc.)
+ * are retrieved via ticket_code lookup during verification.
  */
 export interface QRTicketData {
-  jti: string;        // JWT ID - Unique identifier for tracking
-  ticket_code: string;
-  product_id: number;
-  ticket_type: 'OTA' | 'NORMAL';
-  order_id?: string;
-  batch_id?: string;
-  channel_id?: string;
-  partner_id?: string;
-  issued_at: string;  // ISO 8601
-  expires_at: string; // ISO 8601 - QR expiration (independent from ticket)
-  nonce: string;      // Unique nonce for replay prevention
-  version: number;    // Format version
+  jti: string;         // JWT ID - Unique identifier for replay attack prevention
+  ticket_code: string; // Ticket code - Used to lookup full ticket details
+  expires_at: string;  // ISO 8601 - QR expiration time (independent from ticket validity)
+  version: number;     // Format version for future compatibility
 }
 
 /**
@@ -146,11 +142,10 @@ function verifySignature(data: string, signature: string): boolean {
  */
 async function generateQRImage(encryptedData: string): Promise<string> {
   const options = {
-    errorCorrectionLevel: 'H' as const, // High error correction
+    errorCorrectionLevel: 'M' as const, // Medium error correction (better for dense data)
     type: 'image/png' as const,
-    quality: 0.95,
-    margin: 1,
-    width: 300, // 300x300 pixels
+    margin: 2, // Larger margin for better scanning
+    width: 150, 
     color: {
       dark: '#000000',
       light: '#FFFFFF'
@@ -192,39 +187,37 @@ export function getRemainingSeconds(data: QRTicketData): number {
 
 /**
  * Generate secure QR code (encrypt + sign + generate image)
- * @param ticketData - Ticket information
+ * @param ticketCode - Ticket code (only essential data stored in QR)
  * @param expiryMinutes - QR code expiration time in minutes (default from env)
  * @returns Encrypted QR result with image
  */
 export async function generateSecureQR(
-  ticketData: Omit<QRTicketData, 'jti' | 'expires_at' | 'nonce' | 'version' | 'issued_at'>,
+  ticketCode: string,
   expiryMinutes?: number
 ): Promise<EncryptedQRResult> {
   const now = new Date();
   const expiryTime = expiryMinutes || Number(env.QR_EXPIRY_MINUTES) || 30;
   const expiresAt = new Date(now.getTime() + expiryTime * 60 * 1000);
 
-  // Generate unique JTI for tracking
+  // Generate unique JTI for tracking and replay attack prevention
   const jti = crypto.randomUUID();
 
-  const fullData: QRTicketData = {
+  // Minimized QR data structure (only essential fields)
+  const qrData: QRTicketData = {
     jti,
-    ...ticketData,
-    issued_at: now.toISOString(),
+    ticket_code: ticketCode,
     expires_at: expiresAt.toISOString(),
-    nonce: crypto.randomBytes(16).toString('hex'), // 32-char hex string for encryption
     version: 1 // Format version for future compatibility
   };
 
   logger.info('qr.generation.started', {
     jti,
-    ticket_code: fullData.ticket_code,
-    ticket_type: fullData.ticket_type,
+    ticket_code: ticketCode,
     expires_in_minutes: expiryTime
   });
 
-  // Step 1: Encrypt data
-  const encrypted = encryptData(fullData);
+  // Step 1: Encrypt minimal data
+  const encrypted = encryptData(qrData);
 
   // Step 2: Sign encrypted data
   const signature = signData(encrypted);
@@ -237,7 +230,7 @@ export async function generateSecureQR(
 
   logger.info('qr.generation.success', {
     jti,
-    ticket_code: fullData.ticket_code,
+    ticket_code: ticketCode,
     expires_at: expiresAt.toISOString()
   });
 
@@ -245,7 +238,7 @@ export async function generateSecureQR(
     encrypted_data: signedData,
     qr_image: qrImage,
     expires_at: expiresAt.toISOString(),
-    ticket_code: fullData.ticket_code,
+    ticket_code: ticketCode,
     jti
   };
 }
@@ -292,8 +285,8 @@ export async function decryptAndVerifyQR(
   const remaining = getRemainingSeconds(data);
 
   logger.info('qr.verification.success', {
+    jti: data.jti,
     ticket_code: data.ticket_code,
-    ticket_type: data.ticket_type,
     is_expired: expired,
     remaining_seconds: remaining
   });

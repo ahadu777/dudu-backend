@@ -4,13 +4,30 @@ slug: qr-token
 team: "B - Tickets"
 oas_paths: ["/tickets/{code}/qr-token"]
 migrations: []
-status: "Done"
+status: "Deprecated"
 readiness: "prototype"
 branch: ""
 pr: ""
 newman_report: "reports/newman/qr-token.json"
-last_update: "2025-10-20T09:56:51+0800"
+last_update: "2025-11-13T19:15:00+08:00"
 related_stories: ["US-001","US-003"]
+deprecated: true
+deprecated_date: "2025-11-13"
+replacement: "qr-generation-api.md"
+---
+
+## ⚠️ DEPRECATED
+
+**This API endpoint has been removed as of 2025-11-13.**
+
+**Reason**: Replaced by unified QR generation API with encrypted format and optimized data structure.
+
+**Migration Path**:
+- **Old**: POST `/tickets/{code}/qr-token` (JWT-based, 60s TTL)
+- **New**: POST `/qr/{code}` (AES-256-GCM encrypted, configurable TTL)
+
+**See**: [qr-generation-api.md](qr-generation-api.md) for the replacement API.
+
 ---
 
 ## Status & Telemetry

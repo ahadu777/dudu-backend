@@ -4,7 +4,6 @@ import ordersRouter from './orders/router';
 import paymentsRouter from './payments/router';
 import ticketsRouter from './tickets/router';
 import operatorsRouter from './operators/router';
-import redeemRouter from './redeem/router';
 import reportsRouter from './reports/router';
 import refundsRouter from './refunds/router';
 import policiesRouter from './policies/router';
@@ -37,7 +36,6 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/payments', paymentsRouter);
   app.use('/my', ticketsRouter);
   app.use('/tickets', ticketsRouter);
-  app.use('/tickets', redeemRouter);
   app.use('/operators', operatorsRouter);
   app.use('/validators', operatorsRouter);
   app.use('/reports', reportsRouter);

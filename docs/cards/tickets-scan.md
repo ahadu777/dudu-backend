@@ -4,13 +4,38 @@ slug: tickets-scan
 team: "C - Gate"
 oas_paths: ["/tickets/scan"]
 migrations: ["db/migrations/0004_redemption_events_jti.sql", "db/migrations/0007_redemptions_indexes.sql"]
-status: "Done"
+status: "Deprecated"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/tickets-scan-result.json"
-last_update: "2025-10-30T13:54:00+0800"
+last_update: "2025-11-13T19:15:00+08:00"
 related_stories: ["US-001","US-002"]
+deprecated: true
+deprecated_date: "2025-11-13"
+replacement: "venue-enhanced-scanning.md"
+---
+
+## ⚠️ DEPRECATED
+
+**This API endpoint has been removed as of 2025-11-13.**
+
+**Reason**: Replaced by unified venue scanning API with better separation of concerns (decrypt → display → redeem workflow).
+
+**Migration Path**:
+- **Old**: POST `/tickets/scan` (single-step validate + redeem with JWT token)
+- **New**:
+  1. POST `/qr/decrypt` (decrypt and verify QR code)
+  2. POST `/venue/scan` (validate and redeem ticket)
+
+**Benefits of New Flow**:
+- Supports both encrypted QR (AES-256-GCM) and legacy JWT formats
+- Frontend can display ticket info before redemption
+- Better operator confirmation workflow
+- Optimized QR data structure (56.8% smaller)
+
+**See**: [venue-enhanced-scanning.md](venue-enhanced-scanning.md) for the replacement API.
+
 ---
 
 ## Status & Telemetry

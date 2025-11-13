@@ -186,17 +186,10 @@ export class UnifiedQRService {
     // Step 4: Validate status
     this.validateStatus(ticket);
 
-    // Step 5: Generate encrypted QR code
+    // Step 5: Generate encrypted QR code (only ticket_code is stored in QR)
+    // All other ticket details will be retrieved via ticket_code during verification
     const qrResult = await generateSecureQR(
-      {
-        ticket_code: ticket.ticket_code,
-        product_id: ticket.product_id,
-        ticket_type: ticket.ticket_type,
-        order_id: ticket.order_id,
-        batch_id: ticket.batch_id,
-        channel_id: ticket.channel_id,
-        partner_id: ticket.partner_id
-      },
+      ticket.ticket_code,
       expiryMinutes
     );
 

@@ -5,8 +5,6 @@ import { OTARepository } from './domain/ota.repository';
 import { mockDataStore } from '../../core/mock/data';
 import { dataSourceConfig } from '../../config/data-source';
 import { API_KEYS } from '../../middlewares/otaAuth';
-import { generateSecureQR } from '../../utils/qr-crypto';
-import { TicketRawMetadata } from '../../types/domain';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -818,15 +816,6 @@ export class OTAService {
         const ticketId = Date.now() + (Math.random() * 1000) + i; // Unique ID with index
         const ticketCode = `CRUISE-${new Date().getFullYear()}-${product.category.toUpperCase()}-${Math.floor(ticketId)}`;
 
-        // Generate secure QR code with long expiry for pre-generated tickets (90 days)
-        const qrResult = await generateSecureQR({
-          ticket_code: ticketCode,
-          product_id: product.id,
-          ticket_type: 'OTA',
-          batch_id: request.batch_id,
-          partner_id: partnerId
-        }, 90 * 24 * 60); // 90 days in minutes
-
         // Use entitlements from product or default cruise functions
         const entitlements = product.entitlements?.map((entitlement: any) => ({
           function_code: entitlement.type,
@@ -837,23 +826,8 @@ export class OTAService {
           { function_code: 'dining', remaining_uses: 1 }
         ];
 
-        // Store JTI in raw field for security tracking
-        const rawMetadata: TicketRawMetadata = {
-          jti: {
-            pre_generated_jti: qrResult.jti,
-            current_jti: qrResult.jti,
-            jti_history: [{
-              jti: qrResult.jti,
-              issued_at: new Date().toISOString(),
-              status: 'PRE_GENERATED'
-            }]
-          },
-          qr_metadata: {
-            issued_at: new Date().toISOString(),
-            expires_at: qrResult.expires_at
-          }
-        };
-
+        // Note: QR codes are NOT pre-generated for security reasons
+        // They will be generated on-demand when requested via POST /qr/{code}
         const ticket = {
           ticket_code: ticketCode,
           product_id: product.id,
@@ -861,8 +835,8 @@ export class OTAService {
           partner_id: partnerId,
           status: 'PRE_GENERATED' as const,
           entitlements,
-          qr_code: qrResult.qr_image,
-          raw: rawMetadata,
+          // qr_code removed - will be generated on-demand
+          raw: {},
           created_at: new Date()
         };
 
@@ -926,32 +900,8 @@ export class OTAService {
       const ticketId = mockDataStore.nextTicketId++;
       const ticketCode = `${product.sku}-${ticketId}`;
 
-      // Generate secure QR code with long expiry for pre-generated tickets (90 days)
-      const qrResult = await generateSecureQR({
-        ticket_code: ticketCode,
-        product_id: product.id,
-        ticket_type: 'OTA',
-        batch_id: request.batch_id,
-        partner_id: partnerId
-      }, 90 * 24 * 60); // 90 days in minutes
-
-      // Store JTI in raw field for security tracking
-      const rawMetadata: TicketRawMetadata = {
-        jti: {
-          pre_generated_jti: qrResult.jti,
-          current_jti: qrResult.jti,
-          jti_history: [{
-            jti: qrResult.jti,
-            issued_at: new Date().toISOString(),
-            status: 'PRE_GENERATED'
-          }]
-        },
-        qr_metadata: {
-          issued_at: new Date().toISOString(),
-          expires_at: qrResult.expires_at
-        }
-      };
-
+      // Note: QR codes are NOT pre-generated for security reasons
+      // They will be generated on-demand when requested via POST /qr/{code}
       const ticket = {
         id: ticketId,
         code: ticketCode,
@@ -963,8 +913,8 @@ export class OTAService {
           function_code: func.function_code,
           remaining_uses: 1
         })),
-        qr_code: qrResult.qr_image,
-        raw: rawMetadata,
+        // qr_code removed - will be generated on-demand
+        raw: {},
         created_at: new Date(),
         customer_name: null,
         customer_email: null,
@@ -1046,7 +996,7 @@ export class OTAService {
       expires_at: mockBatch.expires_at,
       tickets: tickets.map(ticket => ({
         ticket_code: ticket.code,
-        qr_code: ticket.qr_code,
+        // qr_code removed - will be generated on-demand via POST /qr/{code}
         status: ticket.status,
         entitlements: ticket.entitlements
       })),
@@ -1296,46 +1246,16 @@ export class OTAService {
     };
 
     // Generate new QR code with new JTI for activation (90 days expiry)
-    const newQrResult = await generateSecureQR({
-      ticket_code: ticketCode,
-      product_id: ticket.product_id,
-      ticket_type: 'OTA',
-      batch_id: ticket.batch_id,
-      partner_id: partnerId,
-      order_id: orderId
-    }, 90 * 24 * 60); // 90 days in minutes
-
-    // Update raw field: preserve pre_generated_jti, update current_jti
-    const existingRaw = ticket.raw as TicketRawMetadata || {};
-    const updatedRaw: TicketRawMetadata = {
-      ...existingRaw,
-      jti: {
-        pre_generated_jti: existingRaw.jti?.pre_generated_jti || existingRaw.jti?.current_jti,
-        current_jti: newQrResult.jti,
-        jti_history: [
-          ...(existingRaw.jti?.jti_history || []),
-          {
-            jti: newQrResult.jti,
-            issued_at: now.toISOString(),
-            status: 'ACTIVE'
-          }
-        ]
-      },
-      qr_metadata: {
-        issued_at: now.toISOString(),
-        expires_at: newQrResult.expires_at
-      }
-    };
-
-    // Update ticket with customer details and new QR code
+    // Update ticket with customer details and activation status
+    // Note: QR codes are generated on-demand when requested via POST /qr/{code}
+    // NOT stored in database to maintain security and freshness
     ticket.customer_name = request.customer_details.name;
     ticket.customer_email = request.customer_details.email;
     ticket.customer_type = request.customer_type;
-    ticket.raw = updatedRaw;
     ticket.order_id = orderId;
     ticket.status = 'ACTIVE';
     ticket.activated_at = now;
-    ticket.qr_code = newQrResult.qr_image;  // Update with new QR code
+    // QR code removed - will be generated on-demand via POST /qr/{code}
 
     // Store the order
     mockDataStore.addOrder(orderId, order);

@@ -5,8 +5,6 @@ import { ChannelReservationEntity, ReservationStatus } from './channel-reservati
 import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
-import { generateSecureQR } from '../../../utils/qr-crypto';
-import { TicketRawMetadata } from '../../../types/domain';
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
@@ -397,23 +395,15 @@ export class OTARepository {
         const ticketId = Date.now() + (Math.random() * 1000) + i;
         const ticketCode = `${product.category?.toUpperCase() || 'TICKET'}-${new Date().getFullYear()}-P${product.id}-${Math.floor(ticketId)}`;
 
-        // Generate secure QR code with encryption + signature
-        const qrResult = await generateSecureQR({
-          ticket_code: ticketCode,
-          product_id: product.id,
-          ticket_type: 'OTA',
-          batch_id: `RESERVATION-${reservationId}`,
-          partner_id: reservation.channel_id,
-          order_id: orderId
-        });
-
+        // Note: QR codes are NOT pre-generated for security reasons
+        // They will be generated on-demand when requested via POST /qr/{code}
         const ticket = queryRunner.manager.create(PreGeneratedTicketEntity, {
           ticket_code: ticketCode,
           product_id: reservation.product_id,
           batch_id: `RESERVATION-${reservationId}`,
           partner_id: reservation.channel_id,
           status: 'ACTIVE' as TicketStatus,
-          qr_code: qrResult.qr_image,
+          // qr_code removed - will be generated on-demand
           entitlements: entitlements,
           customer_name: customerData.name,
           customer_email: customerData.email,
@@ -534,49 +524,18 @@ export class OTARepository {
 
       const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
 
-      // Generate new QR code with new JTI for activation (90 days expiry)
-      const newQrResult = await generateSecureQR({
-        ticket_code: ticketCode,
-        product_id: ticket.product_id,
-        ticket_type: 'OTA',
-        batch_id: ticket.batch_id,
-        partner_id: partnerId,
-        order_id: savedOrder.order_id
-      }, 90 * 24 * 60); // 90 days in minutes
-
-      // Update raw field: preserve pre_generated_jti, update current_jti
-      const existingRaw = (ticket.raw as TicketRawMetadata) || {};
-      const updatedRaw: TicketRawMetadata = {
-        ...existingRaw,
-        jti: {
-          pre_generated_jti: existingRaw.jti?.pre_generated_jti || existingRaw.jti?.current_jti,
-          current_jti: newQrResult.jti,
-          jti_history: [
-            ...(existingRaw.jti?.jti_history || []),
-            {
-              jti: newQrResult.jti,
-              issued_at: new Date().toISOString(),
-              status: 'ACTIVE'
-            }
-          ]
-        },
-        qr_metadata: {
-          issued_at: new Date().toISOString(),
-          expires_at: newQrResult.expires_at
-        }
-      };
-
-      // Update the ticket with customer info, new QR code, and link to order
+      // Update the ticket with customer info and activation status
+      // Note: QR codes are generated on-demand when requested via POST /qr/{code}
+      // NOT stored in database to maintain security and freshness
       ticket.customer_name = customerData.customer_name;
       ticket.customer_email = customerData.customer_email;
       ticket.customer_phone = customerData.customer_phone;
       ticket.customer_type = customerData.customer_type;
-      ticket.raw = updatedRaw;
       ticket.payment_reference = customerData.payment_reference;
       ticket.order_id = savedOrder.order_id;
       ticket.status = 'ACTIVE';
       ticket.activated_at = new Date();
-      ticket.qr_code = newQrResult.qr_image;  // Update with new QR code
+      // QR code removed - will be generated on-demand via POST /qr/{code}
 
       const savedTicket = await queryRunner.manager.save(PreGeneratedTicketEntity, ticket);
 

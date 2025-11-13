@@ -2,18 +2,18 @@
 card: "Enhanced venue scanning with cross-terminal fraud detection"
 slug: venue-enhanced-scanning
 team: "C - Gate"
-oas_paths: ["/venue/scan"]
+oas_paths: ["/venue/scan", "/qr/decrypt"]
 migrations: ["db/migrations/redemption_events.sql"]
 status: "Done"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-enhanced-scanning-result.json"
-last_update: "2025-11-03T18:35:00+0800"
+last_update: "2025-11-13T19:20:00+08:00"
 related_stories: ["US-013"]
 relationships:
-  enhances: ["tickets-scan"]
-  depends_on: ["venue-session-management", "qr-token"]
+  replaces: ["tickets-scan"]
+  depends_on: ["venue-session-management", "qr-generation-api"]
   triggers: ["venue-analytics-reporting"]
   data_dependencies: ["VenueSession", "RedemptionEvent", "Ticket"]
   integration_points:
@@ -23,12 +23,18 @@ relationships:
 ## Status & Telemetry
 - Status: Done
 - Readiness: production
-- Spec Paths: /venue/scan
+- Spec Paths: /venue/scan, /qr/decrypt
 - Migrations: db/migrations/redemption_events.sql
 
 ## Business Logic
 
 **Enhanced ticket scanning with venue context and cross-terminal fraud detection.**
+
+**Recent Updates (2025-11-13):**
+- ✅ Added POST /qr/decrypt endpoint for decryption-only workflow
+- ✅ Dual format support: Encrypted QR (AES-256-GCM) + Legacy JWT
+- ✅ Optimized QR data structure (56.8% smaller)
+- ✅ Improved operator workflow: decrypt → display → confirm → redeem
 
 ### Key Features
 - **Cross-terminal fraud detection**: JTI duplicate prevention across all venues
@@ -39,24 +45,55 @@ relationships:
 
 ### Core Operations
 
-#### Enhanced Venue Scan
+#### Recommended Workflow: Decrypt → Display → Redeem
+
+**Step 1: Decrypt QR Code (Optional but Recommended)**
+```http
+POST /qr/decrypt
+{
+  "encrypted_data": "a1b2c3d4e5f6...89:01ab23cd45ef"
+}
+```
+
+**Response:**
+```json
+{
+  "jti": "550e8400-e29b-41d4-a716-446655440000",
+  "ticket_code": "TIX-ABC123",
+  "expires_at": "2025-11-13T19:50:00.000Z",
+  "version": 1,
+  "is_expired": false,
+  "remaining_seconds": 1800
+}
+```
+
+**Use Case**: Frontend displays ticket info to operator before redemption confirmation.
+
+---
+
+**Step 2: Scan and Redeem**
 ```http
 POST /venue/scan
 {
-  "qr_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "qr_token": "a1b2c3d4e5f6...89:01ab23cd45ef",
   "function_code": "ferry_boarding",
   "session_code": "VS-MOCK-1762194466702-nlaixr301",
   "terminal_device_id": "TERMINAL-CP-001"
 }
 ```
 
+**Supported QR Formats:**
+- **Encrypted (Recommended)**: `iv:encrypted:authTag:signature` (4 colon-separated parts)
+- **Legacy JWT**: `header.payload.signature` (3 dot-separated parts)
+
 **Business Rules:**
-1. **Session Validation**: Active venue session required
-2. **Token Validation**: Valid JWT QR token with JTI
-3. **Fraud Detection**: JTI must not have been used before (across ALL venues)
-4. **Function Validation**: Function must be supported by venue
-5. **Entitlement Check**: Remaining uses must be > 0
-6. **Atomic Operation**: Success decrements remaining uses
+1. **Format Detection**: Auto-detects encrypted (4+ colons) vs JWT (3 dots)
+2. **Session Validation**: Active venue session required
+3. **Token Validation**: Valid encrypted QR or JWT token with JTI
+4. **Fraud Detection**: JTI must not have been used before (across ALL venues)
+5. **Function Validation**: Function must be supported by venue
+6. **Entitlement Check**: Remaining uses must be > 0
+7. **Atomic Operation**: Success decrements remaining uses
 
 **Success Response:**
 ```json
@@ -97,13 +134,27 @@ POST /venue/scan
 ### Fraud Detection System
 
 **JTI (JWT Token ID) Tracking:**
-- Every QR token contains unique JTI
+- Every QR token (encrypted or JWT) contains unique JTI
 - Database indexed lookup for fast duplicate detection
 - Cross-terminal, cross-venue duplicate prevention
 - Response time: 1-3ms for fraud checks
 
+**Dual Format Support:**
+- **Encrypted QR (New)**: AES-256-GCM with HMAC-SHA256 signature
+  - Format: `iv:encrypted:authTag:signature`
+  - Detection: 4+ colon-separated parts
+  - Optimized data: Only jti, ticket_code, expires_at, version
+
+- **Legacy JWT**: HS256 signed tokens (backward compatibility)
+  - Format: `header.payload.signature`
+  - Detection: 3 dot-separated parts
+  - Gradual migration path
+
 **Supported Rejection Reasons:**
-- `TOKEN_EXPIRED`: QR token expired
+- `QR_EXPIRED`: Encrypted QR token expired
+- `TOKEN_EXPIRED`: JWT token expired (legacy)
+- `QR_SIGNATURE_INVALID`: QR tampered with (encrypted only)
+- `QR_DECRYPTION_FAILED`: Invalid encrypted QR format
 - `INVALID_SESSION`: Session not found or expired
 - `ALREADY_REDEEMED`: JTI already used (fraud attempt)
 - `DUPLICATE_JTI`: Same as ALREADY_REDEEMED
