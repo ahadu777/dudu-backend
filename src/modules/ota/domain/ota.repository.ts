@@ -5,6 +5,7 @@ import { ChannelReservationEntity, ReservationStatus } from './channel-reservati
 import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
+import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
@@ -13,6 +14,7 @@ export class OTARepository {
   private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
   private otaOrderRepo: Repository<OTAOrderEntity>;
   private batchRepo: Repository<OTATicketBatchEntity>;
+  private resellerRepo: Repository<OTAResellerEntity>;
 
   constructor(private dataSource: DataSource) {
     this.productRepo = dataSource.getRepository(ProductEntity);
@@ -21,6 +23,7 @@ export class OTARepository {
     this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
     this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
     this.batchRepo = dataSource.getRepository(OTATicketBatchEntity);
+    this.resellerRepo = dataSource.getRepository(OTAResellerEntity);
   }
 
   // Product operations
@@ -312,7 +315,8 @@ export class OTARepository {
       phone: string;
     },
     paymentReference: string,
-    specialRequests?: string
+    specialRequests?: string,
+    customerTypes?: Array<'adult' | 'child' | 'elderly'>
   ): Promise<{ order: OTAOrderEntity; tickets: PreGeneratedTicketEntity[] }> {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -395,6 +399,9 @@ export class OTARepository {
         const ticketId = Date.now() + (Math.random() * 1000) + i;
         const ticketCode = `${product.category?.toUpperCase() || 'TICKET'}-${new Date().getFullYear()}-P${product.id}-${Math.floor(ticketId)}`;
 
+        // Get customer_type for this ticket (if provided)
+        const customerType = customerTypes && customerTypes[i] ? customerTypes[i] : undefined;
+
         // Note: QR codes are NOT pre-generated for security reasons
         // They will be generated on-demand when requested via POST /qr/{code}
         const ticket = queryRunner.manager.create(PreGeneratedTicketEntity, {
@@ -408,6 +415,7 @@ export class OTARepository {
           customer_name: customerData.name,
           customer_email: customerData.email,
           customer_phone: customerData.phone,
+          customer_type: customerType,
           order_id: orderId,
           payment_reference: paymentReference,
           activated_at: new Date()
@@ -1127,5 +1135,37 @@ export class OTARepository {
       total_sold: totalSold,
       overall_utilization: overallUtilization
     };
+  }
+
+  // ============= RESELLER MANAGEMENT (NEW - 2025-11-14) =============
+
+  /**
+   * Find all resellers for a specific OTA partner
+   * Used for: Reseller listing, dropdown selections
+   */
+  async findResellersByPartner(partnerId: string): Promise<OTAResellerEntity[]> {
+    return this.resellerRepo.find({
+      where: { partner_id: partnerId, status: 'active' },
+      order: { reseller_name: 'ASC' }
+    });
+  }
+
+  /**
+   * Find reseller by ID (with partner isolation check)
+   * Used for: Reseller detail views, batch assignments
+   */
+  async findResellerById(id: number, partnerId: string): Promise<OTAResellerEntity | null> {
+    return this.resellerRepo.findOne({
+      where: { id, partner_id: partnerId }
+    });
+  }
+
+  /**
+   * Create new reseller
+   * Used for: Reseller onboarding (future API)
+   */
+  async createReseller(data: Partial<OTAResellerEntity>): Promise<OTAResellerEntity> {
+    const reseller = this.resellerRepo.create(data);
+    return this.resellerRepo.save(reseller);
   }
 }

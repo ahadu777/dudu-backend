@@ -533,7 +533,12 @@ class MockDataStore {
     );
   }
 
-  activateReservation(reservationId: string, customerDetails: any, paymentReference: string): any {
+  activateReservation(
+    reservationId: string,
+    customerDetails: any,
+    paymentReference: string,
+    customerTypes?: Array<'adult' | 'child' | 'elderly'>
+  ): any {
     const reservation = this.reservations.get(reservationId);
     if (!reservation || reservation.status !== 'active') {
       return null;
@@ -583,10 +588,14 @@ class MockDataStore {
       this.tickets.set(ticketId, ticket);
       storedTickets.push(ticket);
 
+      // Get customer_type for this ticket (if provided)
+      const customerType = customerTypes && customerTypes[i] ? customerTypes[i] : undefined;
+
       // Add API response format to tickets array
       tickets.push({
         ticket_code: ticketCode,
         qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+        customer_type: customerType,
         entitlements: product.functions.map(f => ({
           function_code: f.function_code,
           function_name: f.function_name,

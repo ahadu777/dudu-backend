@@ -5,8 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-  BeforeInsert
+  BeforeInsert,
+  ManyToOne,
+  JoinColumn
 } from 'typeorm';
+import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 
 export type BatchStatus = 'active' | 'expired' | 'cancelled';
 export type DistributionMode = 'direct_sale' | 'reseller_batch';
@@ -89,6 +92,14 @@ export class OTATicketBatchEntity {
 
   @Column({ type: 'json', nullable: true })
   batch_metadata?: BatchMetadata;
+
+  // === Reseller Relationship (NEW - 2025-11-14) ===
+  @Column({ type: 'int', nullable: true, comment: '经销商ID，关联ota_resellers.id' })
+  reseller_id?: number;
+
+  @ManyToOne(() => OTAResellerEntity, { nullable: true })
+  @JoinColumn({ name: 'reseller_id' })
+  reseller?: OTAResellerEntity;
 
   @Column({ type: 'timestamp', nullable: true })
   expires_at?: Date;

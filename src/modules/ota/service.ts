@@ -40,6 +40,7 @@ export interface OTAActivateRequest {
     email: string;
     phone: string;
   };
+  customer_type?: Array<'adult' | 'child' | 'elderly'>;  // Array matching ticket quantity
   payment_reference: string;
   special_requests?: string;
 }
@@ -507,7 +508,8 @@ export class OTAService {
             phone: request.customer_details.phone
           },
           request.payment_reference,
-          request.special_requests
+          request.special_requests,
+          request.customer_type
         );
 
         logger.info('ota.reservation.activated', {
@@ -523,6 +525,7 @@ export class OTAService {
           tickets: result.tickets.map(ticket => ({
             code: ticket.ticket_code,
             qr_code: ticket.qr_code,
+            customer_type: ticket.customer_type,
             entitlements: ticket.entitlements,
             status: ticket.status
           })),
@@ -546,7 +549,8 @@ export class OTAService {
     const order = mockDataStore.activateReservation(
       reservationId,
       request.customer_details,
-      request.payment_reference
+      request.payment_reference,
+      request.customer_type
     );
 
     if (!order) {
@@ -1358,16 +1362,32 @@ export class OTAService {
     }
   }
 
-  async getResellerBillingSummary(reseller: string, period: string): Promise<any> {
+  async getResellerBillingSummary(partnerId: string, reseller: string, period: string): Promise<any> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
       if (reseller === 'all') {
-        // Return aggregated summary for all resellers
-        const batches = await repo.findBatchesByPartner('all');
-        // Implementation would aggregate across all resellers
+        // NEW: Aggregate billing summary across all active resellers
+        const allResellers = await repo.findResellersByPartner(partnerId);
+
+        if (allResellers.length === 0) {
+          return {
+            billing_period: period,
+            reseller_summaries: []
+          };
+        }
+
+        // Get billing summary for each reseller
+        const reseller_summaries = [];
+        for (const resellerEntity of allResellers) {
+          const summary = await repo.getResellerBillingSummary(resellerEntity.reseller_name, period);
+          if (summary.reseller_summaries && summary.reseller_summaries.length > 0) {
+            reseller_summaries.push(...summary.reseller_summaries);
+          }
+        }
+
         return {
           billing_period: period,
-          reseller_summaries: []
+          reseller_summaries
         };
       } else {
         return await repo.getResellerBillingSummary(reseller, period);
@@ -1788,6 +1808,233 @@ export class OTAService {
         }
       };
     }
+  }
+
+  // ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
+
+  /**
+   * List all resellers for authenticated OTA partner
+   */
+  async listResellers(partnerId: string): Promise<any> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+      const resellers = await repo.findResellersByPartner(partnerId);
+
+      return {
+        total: resellers.length,
+        resellers: resellers.map(r => ({
+          id: r.id,
+          reseller_code: r.reseller_code,
+          reseller_name: r.reseller_name,
+          contact_email: r.contact_email,
+          contact_phone: r.contact_phone,
+          commission_rate: parseFloat(r.commission_rate.toString()),
+          contract_start_date: r.contract_start_date,
+          contract_end_date: r.contract_end_date,
+          status: r.status,
+          settlement_cycle: r.settlement_cycle,
+          payment_terms: r.payment_terms,
+          region: r.region,
+          tier: r.tier,
+          created_at: r.created_at,
+          updated_at: r.updated_at
+        }))
+      };
+    } else {
+      // Mock implementation
+      return {
+        total: 2,
+        resellers: [
+          {
+            id: 1,
+            reseller_code: 'TEST-RESELLER-001',
+            reseller_name: 'Test Reseller Alpha',
+            contact_email: 'alpha@test.com',
+            contact_phone: '+86-138-0000-0001',
+            commission_rate: 0.10,
+            status: 'active',
+            settlement_cycle: 'monthly',
+            region: '华南地区',
+            tier: 'gold',
+            created_at: new Date(),
+            updated_at: new Date()
+          },
+          {
+            id: 2,
+            reseller_code: 'TEST-RESELLER-002',
+            reseller_name: 'Test Reseller Beta',
+            contact_email: 'beta@test.com',
+            commission_rate: 0.12,
+            status: 'active',
+            settlement_cycle: 'monthly',
+            region: '华北地区',
+            tier: 'silver',
+            created_at: new Date(),
+            updated_at: new Date()
+          }
+        ]
+      };
+    }
+  }
+
+  /**
+   * Get single reseller details
+   */
+  async getResellerById(resellerId: number, partnerId: string): Promise<any> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+      const reseller = await repo.findResellerById(resellerId, partnerId);
+
+      if (!reseller) {
+        return null;
+      }
+
+      return {
+        id: reseller.id,
+        reseller_code: reseller.reseller_code,
+        reseller_name: reseller.reseller_name,
+        contact_email: reseller.contact_email,
+        contact_phone: reseller.contact_phone,
+        commission_rate: parseFloat(reseller.commission_rate.toString()),
+        contract_start_date: reseller.contract_start_date,
+        contract_end_date: reseller.contract_end_date,
+        status: reseller.status,
+        settlement_cycle: reseller.settlement_cycle,
+        payment_terms: reseller.payment_terms,
+        region: reseller.region,
+        tier: reseller.tier,
+        notes: reseller.notes,
+        created_at: reseller.created_at,
+        updated_at: reseller.updated_at
+      };
+    } else {
+      // Mock implementation
+      return {
+        id: resellerId,
+        reseller_code: 'TEST-RESELLER-001',
+        reseller_name: 'Test Reseller Alpha',
+        contact_email: 'alpha@test.com',
+        contact_phone: '+86-138-0000-0001',
+        commission_rate: 0.10,
+        status: 'active',
+        settlement_cycle: 'monthly',
+        payment_terms: 'Net 30',
+        region: '华南地区',
+        tier: 'gold',
+        notes: 'Mock reseller for testing',
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+    }
+  }
+
+  /**
+   * Create new reseller
+   */
+  async createReseller(partnerId: string, data: any): Promise<any> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+
+      const reseller = await repo.createReseller({
+        partner_id: partnerId,
+        reseller_code: data.reseller_code,
+        reseller_name: data.reseller_name,
+        contact_email: data.contact_email,
+        contact_phone: data.contact_phone,
+        commission_rate: data.commission_rate || 0.10,
+        contract_start_date: data.contract_start_date ? new Date(data.contract_start_date) : undefined,
+        contract_end_date: data.contract_end_date ? new Date(data.contract_end_date) : undefined,
+        status: data.status || 'active',
+        settlement_cycle: data.settlement_cycle || 'monthly',
+        payment_terms: data.payment_terms,
+        region: data.region,
+        tier: data.tier || 'bronze',
+        notes: data.notes
+      });
+
+      logger.info('ota.reseller.created', {
+        partner_id: partnerId,
+        reseller_id: reseller.id,
+        reseller_code: reseller.reseller_code
+      });
+
+      return {
+        id: reseller.id,
+        reseller_code: reseller.reseller_code,
+        reseller_name: reseller.reseller_name,
+        status: reseller.status,
+        created_at: reseller.created_at
+      };
+    } else {
+      // Mock implementation
+      return {
+        id: Math.floor(Math.random() * 1000),
+        reseller_code: data.reseller_code,
+        reseller_name: data.reseller_name,
+        status: 'active',
+        created_at: new Date()
+      };
+    }
+  }
+
+  /**
+   * Update reseller
+   */
+  async updateReseller(resellerId: number, partnerId: string, data: any): Promise<any> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+      const reseller = await repo.findResellerById(resellerId, partnerId);
+
+      if (!reseller) {
+        return null;
+      }
+
+      // Update fields
+      if (data.reseller_name) reseller.reseller_name = data.reseller_name;
+      if (data.contact_email !== undefined) reseller.contact_email = data.contact_email;
+      if (data.contact_phone !== undefined) reseller.contact_phone = data.contact_phone;
+      if (data.commission_rate !== undefined) reseller.commission_rate = data.commission_rate;
+      if (data.contract_start_date) reseller.contract_start_date = new Date(data.contract_start_date);
+      if (data.contract_end_date) reseller.contract_end_date = new Date(data.contract_end_date);
+      if (data.status) reseller.status = data.status;
+      if (data.settlement_cycle) reseller.settlement_cycle = data.settlement_cycle;
+      if (data.payment_terms !== undefined) reseller.payment_terms = data.payment_terms;
+      if (data.region !== undefined) reseller.region = data.region;
+      if (data.tier) reseller.tier = data.tier;
+      if (data.notes !== undefined) reseller.notes = data.notes;
+
+      const updated = await repo.createReseller(reseller); // Save uses same method
+
+      logger.info('ota.reseller.updated', {
+        partner_id: partnerId,
+        reseller_id: updated.id,
+        changes: Object.keys(data)
+      });
+
+      return {
+        id: updated.id,
+        reseller_code: updated.reseller_code,
+        reseller_name: updated.reseller_name,
+        status: updated.status,
+        updated_at: updated.updated_at
+      };
+    } else {
+      // Mock implementation
+      return {
+        id: resellerId,
+        reseller_code: 'TEST-RESELLER-001',
+        reseller_name: data.reseller_name || 'Updated Reseller',
+        status: data.status || 'active',
+        updated_at: new Date()
+      };
+    }
+  }
+
+  /**
+   * Deactivate reseller (soft delete)
+   */
+  async deactivateReseller(resellerId: number, partnerId: string): Promise<any> {
+    return this.updateReseller(resellerId, partnerId, { status: 'terminated' });
   }
 }
 
