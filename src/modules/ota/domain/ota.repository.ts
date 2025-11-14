@@ -6,6 +6,7 @@ import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.e
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
 import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
+import { generateSecureQR } from '../../../utils/qr-crypto';
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
@@ -363,9 +364,46 @@ export class OTARepository {
       const orderId = `ORD-${Date.now()}`;
       const confirmationCode = `CONF-${Date.now()}`;
 
-      // Calculate total amount based on pricing snapshot
-      const basePrice = reservation.pricing_snapshot?.base_price || Number(product.base_price);
-      const totalAmount = basePrice * reservation.quantity;
+      // Calculate total amount based on customer types (similar to ticket activation logic)
+      let totalAmount = 0;
+
+      if (customerTypes && customerTypes.length > 0 && reservation.pricing_snapshot?.customer_type_pricing) {
+        // Calculate based on each customer type from pricing snapshot
+        for (const customerType of customerTypes) {
+          const pricing = reservation.pricing_snapshot.customer_type_pricing.find(
+            (p: any) => p.customer_type === customerType
+          );
+
+          if (!pricing) {
+            throw new Error(`Customer type ${customerType} not found in pricing snapshot for reservation ${reservationId}`);
+          }
+
+          totalAmount += pricing.unit_price;
+        }
+
+        // DEBUG: Log price calculation
+        console.log('ota.reservation.activation_price_calculated', {
+          reservation_id: reservationId,
+          customer_types: customerTypes,
+          individual_prices: customerTypes.map(ct => {
+            const p = reservation.pricing_snapshot!.customer_type_pricing!.find((x: any) => x.customer_type === ct);
+            return { type: ct, price: p?.unit_price };
+          }),
+          total_amount: totalAmount
+        });
+      } else {
+        // Fallback: use base price for all tickets
+        const basePrice = reservation.pricing_snapshot?.base_price || Number(product.base_price);
+        totalAmount = basePrice * reservation.quantity;
+
+        console.log('ota.reservation.activation_price_fallback', {
+          reservation_id: reservationId,
+          base_price: basePrice,
+          quantity: reservation.quantity,
+          total_amount: totalAmount,
+          reason: !customerTypes ? 'no_customer_types' : 'no_pricing_snapshot'
+        });
+      }
 
       const order = queryRunner.manager.create(OTAOrderEntity, {
         order_id: orderId,
@@ -402,15 +440,26 @@ export class OTARepository {
         // Get customer_type for this ticket (if provided)
         const customerType = customerTypes && customerTypes[i] ? customerTypes[i] : undefined;
 
-        // Note: QR codes are NOT pre-generated for security reasons
-        // They will be generated on-demand when requested via POST /qr/{code}
+        // Generate QR code for activated ticket
+        const qrResult = await generateSecureQR(ticketCode);
+        const rawMetadata = {
+          jti: {
+            pre_generated_jti: qrResult.jti,
+            current_jti: qrResult.jti
+          },
+          qr_metadata: {
+            issued_at: new Date().toISOString(),
+            expires_at: qrResult.expires_at
+          }
+        };
+
         const ticket = queryRunner.manager.create(PreGeneratedTicketEntity, {
           ticket_code: ticketCode,
           product_id: reservation.product_id,
           batch_id: `RESERVATION-${reservationId}`,
           partner_id: reservation.channel_id,
           status: 'ACTIVE' as TicketStatus,
-          // qr_code removed - will be generated on-demand
+          qr_code: qrResult.qr_image,  // Store QR image for immediate use
           entitlements: entitlements,
           customer_name: customerData.name,
           customer_email: customerData.email,
@@ -418,7 +467,8 @@ export class OTARepository {
           customer_type: customerType,
           order_id: orderId,
           payment_reference: paymentReference,
-          activated_at: new Date()
+          activated_at: new Date(),
+          raw: rawMetadata
         });
 
         tickets.push(ticket);
@@ -848,19 +898,28 @@ export class OTARepository {
   async getResellerBillingSummary(resellerName: string, period: string): Promise<any> {
     // Optimized query with stats computed via JOIN
     // Note: batch_id is stored in lowercase in database, so we use LOWER() for comparison
+    // Billing happens when tickets are sold (ACTIVE) not when redeemed (USED)
     const result = await this.dataSource.query(`
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_sold,
         SUM(CASE
-          WHEN t.status = 'USED' THEN
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
-            CASE
-              WHEN t.customer_type = 'child' THEN 0.65
-              WHEN t.customer_type = 'elderly' THEN 0.83
-              ELSE 1.0
-            END
+          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'adult' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'child' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+            )
+          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'elderly' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+            )
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
@@ -883,22 +942,22 @@ export class OTARepository {
     const periodBatches = result.map((row: any) => ({
       batch_id: row.batch_id,
       tickets_generated: parseInt(row.tickets_generated) || 0,
-      tickets_redeemed: parseInt(row.tickets_redeemed) || 0,
+      tickets_sold: parseInt(row.tickets_sold) || 0,
       total_revenue_realized: parseFloat(row.total_revenue_realized) || 0,
       pricing_snapshot: typeof row.pricing_snapshot === 'string' ? JSON.parse(row.pricing_snapshot) : row.pricing_snapshot
     }));
 
-    const totalRedeemed = periodBatches.reduce((sum: number, b: any) => sum + b.tickets_redeemed, 0);
+    const totalSold = periodBatches.reduce((sum: number, b: any) => sum + b.tickets_sold, 0);
     const totalRevenue = periodBatches.reduce((sum: number, b: any) => sum + b.total_revenue_realized, 0);
 
     const resellerSummary = {
       reseller_name: resellerName,
       total_batches: periodBatches.length,
-      total_redemptions: totalRedeemed,
+      total_sales: totalSold,
       total_amount_due: totalRevenue.toFixed(2),
       batches: periodBatches.map((batch: any) => ({
         batch_id: batch.batch_id,
-        redemptions_count: batch.tickets_redeemed,
+        sales_count: batch.tickets_sold,
         wholesale_rate: batch.pricing_snapshot.base_price,
         amount_due: batch.total_revenue_realized.toFixed(2)
       }))

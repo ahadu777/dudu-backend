@@ -23,9 +23,10 @@ interface TicketInfo {
  * Authentication context
  */
 interface AuthContext {
-  authType: 'USER' | 'OTA_PARTNER';
+  authType: 'USER' | 'OTA_PARTNER' | 'OPERATOR';
   userId?: number;
   partnerId?: string;
+  operatorId?: number;
 }
 
 /**

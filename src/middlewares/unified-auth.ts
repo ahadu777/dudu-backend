@@ -17,20 +17,22 @@ const API_KEYS = new Map<string, { partner_id: string, partner_name: string, per
 declare global {
   namespace Express {
     interface Request {
-      authType?: 'USER' | 'OTA_PARTNER';
+      authType?: 'USER' | 'OTA_PARTNER' | 'OPERATOR';
       ota_partner?: {
         id: string;
         name: string;
         permissions: string[];
       };
+      // Note: operator type is already defined in auth.ts with operator_id field
     }
   }
 }
 
 /**
  * Unified authentication middleware
- * Accepts EITHER:
- * - Authorization: Bearer <jwt_token> (for normal users)
+ * Accepts ANY OF:
+ * - Authorization: Bearer <user_jwt_token> (for normal users)
+ * - Authorization: Bearer <operator_jwt_token> (for operators)
  * - X-API-Key: <api_key> (for OTA partners)
  *
  * Sets req.authType to indicate which auth method succeeded
@@ -40,22 +42,50 @@ export const unifiedAuth = () => {
     const authHeader = req.headers.authorization;
     const apiKey = req.headers['x-api-key'] as string;
 
-    // Try JWT authentication first (users)
+    // Try JWT authentication first (users or operators)
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.substring(7);
-        const decoded = jwt.verify(token, String(env.JWT_SECRET)) as { id: number; email: string };
+        const decoded = jwt.verify(token, String(env.JWT_SECRET)) as any;
 
-        req.user = decoded;
-        req.authType = 'USER';
+        // Distinguish between User JWT and Operator JWT based on payload
+        if (decoded.username && decoded.roles) {
+          // Operator JWT (has username and roles)
+          req.operator = {
+            operator_id: decoded.sub,
+            username: decoded.username,
+            roles: decoded.roles
+          };
+          req.authType = 'OPERATOR';
 
-        logger.info('unified.auth.user_success', {
-          user_id: decoded.id,
-          email: decoded.email,
-          path: req.path
-        });
+          logger.info('unified.auth.operator_success', {
+            operator_id: decoded.sub,
+            username: decoded.username,
+            roles: decoded.roles,
+            path: req.path
+          });
 
-        return next();
+          return next();
+        } else if (decoded.id && decoded.email) {
+          // User JWT (has id and email)
+          req.user = decoded;
+          req.authType = 'USER';
+
+          logger.info('unified.auth.user_success', {
+            user_id: decoded.id,
+            email: decoded.email,
+            path: req.path
+          });
+
+          return next();
+        } else {
+          // Unknown JWT payload structure
+          logger.debug('unified.auth.jwt_unknown_format', {
+            has_username: !!decoded.username,
+            has_email: !!decoded.email,
+            has_roles: !!decoded.roles
+          });
+        }
       } catch (error) {
         // JWT validation failed, will try API key next
         logger.debug('unified.auth.jwt_failed', {
@@ -91,7 +121,7 @@ export const unifiedAuth = () => {
       }
     }
 
-    // Neither authentication method succeeded
+    // No valid authentication method succeeded
     logger.info('unified.auth.no_valid_credentials', {
       has_bearer: !!authHeader,
       has_api_key: !!apiKey,
@@ -101,9 +131,10 @@ export const unifiedAuth = () => {
 
     res.status(401).json({
       error: 'AUTHENTICATION_REQUIRED',
-      message: 'Valid authentication required. Provide either Bearer token or X-API-Key header.',
+      message: 'Valid authentication required. Provide Bearer token (user/operator JWT) or X-API-Key header.',
       details: {
-        bearer_token: 'Authorization: Bearer <user_jwt_token>',
+        user_jwt: 'Authorization: Bearer <user_jwt_token>',
+        operator_jwt: 'Authorization: Bearer <operator_jwt_token>',
         api_key: 'X-API-Key: <ota_partner_key>'
       }
     });
@@ -114,15 +145,18 @@ export const unifiedAuth = () => {
  * Check if request has valid authentication
  */
 export function isAuthenticated(req: Request): boolean {
-  return !!(req.user || req.ota_partner);
+  return !!(req.user || req.ota_partner || req.operator);
 }
 
 /**
- * Get authenticated entity ID (user_id or partner_id)
+ * Get authenticated entity ID (user_id, operator_id, or partner_id)
  */
 export function getAuthenticatedId(req: Request): string | number | null {
   if (req.authType === 'USER' && req.user) {
     return req.user.id;
+  }
+  if (req.authType === 'OPERATOR' && req.operator) {
+    return req.operator.operator_id;
   }
   if (req.authType === 'OTA_PARTNER' && req.ota_partner) {
     return req.ota_partner.id;
@@ -139,6 +173,14 @@ export function getAuthContext(req: Request): Record<string, any> {
       auth_type: 'USER',
       user_id: req.user.id,
       email: req.user.email
+    };
+  }
+  if (req.authType === 'OPERATOR' && req.operator) {
+    return {
+      auth_type: 'OPERATOR',
+      operator_id: req.operator.operator_id,
+      username: req.operator.username,
+      roles: req.operator.roles
     };
   }
   if (req.authType === 'OTA_PARTNER' && req.ota_partner) {
