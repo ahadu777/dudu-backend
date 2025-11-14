@@ -4,13 +4,16 @@ slug: venue-session-management
 team: "C - Gate"
 oas_paths: ["/venue/sessions"]
 migrations: ["db/migrations/venue_sessions.sql", "db/migrations/venues.sql"]
-status: "Done"
+status: "Deprecated"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-session-management-result.json"
-last_update: "2025-11-03T18:35:00+0800"
+last_update: "2025-11-14T20:30:00+08:00"
 related_stories: ["US-013"]
+deprecated: true
+deprecated_date: "2025-11-14"
+replacement: "Removed - Venue sessions are no longer needed. Operator JWT token is sufficient."
 relationships:
   enhances: ["operators-login", "validators-sessions"]
   depends_on: []
@@ -18,6 +21,23 @@ relationships:
   data_dependencies: ["Venue", "VenueSession"]
   integration_points:
     data_stores: ["venue.repository.ts"]
+---
+
+## ⚠️ DEPRECATED
+
+**This API endpoint has been removed as of 2025-11-14.**
+
+**Reason**: Venue sessions add unnecessary complexity. Operator JWT token and terminal_device_id are sufficient.
+
+**Migration Path**:
+- **Old**: POST `/venue/sessions` → use session_code in `/venue/scan`
+- **New**: Use operator JWT token + terminal_device_id directly in `/venue/scan`
+
+**Benefits**:
+- Simpler architecture (no session state management)
+- Fewer database tables (no venue_sessions table needed)
+- Terminal ID provides venue context without session lookup
+
 ---
 
 ## Status & Telemetry

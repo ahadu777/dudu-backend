@@ -4,20 +4,37 @@ slug: venue-enhanced-scanning
 team: "C - Gate"
 oas_paths: ["/venue/scan", "/qr/decrypt"]
 migrations: ["db/migrations/redemption_events.sql"]
-status: "Done"
+status: "Pending"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-enhanced-scanning-result.json"
-last_update: "2025-11-14T20:00:00+08:00"
+last_update: "2025-11-14T20:30:00+08:00"
 related_stories: ["US-013", "US-012"]
 relationships:
   replaces: ["tickets-scan"]
-  depends_on: ["venue-session-management", "qr-generation-api", "ota-premade-tickets"]
+  depends_on: ["qr-generation-api", "ota-premade-tickets"]
   triggers: ["venue-analytics-reporting"]
-  data_dependencies: ["VenueSession", "RedemptionEvent", "Ticket", "PreGeneratedTicket"]
+  data_dependencies: ["RedemptionEvent", "Ticket", "PreGeneratedTicket"]
   integration_points:
     data_stores: ["venue.service.ts", "venue.repository.ts"]
+notes: "Venue architecture under review. Session management removed. Venue entity preserved but may be refactored."
+---
+
+## ⚠️ STATUS: PENDING REDESIGN
+
+**This card is under review as of 2025-11-14.**
+
+**Changes Made:**
+- ✅ Removed dependency on `venue-session-management` (deprecated)
+- ✅ Removed `VenueSession` from data dependencies
+- ⏳ Venue concept preserved but architecture needs clarification
+
+**Open Questions:**
+- Do we need Venue entity or is terminal_device_id sufficient?
+- How should venue context be provided (static config vs database)?
+- Should redemption_events reference venue_id or just terminal_device_id?
+
 ---
 
 ## Status & Telemetry

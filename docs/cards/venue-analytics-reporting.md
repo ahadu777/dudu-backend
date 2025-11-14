@@ -4,12 +4,12 @@ slug: venue-analytics-reporting
 team: "C - Gate"
 oas_paths: ["/venue/{venue_code}/analytics"]
 migrations: []
-status: "Done"
+status: "Pending"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-analytics-reporting-result.json"
-last_update: "2025-11-03T18:35:00+0800"
+last_update: "2025-11-14T20:30:00+08:00"
 related_stories: ["US-013"]
 relationships:
   enhances: ["reports-redemptions"]
@@ -18,6 +18,22 @@ relationships:
   data_dependencies: ["RedemptionEvent", "Venue"]
   integration_points:
     data_stores: ["venue.service.ts", "venue.repository.ts"]
+notes: "Venue architecture under review. Venue entity preserved but may be refactored to use terminal-based analytics instead of venue-based."
+---
+
+## ⚠️ STATUS: PENDING REDESIGN
+
+**This card is under review as of 2025-11-14.**
+
+**Reason:**
+- Venue architecture is being reconsidered
+- May shift from venue-based analytics to terminal-based analytics
+- Waiting for venue entity design decisions
+
+**Open Questions:**
+- Should analytics be grouped by venue_code or terminal_device_id?
+- Is Venue entity necessary or can we use static configuration?
+
 ---
 
 ## Status & Telemetry

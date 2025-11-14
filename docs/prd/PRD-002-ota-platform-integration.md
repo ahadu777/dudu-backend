@@ -114,15 +114,32 @@ deadline: "2025-11-15"
   - Inventory immediately released on expiry
 - **Priority**: High
 
+**Reseller Master Data Management** *(NEW - 2025-11-14)*
+- **Description**: Centralized reseller registry with business information, commission settings, and contract management
+- **Business Value**: Enables systematic reseller management, automated billing, and scalable B2B2C operations
+- **User Value**: OTA partners can manage multiple resellers with different commission rates, regions, and contract terms
+- **Acceptance Criteria**:
+  - Reseller registry with unique identifiers per OTA partner (partner_id + reseller_code)
+  - Commission rate configuration per reseller (default 10%, customizable)
+  - Contract lifecycle tracking (start date, end date, status: active/suspended/terminated)
+  - Settlement cycle configuration (weekly/monthly/quarterly)
+  - Regional assignment and tier-based categorization (platinum/gold/silver/bronze)
+  - Contact information storage (email, phone)
+  - Payment terms and settlement details
+  - Audit trail for reseller creation and modifications
+  - Normalized data structure eliminates redundant reseller name storage in batches
+- **Priority**: High
+
 **B2B2C Reseller Batch Management** *(NEW)*
 - **Description**: Bulk ticket generation for OTA partners to distribute to sub-resellers
 - **Business Value**: Expands market reach through reseller networks without direct partnership overhead
 - **User Value**: OTA partners can efficiently distribute tickets to multiple downstream sellers
 - **Acceptance Criteria**:
-  - Support for 100+ ticket batches with reseller tracking metadata
+  - Support for 100+ ticket batches with reseller tracking metadata via foreign key reference
   - Batch-level expiry management (longer expiry for reseller distribution)
   - Audit trail for ticket distribution from OTA to reseller to end customer
-  - Reseller-specific batch identification and tracking
+  - Reseller-specific batch identification through reseller_id relationship
+  - Batch metadata (batch_purpose, distribution_notes) separate from reseller master data
 - **Priority**: Medium
 
 **Usage-Based Reseller Billing** *(NEW)*
@@ -520,6 +537,72 @@ GET /api/ota/orders/{order_id}/tickets:
         entitlements: array[FunctionEntitlement]
         status: string
       ]
+
+#### Reseller Management APIs *(NEW - Implemented 2025-11-14)*
+```yaml
+GET /api/ota/resellers:
+  summary: List all resellers for authenticated OTA partner
+  description: Retrieve all resellers with partner isolation
+  responses:
+    200:
+      total: number
+      resellers: array[
+        id: number
+        reseller_code: string          # e.g., "GD-TRAVEL-001"
+        reseller_name: string          # e.g., "广州国旅"
+        contact_email: string
+        contact_phone: string
+        commission_rate: number        # e.g., 0.15 = 15%
+        status: "active" | "suspended" | "terminated"
+        settlement_cycle: "weekly" | "monthly" | "quarterly"
+        region: string                 # e.g., "华南地区"
+        tier: "platinum" | "gold" | "silver" | "bronze"
+        created_at: string
+        updated_at: string
+      ]
+
+POST /api/ota/resellers:
+  summary: Create new reseller
+  requestBody:
+    reseller_code: string (required)   # Unique within partner
+    reseller_name: string (required)
+    contact_email?: string
+    contact_phone?: string
+    commission_rate?: number           # Default 0.10
+    region?: string
+    tier?: "platinum" | "gold" | "silver" | "bronze"
+    settlement_cycle?: "weekly" | "monthly" | "quarterly"
+    payment_terms?: string             # e.g., "Net 30"
+    notes?: string
+  responses:
+    201: Created reseller object
+    400: "Missing required fields"
+
+GET /api/ota/resellers/{id}:
+  summary: Get reseller details
+  description: Partner isolation enforced
+  responses:
+    200: Complete reseller object with all fields
+    404: "Reseller not found or not owned by partner"
+
+PUT /api/ota/resellers/{id}:
+  summary: Update reseller information
+  description: Partner isolation enforced
+  requestBody: Any reseller fields (all optional)
+  responses:
+    200: Updated reseller object
+    404: "Reseller not found or not owned by partner"
+
+DELETE /api/ota/resellers/{id}:
+  summary: Deactivate reseller (soft delete)
+  description: Sets status to 'terminated', partner isolation enforced
+  responses:
+    200:
+      message: "Reseller deactivated successfully"
+      reseller_id: number
+      status: "terminated"
+    404: "Reseller not found or not owned by partner"
+```
 
 #### Reseller Billing & Analytics *(NEW)*
 ```yaml
