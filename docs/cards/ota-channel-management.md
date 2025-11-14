@@ -385,11 +385,90 @@ DELIMITER ;
 **When** any OTA endpoint is called
 **Then** returns 401 Unauthorized with proper authentication guidance
 
-## 9) Postman Coverage
-- GET /api/ota/inventory: Test availability retrieval for all product combinations
-- POST /api/ota/reserve: Test successful reservation creation and inventory locking
-- Inventory edge cases: Test overselling prevention and allocation limits
-- Authentication: Test invalid API keys and permission boundaries
-- Concurrency: Test multiple simultaneous reservations for same product
-- Expiry handling: Test reservation cleanup and inventory release
-- Rate limiting: Test API quota enforcement per partner
+## 9) Test Requirements (Copy-Paste Ready)
+
+### Individual Endpoint Tests
+- [ ] `curl -H "X-API-Key: ota_test_key_12345" http://localhost:8080/api/ota/inventory` → 200 response
+- [ ] Response contains `available_quantities` field with Product 106 ~800 units
+- [ ] Response time < 2 seconds
+- [ ] `curl -X POST http://localhost:8080/api/ota/reserve -H "X-API-Key: ota_test_key_12345" -d '{"product_id":106,"quantity":5}'` → 201 response
+- [ ] Returns `reservation_id` and `expires_at` fields
+- [ ] Invalid API key → 401 error
+- [ ] Overselling attempt (quantity > available) → 409 error
+
+### API Sequence Tests (E2E Flow)
+- [ ] **State Change Validation**: Before → Reserve → After inventory decreases correctly
+- [ ] **Reservation Lifecycle**: Reserve → Check inventory reduced → Expiry → Inventory restored
+- [ ] **Multi-Partner Isolation**: Partner A reservation doesn't affect Partner B inventory view
+
+### Newman Report
+- [ ] newman_report: `reports/newman/us-012-ota-integration-e2e.xml` passes all tests
+
+## 10) E2E Runbook (Copy-Paste Commands)
+
+```bash
+#!/bin/bash
+# OTA Channel Management - End-to-End Flow Test
+# Copy-paste this entire block to validate the complete flow
+
+echo "=== OTA Channel Management E2E Test ==="
+
+# Step 1: Get initial inventory state
+echo "Step 1: Check initial inventory"
+INITIAL=$(curl -s -H "X-API-Key: ota_test_key_12345" \
+  http://localhost:8080/api/ota/inventory | jq '.available_quantities["106"]')
+echo "Initial Product 106 units: $INITIAL"
+
+# Step 2: Create reservation
+echo "Step 2: Create reservation for 5 units"
+RESERVE_RESPONSE=$(curl -s -X POST http://localhost:8080/api/ota/reserve \
+  -H "X-API-Key: ota_test_key_12345" \
+  -H "Content-Type: application/json" \
+  -d '{"product_id":106,"quantity":5}')
+RESERVATION_ID=$(echo $RESERVE_RESPONSE | jq -r '.reservation_id')
+echo "Reservation created: $RESERVATION_ID"
+
+# Step 3: Verify inventory decrease
+echo "Step 3: Verify inventory decreased"
+AFTER_RESERVE=$(curl -s -H "X-API-Key: ota_test_key_12345" \
+  http://localhost:8080/api/ota/inventory | jq '.available_quantities["106"]')
+echo "After reserve: $AFTER_RESERVE"
+DIFFERENCE=$((INITIAL - AFTER_RESERVE))
+if [ $DIFFERENCE -eq 5 ]; then
+  echo "✅ Inventory correctly decreased by 5"
+else
+  echo "❌ Inventory decrease failed. Expected: 5, Got: $DIFFERENCE"
+fi
+
+# Step 4: Test partner isolation
+echo "Step 4: Test partner isolation"
+PARTNER_B_VIEW=$(curl -s -H "X-API-Key: ota251103_key_67890" \
+  http://localhost:8080/api/ota/inventory | jq '.available_quantities["106"]')
+if [ $PARTNER_B_VIEW -eq $AFTER_RESERVE ]; then
+  echo "✅ Partner isolation working - both partners see same inventory"
+else
+  echo "❌ Partner isolation failed"
+fi
+
+# Step 5: Test overselling prevention
+echo "Step 5: Test overselling prevention"
+OVERSELL_RESPONSE=$(curl -s -w "%{http_code}" -X POST http://localhost:8080/api/ota/reserve \
+  -H "X-API-Key: ota_test_key_12345" \
+  -H "Content-Type: application/json" \
+  -d "{\"product_id\":106,\"quantity\":$((AFTER_RESERVE + 1))}")
+HTTP_CODE=${OVERSELL_RESPONSE: -3}
+if [ $HTTP_CODE -eq 409 ]; then
+  echo "✅ Overselling prevention working"
+else
+  echo "❌ Overselling prevention failed. Expected: 409, Got: $HTTP_CODE"
+fi
+
+echo "=== E2E Test Complete ==="
+```
+
+## 11) Postman Coverage
+- All individual endpoint tests from Test Requirements section
+- Complete E2E flow validation script
+- Error boundary testing (auth, overselling, invalid data)
+- Performance validation (response times)
+- Multi-partner isolation verification

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="US-012: OTA平台完整集成测试2" tests="30" time="60.728">
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦" id="9c212903-d75a-43db-993e-1e3262cd3047" timestamp="2025-11-06T03:24:18.597Z" tests="3" failures="3" errors="1" time="0.011">
+<testsuites name="US-012: OTA平台完整集成测试2" tests="30" time="9.813">
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦" id="c6507493-ea68-46b0-bad6-68ec352972e2" timestamp="2025-11-08T16:50:41.650Z" tests="3" failures="3" errors="1" time="0.017">
     <system-err><![CDATA[Iteration: 0
 
 ---
@@ -9,10 +9,10 @@ testScriptError: Unexpected token '<' at 1:1
 ^
 ---
 ]]></system-err>
-    <testcase name="状态码是200" time="0.011" classname="10">
+    <testcase name="状态码是200" time="0.017" classname="10">
       <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
         <![CDATA[Test description: 状态码是200.]]>
@@ -21,10 +21,10 @@ testScriptError: Unexpected token '<' at 1:1
    at Object.eval sandbox-script.js:1:1).]]>
       </failure>
     </testcase>
-    <testcase name="返回产品列表" time="0.011" classname="10">
+    <testcase name="返回产品列表" time="0.017" classname="10">
       <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
         <![CDATA[Test description: 返回产品列表.]]>
@@ -37,10 +37,10 @@ testScriptError: Unexpected token '<' at 1:1
    at Object.eval sandbox-script.js:2:1).]]>
       </failure>
     </testcase>
-    <testcase name="产品包含完整信息" time="0.011" classname="10">
+    <testcase name="产品包含完整信息" time="0.017" classname="10">
       <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
         <![CDATA[Test description: 产品包含完整信息.]]>
@@ -54,29 +54,29 @@ testScriptError: Unexpected token '<' at 1:1
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.1 查询OTA库存" id="443d61b9-2514-4a30-a4ba-da3a5c477870" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.362">
-    <testcase name="状态码是200" time="0.362" classname="11ota"/>
-    <testcase name="返回库存数据" time="0.362" classname="11ota"/>
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.1 查询OTA库存" id="d56f4b6a-e2dd-4d97-9c09-3a3e3e9322dc" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.045">
+    <testcase name="状态码是200" time="0.045" classname="11ota"/>
+    <testcase name="返回库存数据" time="0.045" classname="11ota"/>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.2 创建预订" id="4a97995c-096e-4d99-aa8c-d07c90fc3137" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="3.457">
-    <testcase name="状态码是201" time="3.457" classname="12"/>
-    <testcase name="返回预订ID" time="3.457" classname="12"/>
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.2 创建预订" id="081065cf-2151-4df4-8f56-8d0bc023dd74" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.427">
+    <testcase name="状态码是201" time="0.427" classname="12"/>
+    <testcase name="返回预订ID" time="0.427" classname="12"/>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.3 查询预订详情" id="0ee9bacd-b958-44b2-abc9-ebfdf2eaeca4" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.747">
-    <testcase name="状态码是200" time="0.747" classname="13"/>
-    <testcase name="预订状态为active" time="0.747" classname="13"/>
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.3 查询预订详情" id="d97efa20-f53d-45bb-85b6-08ed84bc1b56" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.087">
+    <testcase name="状态码是200" time="0.087" classname="13"/>
+    <testcase name="预订状态为active" time="0.087" classname="13"/>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐" id="876581b8-9cc5-485e-8736-ef49101ba48b" timestamp="2025-11-06T03:24:18.597Z" tests="4" failures="4" errors="1" time="0.003">
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐" id="31dde44d-3d6c-4c32-831d-17273f0c2b28" timestamp="2025-11-08T16:50:41.650Z" tests="4" failures="4" errors="1" time="0.002">
     <system-err><![CDATA[Iteration: 0
 
 ---
 testScriptError: Cannot read properties of undefined (reading 'length')
 ---
 ]]></system-err>
-    <testcase name="状态码是201" time="0.003" classname="14">
+    <testcase name="状态码是201" time="0.002" classname="14">
       <failure type="AssertionFailure" message="expected response to have status code 201 but got 403">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
         <![CDATA[Test description: 状态码是201.]]>
@@ -85,10 +85,10 @@ testScriptError: Cannot read properties of undefined (reading 'length')
    at Object.eval sandbox-script.js:1:5).]]>
       </failure>
     </testcase>
-    <testcase name="订单创建成功" time="0.003" classname="14">
+    <testcase name="订单创建成功" time="0.002" classname="14">
       <failure type="AssertionFailure" message="expected { …(2) } to have property 'order_id'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
         <![CDATA[Test description: 订单创建成功.]]>
@@ -97,10 +97,10 @@ testScriptError: Cannot read properties of undefined (reading 'length')
    at Object.eval sandbox-script.js:2:5).]]>
       </failure>
     </testcase>
-    <testcase name="生成了25张票券" time="0.003" classname="14">
+    <testcase name="生成了25张票券" time="0.002" classname="14">
       <failure type="AssertionFailure" message="Target cannot be null or undefined.">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
         <![CDATA[Test description: 生成了25张票券.]]>
@@ -109,10 +109,10 @@ testScriptError: Cannot read properties of undefined (reading 'length')
    at Object.eval sandbox-script.js:3:5).]]>
       </failure>
     </testcase>
-    <testcase name="票券包含entitlements" time="0.003" classname="14">
+    <testcase name="票券包含entitlements" time="0.002" classname="14">
       <failure type="AssertionFailure" message="Cannot read properties of undefined (reading '0')">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
         <![CDATA[Test description: 票券包含entitlements.]]>
@@ -122,38 +122,38 @@ testScriptError: Cannot read properties of undefined (reading 'length')
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.5 查询订单列表" id="19d20b31-7ed2-48e4-a81b-c410c7d3d19a" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.362">
-    <testcase name="状态码是200" time="0.362" classname="15"/>
-    <testcase name="返回订单列表" time="0.362" classname="15"/>
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.5 查询订单列表" id="e6942c8c-88ac-480c-b7d5-83d37b822d97" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.047">
+    <testcase name="状态码是200" time="0.047" classname="15"/>
+    <testcase name="返回订单列表" time="0.047" classname="15"/>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋" id="16d113b7-4cfc-4b00-b8fc-a724ab4a6e71" timestamp="2025-11-06T03:24:18.597Z" tests="3" failures="2" errors="0" time="0.355">
-    <testcase name="状态码是200" time="0.355" classname="151"/>
-    <testcase name="返回订单详情" time="0.355" classname="151">
-      <failure type="AssertionFailure" message="expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'order_id'">
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋" id="f53279c5-e082-4bf3-abde-95dd64f52bdd" timestamp="2025-11-08T16:50:41.650Z" tests="3" failures="2" errors="0" time="0.048">
+    <testcase name="状态码是200" time="0.048" classname="151"/>
+    <testcase name="返回订单详情" time="0.048" classname="151">
+      <failure type="AssertionFailure" message="expected { orders: [ { …(8) }, …(36) ], …(1) } to have property 'order_id'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋.]]>
         <![CDATA[Test description: 返回订单详情.]]>
-        <![CDATA[Error message: expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'order_id'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'order_id'
+        <![CDATA[Error message: expected { orders: [ { …(8) }, …(36) ], …(1) } to have property 'order_id'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { orders: [ { …(8) }, …(36) ], …(1) } to have property 'order_id'
    at Object.eval sandbox-script.js:2:7).]]>
       </failure>
     </testcase>
-    <testcase name="订单包含预订关联" time="0.355" classname="151">
-      <failure type="AssertionFailure" message="expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'reservation_id'">
+    <testcase name="订单包含预订关联" time="0.048" classname="151">
+      <failure type="AssertionFailure" message="expected { orders: [ { …(8) }, …(36) ], …(1) } to have property 'reservation_id'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋.]]>
         <![CDATA[Test description: 订单包含预订关联.]]>
-        <![CDATA[Error message: expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'reservation_id'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected { orders: [ { …(8) }, …(11) ], …(1) } to have property 'reservation_id'
+        <![CDATA[Error message: expected { orders: [ { …(8) }, …(36) ], …(1) } to have property 'reservation_id'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { orders: [ { …(8) }, …(36) ], …(1) } to have property 'reservation_id'
    at Object.eval sandbox-script.js:3:7).]]>
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码" id="66af35ae-8614-4a2c-a528-1586a3d854e0" timestamp="2025-11-06T03:24:18.597Z" tests="3" failures="3" errors="1" time="0.003">
+  <testsuite name="流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码" id="8812b436-d3e7-4f19-a18f-3be3bcfbc93b" timestamp="2025-11-08T16:50:41.650Z" tests="3" failures="3" errors="1" time="0.002">
     <system-err><![CDATA[Iteration: 0
 
 ---
@@ -162,10 +162,10 @@ testScriptError: Unexpected token '<' at 1:1
 ^
 ---
 ]]></system-err>
-    <testcase name="状态码是200" time="0.003" classname="16qr">
+    <testcase name="状态码是200" time="0.002" classname="16qr">
       <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
         <![CDATA[Test description: 状态码是200.]]>
@@ -174,10 +174,10 @@ testScriptError: Unexpected token '<' at 1:1
    at Object.eval sandbox-script.js:1:8).]]>
       </failure>
     </testcase>
-    <testcase name="返回票券列表" time="0.003" classname="16qr">
+    <testcase name="返回票券列表" time="0.002" classname="16qr">
       <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
         <![CDATA[Test description: 返回票券列表.]]>
@@ -190,10 +190,10 @@ testScriptError: Unexpected token '<' at 1:1
    at Object.eval sandbox-script.js:2:8).]]>
       </failure>
     </testcase>
-    <testcase name="票券包含QR码" time="0.003" classname="16qr">
+    <testcase name="票券包含QR码" time="0.002" classname="16qr">
       <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
         <![CDATA[Test description: 票券包含QR码.]]>
@@ -207,75 +207,75 @@ testScriptError: Unexpected token '<' at 1:1
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.1 批量生成预制票据" id="83b2d54c-b846-474f-9535-04e41286fb72" timestamp="2025-11-06T03:24:18.597Z" tests="4" failures="0" errors="0" time="10.040">
-    <testcase name="状态码是201" time="10.040" classname="21"/>
-    <testcase name="批量生成成功" time="10.040" classname="21"/>
-    <testcase name="票据状态为PRE_GENERATED" time="10.040" classname="21"/>
-    <testcase name="票据包含QR码和entitlements" time="10.040" classname="21"/>
+  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.1 批量生成预制票据" id="47114d39-2613-4bc5-990e-589b1438c999" timestamp="2025-11-08T16:50:41.650Z" tests="4" failures="0" errors="0" time="1.719">
+    <testcase name="状态码是201" time="1.719" classname="21"/>
+    <testcase name="批量生成成功" time="1.719" classname="21"/>
+    <testcase name="票据状态为PRE_GENERATED" time="1.719" classname="21"/>
+    <testcase name="票据包含QR码和entitlements" time="1.719" classname="21"/>
   </testsuite>
-  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.2 激活预制票据 → 生成订单 ⭐" id="bd97fe27-3f5d-4383-b7d8-162436cb4170" timestamp="2025-11-06T03:24:18.597Z" tests="4" failures="0" errors="0" time="4.584">
-    <testcase name="状态码是200" time="4.584" classname="22"/>
-    <testcase name="票据激活成功" time="4.584" classname="22"/>
-    <testcase name="状态转换为ACTIVE" time="4.584" classname="22"/>
-    <testcase name="客户信息已绑定" time="4.584" classname="22"/>
+  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.2 激活预制票据 → 生成订单 ⭐" id="ad588a8f-63cd-4634-a451-67486aee4f01" timestamp="2025-11-08T16:50:41.650Z" tests="4" failures="0" errors="0" time="0.552">
+    <testcase name="状态码是200" time="0.552" classname="22"/>
+    <testcase name="票据激活成功" time="0.552" classname="22"/>
+    <testcase name="状态转换为ACTIVE" time="0.552" classname="22"/>
+    <testcase name="客户信息已绑定" time="0.552" classname="22"/>
   </testsuite>
-  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.3 验证订单已创建" id="590a2c8f-0918-44c5-b341-6b5d4cbfad87" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.345">
-    <testcase name="状态码是200" time="0.345" classname="23"/>
-    <testcase name="订单票据查询成功" time="0.345" classname="23"/>
+  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.3 验证订单已创建" id="5ebd27b5-04e4-4d5c-9b49-85e89f3bca6f" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.047">
+    <testcase name="状态码是200" time="0.047" classname="23"/>
+    <testcase name="订单票据查询成功" time="0.047" classname="23"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次A" id="e5f8fb9d-25dc-45fb-9822-90d0c4864253" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="6.535">
-    <testcase name="票券生成成功" time="6.535" classname="A"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次A" id="9052d371-385c-47a4-9036-442a2c0250ab" timestamp="2025-11-08T16:50:41.650Z" tests="1" failures="0" errors="0" time="1.296">
+    <testcase name="票券生成成功" time="1.296" classname="A"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次B" id="f41a3cbf-9d51-49c4-9282-b3c2f02d47d9" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="5.221">
-    <testcase name="票券生成成功" time="5.221" classname="B"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次B" id="f9a0fe6a-01e1-4732-9875-fc3f538811d1" timestamp="2025-11-08T16:50:41.650Z" tests="1" failures="0" errors="0" time="1.169">
+    <testcase name="票券生成成功" time="1.169" classname="B"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.1 查询所有票券 ✅" id="967ec317-6270-4a4b-bc82-6daff9e26773" timestamp="2025-11-06T03:24:18.597Z" tests="3" failures="0" errors="0" time="1.049">
-    <testcase name="状态码是200" time="1.049" classname="31"/>
-    <testcase name="返回票券列表" time="1.049" classname="31"/>
-    <testcase name="票券包含完整字段" time="1.049" classname="31"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.1 查询所有票券 ✅" id="9770cf39-88b4-48b8-8e43-b01936fda85a" timestamp="2025-11-08T16:50:41.650Z" tests="3" failures="0" errors="0" time="0.133">
+    <testcase name="状态码是200" time="0.133" classname="31"/>
+    <testcase name="返回票券列表" time="0.133" classname="31"/>
+    <testcase name="票券包含完整字段" time="0.133" classname="31"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.2 按状态过滤 - PRE_GENERATED ✅" id="012845ec-414b-4023-b173-525248ec8614" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.877">
-    <testcase name="状态码是200" time="0.877" classname="32PreGenerated"/>
-    <testcase name="只返回PRE_GENERATED状态的票券" time="0.877" classname="32PreGenerated"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.2 按状态过滤 - PRE_GENERATED ✅" id="8b229b73-0fea-4edd-a8ab-4ea20d005c75" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.094">
+    <testcase name="状态码是200" time="0.094" classname="32PreGenerated"/>
+    <testcase name="只返回PRE_GENERATED状态的票券" time="0.094" classname="32PreGenerated"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 激活一张票券" id="50379f6b-8986-4fed-a1a0-a1f617ea2abe" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="4.640">
-    <testcase name="激活成功" time="4.640" classname="Us012OtA2"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 激活一张票券" id="3b96ef26-6dba-4520-9375-40238e9aab55" timestamp="2025-11-08T16:50:41.650Z" tests="1" failures="0" errors="0" time="0.563">
+    <testcase name="激活成功" time="0.563" classname="Us012OtA2"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.3 按状态过滤 - ACTIVE ✅" id="39cd4732-c48f-4a45-9a34-0d0c3ca34008" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.693">
-    <testcase name="状态码是200" time="0.693" classname="33Active"/>
-    <testcase name="只返回ACTIVE状态的票券" time="0.693" classname="33Active"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.3 按状态过滤 - ACTIVE ✅" id="55dd5409-01a5-4e1d-82d9-eae165c09439" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.438">
+    <testcase name="状态码是200" time="0.438" classname="33Active"/>
+    <testcase name="只返回ACTIVE状态的票券" time="0.438" classname="33Active"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.4 分页测试 - 第1页 ✅" id="e8c81b8a-1a69-4fd4-b747-a88bd2c797fb" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.688">
-    <testcase name="状态码是200" time="0.688" classname="341"/>
-    <testcase name="返回正确的分页信息" time="0.688" classname="341"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.4 分页测试 - 第1页 ✅" id="67582114-7d87-4487-b9fa-4cf3128ad58d" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.090">
+    <testcase name="状态码是200" time="0.090" classname="341"/>
+    <testcase name="返回正确的分页信息" time="0.090" classname="341"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.5 分页测试 - 第2页 ✅" id="2436f416-dbbe-4a4e-b02b-c2559c39e992" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.690">
-    <testcase name="状态码是200" time="0.690" classname="352"/>
-    <testcase name="返回正确的分页信息" time="0.690" classname="352"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.5 分页测试 - 第2页 ✅" id="24e56056-7f66-4436-b317-cb2c1a93f037" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.090">
+    <testcase name="状态码是200" time="0.090" classname="352"/>
+    <testcase name="返回正确的分页信息" time="0.090" classname="352"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.6 按时间范围过滤 ✅" id="3b36ef3e-e4bd-4c6f-a416-cbb3eb12265c" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="1.485">
-    <testcase name="状态码是200" time="1.485" classname="36"/>
-    <testcase name="返回的票券都在时间范围内" time="1.485" classname="36"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.6 按时间范围过滤 ✅" id="83e60a52-6206-4c9e-bf2a-19d92c19bd06" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.136">
+    <testcase name="状态码是200" time="0.136" classname="36"/>
+    <testcase name="返回的票券都在时间范围内" time="0.136" classname="36"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.7 组合过滤 - 状态+分页 ✅" id="f39e382c-0637-4a90-b553-97b15f3c3c25" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.696">
-    <testcase name="状态码是200" time="0.696" classname="37"/>
-    <testcase name="组合过滤生效" time="0.696" classname="37"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.7 组合过滤 - 状态+分页 ✅" id="944b6810-4ccf-429a-822a-f8439b8a301b" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.088">
+    <testcase name="状态码是200" time="0.088" classname="37"/>
+    <testcase name="组合过滤生效" time="0.088" classname="37"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.8 错误测试 - 无效分页参数 ❌" id="aa06f66f-c358-4e9a-b521-89f6e38461e4" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="返回422验证错误" time="0.001" classname="38"/>
-    <testcase name="错误信息正确" time="0.001" classname="38"/>
+  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.8 错误测试 - 无效分页参数 ❌" id="6aaa2716-66a6-45b9-8dfc-b7f60d9da0bb" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="返回422验证错误" time="0.002" classname="38"/>
+    <testcase name="错误信息正确" time="0.002" classname="38"/>
   </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 准备: 生成测试票据" id="fc9143ff-0383-4c0c-a154-797f96417818" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="3.769">
-    <testcase name="票据生成成功" time="3.769" classname="Us012OtA2"/>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 准备: 生成测试票据" id="65cbf4a7-4e52-4e9d-9017-92629bf35af0" timestamp="2025-11-08T16:50:41.650Z" tests="1" failures="0" errors="0" time="0.934">
+    <testcase name="票据生成成功" time="0.934" classname="Us012OtA2"/>
   </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 准备: 激活测试票据" id="3cc91d34-e04e-4404-a004-eb917d805016" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="4.477">
-    <testcase name="激活成功" time="4.477" classname="Us012OtA2"/>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 准备: 激活测试票据" id="3a3a88ae-081d-4f56-9071-ec61afd32706" timestamp="2025-11-08T16:50:41.650Z" tests="1" failures="0" errors="0" time="0.558">
+    <testcase name="激活成功" time="0.558" classname="Us012OtA2"/>
   </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌" id="1c376e00-4992-4c43-b4e5-959bbad41839" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="2" errors="0" time="1.038">
-    <testcase name="返回409冲突错误" time="1.038" classname="31">
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌" id="9f1d55d2-df74-4b9a-bb2c-11473fef5c0a" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="2" errors="0" time="0.140">
+    <testcase name="返回409冲突错误" time="0.140" classname="31">
       <failure type="AssertionFailure" message="expected response to have status code 409 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌.]]>
         <![CDATA[Test description: 返回409冲突错误.]]>
@@ -284,10 +284,10 @@ testScriptError: Unexpected token '<' at 1:1
    at Object.eval sandbox-script.js:1:25).]]>
       </failure>
     </testcase>
-    <testcase name="错误信息正确" time="1.038" classname="31">
+    <testcase name="错误信息正确" time="0.140" classname="31">
       <failure type="AssertionFailure" message="expected 'TICKET_NOT_FOUND' to deeply equal 'TICKET_ALREADY_ACTIVATED'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: 18fcba39-515f-4552-b31d-4f87bba27c18.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
         <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
         <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌.]]>
         <![CDATA[Test description: 错误信息正确.]]>
@@ -297,22 +297,44 @@ testScriptError: Unexpected token '<' at 1:1
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.2 测试无效票据码 ❌" id="7f617031-fdd1-4c00-a199-f6cdc3b374d2" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="1.030">
-    <testcase name="返回404错误" time="1.030" classname="32"/>
-    <testcase name="错误信息正确" time="1.030" classname="32"/>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.2 测试无效票据码 ❌" id="737d3560-96df-470b-8b01-b29259d35e71" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.137">
+    <testcase name="返回404错误" time="0.137" classname="32"/>
+    <testcase name="错误信息正确" time="0.137" classname="32"/>
   </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.3 创建预订用于取消测试" id="9042114e-2229-4599-8d40-9b2c15c39c83" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="3.433">
-    <testcase name="预订创建成功" time="3.433" classname="33"/>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.3 创建预订用于取消测试" id="428a05fb-1988-49da-8ac4-23be4ce1d2fd" timestamp="2025-11-08T16:50:41.650Z" tests="1" failures="0" errors="0" time="0.432">
+    <testcase name="预订创建成功" time="0.432" classname="33"/>
   </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.4 取消预订" id="8cd43a49-1e59-4411-ab79-bdb009600c11" timestamp="2025-11-06T03:24:18.597Z" tests="1" failures="0" errors="0" time="4.135">
-    <testcase name="返回204 No Content" time="4.135" classname="34"/>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.4 取消预订" id="7f228d6c-ce6e-4e01-99c5-6c9206df8c45" timestamp="2025-11-08T16:50:41.650Z" tests="1" failures="0" errors="0" time="0.516">
+    <testcase name="返回204 No Content" time="0.516" classname="34"/>
   </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.5 测试无效API Key ❌" id="3ce076ca-4cb2-40e0-87df-638766bd9e20" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="返回401未授权" time="0.001" classname="35apiKey"/>
-    <testcase name="错误信息正确" time="0.001" classname="35apiKey"/>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.5 测试无效API Key ❌" id="39f60b74-9913-4785-99c2-8bfe9147f10e" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="返回401未授权" time="0.002" classname="35apiKey"/>
+    <testcase name="错误信息正确" time="0.002" classname="35apiKey"/>
   </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.6 测试超量预订 ❌" id="9e977fff-92ee-4330-89e3-21defa0cf48c" timestamp="2025-11-06T03:24:18.597Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="返回422验证错误" time="0.001" classname="36"/>
-    <testcase name="错误信息正确" time="0.001" classname="36"/>
+  <testsuite name="流程四: 状态转换和错误处理验证 / 3.6 测试超量预订 ❌" id="4cabbfa8-c02d-4985-a779-f3a04ce3add3" timestamp="2025-11-08T16:50:41.650Z" tests="2" failures="2" errors="0" time="0.002">
+    <testcase name="返回422验证错误" time="0.002" classname="36">
+      <failure type="AssertionFailure" message="expected response to have status code 422 but got 429">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.6 测试超量预订 ❌.]]>
+        <![CDATA[Test description: 返回422验证错误.]]>
+        <![CDATA[Error message: expected response to have status code 422 but got 429.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 422 but got 429
+   at Object.eval sandbox-script.js:1:30).]]>
+      </failure>
+    </testcase>
+    <testcase name="错误信息正确" time="0.002" classname="36">
+      <failure type="AssertionFailure" message="expected 'RATE_LIMIT_EXCEEDED' to deeply equal 'VALIDATION_ERROR'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 65dffd4c-7429-49ae-b164-c59ae78ba09c.]]>
+        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
+        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.6 测试超量预订 ❌.]]>
+        <![CDATA[Test description: 错误信息正确.]]>
+        <![CDATA[Error message: expected 'RATE_LIMIT_EXCEEDED' to deeply equal 'VALIDATION_ERROR'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 'RATE_LIMIT_EXCEEDED' to deeply equal 'VALIDATION_ERROR'
+   at Object.eval sandbox-script.js:2:30).]]>
+      </failure>
+    </testcase>
   </testsuite>
 </testsuites>

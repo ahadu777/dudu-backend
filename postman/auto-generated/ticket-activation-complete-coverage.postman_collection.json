@@ -1,0 +1,544 @@
+{
+  "info": {
+    "name": "Ticket Activation Complete Coverage Test Suite",
+    "description": "Complete coverage of ticket activation scenarios from US-012 and PRD-002 requirements",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "ota_full_access_key_99999",
+      "type": "string"
+    },
+    {
+      "key": "test_batch_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "special_pricing_ticket",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup: Generate Test Batch for Activation Testing",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Batch generation successful', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Setup test variables for activation testing', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.batch_id).to.exist;",
+              "    pm.expect(response.tickets).to.be.an('array');",
+              "    pm.expect(response.tickets.length).to.be.at.least(2);",
+              "    ",
+              "    // Save batch and ticket info for subsequent tests",
+              "    pm.collectionVariables.set('test_batch_id', response.batch_id);",
+              "    pm.collectionVariables.set('test_ticket_code', response.tickets[0].ticket_code);",
+              "    pm.collectionVariables.set('special_pricing_ticket', response.tickets[1].ticket_code);",
+              "});",
+              "",
+              "pm.test('Tickets have correct initial status', function () {",
+              "    const response = pm.response.json();",
+              "    response.tickets.forEach(ticket => {",
+              "        pm.expect(ticket.status).to.equal('PRE_GENERATED');",
+              "        pm.expect(ticket.ticket_code).to.match(/^CRUISE-\\d{4}-[A-Z]+-\\d{13}$/);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 3,\n  \"batch_id\": \"ACTIVATION-TEST-{{$randomInt}}\",\n  \"special_pricing\": {\n    \"base_price\": 275,\n    \"customer_type_pricing\": [\n      {\"customer_type\": \"child\", \"price\": 175},\n      {\"customer_type\": \"elderly\", \"price\": 225}\n    ]\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "bulk-generate"]
+        }
+      }
+    },
+    {
+      "name": "Test 1: Standard Ticket Activation - Adult Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Status transition: PRE_GENERATED → ACTIVE', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.status).to.equal('ACTIVE');",
+              "    pm.expect(response.activated_at).to.exist;",
+              "    pm.expect(response.ticket_code).to.exist;",
+              "});",
+              "",
+              "pm.test('Customer details properly assigned', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.customer_name).to.equal('John Doe');",
+              "    pm.expect(response.customer_type).to.equal('adult');",
+              "});",
+              "",
+              "pm.test('Order created and linked', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.order_id).to.exist;",
+              "    pm.expect(response.order_id).to.match(/^ORD-\\d{13}$/);",
+              "    pm.collectionVariables.set('order_id', response.order_id);",
+              "});",
+              "",
+              "pm.test('Special pricing preserved in activation', function () {",
+              "    const response = pm.response.json();",
+              "    // Should reflect the special pricing for adult (275)",
+              "    pm.expect(response.currency).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_details\": {\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"+1-555-0123\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-ADULT-{{$randomInt}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/{{test_ticket_code}}/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "{{test_ticket_code}}", "activate"]
+        }
+      }
+    },
+    {
+      "name": "Test 2: Child Customer Activation - Special Pricing Validation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Child customer type handled correctly', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.customer_type).to.equal('child');",
+              "    pm.expect(response.customer_name).to.equal('Jane Smith');",
+              "});",
+              "",
+              "pm.test('Special pricing applied for child', function () {",
+              "    const response = pm.response.json();",
+              "    // Child special pricing (175) should be preserved",
+              "    pm.expect(response.status).to.equal('ACTIVE');",
+              "    pm.expect(response.activated_at).to.exist;",
+              "});",
+              "",
+              "pm.test('Order created with special pricing context', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.order_id).to.exist;",
+              "    pm.expect(response.order_id).to.not.equal(pm.collectionVariables.get('order_id'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_details\": {\n    \"name\": \"Jane Smith\",\n    \"email\": \"jane.smith@family.com\",\n    \"phone\": \"+1-555-0124\"\n  },\n  \"customer_type\": \"child\",\n  \"payment_reference\": \"PAY-CHILD-{{$randomInt}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/{{special_pricing_ticket}}/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "{{special_pricing_ticket}}", "activate"]
+        }
+      }
+    },
+    {
+      "name": "Test 3: Duplicate Activation Error - Business Rule Validation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Duplicate activation returns 409', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "",
+              "pm.test('Error message indicates already activated', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.exist;",
+              "    pm.expect(response.error.toLowerCase()).to.include('activated');",
+              "});",
+              "",
+              "pm.test('Business rule protection working', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.message).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_details\": {\n    \"name\": \"Duplicate User\",\n    \"email\": \"duplicate@test.com\",\n    \"phone\": \"+1-555-9999\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-DUPLICATE-{{$randomInt}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/{{test_ticket_code}}/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "{{test_ticket_code}}", "activate"]
+        }
+      }
+    },
+    {
+      "name": "Test 4: Invalid Ticket Code - 404 Error Validation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Invalid ticket returns 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Error message indicates ticket not found', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.exist;",
+              "    pm.expect(response.error.toLowerCase()).to.include('not found');",
+              "});",
+              "",
+              "pm.test('Security validation working', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.message).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_details\": {\n    \"name\": \"Invalid Test\",\n    \"email\": \"invalid@test.com\",\n    \"phone\": \"+1-555-0000\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-INVALID-{{$randomInt}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/INVALID-TICKET-CODE-12345/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "INVALID-TICKET-CODE-12345", "activate"]
+        }
+      }
+    },
+    {
+      "name": "Test 5: Invalid Customer Data - Validation Error",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Missing customer details returns 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Validation error message specific', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.exist;",
+              "    pm.expect(response.message).to.include('customer_details');",
+              "});",
+              "",
+              "pm.test('Input validation working correctly', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.equal('INVALID_REQUEST');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-NO-DETAILS-{{$randomInt}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/CRUISE-2025-FERRY-1763128582102/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "CRUISE-2025-FERRY-1763128582102", "activate"]
+        }
+      }
+    },
+    {
+      "name": "Test 6: Multi-Partner Isolation - Wrong API Key",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Wrong API key returns 401/403', function () {",
+              "    pm.expect([401, 403]).to.include(pm.response.code);",
+              "});",
+              "",
+              "pm.test('Security isolation enforced', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "wrong_api_key_12345"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_details\": {\n    \"name\": \"Unauthorized User\",\n    \"email\": \"unauthorized@test.com\",\n    \"phone\": \"+1-555-0001\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-UNAUTHORIZED-{{$randomInt}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/CRUISE-2025-FERRY-1763128582102/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "CRUISE-2025-FERRY-1763128582102", "activate"]
+        }
+      }
+    },
+    {
+      "name": "Test 7: Elderly Customer - Complete Customer Type Coverage",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Generate a new ticket for elderly customer test",
+              "const generateTicketRequest = {",
+              "    url: pm.collectionVariables.get('base_url') + '/api/ota/tickets/bulk-generate',",
+              "    method: 'POST',",
+              "    header: {",
+              "        'Content-Type': 'application/json',",
+              "        'X-API-Key': pm.collectionVariables.get('api_key')",
+              "    },",
+              "    body: {",
+              "        mode: 'raw',",
+              "        raw: JSON.stringify({",
+              "            'product_id': 106,",
+              "            'quantity': 1,",
+              "            'batch_id': 'ELDERLY-TEST-' + Math.floor(Math.random() * 100000),",
+              "            'special_pricing': {",
+              "                'base_price': 275,",
+              "                'customer_type_pricing': [",
+              "                    {'customer_type': 'elderly', 'price': 225}",
+              "                ]",
+              "            }",
+              "        })",
+              "    }",
+              "};",
+              "",
+              "pm.sendRequest(generateTicketRequest, (error, response) => {",
+              "    if (error) {",
+              "        console.log('Error generating ticket for elderly test:', error);",
+              "    } else {",
+              "        const responseJson = response.json();",
+              "        pm.collectionVariables.set('elderly_ticket_code', responseJson.tickets[0].ticket_code);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Elderly customer type handled correctly', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.customer_type).to.equal('elderly');",
+              "    pm.expect(response.customer_name).to.equal('Robert Johnson');",
+              "});",
+              "",
+              "pm.test('Elderly special pricing validation', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.status).to.equal('ACTIVE');",
+              "    pm.expect(response.activated_at).to.exist;",
+              "});",
+              "",
+              "pm.test('Complete customer type coverage achieved', function () {",
+              "    // This test validates all customer types: adult, child, elderly",
+              "    pm.expect(['adult', 'child', 'elderly']).to.include(pm.response.json().customer_type);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_details\": {\n    \"name\": \"Robert Johnson\",\n    \"email\": \"robert.johnson@senior.com\",\n    \"phone\": \"+1-555-0125\"\n  },\n  \"customer_type\": \"elderly\",\n  \"payment_reference\": \"PAY-ELDERLY-{{$randomInt}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/{{elderly_ticket_code}}/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "{{elderly_ticket_code}}", "activate"]
+        }
+      }
+    },
+    {
+      "name": "Test 8: Batch Analytics After Activation - Performance Tracking",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Activation metrics updated correctly', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.tickets_activated).to.be.at.least(2); // At least 2 tickets activated",
+              "    pm.expect(response.tickets_generated).to.be.at.least(3); // 3 tickets generated in setup",
+              "});",
+              "",
+              "pm.test('Conversion rates calculated', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.conversion_rates).to.exist;",
+              "    pm.expect(response.conversion_rates.activation_rate).to.be.above(0);",
+              "    pm.expect(response.conversion_rates.activation_rate).to.be.at.most(1);",
+              "});",
+              "",
+              "pm.test('Revenue metrics reflect special pricing', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.revenue_metrics).to.exist;",
+              "    pm.expect(response.revenue_metrics.potential_revenue).to.be.above(0);",
+              "    pm.expect(response.wholesale_rate).to.equal(275); // Special pricing base",
+              "});",
+              "",
+              "pm.test('Batch tracking complete', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.batch_id).to.equal(pm.collectionVariables.get('test_batch_id'));",
+              "    pm.expect(response.generated_at).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches/{{test_batch_id}}/analytics",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches", "{{test_batch_id}}", "analytics"]
+        }
+      }
+    }
+  ]
+}

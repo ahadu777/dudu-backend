@@ -1,0 +1,374 @@
+{
+  "info": {
+    "name": "Special Pricing Override Test Suite",
+    "description": "Test scenarios for custom batch pricing overrides (PRD-002)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "ota_full_access_key_99999",
+      "type": "string"
+    },
+    {
+      "key": "special_batch_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "default_batch_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_ticket_code",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Test 1: Special Pricing Override - Custom Pricing Lock-in",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Response contains custom pricing override', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.pricing_snapshot).to.exist;",
+              "    pm.expect(response.pricing_snapshot.base_price).to.equal(250);",
+              "    pm.expect(response.pricing_snapshot.customer_type_pricing).to.be.an('array');",
+              "    ",
+              "    // Check custom child pricing",
+              "    const childPricing = response.pricing_snapshot.customer_type_pricing.find(p => p.customer_type === 'child');",
+              "    pm.expect(childPricing.price).to.equal(150);",
+              "    ",
+              "    // Check custom elderly pricing",
+              "    const elderlyPricing = response.pricing_snapshot.customer_type_pricing.find(p => p.customer_type === 'elderly');",
+              "    pm.expect(elderlyPricing.price).to.equal(200);",
+              "});",
+              "",
+              "pm.test('Batch ID generated for special pricing', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.batch_id).to.exist;",
+              "    pm.collectionVariables.set('special_batch_id', response.batch_id);",
+              "});",
+              "",
+              "pm.test('Tickets generated with correct status', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.tickets).to.be.an('array').with.length(3);",
+              "    response.tickets.forEach(ticket => {",
+              "        pm.expect(ticket.status).to.equal('PRE_GENERATED');",
+              "        pm.expect(ticket.ticket_code).to.exist;",
+              "    });",
+              "    // Save first ticket for activation test",
+              "    pm.collectionVariables.set('test_ticket_code', response.tickets[0].ticket_code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 3,\n  \"batch_id\": \"SPECIAL-PRICING-{{$randomInt}}\",\n  \"special_pricing\": {\n    \"base_price\": 250,\n    \"customer_type_pricing\": [\n      {\"customer_type\": \"child\", \"price\": 150},\n      {\"customer_type\": \"elderly\", \"price\": 200}\n    ],\n    \"weekend_premium\": 35,\n    \"currency\": \"USD\"\n  },\n  \"campaign_info\": {\n    \"campaign_type\": \"flash_sale\",\n    \"campaign_name\": \"Weekend Flash Sale\",\n    \"marketing_tags\": [\"premium\", \"limited_time\"],\n    \"promotional_code\": \"FLASH25\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "bulk-generate"]
+        }
+      }
+    },
+    {
+      "name": "Test 2: Default Pricing Fallback - No Special Pricing",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Uses product default pricing when no special_pricing', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.pricing_snapshot).to.exist;",
+              "    ",
+              "    // Should use product 106 default pricing (228 USD)",
+              "    pm.expect(response.pricing_snapshot.base_price).to.equal(228);",
+              "    pm.expect(response.pricing_snapshot.currency).to.equal('USD');",
+              "    ",
+              "    // Check default customer type pricing",
+              "    const childPricing = response.pricing_snapshot.customer_type_pricing.find(p => p.customer_type === 'child');",
+              "    pm.expect(childPricing.price).to.equal(188); // Product default",
+              "});",
+              "",
+              "pm.test('Batch ID generated for default pricing', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.batch_id).to.exist;",
+              "    pm.collectionVariables.set('default_batch_id', response.batch_id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 2,\n  \"batch_id\": \"DEFAULT-PRICING-{{$randomInt}}\",\n  \"campaign_info\": {\n    \"campaign_type\": \"regular\",\n    \"campaign_name\": \"Standard Batch Generation\",\n    \"marketing_tags\": [\"standard\"]\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "bulk-generate"]
+        }
+      }
+    },
+    {
+      "name": "Test 3: Activate Ticket with Special Pricing - Pricing Persistence",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait 1 second to ensure ticket is ready for activation",
+              "setTimeout(() => {}, 1000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Activated ticket maintains special pricing', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.ticket.status).to.equal('ACTIVE');",
+              "    pm.expect(response.ticket.pricing_snapshot).to.exist;",
+              "    ",
+              "    // Verify special pricing is preserved after activation",
+              "    pm.expect(response.ticket.pricing_snapshot.base_price).to.equal(250);",
+              "    ",
+              "    const childPricing = response.ticket.pricing_snapshot.customer_type_pricing.find(p => p.customer_type === 'child');",
+              "    pm.expect(childPricing.price).to.equal(150);",
+              "});",
+              "",
+              "pm.test('QR code generated with proper expiry', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.ticket.qr_code).to.exist;",
+              "    pm.expect(response.ticket.qr_expiry).to.exist;",
+              "    ",
+              "    // Verify QR expiry is reasonable (within next 24 hours)",
+              "    const expiryDate = new Date(response.ticket.qr_expiry);",
+              "    const now = new Date();",
+              "    const hoursDiff = (expiryDate - now) / (1000 * 60 * 60);",
+              "    pm.expect(hoursDiff).to.be.within(0, 24);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_info\": {\n    \"name\": \"Test Customer\",\n    \"email\": \"test@example.com\",\n    \"phone\": \"+1234567890\"\n  },\n  \"customer_type\": \"child\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/{{test_ticket_code}}/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "{{test_ticket_code}}", "activate"]
+        }
+      }
+    },
+    {
+      "name": "Test 4: Batch Analytics with Special Pricing",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Analytics includes special pricing information', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.batch_id).to.exist;",
+              "    pm.expect(response.pricing_snapshot).to.exist;",
+              "    pm.expect(response.pricing_snapshot.base_price).to.equal(250);",
+              "});",
+              "",
+              "pm.test('Campaign metrics tracked correctly', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.campaign_info).to.exist;",
+              "    pm.expect(response.campaign_info.campaign_type).to.equal('flash_sale');",
+              "    pm.expect(response.campaign_info.promotional_code).to.equal('FLASH25');",
+              "});",
+              "",
+              "pm.test('Batch performance metrics available', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.total_tickets).to.be.a('number');",
+              "    pm.expect(response.activated_tickets).to.be.a('number');",
+              "    pm.expect(response.activation_rate).to.be.a('number');",
+              "    ",
+              "    // At least 1 ticket should be activated from previous test",
+              "    pm.expect(response.activated_tickets).to.be.at.least(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches/{{special_batch_id}}/analytics",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches", "{{special_batch_id}}", "analytics"]
+        }
+      }
+    },
+    {
+      "name": "Test 5: Special Pricing Validation - Edge Cases",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Invalid special pricing rejected', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Error message explains validation failure', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.error).to.exist;",
+              "    pm.expect(response.error.toLowerCase()).to.include('price');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 1,\n  \"batch_id\": \"INVALID-PRICING-{{$randomInt}}\",\n  \"special_pricing\": {\n    \"base_price\": -50,\n    \"customer_type_pricing\": [\n      {\"customer_type\": \"child\", \"price\": -25}\n    ]\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "bulk-generate"]
+        }
+      }
+    },
+    {
+      "name": "Test 6: Pricing Consistency Within Batch",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('All tickets in batch have consistent pricing', function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.tickets).to.be.an('array');",
+              "    ",
+              "    // All tickets should have same pricing_snapshot",
+              "    const firstTicketPricing = response.tickets[0].pricing_snapshot;",
+              "    response.tickets.forEach(ticket => {",
+              "        pm.expect(ticket.pricing_snapshot.base_price).to.equal(firstTicketPricing.base_price);",
+              "        pm.expect(ticket.pricing_snapshot.currency).to.equal(firstTicketPricing.currency);",
+              "    });",
+              "});",
+              "",
+              "pm.test('Special pricing locked-in for entire batch', function () {",
+              "    const response = pm.response.json();",
+              "    response.tickets.forEach(ticket => {",
+              "        pm.expect(ticket.pricing_snapshot.base_price).to.equal(280); // Custom pricing",
+              "        const childPricing = ticket.pricing_snapshot.customer_type_pricing.find(p => p.customer_type === 'child');",
+              "        pm.expect(childPricing.price).to.equal(210); // Custom child pricing",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches/CONSISTENCY-TEST-{{$randomInt}}/tickets",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches", "CONSISTENCY-TEST-{{$randomInt}}", "tickets"]
+        }
+      }
+    }
+  ]
+}

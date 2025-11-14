@@ -1,0 +1,683 @@
+{
+  "info": {
+    "name": "US-012 Complete Coverage - OTA Platform Integration",
+    "description": "Comprehensive validation of all US-012 requirements: inventory, reservations, orders, multi-partner isolation, and performance",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "partner_a_api_key",
+      "value": "ota_full_access_key_99999",
+      "type": "string"
+    },
+    {
+      "key": "partner_b_api_key",
+      "value": "ota251103_key_67890",
+      "type": "string"
+    },
+    {
+      "key": "test_timestamp",
+      "value": "{{$timestamp}}",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Channel Allocation Verification",
+      "item": [
+        {
+          "name": "Partner A: Get Inventory - Initial State",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response time under 2 seconds (Performance Requirement)\", function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test(\"Status code is 200\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Channel Allocation: Product 106 ~2000 units\", function() {",
+                  "    const json = pm.response.json();",
+                  "    const product106 = json.available_quantities[\"106\"];",
+                  "    pm.expect(product106).to.be.a(\"number\");",
+                  "    pm.expect(product106).to.be.at.least(1500);",
+                  "    pm.expect(product106).to.be.at.most(2500);",
+                  "    pm.collectionVariables.set(\"initial_106_inventory\", product106);",
+                  "});",
+                  "",
+                  "pm.test(\"Channel Allocation: Product 107 ~1500 units\", function() {",
+                  "    const json = pm.response.json();",
+                  "    const product107 = json.available_quantities[\"107\"];",
+                  "    pm.expect(product107).to.be.a(\"number\");",
+                  "    pm.expect(product107).to.be.at.least(1000);",
+                  "    pm.expect(product107).to.be.at.most(2000);",
+                  "});",
+                  "",
+                  "pm.test(\"Channel Allocation: Product 108 ~1500 units\", function() {",
+                  "    const json = pm.response.json();",
+                  "    const product108 = json.available_quantities[\"108\"];",
+                  "    pm.expect(product108).to.be.a(\"number\");",
+                  "    pm.expect(product108).to.be.at.least(1000);",
+                  "    pm.expect(product108).to.be.at.most(2000);",
+                  "});",
+                  "",
+                  "pm.test(\"Pricing context includes customer discounts\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"pricing_context\");",
+                  "    pm.expect(json.pricing_context).to.have.property(\"customer_discounts\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Partner B: Get Same Inventory View",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Partner B sees identical inventory (Shared Pool)\", function() {",
+                  "    const json = pm.response.json();",
+                  "    const initialInventory = pm.collectionVariables.get(\"initial_106_inventory\");",
+                  "    const partnerBInventory = json.available_quantities[\"106\"];",
+                  "    pm.expect(partnerBInventory).to.equal(parseInt(initialInventory));",
+                  "});",
+                  "",
+                  "pm.test(\"Response time under 2 seconds\", function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_b_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Reservation Management Flow",
+      "item": [
+        {
+          "name": "Partner A: Create Reservation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Reservation created successfully\", function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Reservation ID provided\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"reservation_id\");",
+                  "    pm.collectionVariables.set(\"partner_a_reservation_id\", json.reservation_id);",
+                  "});",
+                  "",
+                  "pm.test(\"Expiry time is 24 hours from now\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"reserved_until\");",
+                  "    const expiryTime = new Date(json.reserved_until);",
+                  "    const now = new Date();",
+                  "    const diffHours = (expiryTime - now) / (1000 * 60 * 60);",
+                  "    pm.expect(diffHours).to.be.closeTo(24, 1);",
+                  "});",
+                  "",
+                  "pm.test(\"Pricing snapshot captured\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"pricing_snapshot\");",
+                  "    pm.expect(json.pricing_snapshot).to.have.property(\"base_price\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "reserve"]
+            }
+          }
+        },
+        {
+          "name": "Verify Inventory Decreased After Reservation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Inventory decreased by reserved amount\", function() {",
+                  "    const json = pm.response.json();",
+                  "    const currentInventory = json.available_quantities[\"106\"];",
+                  "    const initialInventory = pm.collectionVariables.get(\"initial_106_inventory\");",
+                  "    const decrease = initialInventory - currentInventory;",
+                  "    pm.expect(decrease).to.equal(10);",
+                  "    pm.collectionVariables.set(\"after_reserve_inventory\", currentInventory);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Multi-Partner Isolation Tests",
+      "item": [
+        {
+          "name": "Partner B: Cannot Access Partner A's Reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Partner B cannot see Partner A's reservations\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    const partnerAReservationId = pm.collectionVariables.get(\"partner_a_reservation_id\");",
+                  "    ",
+                  "    // Partner B should not see Partner A's reservation",
+                  "    const foundReservation = json.reservations.find(r => r.reservation_id === partnerAReservationId);",
+                  "    pm.expect(foundReservation).to.be.undefined;",
+                  "});",
+                  "",
+                  "pm.test(\"Partner B has own reservations list\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"reservations\");",
+                  "    pm.expect(json.reservations).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_b_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/reservations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "reservations"]
+            }
+          }
+        },
+        {
+          "name": "Partner B: Sees Same Reduced Inventory",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Partner B sees same inventory reduction\", function() {",
+                  "    const json = pm.response.json();",
+                  "    const partnerBInventory = json.available_quantities[\"106\"];",
+                  "    const afterReserveInventory = pm.collectionVariables.get(\"after_reserve_inventory\");",
+                  "    pm.expect(partnerBInventory).to.equal(parseInt(afterReserveInventory));",
+                  "});",
+                  "",
+                  "pm.test(\"Shared inventory pool working correctly\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_b_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Complete OTA Workflow Validation",
+      "item": [
+        {
+          "name": "Create Order from Reservation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Order created from reservation\", function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Order ID provided\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"order_id\");",
+                  "    pm.collectionVariables.set(\"test_order_id\", json.order_id);",
+                  "});",
+                  "",
+                  "pm.test(\"Payment required amount specified\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"payment_required\");",
+                  "    pm.expect(json.payment_required).to.be.a(\"number\");",
+                  "    pm.expect(json.payment_required).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservation_id\": \"{{partner_a_reservation_id}}\",\n  \"customer_details\": {\n    \"name\": \"Test Customer\",\n    \"email\": \"test@example.com\",\n    \"phone\": \"+1234567890\"\n  },\n  \"pricing_context\": {\n    \"customer_type\": \"adult\",\n    \"is_weekend\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Activate Order After Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Order activated successfully\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Tickets issued with QR codes\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"tickets\");",
+                  "    pm.expect(json.tickets).to.be.an(\"array\");",
+                  "    pm.expect(json.tickets.length).to.be.above(0);",
+                  "    ",
+                  "    json.tickets.forEach(ticket => {",
+                  "        pm.expect(ticket).to.have.property(\"ticket_code\");",
+                  "        pm.expect(ticket).to.have.property(\"qr_code\");",
+                  "        pm.expect(ticket.status).to.equal(\"ACTIVE\");",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test(\"Activation status is success\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.activation_status).to.equal(\"success\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{test_order_id}}\",\n  \"payment_reference\": \"PAY_TEST_{{test_timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/activate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "activate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. B2B2C Bulk Generation Tests",
+      "item": [
+        {
+          "name": "Generate Reseller Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bulk generation successful\", function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Batch ID and tickets provided\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"batch_id\");",
+                  "    pm.expect(json).to.have.property(\"tickets\");",
+                  "    pm.expect(json.tickets).to.be.an(\"array\");",
+                  "    pm.expect(json.tickets.length).to.equal(100);",
+                  "    pm.collectionVariables.set(\"reseller_batch_id\", json.batch_id);",
+                  "});",
+                  "",
+                  "pm.test(\"Reseller metadata preserved\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"reseller_metadata\");",
+                  "    pm.expect(json.reseller_metadata.intended_reseller).to.equal(\"Test Reseller Network\");",
+                  "    pm.expect(json.reseller_metadata.commission_rate).to.equal(0.15);",
+                  "});",
+                  "",
+                  "pm.test(\"Extended expiry for reseller batches\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"expires_at\");",
+                  "    const expiryTime = new Date(json.expires_at);",
+                  "    const now = new Date();",
+                  "    const diffHours = (expiryTime - now) / (1000 * 60 * 60);",
+                  "    pm.expect(diffHours).to.be.above(24); // Extended beyond 24h",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 100,\n  \"batch_id\": \"RESELLER_BATCH_{{test_timestamp}}\",\n  \"distribution_mode\": \"reseller_batch\",\n  \"reseller_metadata\": {\n    \"intended_reseller\": \"Test Reseller Network\",\n    \"commission_rate\": 0.15,\n    \"markup_percentage\": 0.25,\n    \"payment_terms\": \"net_30\",\n    \"billing_contact\": \"billing@testreseller.com\"\n  },\n  \"batch_metadata\": {\n    \"campaign_type\": \"b2b2c_expansion\",\n    \"target_demographic\": \"adventure_travelers\",\n    \"geographic_focus\": \"Southeast Asia\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          }
+        },
+        {
+          "name": "Query Generated Tickets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Ticket query successful\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Batch tickets filtered correctly\", function() {",
+                  "    const json = pm.response.json();",
+                  "    const batchId = pm.collectionVariables.get(\"reseller_batch_id\");",
+                  "    pm.expect(json.tickets.length).to.be.above(0);",
+                  "    ",
+                  "    json.tickets.forEach(ticket => {",
+                  "        pm.expect(ticket.batch_id).to.equal(batchId);",
+                  "        pm.expect(ticket.status).to.equal(\"PRE_GENERATED\");",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test(\"Pagination working\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"total_count\");",
+                  "    pm.expect(json).to.have.property(\"page\");",
+                  "    pm.expect(json).to.have.property(\"page_size\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets?batch_id={{reseller_batch_id}}&status=PRE_GENERATED&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets"],
+              "query": [
+                {
+                  "key": "batch_id",
+                  "value": "{{reseller_batch_id}}"
+                },
+                {
+                  "key": "status",
+                  "value": "PRE_GENERATED"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Security & Error Handling",
+      "item": [
+        {
+          "name": "Invalid API Key - Unauthorized",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Invalid API key rejected\", function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"Proper error message\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.equal(\"INVALID_API_KEY\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "invalid_key_12345"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Overselling Prevention",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Overselling attempt prevented\", function() {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Insufficient inventory error\", function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.equal(\"INSUFFICIENT_INVENTORY\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 99999\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "reserve"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Performance & Scale Validation",
+      "item": [
+        {
+          "name": "5000 Unit Allocation Verification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Total OTA allocation meets 5000 unit requirement\", function() {",
+                  "    const json = pm.response.json();",
+                  "    const total = json.available_quantities[\"106\"] + ",
+                  "                  json.available_quantities[\"107\"] + ",
+                  "                  json.available_quantities[\"108\"];",
+                  "    pm.expect(total).to.be.at.least(4500);",
+                  "    pm.expect(total).to.be.at.most(5500);",
+                  "});",
+                  "",
+                  "pm.test(\"Performance: Response under 2 seconds\", function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test(\"Business requirement: Nov 15 deadline readiness\", function() {",
+                  "    const today = new Date();",
+                  "    const deadline = new Date('2025-11-15');",
+                  "    pm.expect(today).to.be.below(deadline);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
