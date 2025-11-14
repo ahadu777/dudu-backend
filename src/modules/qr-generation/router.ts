@@ -4,6 +4,9 @@ import { unifiedQRService } from './service';
 import { logger } from '../../utils/logger';
 import { decryptAndVerifyQR } from '../../utils/qr-crypto';
 import { mockDataStore } from '../../core/mock/data';
+import { AppDataSource } from '../../config/database';
+import { VenueRepository } from '../venue/domain/venue.repository';
+import { dataSourceConfig } from '../../config/data-source';
 
 const router = Router();
 
@@ -150,11 +153,13 @@ router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: N
     // Return encrypted QR code for redemption system
     return res.status(200).json({
       success: true,
-      qr_image: qrResult.qr_image,
+      qr_image: qrResult.qr_image,        // For display to user
+      encrypted_data: qrResult.encrypted_data,  // For venue scanning API
       ticket_code: qrResult.ticket_code,
       expires_at: qrResult.expires_at,
       valid_for_seconds: validForSeconds,
-      issued_at: new Date().toISOString()
+      issued_at: new Date().toISOString(),
+      jti: qrResult.jti  // JWT ID for tracking
     });
   } catch (error) {
     logger.error('qr.router.error', {
@@ -227,14 +232,71 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
       auth_type: req.authType
     });
 
-    // This would be similar to generateQR but without actual QR generation
-    // For now, return a simple status
-    return res.status(200).json({
-      success: true,
-      ticket_code: ticketCode,
-      qr_generation_available: true,
-      message: 'Use POST /api/tickets/:code/qr to generate QR code'
-    });
+    // Get ticket information using the service
+    // This validates ownership and returns complete ticket details
+    try {
+      // Create auth context
+      const authContext = {
+        authType: req.authType!,
+        userId: req.user?.id,
+        partnerId: req.ota_partner?.id
+      };
+
+      // Try to fetch ticket info (this will validate ownership)
+      const ticketType = ticketCode.match(/^(CRUISE-|BATCH-|FERRY-|OTA-)/i) ? 'OTA' : 'NORMAL';
+
+      let ticket;
+      if (ticketType === 'OTA') {
+        // Try database first for OTA tickets
+        if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+          const venueRepo = new VenueRepository(AppDataSource);
+          ticket = await venueRepo.getTicketByCode(ticketCode);
+        } else {
+          // Fallback to mock store
+          ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+        }
+
+        if (ticket && ticket.partner_id !== authContext.partnerId) {
+          throw new Error('UNAUTHORIZED');
+        }
+      } else {
+        ticket = mockDataStore.getTicketByCode(ticketCode);
+        if (ticket && ticket.user_id !== authContext.userId) {
+          throw new Error('UNAUTHORIZED');
+        }
+      }
+
+      if (!ticket) {
+        return res.status(404).json({
+          success: false,
+          error: 'TICKET_NOT_FOUND',
+          message: 'Ticket not found'
+        });
+      }
+
+      // Return ticket information with entitlements
+      return res.status(200).json({
+        success: true,
+        ticket_code: ticketCode,
+        ticket_type: ticketType,
+        status: ticket.status,
+        entitlements: ticket.entitlements || [],
+        product_id: ticket.product_id,
+        order_id: ticket.order_id,
+        batch_id: ticket.batch_id,
+        partner_id: ticket.partner_id,
+        qr_generation_available: ['PRE_GENERATED', 'ACTIVE', 'USED', 'active', 'partially_redeemed'].includes(ticket.status)
+      });
+    } catch (error: any) {
+      if (error.message === 'UNAUTHORIZED') {
+        return res.status(403).json({
+          success: false,
+          error: 'UNAUTHORIZED',
+          message: 'You do not have permission to access this ticket'
+        });
+      }
+      throw error;
+    }
   } catch (error) {
     next(error);
   }

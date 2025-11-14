@@ -1,6 +1,6 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
-export type TicketStatus = 'PRE_GENERATED' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+export type TicketStatus = 'PRE_GENERATED' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'CANCELLED';
 
 @Entity('pre_generated_tickets')
 @Index(['batch_id']) // For batch operations
@@ -24,7 +24,7 @@ export class PreGeneratedTicketEntity {
 
   @Column({
     type: 'enum',
-    enum: ['PRE_GENERATED', 'ACTIVE', 'EXPIRED', 'CANCELLED'],
+    enum: ['PRE_GENERATED', 'ACTIVE', 'USED', 'EXPIRED', 'CANCELLED'],
     default: 'PRE_GENERATED'
   })
   status!: TicketStatus;

@@ -859,10 +859,8 @@ export class OTAService {
       // Save to database with inventory update
       const savedTickets = await this.otaRepository!.createPreGeneratedTickets(tickets, channelId);
 
-      // Update batch with actual tickets generated
-      await repo.updateBatchCounters(batch.batch_id, {
-        tickets_generated: savedTickets.length
-      });
+      // Note: Batch statistics (tickets_generated, etc.) are now computed on-demand via JOIN queries
+      // No need to update counters in the batch table
 
       logger.info('ota.tickets.bulk_generation_database_completed', {
         batch_id: request.batch_id,
@@ -1438,9 +1436,19 @@ export class OTAService {
         }
 
         // Aggregate analytics for this campaign type
+        // Note: findBatchesByCampaignType doesn't include stats, so we manually query
+        // TODO: Consider creating findBatchesByCampaignTypeWithStats for better performance
         const totalBatches = filteredBatches.length;
-        const totalGenerated = filteredBatches.reduce((sum, b) => sum + b.tickets_generated, 0);
-        const totalRedeemed = filteredBatches.reduce((sum, b) => sum + b.tickets_redeemed, 0);
+        let totalGenerated = 0;
+        let totalRedeemed = 0;
+
+        for (const batch of filteredBatches) {
+          const analytics = await repo.getBatchAnalytics(batch.batch_id);
+          if (analytics) {
+            totalGenerated += analytics.tickets_generated;
+            totalRedeemed += analytics.tickets_redeemed;
+          }
+        }
 
         return {
           campaign_summaries: [
@@ -1456,8 +1464,8 @@ export class OTAService {
         };
       } else {
         // Return all campaign types aggregated
-        // Use findBatchesByPartner with 'all' to get all batches
-        const allBatches = await repo.findBatchesByPartner('all');
+        // Use optimized query with stats
+        const allBatches = await repo.findBatchesWithStats();
 
         // Filter by date_range if provided
         let filteredBatches = allBatches;
@@ -1481,8 +1489,8 @@ export class OTAService {
         // Generate summaries for each campaign type
         const summaries = Object.keys(campaignGroups).map(type => {
           const batches = campaignGroups[type];
-          const totalGenerated = batches.reduce((sum, b) => sum + b.tickets_generated, 0);
-          const totalRedeemed = batches.reduce((sum, b) => sum + b.tickets_redeemed, 0);
+          const totalGenerated = batches.reduce((sum, b) => sum + (b.tickets_generated ?? 0), 0);
+          const totalRedeemed = batches.reduce((sum, b) => sum + (b.tickets_redeemed ?? 0), 0);
 
           return {
             campaign_type: type,

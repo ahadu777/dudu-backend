@@ -254,6 +254,222 @@
           "path": ["api", "ota", "tickets", "bulk-generate"]
         }
       }
+    },
+    {
+      "name": "Get Batch Analytics",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Batch analytics retrieved', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Analytics response has required fields', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('batch_id');",
+              "    pm.expect(json).to.have.property('reseller_name');",
+              "    pm.expect(json).to.have.property('tickets_generated');",
+              "    pm.expect(json).to.have.property('tickets_activated');",
+              "    pm.expect(json).to.have.property('tickets_redeemed');",
+              "    pm.expect(json).to.have.property('conversion_rates');",
+              "    pm.expect(json).to.have.property('revenue_metrics');",
+              "});",
+              "",
+              "pm.test('Conversion rates calculated', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.conversion_rates).to.have.property('activation_rate');",
+              "    pm.expect(json.conversion_rates).to.have.property('redemption_rate');",
+              "    pm.expect(json.conversion_rates).to.have.property('overall_utilization');",
+              "});",
+              "",
+              "pm.test('Revenue metrics present', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.revenue_metrics).to.have.property('potential_revenue');",
+              "    pm.expect(json.revenue_metrics).to.have.property('realized_revenue');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches/{{batch_id}}/analytics",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches", "{{batch_id}}", "analytics"]
+        }
+      }
+    },
+    {
+      "name": "Get Campaign Analytics",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Campaign analytics retrieved', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Analytics response has campaign summaries', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('campaign_summaries');",
+              "    pm.expect(json.campaign_summaries).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Campaign summary has required fields', function() {",
+              "    const json = pm.response.json();",
+              "    if (json.campaign_summaries.length > 0) {",
+              "        const summary = json.campaign_summaries[0];",
+              "        pm.expect(summary).to.have.property('campaign_type');",
+              "        pm.expect(summary).to.have.property('total_batches');",
+              "        pm.expect(summary).to.have.property('total_tickets_generated');",
+              "        pm.expect(summary).to.have.property('total_tickets_redeemed');",
+              "        pm.expect(summary).to.have.property('average_conversion_rate');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/campaigns/analytics?campaign_type=early_bird&date_range=7d",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "campaigns", "analytics"],
+          "query": [
+            {
+              "key": "campaign_type",
+              "value": "early_bird"
+            },
+            {
+              "key": "date_range",
+              "value": "7d"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Billing Summary",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Billing summary retrieved', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Billing summary has required fields', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('billing_period');",
+              "    pm.expect(json).to.have.property('reseller_summaries');",
+              "    pm.expect(json.reseller_summaries).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Reseller summary structure correct', function() {",
+              "    const json = pm.response.json();",
+              "    if (json.reseller_summaries.length > 0) {",
+              "        const summary = json.reseller_summaries[0];",
+              "        pm.expect(summary).to.have.property('reseller_name');",
+              "        pm.expect(summary).to.have.property('total_redemptions');",
+              "        pm.expect(summary).to.have.property('total_amount_due');",
+              "        pm.expect(summary).to.have.property('batches');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/billing/summary?period=2025-11&reseller=Newman Test Reseller",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "billing", "summary"],
+          "query": [
+            {
+              "key": "period",
+              "value": "2025-11"
+            },
+            {
+              "key": "reseller",
+              "value": "Newman Test Reseller"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Batch Redemptions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Batch redemptions retrieved', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Redemptions response has required fields', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('batch_id');",
+              "    pm.expect(json).to.have.property('total_redemptions');",
+              "    pm.expect(json).to.have.property('redemption_events');",
+              "    pm.expect(json.redemption_events).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Redemption event structure correct', function() {",
+              "    const json = pm.response.json();",
+              "    if (json.redemption_events.length > 0) {",
+              "        const event = json.redemption_events[0];",
+              "        pm.expect(event).to.have.property('ticket_code');",
+              "        pm.expect(event).to.have.property('function_code');",
+              "        pm.expect(event).to.have.property('redeemed_at');",
+              "        pm.expect(event).to.have.property('venue_name');",
+              "        pm.expect(event).to.have.property('wholesale_price');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches/{{batch_id}}/redemptions",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches", "{{batch_id}}", "redemptions"]
+        }
+      }
     }
   ]
 }

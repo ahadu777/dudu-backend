@@ -100,17 +100,14 @@ export class OTATicketBatchEntity {
   })
   status!: BatchStatus;
 
-  @Column({ type: 'int', unsigned: true, default: 0 })
-  tickets_generated!: number;
-
-  @Column({ type: 'int', unsigned: true, default: 0 })
-  tickets_activated!: number;
-
-  @Column({ type: 'int', unsigned: true, default: 0 })
-  tickets_redeemed!: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  total_revenue_realized!: number; // Wholesale revenue from redeemed tickets
+  // ========================================
+  // Transient Properties (Computed from tickets table, not stored in DB)
+  // These are populated by Repository methods with JOIN queries
+  // ========================================
+  tickets_generated?: number;
+  tickets_activated?: number;
+  tickets_redeemed?: number;
+  total_revenue_realized?: number;
 
   @CreateDateColumn()
   created_at!: Date;
@@ -137,27 +134,17 @@ export class OTATicketBatchEntity {
     return this.status === 'active' && (!this.expires_at || new Date() <= this.expires_at);
   }
 
+  // Statistics methods (require stats to be loaded via Repository)
   getConversionRate(): number {
-    return this.tickets_generated > 0 ? this.tickets_activated / this.tickets_generated : 0;
+    const generated = this.tickets_generated ?? 0;
+    const activated = this.tickets_activated ?? 0;
+    return generated > 0 ? activated / generated : 0;
   }
 
   getRemainingTickets(): number {
-    return this.tickets_generated - this.tickets_activated;
-  }
-
-  incrementTicketsGenerated(count: number = 1): void {
-    this.tickets_generated += count;
-  }
-
-  incrementTicketsActivated(count: number = 1): void {
-    this.tickets_activated += count;
-  }
-
-  incrementTicketsRedeemed(count: number = 1, wholesalePrice?: number): void {
-    this.tickets_redeemed += count;
-    if (wholesalePrice) {
-      this.total_revenue_realized += wholesalePrice * count;
-    }
+    const generated = this.tickets_generated ?? 0;
+    const activated = this.tickets_activated ?? 0;
+    return generated - activated;
   }
 
   expire(): void {
@@ -237,29 +224,35 @@ export class OTATicketBatchEntity {
     return this.batch_metadata?.marketing_tags || [];
   }
 
-  // Billing and analytics methods
+  // Billing and analytics methods (require stats to be loaded via Repository)
   getRedemptionRate(): number {
-    return this.tickets_activated > 0 ? this.tickets_redeemed / this.tickets_activated : 0;
+    const activated = this.tickets_activated ?? 0;
+    const redeemed = this.tickets_redeemed ?? 0;
+    return activated > 0 ? redeemed / activated : 0;
   }
 
   getOverallUtilization(): number {
-    return this.tickets_generated > 0 ? this.tickets_redeemed / this.tickets_generated : 0;
+    const generated = this.tickets_generated ?? 0;
+    const redeemed = this.tickets_redeemed ?? 0;
+    return generated > 0 ? redeemed / generated : 0;
   }
 
   getPotentialRevenue(): number {
-    return this.tickets_generated * this.pricing_snapshot.base_price;
+    const generated = this.tickets_generated ?? 0;
+    return generated * this.pricing_snapshot.base_price;
   }
 
   getRealizedRevenue(): number {
-    return this.total_revenue_realized;
+    return this.total_revenue_realized ?? 0;
   }
 
   getRevenueRealizationRate(): number {
     const potential = this.getPotentialRevenue();
-    return potential > 0 ? this.total_revenue_realized / potential : 0;
+    const realized = this.total_revenue_realized ?? 0;
+    return potential > 0 ? realized / potential : 0;
   }
 
-  // Get billing summary for this batch
+  // Get billing summary for this batch (requires stats to be loaded)
   getBillingSummary() {
     return {
       batch_id: this.batch_id,
@@ -267,9 +260,9 @@ export class OTATicketBatchEntity {
       campaign_type: this.batch_metadata?.campaign_type || 'standard',
       campaign_name: this.batch_metadata?.campaign_name || 'Standard Batch',
       generated_at: this.created_at,
-      tickets_generated: this.tickets_generated,
-      tickets_activated: this.tickets_activated,
-      tickets_redeemed: this.tickets_redeemed,
+      tickets_generated: this.tickets_generated ?? 0,
+      tickets_activated: this.tickets_activated ?? 0,
+      tickets_redeemed: this.tickets_redeemed ?? 0,
       conversion_rates: {
         activation_rate: this.getConversionRate(),
         redemption_rate: this.getRedemptionRate(),
@@ -281,7 +274,7 @@ export class OTATicketBatchEntity {
         realization_rate: this.getRevenueRealizationRate()
       },
       wholesale_rate: this.pricing_snapshot.base_price,
-      amount_due: this.total_revenue_realized
+      amount_due: this.total_revenue_realized ?? 0
     };
   }
 }

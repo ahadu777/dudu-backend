@@ -676,52 +676,119 @@ export class OTARepository {
       .getMany();
   }
 
-  async updateBatchCounters(batchId: string, updates: {
-    tickets_generated?: number;
-    tickets_activated?: number;
-    tickets_redeemed?: number;
-    revenue_realized?: number;
-  }): Promise<boolean> {
-    const batch = await this.batchRepo.findOne({ where: { batch_id: batchId } });
-    if (!batch) return false;
+  // ========================================
+  // Optimized batch queries with statistics (single JOIN query)
+  // ========================================
 
-    if (updates.tickets_generated !== undefined) {
-      batch.tickets_generated = updates.tickets_generated;
-    }
-    if (updates.tickets_activated !== undefined) {
-      batch.tickets_activated = updates.tickets_activated;
-    }
-    if (updates.tickets_redeemed !== undefined) {
-      batch.tickets_redeemed = updates.tickets_redeemed;
-    }
-    if (updates.revenue_realized !== undefined) {
-      batch.total_revenue_realized = updates.revenue_realized;
-    }
-
-    await this.batchRepo.save(batch);
-    return true;
-  }
-
-  async getBatchAnalytics(batchId: string): Promise<any | null> {
-    const batch = await this.findBatchById(batchId);
-    if (!batch) return null;
-
-    // Dynamically calculate ticket counts from actual ticket statuses
-    const ticketStats = await this.dataSource.query(`
+  /**
+   * Find a single batch with statistics computed via JOIN
+   * This is much faster than separate queries
+   */
+  async findBatchWithStats(batchId: string): Promise<OTATicketBatchEntity | null> {
+    const result = await this.dataSource.query(`
       SELECT
-        COUNT(*) as tickets_generated,
-        SUM(CASE WHEN status IN ('ACTIVE', 'REDEEMED') THEN 1 ELSE 0 END) as tickets_activated,
-        SUM(CASE WHEN status = 'REDEEMED' THEN 1 ELSE 0 END) as tickets_redeemed
-      FROM pre_generated_tickets
-      WHERE batch_id = ?
+        b.*,
+        COUNT(t.ticket_code) as tickets_generated,
+        SUM(CASE WHEN t.status IN ('ACTIVE', 'REDEEMED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'REDEEMED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE WHEN t.status = 'REDEEMED' THEN t.ticket_price ELSE 0 END) as total_revenue_realized
+      FROM ota_ticket_batches b
+      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+      WHERE b.batch_id = ?
+      GROUP BY b.batch_id
     `, [batchId]);
 
-    const stats = ticketStats[0];
-    const tickets_generated = parseInt(stats.tickets_generated) || 0;
-    const tickets_activated = parseInt(stats.tickets_activated) || 0;
-    const tickets_redeemed = parseInt(stats.tickets_redeemed) || 0;
+    if (!result || result.length === 0) return null;
+
+    return this.mapRowToBatchWithStats(result[0]);
+  }
+
+  /**
+   * Find multiple batches with statistics via JOIN
+   * Optimized for listing pages - avoids N+1 query problem
+   */
+  async findBatchesWithStats(partnerId?: string, limit?: number, offset?: number): Promise<OTATicketBatchEntity[]> {
+    let query = `
+      SELECT
+        b.*,
+        COUNT(t.ticket_code) as tickets_generated,
+        SUM(CASE WHEN t.status IN ('ACTIVE', 'REDEEMED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'REDEEMED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE WHEN t.status = 'REDEEMED' THEN t.ticket_price ELSE 0 END) as total_revenue_realized
+      FROM ota_ticket_batches b
+      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+    `;
+
+    const params: any[] = [];
+    if (partnerId) {
+      query += ' WHERE b.partner_id = ?';
+      params.push(partnerId);
+    }
+
+    query += ' GROUP BY b.batch_id ORDER BY b.created_at DESC';
+
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(limit);
+      if (offset) {
+        query += ' OFFSET ?';
+        params.push(offset);
+      }
+    }
+
+    const results = await this.dataSource.query(query, params);
+    return results.map((row: any) => this.mapRowToBatchWithStats(row));
+  }
+
+  /**
+   * Helper method to map raw SQL row to entity with stats
+   */
+  private mapRowToBatchWithStats(row: any): OTATicketBatchEntity {
+    const batch = new OTATicketBatchEntity();
+
+    // Map basic fields
+    batch.batch_id = row.batch_id;
+    batch.partner_id = row.partner_id;
+    batch.product_id = row.product_id;
+    batch.total_quantity = row.total_quantity;
+    batch.distribution_mode = row.distribution_mode;
+    batch.pricing_snapshot = typeof row.pricing_snapshot === 'string'
+      ? JSON.parse(row.pricing_snapshot)
+      : row.pricing_snapshot;
+    batch.reseller_metadata = row.reseller_metadata
+      ? (typeof row.reseller_metadata === 'string' ? JSON.parse(row.reseller_metadata) : row.reseller_metadata)
+      : undefined;
+    batch.batch_metadata = row.batch_metadata
+      ? (typeof row.batch_metadata === 'string' ? JSON.parse(row.batch_metadata) : row.batch_metadata)
+      : undefined;
+    batch.expires_at = row.expires_at;
+    batch.status = row.status;
+    batch.created_at = row.created_at;
+    batch.updated_at = row.updated_at;
+
+    // Map computed statistics (transient properties)
+    batch.tickets_generated = parseInt(row.tickets_generated) || 0;
+    batch.tickets_activated = parseInt(row.tickets_activated) || 0;
+    batch.tickets_redeemed = parseInt(row.tickets_redeemed) || 0;
+    batch.total_revenue_realized = parseFloat(row.total_revenue_realized) || 0;
+
+    return batch;
+  }
+
+  /**
+   * Get batch analytics using optimized JOIN query
+   * This is the preferred method for fetching batch statistics
+   */
+  async getBatchAnalytics(batchId: string): Promise<any | null> {
+    // Use optimized single-query method
+    const batch = await this.findBatchWithStats(batchId);
+    if (!batch) return null;
 
     const basePrice = batch.pricing_snapshot.base_price;
+    const tickets_generated = batch.tickets_generated ?? 0;
+    const tickets_activated = batch.tickets_activated ?? 0;
+    const tickets_redeemed = batch.tickets_redeemed ?? 0;
+    const total_revenue = batch.total_revenue_realized ?? 0;
 
     return {
       batch_id: batch.batch_id,
@@ -739,29 +806,52 @@ export class OTARepository {
       },
       revenue_metrics: {
         potential_revenue: tickets_generated * basePrice,
-        realized_revenue: tickets_redeemed * basePrice,
-        realization_rate: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
+        realized_revenue: total_revenue,
+        realization_rate: tickets_generated > 0 ? total_revenue / (tickets_generated * basePrice) : 0
       },
       wholesale_rate: basePrice,
-      amount_due: (tickets_redeemed * basePrice).toFixed(2),
+      amount_due: total_revenue.toFixed(2),
       batch_metadata: batch.batch_metadata || {}
     };
   }
 
+  /**
+   * Get reseller billing summary with optimized query
+   * Uses JOIN to compute statistics in single query
+   */
   async getResellerBillingSummary(resellerName: string, period: string): Promise<any> {
-    const batches = await this.findBatchesByReseller(resellerName);
+    // Optimized query with stats computed via JOIN
+    const result = await this.dataSource.query(`
+      SELECT
+        b.*,
+        COUNT(t.ticket_code) as tickets_generated,
+        SUM(CASE WHEN t.status = 'REDEEMED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE WHEN t.status = 'REDEEMED' THEN t.ticket_price ELSE 0 END) as total_revenue_realized
+      FROM ota_ticket_batches b
+      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+      WHERE JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?
+        AND DATE_FORMAT(b.created_at, '%Y-%m') = ?
+      GROUP BY b.batch_id
+      ORDER BY b.created_at DESC
+    `, [resellerName, period]);
 
-    // Filter by period (YYYY-MM format)
-    const periodBatches = batches.filter(batch => {
-      return batch.created_at.toISOString().slice(0, 7) === period;
-    });
+    const periodBatches = result.map((row: any) => ({
+      batch_id: row.batch_id,
+      tickets_generated: parseInt(row.tickets_generated) || 0,
+      tickets_redeemed: parseInt(row.tickets_redeemed) || 0,
+      total_revenue_realized: parseFloat(row.total_revenue_realized) || 0,
+      pricing_snapshot: typeof row.pricing_snapshot === 'string' ? JSON.parse(row.pricing_snapshot) : row.pricing_snapshot
+    }));
+
+    const totalRedeemed = periodBatches.reduce((sum: number, b: any) => sum + b.tickets_redeemed, 0);
+    const totalRevenue = periodBatches.reduce((sum: number, b: any) => sum + b.total_revenue_realized, 0);
 
     const resellerSummary = {
       reseller_name: resellerName,
       total_batches: periodBatches.length,
-      total_redemptions: periodBatches.reduce((sum, b) => sum + b.tickets_redeemed, 0),
-      total_amount_due: periodBatches.reduce((sum, b) => sum + b.total_revenue_realized, 0).toFixed(2),
-      batches: periodBatches.map(batch => ({
+      total_redemptions: totalRedeemed,
+      total_amount_due: totalRevenue.toFixed(2),
+      batches: periodBatches.map((batch: any) => ({
         batch_id: batch.batch_id,
         redemptions_count: batch.tickets_redeemed,
         wholesale_rate: batch.pricing_snapshot.base_price,

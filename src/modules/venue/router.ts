@@ -223,12 +223,12 @@ router.post('/sessions', async (req, res) => {
  *                   type: string
  */
 router.post('/scan', async (req, res) => {
-  const { qr_token, function_code, session_code, terminal_device_id } = req.body;
+  const { qr_token, function_code, terminal_device_id } = req.body;
 
-  if (!qr_token || !function_code || !session_code) {
+  if (!qr_token || !function_code) {
     return res.status(400).json({
       error: 'INVALID_REQUEST',
-      message: 'qr_token, function_code, and session_code are required'
+      message: 'qr_token and function_code are required'
     });
   }
 
@@ -236,7 +236,6 @@ router.post('/scan', async (req, res) => {
     const result = await venueOperationsService.validateAndRedeem({
       qrToken: qr_token,
       functionCode: function_code,
-      sessionCode: session_code,
       terminalDeviceId: terminal_device_id
     });
 
@@ -247,7 +246,6 @@ router.post('/scan', async (req, res) => {
   } catch (error) {
     logger.error('venue.scan.error', {
       function_code,
-      session_code,
       terminal_device: terminal_device_id,
       error: (error as Error).message
     });
