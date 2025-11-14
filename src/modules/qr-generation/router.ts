@@ -239,10 +239,11 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
       const authContext = {
         authType: req.authType!,
         userId: req.user?.id,
-        partnerId: req.ota_partner?.id
+        partnerId: req.ota_partner?.id,
+        operatorId: req.operator?.operator_id
       };
 
-      // Try to fetch ticket info (this will validate ownership)
+      // Try to fetch ticket info
       const ticketType = ticketCode.match(/^(CRUISE-|BATCH-|FERRY-|OTA-)/i) ? 'OTA' : 'NORMAL';
 
       let ticket;
@@ -256,12 +257,15 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
           ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
         }
 
-        if (ticket && ticket.partner_id !== authContext.partnerId) {
+        // Validate ownership (operators can view any ticket)
+        if (ticket && authContext.authType !== 'OPERATOR' && ticket.partner_id !== authContext.partnerId) {
           throw new Error('UNAUTHORIZED');
         }
       } else {
         ticket = mockDataStore.getTicketByCode(ticketCode);
-        if (ticket && ticket.user_id !== authContext.userId) {
+
+        // Validate ownership (operators can view any ticket)
+        if (ticket && authContext.authType !== 'OPERATOR' && ticket.user_id !== authContext.userId) {
           throw new Error('UNAUTHORIZED');
         }
       }
@@ -274,18 +278,38 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
         });
       }
 
-      // Return ticket information with entitlements
+      // Get product information
+      const product = mockDataStore.getProduct(ticket.product_id);
+      const productInfo = product ? {
+        id: product.id,
+        name: product.name
+      } : {
+        id: ticket.product_id,
+        name: 'Unknown Product'
+      };
+
+      // Format entitlements with complete information
+      const formattedEntitlements = (ticket.entitlements || []).map((e: any) => ({
+        function_code: e.function_code,
+        function_name: e.label || e.function_code,
+        remaining_uses: e.remaining_uses,
+        total_uses: e.total_uses || e.remaining_uses
+      }));
+
+      // Return ticket information with entitlements (aligned with US-012 requirements)
       return res.status(200).json({
         success: true,
         ticket_code: ticketCode,
         ticket_type: ticketType,
         status: ticket.status,
-        entitlements: ticket.entitlements || [],
+        entitlements: formattedEntitlements,
+        can_generate_qr: ['PRE_GENERATED', 'ACTIVE', 'USED', 'active', 'partially_redeemed'].includes(ticket.status),
+        product_info: productInfo,
+        // Additional fields for backward compatibility and debugging
         product_id: ticket.product_id,
         order_id: ticket.order_id,
         batch_id: ticket.batch_id,
-        partner_id: ticket.partner_id,
-        qr_generation_available: ['PRE_GENERATED', 'ACTIVE', 'USED', 'active', 'partially_redeemed'].includes(ticket.status)
+        partner_id: ticket.partner_id
       });
     } catch (error: any) {
       if (error.message === 'UNAUTHORIZED') {

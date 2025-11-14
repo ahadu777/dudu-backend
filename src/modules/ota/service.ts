@@ -29,8 +29,15 @@ export interface OTAReserveResponse {
   reserved_until: string;
   pricing_snapshot: {
     base_price: number;
-    weekend_premium: number;
-    customer_discounts: { [type: string]: number };
+    weekend_premium?: number;
+    customer_discounts?: { [type: string]: number };  // Legacy field (deprecated)
+    customer_type_pricing?: Array<{
+      customer_type: 'adult' | 'child' | 'elderly';
+      unit_price: number;
+      discount_applied: number;
+    }>;
+    currency?: string;
+    captured_at?: string;
   };
 }
 
@@ -264,11 +271,41 @@ export class OTAService {
           };
         }
 
-        // Build pricing snapshot
+        // Build pricing snapshot with customer type pricing
+        const basePrice = Number(product.base_price);
+        const weekendPremium = Number(product.weekend_premium || 30.00);
+
+        // Get customer type pricing from product or calculate defaults
+        // Note: customer_discounts are stored as absolute amounts, not percentages
+        const customerTypePricing = product.customer_discounts ? [
+          {
+            customer_type: 'adult' as const,
+            unit_price: Math.round(basePrice - (product.customer_discounts.adult ?? 0)),
+            discount_applied: Math.round(product.customer_discounts.adult ?? 0)
+          },
+          {
+            customer_type: 'child' as const,
+            unit_price: Math.round(basePrice - (product.customer_discounts.child ?? Math.round(basePrice * 0.35))),
+            discount_applied: Math.round(product.customer_discounts.child ?? Math.round(basePrice * 0.35))
+          },
+          {
+            customer_type: 'elderly' as const,
+            unit_price: Math.round(basePrice - (product.customer_discounts.elderly ?? Math.round(basePrice * 0.17))),
+            discount_applied: Math.round(product.customer_discounts.elderly ?? Math.round(basePrice * 0.17))
+          }
+        ] : [
+          // Fallback defaults if no customer discounts defined
+          { customer_type: 'adult' as const, unit_price: basePrice, discount_applied: 0 },
+          { customer_type: 'child' as const, unit_price: Math.round(basePrice * 0.65), discount_applied: Math.round(basePrice * 0.35) },
+          { customer_type: 'elderly' as const, unit_price: Math.round(basePrice * 0.83), discount_applied: Math.round(basePrice * 0.17) }
+        ];
+
         const pricing_snapshot = {
-          base_price: Number(product.base_price),
-          weekend_premium: Number(product.weekend_premium || 30.00),
-          customer_discounts: product.customer_discounts || {}
+          base_price: basePrice,
+          customer_type_pricing: customerTypePricing,
+          weekend_premium: weekendPremium,
+          currency: 'HKD',
+          captured_at: new Date().toISOString()
         };
 
         // Create reservation with database transaction

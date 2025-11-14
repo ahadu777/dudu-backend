@@ -30,10 +30,10 @@ relationships:
 - Spec Paths: /qr/:code, /qr/:code/info, /qr/decrypt, /qr/verify
 - Migrations: src/migrations/007-add-raw-field-to-tickets.ts
 - Integration Guide: docs/OTA_QR_CODE_GUIDE.md
-- Last Update: 2025-11-14T20:00:00+08:00 (Added GET /qr/:code/info endpoint)
+- Last Update: 2025-11-14T21:00:00+08:00 (Enhanced /:code/info with Operator JWT support, unified ticket info API)
 
 ## 0) Prerequisites
-- Unified authentication middleware (OTA API Key + User JWT)
+- Unified authentication middleware (OTA API Key + User JWT + Operator JWT)
 - QR encryption utilities (AES-256-GCM + HMAC-SHA256)
 - Tickets exist in system (OTA pre-generated or normal tickets)
 - Environment variables: QR_ENCRYPTION_KEY, QR_SIGNING_SECRET
@@ -225,21 +225,30 @@ paths:
   /qr/{code}/info:
     get:
       tags: ["QR Code Generation"]
-      summary: Get ticket information with entitlements
+      summary: Get ticket information with entitlements (unified for all roles)
       description: |
         Returns ticket status, entitlements, and QR generation availability without generating QR code.
-        Supports both OTA tickets (API Key auth) and normal tickets (JWT auth).
+
+        **Supported Authentication:**
+        - **OTA Partners**: API Key authentication (x-api-key header)
+        - **Normal Users**: User JWT (Authorization: Bearer <user_token>)
+        - **Operators**: Operator JWT (Authorization: Bearer <operator_token>)
 
         **Use Cases:**
-        - Check ticket status before generating QR
-        - View remaining entitlements
-        - Verify ownership of ticket
+        - Check ticket status before generating QR (Users/OTA)
+        - View remaining entitlements and product info (All roles)
+        - Verify ownership of ticket (Users/OTA)
+        - Operator ticket verification at gates (Operators)
 
-        **OTA Tickets**: Returns full entitlements array with remaining_uses for each function
-        **Normal Tickets**: Returns ticket status and basic information
+        **Access Control:**
+        - Users can only view their own tickets
+        - OTA partners can only view tickets they issued
+        - Operators can view ANY ticket (for gate operations)
+
+        **Replaced**: GET /tickets/{code}/info (deprecated, removed in this version)
       security:
         - ApiKeyAuth: []  # For OTA partners
-        - BearerAuth: []  # For normal users
+        - BearerAuth: []  # For normal users AND operators
       parameters:
         - name: code
           in: path
@@ -274,25 +283,55 @@ paths:
                     example: "ACTIVE"
                   entitlements:
                     type: array
-                    description: Array of available entitlements with remaining uses
+                    description: Array of all entitlements (including used ones) with complete information
                     items:
                       type: object
                       properties:
                         function_code:
                           type: string
                           example: "ferry"
+                        function_name:
+                          type: string
+                          description: Human-readable function name
+                          example: "轮渡往返"
                         remaining_uses:
                           type: integer
+                          description: Number of uses remaining
                           example: 1
+                        total_uses:
+                          type: integer
+                          description: Total number of uses allocated
+                          example: 2
                     example:
                       - function_code: "ferry"
+                        function_name: "轮渡往返"
                         remaining_uses: 1
+                        total_uses: 2
                       - function_code: "gift"
+                        function_name: "伴手礼兑换"
                         remaining_uses: 1
+                        total_uses: 1
                       - function_code: "tokens"
-                        remaining_uses: 1
+                        function_name: "游戏币领取"
+                        remaining_uses: 0
+                        total_uses: 1
+                  can_generate_qr:
+                    type: boolean
+                    description: Whether QR code can be generated for this ticket
+                    example: true
+                  product_info:
+                    type: object
+                    description: Product information
+                    properties:
+                      id:
+                        type: integer
+                        example: 106
+                      name:
+                        type: string
+                        example: "Premium Cruise Package"
                   product_id:
                     type: integer
+                    description: (Deprecated, use product_info.id)
                     example: 106
                   order_id:
                     type: string
@@ -306,10 +345,6 @@ paths:
                     type: string
                     nullable: true
                     example: "dudu_partner"
-                  qr_generation_available:
-                    type: boolean
-                    description: Whether QR code can be generated for this ticket
-                    example: true
         403:
           description: Unauthorized access to ticket
           content:
