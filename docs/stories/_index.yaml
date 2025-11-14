@@ -213,6 +213,10 @@ stories:
     validation_assets:
       newman:
         - reports/collections/us-012-ota-integration.json
+        - postman/auto-generated/ticket-activation-complete-coverage.postman_collection.json
+        - postman/auto-generated/special-pricing-override.postman_collection.json
+      test_analysis:
+        - docs/test-analysis/ticket-activation-test-analysis.md
   - id: US-013
     title: Event Venue Operations Platform
     status: Done

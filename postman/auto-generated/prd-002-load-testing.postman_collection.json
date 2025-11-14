@@ -1,0 +1,618 @@
+{
+  "info": {
+    "name": "PRD-002 Load Testing & Performance Validation",
+    "description": "Stress testing for OTA Platform Integration: concurrent API access, multi-partner isolation, and performance under load",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "partner_a_api_key",
+      "value": "ota_full_access_key_99999",
+      "type": "string"
+    },
+    {
+      "key": "partner_b_api_key",
+      "value": "ota251103_key_67890",
+      "type": "string"
+    },
+    {
+      "key": "stress_batch_prefix",
+      "value": "STRESS-{{$timestamp}}",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Performance Requirements Validation",
+      "item": [
+        {
+          "name": "API Response Time < 2s (PRD Requirement)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response time under 2 seconds (PRD-002 Performance Requirement)', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Inventory data structure valid', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('available_quantities');",
+                  "    pm.expect(json).to.have.property('pricing_context');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Generation Performance (100 tickets)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Bulk generation under 2 seconds for 100 tickets', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('100 tickets generated successfully', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.tickets).to.be.an('array').with.length(100);",
+                  "    pm.expect(json.total_generated).to.equal(100);",
+                  "});",
+                  "",
+                  "pm.test('Distribution mode set correctly', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.distribution_mode).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 100,\n  \"batch_id\": \"{{stress_batch_prefix}}-PERF-100\",\n  \"distribution_mode\": \"reseller_batch\",\n  \"reseller_info\": {\n    \"reseller_name\": \"Performance Test Reseller\",\n    \"batch_purpose\": \"Load testing 100 ticket generation\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Expiry Mode Validation",
+      "item": [
+        {
+          "name": "Direct Sale Mode: 7-day Expiry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Distribution mode is direct_sale', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.distribution_mode).to.equal('direct_sale');",
+                  "});",
+                  "",
+                  "pm.test('Expiry date is ~7 days from now', function () {",
+                  "    const json = pm.response.json();",
+                  "    const expiryDate = new Date(json.expires_at);",
+                  "    const now = new Date();",
+                  "    const daysDiff = (expiryDate - now) / (1000 * 60 * 60 * 24);",
+                  "    pm.expect(daysDiff).to.be.within(6, 8); // ~7 days ±1 for timezone",
+                  "});",
+                  "",
+                  "pm.test('Tickets generated with PRE_GENERATED status', function () {",
+                  "    const json = pm.response.json();",
+                  "    json.tickets.forEach(ticket => {",
+                  "        pm.expect(ticket.status).to.equal('PRE_GENERATED');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 5,\n  \"batch_id\": \"{{stress_batch_prefix}}-DIRECT-7DAY\",\n  \"distribution_mode\": \"direct_sale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          }
+        },
+        {
+          "name": "Reseller Batch Mode: 30-day Expiry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Distribution mode is reseller_batch', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.distribution_mode).to.equal('reseller_batch');",
+                  "});",
+                  "",
+                  "pm.test('Expiry date is ~30 days from now', function () {",
+                  "    const json = pm.response.json();",
+                  "    const expiryDate = new Date(json.expires_at);",
+                  "    const now = new Date();",
+                  "    const daysDiff = (expiryDate - now) / (1000 * 60 * 60 * 24);",
+                  "    pm.expect(daysDiff).to.be.within(28, 32); // ~30 days ±2 for timezone",
+                  "});",
+                  "",
+                  "pm.test('Reseller metadata included', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.tickets[0]).to.have.property('reseller_metadata');",
+                  "    pm.expect(json.tickets[0].reseller_metadata.reseller_name).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 3,\n  \"batch_id\": \"{{stress_batch_prefix}}-RESELLER-30DAY\",\n  \"distribution_mode\": \"reseller_batch\",\n  \"reseller_info\": {\n    \"reseller_name\": \"Test Reseller for 30-day Expiry\",\n    \"batch_purpose\": \"B2B2C distribution testing\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Multi-Partner Isolation Stress Testing",
+      "item": [
+        {
+          "name": "Partner A: Generate Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Partner A batch created successfully', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Partner A ticket codes generated', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.tickets).to.be.an('array').with.length(10);",
+                  "    // Store first ticket for cross-partner access test",
+                  "    pm.collectionVariables.set('partner_a_ticket_code', json.tickets[0].ticket_code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 10,\n  \"batch_id\": \"{{stress_batch_prefix}}-PARTNER-A\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          }
+        },
+        {
+          "name": "Partner B: Generate Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Partner B batch created successfully', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Partner B ticket codes generated', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.tickets).to.be.an('array').with.length(15);",
+                  "    pm.collectionVariables.set('partner_b_ticket_code', json.tickets[0].ticket_code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_b_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 15,\n  \"batch_id\": \"{{stress_batch_prefix}}-PARTNER-B\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          }
+        },
+        {
+          "name": "Cross-Partner Access Prevention: Partner B Cannot Access Partner A Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Cross-partner access is prevented (403 or 404)', function () {",
+                  "    // Should fail - Partner B cannot activate Partner A's ticket",
+                  "    pm.expect([403, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Error message explains isolation', function () {",
+                  "    if (pm.response.code === 403 || pm.response.code === 404) {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.error || json.message).to.exist;",
+                  "        // Should mention ticket not found or access denied",
+                  "        const errorText = (json.error || json.message).toLowerCase();",
+                  "        const hasIsolationMessage = errorText.includes('not found') || errorText.includes('access') || errorText.includes('unauthorized');",
+                  "        pm.expect(hasIsolationMessage).to.be.true;",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_b_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"Unauthorized Access Test\",\n    \"email\": \"test@isolation.com\",\n    \"phone\": \"+1555000999\"\n  },\n  \"payment_reference\": \"ISOLATION-TEST-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{partner_a_ticket_code}}/activate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "{{partner_a_ticket_code}}", "activate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Concurrent API Stress Testing",
+      "item": [
+        {
+          "name": "Concurrent Inventory Queries (Rate Limiting Test)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// This test should be run with Postman Collection Runner",
+                  "// Set iterations to 50+ to test concurrent access patterns",
+                  "console.log('Testing concurrent inventory access - iteration ' + pm.info.iteration);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Inventory API handles concurrent requests', function () {",
+                  "    // Should succeed under normal load (within rate limits)",
+                  "    pm.expect([200, 429]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Rate limiting handled gracefully (if triggered)', function () {",
+                  "    if (pm.response.code === 429) {",
+                  "        // Rate limiting triggered - this is expected under stress",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json).to.have.property('error');",
+                  "        console.log('Rate limiting triggered at iteration ' + pm.info.iteration);",
+                  "    } else {",
+                  "        // Normal response",
+                  "        pm.expect(pm.response.responseTime).to.be.below(3000); // Slightly relaxed under load",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Response structure consistent under load', function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json).to.have.property('available_quantities');",
+                  "        pm.expect(json).to.have.property('pricing_context');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Concurrent Batch Generation (Inventory Stress)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique batch ID for each concurrent request",
+                  "pm.collectionVariables.set('unique_batch_id', 'STRESS-' + pm.info.iteration + '-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Concurrent batch generation handles inventory correctly', function () {",
+                  "    // Should either succeed or fail gracefully due to inventory limits",
+                  "    pm.expect([201, 409, 429]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Inventory atomicity maintained', function () {",
+                  "    if (pm.response.code === 201) {",
+                  "        // Successful generation",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.tickets).to.be.an('array').with.length(5);",
+                  "        console.log('Batch generated successfully: ' + json.batch_id);",
+                  "    } else if (pm.response.code === 409) {",
+                  "        // Inventory exhausted - expected under stress",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.error).to.exist;",
+                  "        console.log('Inventory exhausted at iteration ' + pm.info.iteration);",
+                  "    } else if (pm.response.code === 429) {",
+                  "        // Rate limited - expected under stress",
+                  "        console.log('Rate limited at iteration ' + pm.info.iteration);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('No race condition errors (500/502/503)', function () {",
+                  "    // Should not see race condition errors",
+                  "    pm.expect([500, 502, 503]).to.not.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 5,\n  \"batch_id\": \"{{unique_batch_id}}\",\n  \"distribution_mode\": \"direct_sale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. System Recovery & Error Handling",
+      "item": [
+        {
+          "name": "Invalid API Key Handling",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid API key rejected with 401 or 403', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Clear error message provided', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error || json.message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "invalid_key_12345"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          }
+        },
+        {
+          "name": "Large Batch Request Validation (Over Limit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Large batch request rejected appropriately', function () {",
+                  "    pm.expect([400, 422]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Validation error explains limit', function () {",
+                  "    const json = pm.response.json();",
+                  "    const errorText = (json.error || json.message || '').toLowerCase();",
+                  "    pm.expect(errorText).to.include.oneOf(['quantity', 'limit', 'maximum']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{partner_a_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 10000,\n  \"batch_id\": \"{{stress_batch_prefix}}-OVERLIMIT\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

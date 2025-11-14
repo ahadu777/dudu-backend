@@ -150,6 +150,11 @@ grep -A 5 -B 5 "pattern.*name" docs/cases/CASE-DISCOVER-AI-WORKFLOW.md
   - [ ] Newman E2E test coverage
   - [ ] TypeScript SDK examples (if applicable)
   - [ ] Database persistence verified
+- [ ] **Validation Assets Updated** (for stories):
+  - [ ] `validation_assets` section added to `docs/stories/_index.yaml`
+  - [ ] Newman collections documented and working
+  - [ ] Test analysis generated (if applicable)
+  - [ ] Story validation coverage verified
 
 ### Testing Standards (Newman-First Approach)
 **Test Generation Hierarchy:**
@@ -161,7 +166,7 @@ grep -A 5 -B 5 "pattern.*name" docs/cases/CASE-DISCOVER-AI-WORKFLOW.md
 - **Generate from STORIES**: `us-xxx-complete-coverage.postman_collection.json`
 - **Business Rules**: `[domain]-business-rules.postman_collection.json`
 - **Output Format**: XML reports in `reports/newman/` for CI/CD integration
-- **Replace Bash Scripts**: Newman handles all test scenarios - bash scripts are redundant
+- **Replace Bash Scripts**: Newman handles all test scenarios
 
 **Testing Workflow:**
 ```bash
@@ -172,8 +177,8 @@ npm start
 curl http://localhost:8080/healthz
 
 # 3. Run Newman collections (primary standard)
-newman run postman/auto-generated/us-xxx-complete-coverage.postman_collection.json
-newman run postman/auto-generated/business-rules.postman_collection.json
+npx newman run postman/auto-generated/us-xxx-complete-coverage.postman_collection.json
+npx newman run postman/auto-generated/business-rules.postman_collection.json
 
 # 4. Review XML reports
 ls reports/newman/*.xml
@@ -186,11 +191,45 @@ ls reports/newman/*.xml
 - [ ] Business logic validation (PRD requirements)
 - [ ] Complete user workflow (end-to-end story coverage)
 
+**PRD Coverage Tracking (Two-Layer Approach):**
+1. **Explicit Mapping** (Primary): `docs/test-coverage/_index.yaml` - Manually maintained as we code
+2. **Automatic Discovery** (Backup): `node scripts/prd-test-mapper.mjs` - For gap analysis when explicit mapping is incomplete
+
+**When to Update Explicit Mapping:**
+- [ ] When implementing new PRD requirements
+- [ ] When adding new Newman test collections
+- [ ] When discovering coverage gaps during testing
+- [ ] Weekly during sprint planning
+
+**Validation Assets Standards:**
+Stories must include `validation_assets` section in `docs/stories/_index.yaml`:
+```yaml
+validation_assets:
+  newman:
+    - reports/collections/us-xxx-story-coverage.json      # End-to-end workflow tests
+    - postman/auto-generated/component-specific.postman_collection.json  # Component tests
+  runbook: docs/integration/US-XXX-runbook.md            # Optional: Integration guide
+  test_analysis: docs/test-analysis/component-analysis.md # Optional: AI-generated analysis
+```
+- **Newman collections**: All test scenarios for the story (workflow + component tests)
+- **Runbooks**: Copy-paste integration instructions for stakeholders
+- **Test analysis**: AI-generated visual documentation for easy understanding
+
 ### Key Commands
 ```bash
 node scripts/progress-report.js  # Check status
 npm run build && npm start      # Deploy changes
 curl http://localhost:8080/      # Test endpoints
+
+# Test Coverage Analysis
+./scripts/coverage-summary.sh               # Quick coverage overview (explicit mapping)
+node scripts/prd-test-mapper.mjs           # Full automatic discovery (backup analysis)
+node scripts/generate-coverage-report.mjs  # Generate comprehensive coverage status report
+
+# Bug and Issue Tracking
+grep "status: Open" docs/bugs/_index.yaml     # List open bugs
+grep "severity: Critical\|High" docs/bugs/_index.yaml  # Critical/high priority bugs
+grep "US-001" docs/bugs/_index.yaml          # Find bugs affecting specific story
 ```
 
 ### When Stuck

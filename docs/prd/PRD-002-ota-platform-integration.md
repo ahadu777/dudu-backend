@@ -11,13 +11,14 @@ last_updated: "2025-11-14"
 related_stories: ["US-012"]
 implementation_cards: ["ota-channel-management", "ota-authentication-middleware", "ota-order-processing", "channel-inventory-tracking", "ota-premade-tickets", "qr-generation-api"]
 enhances: "PRD-001"
+enables: "PRD-005"
 deadline: "2025-11-15"
 ```
 
 ## Executive Summary
 **Problem Statement**: External OTA platforms need guaranteed inventory access to sell our cruise packages at scale, but current system only supports direct sales channel, limiting market reach and revenue potential.
 
-**Solution Overview**: Multi-channel inventory management system with dedicated OTA API endpoints, enabling external platforms to reserve and sell cruise packages while maintaining inventory separation and pricing consistency.
+**Solution Overview**: Multi-channel inventory management system with dedicated OTA API endpoints, enabling external platforms to reserve and sell cruise packages while maintaining inventory separation and pricing consistency. Foundation for advanced B2B2C billing workflows (see PRD-005).
 
 **Success Metrics**:
 - 5000 package units allocated to OTA by Nov 15, 2025
@@ -63,20 +64,19 @@ deadline: "2025-11-15"
 - **Revenue Goals**:
   - Maintain existing direct sales revenue (baseline protection)
   - Generate additional revenue through OTA channel (incremental growth)
-  - **NEW**: Enable B2B2C revenue streams through reseller distribution
-  - **NEW**: Support custom pricing overrides for special batch campaigns
+  - Support custom pricing overrides for special batch campaigns
   - Preserve complex pricing model across all channels
 - **Operational Constraints**:
   - Nov 15, 2025 hard deadline for OTA partner launch
   - Must maintain existing cruise platform functionality (PRD-001)
   - Channel inventory separation to prevent overselling
-  - **NEW**: Support for 100+ ticket batch distribution to sub-resellers
+  - Support for 100+ ticket batch distribution to sub-resellers
 - **Partnership Requirements**:
   - Secure API access for external platforms with partner isolation
   - Real-time inventory synchronization
   - Automated reservation expiry to prevent inventory blocking
   - Multi-partner support with segregated ticket management
-  - **NEW**: Batch tracking and audit trail for reseller distribution
+  - Basic batch tracking for distribution
 
 ## Product Specification
 
@@ -114,44 +114,17 @@ deadline: "2025-11-15"
   - Inventory immediately released on expiry
 - **Priority**: High
 
-**Reseller Master Data Management** *(NEW - 2025-11-14)*
-- **Description**: Centralized reseller registry with business information, commission settings, and contract management
-- **Business Value**: Enables systematic reseller management, automated billing, and scalable B2B2C operations
-- **User Value**: OTA partners can manage multiple resellers with different commission rates, regions, and contract terms
-- **Acceptance Criteria**:
-  - Reseller registry with unique identifiers per OTA partner (partner_id + reseller_code)
-  - Commission rate configuration per reseller (default 10%, customizable)
-  - Contract lifecycle tracking (start date, end date, status: active/suspended/terminated)
-  - Settlement cycle configuration (weekly/monthly/quarterly)
-  - Regional assignment and tier-based categorization (platinum/gold/silver/bronze)
-  - Contact information storage (email, phone)
-  - Payment terms and settlement details
-  - Audit trail for reseller creation and modifications
-  - Normalized data structure eliminates redundant reseller name storage in batches
-- **Priority**: High
 
 **B2B2C Reseller Batch Management** *(NEW)*
 - **Description**: Bulk ticket generation for OTA partners to distribute to sub-resellers
 - **Business Value**: Expands market reach through reseller networks without direct partnership overhead
 - **User Value**: OTA partners can efficiently distribute tickets to multiple downstream sellers
 - **Acceptance Criteria**:
-  - Support for 100+ ticket batches with reseller tracking metadata via foreign key reference
-  - Batch-level expiry management (longer expiry for reseller distribution)
-  - Audit trail for ticket distribution from OTA to reseller to end customer
-  - Reseller-specific batch identification through reseller_id relationship
-  - Batch metadata (batch_purpose, distribution_notes) separate from reseller master data
+  - Support for 100+ ticket batches with basic reseller tracking
+  - Batch-level expiry management (30 days for reseller distribution vs 7 days direct)
+  - Basic batch identification and metadata tracking
 - **Priority**: Medium
 
-**Usage-Based Reseller Billing** *(NEW)*
-- **Description**: Charge resellers based on actual ticket redemption events, not purchase events
-- **Business Value**: Revenue recognition aligned with actual value delivery, reduces reseller risk
-- **User Value**: Resellers only pay for tickets that customers actually use
-- **Acceptance Criteria**:
-  - Track redemption events back to originating batch and reseller
-  - Generate billing summaries per reseller per billing period
-  - Real-time redemption counts per batch for reseller analytics
-  - Automated billing event generation when tickets are redeemed at venues
-- **Priority**: High
 
 **Special Batch Pricing Override** *(NEW)*
 - **Description**: Enable custom pricing for specific ticket batches independent of standard product pricing
@@ -426,10 +399,9 @@ POST /api/ota/tickets/bulk-generate:
     quantity: number (1-5000)
     batch_id: string
     distribution_mode: "direct_sale" | "reseller_batch"  # NEW: Specify intended use (affects expiry: 7 days vs 30 days)
-    reseller_metadata?: {                                # NEW: For B2B2C distribution (REQUIRED for reseller_batch mode)
-      intended_reseller: string                        # REQUIRED when distribution_mode = "reseller_batch"
-      batch_purpose: string
-      distribution_notes?: string
+    reseller_info?: {                                    # Basic reseller tracking
+      reseller_name: string                            # Simple reseller identification
+      batch_purpose?: string
     }
     batch_metadata?: {                                   # NEW: Campaign and marketing metadata
       campaign_type: "early_bird" | "flash_sale" | "group_discount" | "seasonal" | "standard"
@@ -538,147 +510,24 @@ GET /api/ota/orders/{order_id}/tickets:
         status: string
       ]
 
-#### Reseller Management APIs *(NEW - Implemented 2025-11-14)*
+
+#### Batch Analytics *(Simplified)*
 ```yaml
-GET /api/ota/resellers:
-  summary: List all resellers for authenticated OTA partner
-  description: Retrieve all resellers with partner isolation
-  responses:
-    200:
-      total: number
-      resellers: array[
-        id: number
-        reseller_code: string          # e.g., "GD-TRAVEL-001"
-        reseller_name: string          # e.g., "广州国旅"
-        contact_email: string
-        contact_phone: string
-        commission_rate: number        # e.g., 0.15 = 15%
-        status: "active" | "suspended" | "terminated"
-        settlement_cycle: "weekly" | "monthly" | "quarterly"
-        region: string                 # e.g., "华南地区"
-        tier: "platinum" | "gold" | "silver" | "bronze"
-        created_at: string
-        updated_at: string
-      ]
-
-POST /api/ota/resellers:
-  summary: Create new reseller
-  requestBody:
-    reseller_code: string (required)   # Unique within partner
-    reseller_name: string (required)
-    contact_email?: string
-    contact_phone?: string
-    commission_rate?: number           # Default 0.10
-    region?: string
-    tier?: "platinum" | "gold" | "silver" | "bronze"
-    settlement_cycle?: "weekly" | "monthly" | "quarterly"
-    payment_terms?: string             # e.g., "Net 30"
-    notes?: string
-  responses:
-    201: Created reseller object
-    400: "Missing required fields"
-
-GET /api/ota/resellers/{id}:
-  summary: Get reseller details
-  description: Partner isolation enforced
-  responses:
-    200: Complete reseller object with all fields
-    404: "Reseller not found or not owned by partner"
-
-PUT /api/ota/resellers/{id}:
-  summary: Update reseller information
-  description: Partner isolation enforced
-  requestBody: Any reseller fields (all optional)
-  responses:
-    200: Updated reseller object
-    404: "Reseller not found or not owned by partner"
-
-DELETE /api/ota/resellers/{id}:
-  summary: Deactivate reseller (soft delete)
-  description: Sets status to 'terminated', partner isolation enforced
-  responses:
-    200:
-      message: "Reseller deactivated successfully"
-      reseller_id: number
-      status: "terminated"
-    404: "Reseller not found or not owned by partner"
-```
-
-#### Reseller Billing & Analytics *(NEW)*
-```yaml
-GET /api/ota/batches/{batch_id}/redemptions:
-  summary: Get redemption events for specific batch
-  responses:
-    200:
-      batch_id: string
-      total_redemptions: number
-      redemption_events: array[
-        ticket_code: string
-        function_code: string
-        redeemed_at: string
-        venue_name: string
-        wholesale_price: number
-      ]
-
-GET /api/ota/billing/summary:
-  summary: Get billing summary for reseller
-  parameters:
-    - period: "2025-11" (YYYY-MM format)
-    - reseller: string (optional filter)
-  responses:
-    200:
-      billing_period: string
-      reseller_summaries: array[
-        reseller_name: string
-        total_redemptions: number
-        total_amount_due: number
-        batches: array[
-          batch_id: string
-          redemptions_count: number
-          wholesale_rate: number
-          amount_due: number
-        ]
-      ]
-
 GET /api/ota/batches/{batch_id}/analytics:
-  summary: Real-time batch performance analytics
+  summary: Basic batch performance analytics
   responses:
     200:
       batch_id: string
-      reseller_name: string
-      campaign_type: string      # NEW: e.g., "early_bird", "flash_sale"
-      campaign_name: string      # NEW: e.g., "Spring 2025 Early Bird"
+      campaign_type: string
+      campaign_name: string
       generated_at: string
       tickets_generated: number
       tickets_activated: number
-      tickets_redeemed: number
       conversion_rates:
         activation_rate: number  # activated/generated
-        redemption_rate: number  # redeemed/activated
-        overall_utilization: number  # redeemed/generated
-      revenue_metrics:
-        potential_revenue: number  # all tickets * wholesale_price
-        realized_revenue: number   # redeemed tickets * wholesale_price
-      batch_metadata:            # NEW: Complete campaign context
+      batch_metadata:
         marketing_tags: string[]
-        special_conditions: string[]
         promotional_code: string
-
-GET /api/ota/campaigns/analytics:                        # NEW: Campaign performance
-  summary: Analytics by campaign type across all batches
-  parameters:
-    - campaign_type: "early_bird" | "flash_sale" | "seasonal" (optional)
-    - date_range: "2025-11" (YYYY-MM format)
-  responses:
-    200:
-      campaign_summaries: array[
-        campaign_type: string
-        total_batches: number
-        total_tickets_generated: number
-        total_tickets_redeemed: number
-        average_conversion_rate: number
-        top_performing_resellers: string[]
-      ]
 ```
 
 #### QR Code Generation *(NEW - Phase 4)*
@@ -740,14 +589,6 @@ GET /qr/verify:
   - **Target Scenario**: B2B2C distribution networks requiring extended sales cycles
 - **Common Behavior**: Both modes use same `ota_ticket_batches` table with `distribution_mode` field differentiation
 
-### Reseller Billing Logic *(NEW)*
-- **Billing Trigger**: Charge events generated when tickets are redeemed at venues (not when purchased)
-- **Batch Traceability**: Every redemption event links back to originating batch and reseller
-- **Billing Periods**: Monthly billing cycles with real-time redemption tracking
-- **Revenue Recognition**: Payment due when end customer uses the service
-- **Pricing Model**: Resellers pay wholesale price from batch `pricing_snapshot` at redemption time
-- **Special Pricing Support**: Custom batch pricing overrides locked-in at generation time
-- **Settlement**: Automated billing summaries generated per reseller per month
 
 ### System Architecture Flows
 
