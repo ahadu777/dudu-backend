@@ -81,7 +81,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [PRE_GENERATED, ACTIVE]
+            enum: [PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED]
           description: Filter by ticket status
           example: PRE_GENERATED
         - name: batch_id
@@ -144,7 +144,14 @@ paths:
                           example: "CRUISE-2025-FERRY-1762330663284"
                         status:
                           type: string
-                          enum: [PRE_GENERATED, ACTIVE]
+                          enum: [PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED]
+                          description: |
+                            Ticket lifecycle status:
+                            - PRE_GENERATED: Newly generated, not yet activated
+                            - ACTIVE: Activated by customer, ready for redemption
+                            - USED: All entitlements fully consumed (automatic)
+                            - EXPIRED: Past valid date
+                            - CANCELLED: Manually cancelled by partner
                         batch_id:
                           type: string
                           example: "BATCH-20251105-001"
@@ -469,8 +476,13 @@ paths:
 - partner_id (VARCHAR(50), for partner isolation)
 - product_id (Foreign Key to products)
 - qr_code (Base64 encoded data)
-- status (PRE_GENERATED → ACTIVE)
-- entitlements (JSON array)
+- status (ENUM: 'PRE_GENERATED', 'ACTIVE', 'USED', 'EXPIRED', 'CANCELLED')
+  - PRE_GENERATED: Newly generated, not yet activated
+  - ACTIVE: Activated by customer, ready for redemption
+  - USED: All entitlements fully consumed (automatic via venue scanning)
+  - EXPIRED: Past valid date
+  - CANCELLED: Manually cancelled by partner
+- entitlements (JSON array: [{function_code, remaining_uses}, ...])
 - customer_name, customer_email, customer_phone (NULL until activation)
 - order_id (Foreign Key, NULL until activation)
 - payment_reference (VARCHAR(100), for audit trail)
@@ -513,6 +525,10 @@ paths:
 **Given** an already ACTIVE ticket
 **When** attempting to activate again
 **Then** returns 409 Conflict with clear error message
+
+**Given** an ACTIVE OTA ticket with multiple entitlements
+**When** all entitlements are redeemed at venue (all remaining_uses = 0)
+**Then** ticket status automatically changes to USED (via venue scanning system)
 
 **Given** invalid customer details (missing phone)
 **When** activation attempt

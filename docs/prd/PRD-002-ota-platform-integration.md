@@ -7,7 +7,7 @@ product_area: "Commerce"
 owner: "Product Manager"
 status: "Production Ready"
 created_date: "2025-11-03"
-last_updated: "2025-11-12"
+last_updated: "2025-11-14"
 related_stories: ["US-012"]
 implementation_cards: ["ota-channel-management", "ota-authentication-middleware", "ota-order-processing", "channel-inventory-tracking", "ota-premade-tickets", "qr-generation-api"]
 enhances: "PRD-001"
@@ -148,6 +148,21 @@ deadline: "2025-11-15"
   - Locked-in pricing survives product price changes during batch lifecycle
 - **Priority**: High
 
+**Ticket Status Lifecycle Management** *(NEW - 2025-11-14)*
+- **Description**: Automated ticket status transitions based on entitlement consumption
+- **Business Value**: Provides clear inventory visibility and accurate billing reconciliation for OTA partners
+- **User Value**: Partners can track ticket usage lifecycle from generation through complete consumption
+- **Acceptance Criteria**:
+  - **PRE_GENERATED**: Newly generated tickets awaiting customer activation
+  - **ACTIVE**: Activated tickets ready for redemption
+  - **USED**: Automatically marked when all entitlements fully consumed (all remaining_uses = 0)
+  - **EXPIRED**: Past valid date (manual or automatic)
+  - **CANCELLED**: Partner-initiated cancellation
+  - Automatic ACTIVE → USED transition during venue scanning when last entitlement redeemed
+  - Status visible in ticket info API (`GET /qr/:code/info`) with entitlements breakdown
+  - Audit trail tracks status transitions for billing and analytics
+- **Priority**: High
+
 **Unified QR Code Generation API** *(NEW)*
 - **Description**: On-demand secure QR code generation for both OTA and normal tickets
 - **Business Value**: Enables flexible ticket delivery and reduces storage costs by generating QR codes when needed
@@ -159,6 +174,7 @@ deadline: "2025-11-15"
   - Base64 PNG image output for direct display in applications
   - AES-256-GCM encryption with HMAC-SHA256 signature for security
   - Partner isolation ensures OTA partners can only generate QR for their tickets
+  - **NEW**: Info endpoint (`GET /qr/:code/info`) returns ticket status and entitlements without generating QR
 - **Priority**: High
 
 **WeChat QR Code Verification** *(NEW)*
@@ -883,6 +899,13 @@ Test Scenarios:
 - ✅ Partner isolation for OTA ticket QR generation
 - ✅ Integration guide for OTA partners (OTA_QR_CODE_GUIDE.md)
 - ✅ Database migration for tickets.raw field
+
+**Phase 5** (Nov 14, 2025): Ticket Lifecycle Enhancement - ✅ **COMPLETED**
+- ✅ Auto-USED status transition when all entitlements consumed
+- ✅ Ticket info API endpoint (`GET /qr/:code/info`) with entitlements
+- ✅ session_code made optional in venue scanning workflow
+- ✅ Complete documentation synchronization across cards, PRDs, stories
+- ✅ Enhanced OTA ticket lifecycle management for accurate billing reconciliation
 
 ### Resource Requirements
 - **Engineering**: 1 AI developer (full-stack implementation)

@@ -150,6 +150,7 @@ export class VenueOperationsService {
   async validateAndRedeem(request: {
     qrToken: string;
     functionCode: string;
+    sessionCode?: string;
     terminalDeviceId?: string;
   }): Promise<VenueOperationsResponse> {
     const startTime = Date.now();
@@ -249,14 +250,45 @@ export class VenueOperationsService {
       function_code: request.functionCode
     });
 
+    // Get session info if available (session_code is optional)
+    let venueId: number | undefined;
+    let operatorId: number | undefined;
+    let sessionCode: string | undefined;
+
+    if (request.sessionCode) {
+      const session = await repo.findActiveSession(request.sessionCode);
+      if (session) {
+        venueId = session.venue_id;
+        operatorId = session.operator_id;
+        sessionCode = session.session_code;
+      }
+    }
+
     // CRITICAL: Cross-terminal fraud detection (JTI replay attack prevention)
-    const jtiAlreadyUsed = await repo.hasJtiBeenUsed(jti);
-    if (jtiAlreadyUsed) {
+    // Check if this JTI has been used for this specific function
+    const jtiAlreadyUsedForFunction = await repo.hasJtiBeenUsedForFunction(jti, request.functionCode);
+    if (jtiAlreadyUsedForFunction) {
       logger.info('venue.scan.fraud_detected', {
         jti,
         ticket_code: ticketCode,
-        function_code: request.functionCode
+        function_code: request.functionCode,
+        reason: 'Same JTI already used for this function'
       });
+
+      // Record fraud attempt
+      if (venueId) {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId,
+          operatorId: operatorId || 0,
+          sessionCode: sessionCode || '',
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'ALREADY_REDEEMED'
+        });
+      }
 
       return this.createRejectResponse('ALREADY_REDEEMED', startTime, {
         fraud_detected: true
@@ -268,6 +300,22 @@ export class VenueOperationsService {
 
     if (!ticket) {
       logger.info('venue.scan.ticket_not_found_in_db', { ticket_code: ticketCode });
+
+      // Record failed attempt
+      if (venueId) {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId,
+          operatorId: operatorId || 0,
+          sessionCode: sessionCode || '',
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'TICKET_NOT_FOUND'
+        });
+      }
+
       return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
     }
 
@@ -296,6 +344,21 @@ export class VenueOperationsService {
           ? 'Old pre-generated QR code detected. Please use the QR code received after activation.'
           : 'QR code does not match current ticket JTI.';
 
+        // Record JTI mismatch attempt
+        if (venueId) {
+          await repo.recordRedemption({
+            ticketCode,
+            functionCode: request.functionCode,
+            venueId,
+            operatorId: operatorId || 0,
+            sessionCode: sessionCode || '',
+            terminalDeviceId: request.terminalDeviceId,
+            jti,
+            result: 'reject',
+            reason
+          });
+        }
+
         return this.createRejectResponse(reason as any, startTime, {
           ...request,
           message,
@@ -307,11 +370,42 @@ export class VenueOperationsService {
     // Function validation
     const entitlement = ticket.entitlements.find((e: { function_code: string; remaining_uses: number }) => e.function_code === request.functionCode);
     if (!entitlement) {
+      // Record wrong function attempt
+      if (venueId) {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId,
+          operatorId: operatorId || 0,
+          sessionCode: sessionCode || '',
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'WRONG_FUNCTION'
+        });
+      }
+
       return this.createRejectResponse('WRONG_FUNCTION', startTime, request);
     }
 
     // Check remaining uses
     if (entitlement.remaining_uses <= 0) {
+      // Record no remaining uses attempt
+      if (venueId) {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId,
+          operatorId: operatorId || 0,
+          sessionCode: sessionCode || '',
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'NO_REMAINING',
+          remainingUsesAfter: 0
+        });
+      }
+
       return this.createRejectResponse('NO_REMAINING', startTime, request);
     }
 
@@ -319,6 +413,28 @@ export class VenueOperationsService {
     const success = await repo.decrementEntitlement(ticketCode, request.functionCode);
     if (!success) {
       return this.createRejectResponse('INTERNAL_ERROR', startTime, request);
+    }
+
+    const remainingUsesAfter = entitlement.remaining_uses - 1;
+
+    // CRITICAL: Record successful redemption event
+    if (venueId) {
+      await repo.recordRedemption({
+        ticketCode,
+        functionCode: request.functionCode,
+        venueId,
+        operatorId: operatorId || 0,
+        sessionCode: sessionCode || '',
+        terminalDeviceId: request.terminalDeviceId,
+        jti,
+        result: 'success',
+        remainingUsesAfter
+      });
+    } else {
+      logger.warn('venue.scan.no_venue_context', {
+        ticket_code: ticketCode,
+        message: 'Redemption succeeded but no venue context available for audit trail'
+      });
     }
 
     // Fetch updated ticket from database
@@ -329,14 +445,14 @@ export class VenueOperationsService {
       ticket_code: ticketCode,
       function_code: request.functionCode,
       response_time_ms: responseTime,
-      remaining_uses: entitlement.remaining_uses - 1
+      remaining_uses: remainingUsesAfter
     });
 
     return {
       result: 'success',
       ticket_status: updatedTicket?.status || 'unknown',
       entitlements: updatedTicket?.entitlements || [],
-      remaining_uses: entitlement.remaining_uses - 1,
+      remaining_uses: remainingUsesAfter,
       performance_metrics: {
         response_time_ms: responseTime,
         fraud_checks_passed: true

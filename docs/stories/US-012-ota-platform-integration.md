@@ -50,6 +50,15 @@ related_stories: ["US-001", "US-011"]
 - [ ] Ticket activation includes reseller-to-customer chain tracking
 - [ ] Batch distribution doesn't affect direct OTA sales inventory allocation
 
+#### Ticket Lifecycle Enhancement Acceptance Criteria *(NEW - 2025-11-14)*
+- [x] OTA tickets support USED status in addition to existing statuses
+- [x] Tickets automatically transition from ACTIVE to USED when all entitlements fully consumed
+- [x] GET /qr/:code/info endpoint returns ticket status and entitlements without generating QR
+- [x] Info endpoint supports both API Key (OTA) and JWT (normal user) authentication
+- [x] Venue scanning workflow supports optional session_code (no longer required)
+- [x] All entitlements.remaining_uses = 0 triggers automatic USED status update
+- [x] USED tickets properly reflected in inventory reconciliation and billing
+
 ### 2. Business Rules Extraction
 
 #### Inventory Allocation Rules
@@ -167,6 +176,23 @@ related_stories: ["US-001", "US-011"]
       - page: current page number
       - page_size: results per page
     errors: 422, 401, 403
+
+/qr/{ticket_code}/info:                                      # NEW ENDPOINT (2025-11-14)
+  get:
+    summary: Get ticket status and entitlements without generating QR
+    security:
+      - ApiKeyAuth: []  # For OTA partners
+      - BearerAuth: []  # For normal users
+    parameters:
+      - ticket_code: string (path)
+    response:
+      - ticket_code: string
+      - ticket_type: "OTA" | "NORMAL"
+      - status: "PRE_GENERATED" | "ACTIVE" | "USED" | "EXPIRED" | "CANCELLED"
+      - entitlements: array of {function_code, remaining_uses}
+      - can_generate_qr: boolean
+      - product_info: {id, name}
+    errors: 401, 403, 404
 ```
 
 ### 4. Data Impact Analysis

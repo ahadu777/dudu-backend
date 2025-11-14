@@ -2,7 +2,7 @@
 card: "Unified QR Code Generation API"
 slug: qr-generation-api
 team: "A - Commerce"
-oas_paths: ["/qr/:code", "/qr/decrypt", "/qr/verify"]
+oas_paths: ["/qr/:code", "/qr/:code/info", "/qr/decrypt", "/qr/verify"]
 migrations: ["src/migrations/007-add-raw-field-to-tickets.ts"]
 status: "Done"
 readiness: "mvp"
@@ -10,7 +10,7 @@ branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/qr-generation-api.xml"
 integration_runbook: "docs/OTA_QR_CODE_GUIDE.md"
-last_update: "2025-11-13T19:00:00+08:00"
+last_update: "2025-11-14T20:00:00+08:00"
 related_stories: ["US-012", "US-001", "US-003"]
 relationships:
   depends_on: ["ota-premade-tickets", "tickets-issuance"]
@@ -27,10 +27,10 @@ relationships:
 ## Status & Telemetry
 - Status: Done
 - Readiness: mvp
-- Spec Paths: /qr/:code, /qr/decrypt, /qr/verify
+- Spec Paths: /qr/:code, /qr/:code/info, /qr/decrypt, /qr/verify
 - Migrations: src/migrations/007-add-raw-field-to-tickets.ts
 - Integration Guide: docs/OTA_QR_CODE_GUIDE.md
-- Last Update: 2025-11-13T19:00:00+08:00
+- Last Update: 2025-11-14T20:00:00+08:00 (Added GET /qr/:code/info endpoint)
 
 ## 0) Prerequisites
 - Unified authentication middleware (OTA API Key + User JWT)
@@ -221,6 +221,127 @@ paths:
                   error:
                     type: string
                     example: "CONFIGURATION_ERROR"
+
+  /qr/{code}/info:
+    get:
+      tags: ["QR Code Generation"]
+      summary: Get ticket information with entitlements
+      description: |
+        Returns ticket status, entitlements, and QR generation availability without generating QR code.
+        Supports both OTA tickets (API Key auth) and normal tickets (JWT auth).
+
+        **Use Cases:**
+        - Check ticket status before generating QR
+        - View remaining entitlements
+        - Verify ownership of ticket
+
+        **OTA Tickets**: Returns full entitlements array with remaining_uses for each function
+        **Normal Tickets**: Returns ticket status and basic information
+      security:
+        - ApiKeyAuth: []  # For OTA partners
+        - BearerAuth: []  # For normal users
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ticket code
+          example: "CRUISE-2025-FERRY-1762329306017"
+      responses:
+        200:
+          description: Ticket information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  ticket_code:
+                    type: string
+                    example: "CRUISE-2025-FERRY-1762329306017"
+                  ticket_type:
+                    type: string
+                    enum: [OTA, NORMAL]
+                    description: Ticket origin type
+                    example: "OTA"
+                  status:
+                    type: string
+                    enum: [PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED, active, partially_redeemed, void]
+                    description: Current ticket status
+                    example: "ACTIVE"
+                  entitlements:
+                    type: array
+                    description: Array of available entitlements with remaining uses
+                    items:
+                      type: object
+                      properties:
+                        function_code:
+                          type: string
+                          example: "ferry"
+                        remaining_uses:
+                          type: integer
+                          example: 1
+                    example:
+                      - function_code: "ferry"
+                        remaining_uses: 1
+                      - function_code: "gift"
+                        remaining_uses: 1
+                      - function_code: "tokens"
+                        remaining_uses: 1
+                  product_id:
+                    type: integer
+                    example: 106
+                  order_id:
+                    type: string
+                    nullable: true
+                    example: null
+                  batch_id:
+                    type: string
+                    nullable: true
+                    example: "DUDU_FINAL_DB_TEST"
+                  partner_id:
+                    type: string
+                    nullable: true
+                    example: "dudu_partner"
+                  qr_generation_available:
+                    type: boolean
+                    description: Whether QR code can be generated for this ticket
+                    example: true
+        403:
+          description: Unauthorized access to ticket
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "UNAUTHORIZED"
+                  message:
+                    type: string
+                    example: "You do not have permission to access this ticket"
+        404:
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "TICKET_NOT_FOUND"
+                  message:
+                    type: string
+                    example: "Ticket not found"
 
   /qr/decrypt:
     post:

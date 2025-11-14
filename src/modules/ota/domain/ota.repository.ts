@@ -689,9 +689,18 @@ export class OTARepository {
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVE', 'REDEEMED') THEN 1 ELSE 0 END) as tickets_activated,
-        SUM(CASE WHEN t.status = 'REDEEMED' THEN 1 ELSE 0 END) as tickets_redeemed,
-        SUM(CASE WHEN t.status = 'REDEEMED' THEN t.ticket_price ELSE 0 END) as total_revenue_realized
+        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE
+          WHEN t.status = 'USED' THEN
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
+            CASE
+              WHEN t.customer_type = 'child' THEN 0.65
+              WHEN t.customer_type = 'elderly' THEN 0.83
+              ELSE 1.0
+            END
+          ELSE 0
+        END) as total_revenue_realized
       FROM ota_ticket_batches b
       LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
       WHERE b.batch_id = ?
@@ -712,9 +721,18 @@ export class OTARepository {
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVE', 'REDEEMED') THEN 1 ELSE 0 END) as tickets_activated,
-        SUM(CASE WHEN t.status = 'REDEEMED' THEN 1 ELSE 0 END) as tickets_redeemed,
-        SUM(CASE WHEN t.status = 'REDEEMED' THEN t.ticket_price ELSE 0 END) as total_revenue_realized
+        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE
+          WHEN t.status = 'USED' THEN
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
+            CASE
+              WHEN t.customer_type = 'child' THEN 0.65
+              WHEN t.customer_type = 'elderly' THEN 0.83
+              ELSE 1.0
+            END
+          ELSE 0
+        END) as total_revenue_realized
       FROM ota_ticket_batches b
       LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
     `;
@@ -821,19 +839,38 @@ export class OTARepository {
    */
   async getResellerBillingSummary(resellerName: string, period: string): Promise<any> {
     // Optimized query with stats computed via JOIN
+    // Note: batch_id is stored in lowercase in database, so we use LOWER() for comparison
     const result = await this.dataSource.query(`
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status = 'REDEEMED' THEN 1 ELSE 0 END) as tickets_redeemed,
-        SUM(CASE WHEN t.status = 'REDEEMED' THEN t.ticket_price ELSE 0 END) as total_revenue_realized
+        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE
+          WHEN t.status = 'USED' THEN
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
+            CASE
+              WHEN t.customer_type = 'child' THEN 0.65
+              WHEN t.customer_type = 'elderly' THEN 0.83
+              ELSE 1.0
+            END
+          ELSE 0
+        END) as total_revenue_realized
       FROM ota_ticket_batches b
-      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
-      WHERE JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?
+      LEFT JOIN pre_generated_tickets t ON LOWER(t.batch_id) = LOWER(b.batch_id)
+      WHERE b.reseller_metadata IS NOT NULL
+        AND JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?
         AND DATE_FORMAT(b.created_at, '%Y-%m') = ?
       GROUP BY b.batch_id
       ORDER BY b.created_at DESC
     `, [resellerName, period]);
+
+    // Return empty if no results - this is normal
+    if (result.length === 0) {
+      return {
+        billing_period: period,
+        reseller_summaries: []
+      };
+    }
 
     const periodBatches = result.map((row: any) => ({
       batch_id: row.batch_id,
@@ -872,7 +909,7 @@ export class OTARepository {
         r.ticket_code,
         r.function_code,
         r.redeemed_at,
-        v.name as venue_name,
+        v.venue_name,
         JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) as wholesale_price
       FROM redemption_events r
       INNER JOIN pre_generated_tickets t ON r.ticket_code = t.ticket_code

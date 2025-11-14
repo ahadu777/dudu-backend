@@ -145,8 +145,15 @@ export class VenueRepository {
   }
 
   // CRITICAL: Fast JTI duplicate detection for fraud prevention
-  async hasJtiBeenUsed(jti: string): Promise<boolean> {
-    const count = await this.redemptionRepo.count({ where: { jti } });
+  // Check if JTI has been used for a specific function (not just any function)
+  async hasJtiBeenUsedForFunction(jti: string, functionCode: string): Promise<boolean> {
+    const count = await this.redemptionRepo.count({
+      where: {
+        jti,
+        function_code: functionCode,
+        result: 'success'  // Only count successful redemptions
+      }
+    });
     return count > 0;
   }
 

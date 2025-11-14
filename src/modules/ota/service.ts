@@ -1423,38 +1423,37 @@ export class OTAService {
   async getCampaignAnalytics(campaignType?: string, dateRange?: string): Promise<any> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
+
+      // Use optimized query with stats for ALL cases (no N+1 query problem)
+      const allBatches = await repo.findBatchesWithStats();
+
+      // Filter by campaign_type if specified
+      let filteredBatches = allBatches;
       if (campaignType) {
-        const batches = await repo.findBatchesByCampaignType(campaignType);
+        filteredBatches = allBatches.filter((batch: any) => {
+          const type = batch.batch_metadata?.campaign_type || 'standard';
+          return type === campaignType;
+        });
+      }
 
-        // Filter batches by date_range if provided
-        let filteredBatches = batches;
-        if (dateRange) {
-          filteredBatches = batches.filter((batch: any) => {
-            const batchDate = batch.created_at.toISOString().slice(0, 7); // YYYY-MM
-            return batchDate === dateRange;
-          });
-        }
+      // Filter by date_range if provided
+      if (dateRange) {
+        filteredBatches = filteredBatches.filter((batch: any) => {
+          const batchDate = batch.created_at.toISOString().slice(0, 7); // YYYY-MM
+          return batchDate === dateRange;
+        });
+      }
 
-        // Aggregate analytics for this campaign type
-        // Note: findBatchesByCampaignType doesn't include stats, so we manually query
-        // TODO: Consider creating findBatchesByCampaignTypeWithStats for better performance
-        const totalBatches = filteredBatches.length;
-        let totalGenerated = 0;
-        let totalRedeemed = 0;
-
-        for (const batch of filteredBatches) {
-          const analytics = await repo.getBatchAnalytics(batch.batch_id);
-          if (analytics) {
-            totalGenerated += analytics.tickets_generated;
-            totalRedeemed += analytics.tickets_redeemed;
-          }
-        }
+      if (campaignType) {
+        // Return single campaign type analytics
+        const totalGenerated = filteredBatches.reduce((sum, b) => sum + (b.tickets_generated ?? 0), 0);
+        const totalRedeemed = filteredBatches.reduce((sum, b) => sum + (b.tickets_redeemed ?? 0), 0);
 
         return {
           campaign_summaries: [
             {
               campaign_type: campaignType,
-              total_batches: totalBatches,
+              total_batches: filteredBatches.length,
               total_tickets_generated: totalGenerated,
               total_tickets_redeemed: totalRedeemed,
               average_conversion_rate: totalGenerated > 0 ? totalRedeemed / totalGenerated : 0,
@@ -1464,17 +1463,7 @@ export class OTAService {
         };
       } else {
         // Return all campaign types aggregated
-        // Use optimized query with stats
-        const allBatches = await repo.findBatchesWithStats();
-
-        // Filter by date_range if provided
-        let filteredBatches = allBatches;
-        if (dateRange) {
-          filteredBatches = allBatches.filter((batch: any) => {
-            const batchDate = batch.created_at.toISOString().slice(0, 7); // YYYY-MM
-            return batchDate === dateRange;
-          });
-        }
+        // Already have filteredBatches from above
 
         // Group by campaign_type
         const campaignGroups: { [key: string]: any[] } = {};

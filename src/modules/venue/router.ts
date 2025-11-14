@@ -223,7 +223,7 @@ router.post('/sessions', async (req, res) => {
  *                   type: string
  */
 router.post('/scan', async (req, res) => {
-  const { qr_token, function_code, terminal_device_id } = req.body;
+  const { qr_token, function_code, session_code, terminal_device_id } = req.body;
 
   if (!qr_token || !function_code) {
     return res.status(400).json({
@@ -236,6 +236,7 @@ router.post('/scan', async (req, res) => {
     const result = await venueOperationsService.validateAndRedeem({
       qrToken: qr_token,
       functionCode: function_code,
+      sessionCode: session_code,
       terminalDeviceId: terminal_device_id
     });
 
