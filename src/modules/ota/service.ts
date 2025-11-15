@@ -4,6 +4,9 @@ import { AppDataSource } from '../../config/database';
 import { OTARepository } from './domain/ota.repository';
 import { mockDataStore } from '../../core/mock/data';
 import { dataSourceConfig } from '../../config/data-source';
+import { API_KEYS } from '../../middlewares/otaAuth';
+import { generateSecureQR } from '../../utils/qr-crypto';
+import { TicketRawMetadata } from '../../types/domain';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -26,8 +29,15 @@ export interface OTAReserveResponse {
   reserved_until: string;
   pricing_snapshot: {
     base_price: number;
-    weekend_premium: number;
-    customer_discounts: { [type: string]: number };
+    weekend_premium?: number;
+    customer_discounts?: { [type: string]: number };  // Legacy field (deprecated)
+    customer_type_pricing?: Array<{
+      customer_type: 'adult' | 'child' | 'elderly';
+      unit_price: number;
+      discount_applied: number;
+    }>;
+    currency?: string;
+    captured_at?: string;
   };
 }
 
@@ -37,6 +47,7 @@ export interface OTAActivateRequest {
     email: string;
     phone: string;
   };
+  customer_type?: Array<'adult' | 'child' | 'elderly'>;  // Array matching ticket quantity
   payment_reference: string;
   special_requests?: string;
 }
@@ -96,6 +107,7 @@ export interface OTATicketActivateRequest {
     email: string;
     phone: string;
   };
+  customer_type: 'adult' | 'child' | 'elderly';  // Required: determines pricing
   payment_reference: string;
 }
 
@@ -103,6 +115,9 @@ export interface OTATicketActivateResponse {
   ticket_code: string;
   order_id: string;
   customer_name: string;
+  customer_type: 'adult' | 'child' | 'elderly';
+  ticket_price: number;
+  currency: string;
   status: string;
   activated_at: string;
 }
@@ -256,11 +271,41 @@ export class OTAService {
           };
         }
 
-        // Build pricing snapshot
+        // Build pricing snapshot with customer type pricing
+        const basePrice = Number(product.base_price);
+        const weekendPremium = Number(product.weekend_premium || 30.00);
+
+        // Get customer type pricing from product or calculate defaults
+        // Note: customer_discounts are stored as absolute amounts, not percentages
+        const customerTypePricing = product.customer_discounts ? [
+          {
+            customer_type: 'adult' as const,
+            unit_price: Math.round(basePrice - (product.customer_discounts.adult ?? 0)),
+            discount_applied: Math.round(product.customer_discounts.adult ?? 0)
+          },
+          {
+            customer_type: 'child' as const,
+            unit_price: Math.round(basePrice - (product.customer_discounts.child ?? Math.round(basePrice * 0.35))),
+            discount_applied: Math.round(product.customer_discounts.child ?? Math.round(basePrice * 0.35))
+          },
+          {
+            customer_type: 'elderly' as const,
+            unit_price: Math.round(basePrice - (product.customer_discounts.elderly ?? Math.round(basePrice * 0.17))),
+            discount_applied: Math.round(product.customer_discounts.elderly ?? Math.round(basePrice * 0.17))
+          }
+        ] : [
+          // Fallback defaults if no customer discounts defined
+          { customer_type: 'adult' as const, unit_price: basePrice, discount_applied: 0 },
+          { customer_type: 'child' as const, unit_price: Math.round(basePrice * 0.65), discount_applied: Math.round(basePrice * 0.35) },
+          { customer_type: 'elderly' as const, unit_price: Math.round(basePrice * 0.83), discount_applied: Math.round(basePrice * 0.17) }
+        ];
+
         const pricing_snapshot = {
-          base_price: Number(product.base_price),
-          weekend_premium: Number(product.weekend_premium || 30.00),
-          customer_discounts: product.customer_discounts || {}
+          base_price: basePrice,
+          customer_type_pricing: customerTypePricing,
+          weekend_premium: weekendPremium,
+          currency: 'HKD',
+          captured_at: new Date().toISOString()
         };
 
         // Create reservation with database transaction
@@ -500,7 +545,8 @@ export class OTAService {
             phone: request.customer_details.phone
           },
           request.payment_reference,
-          request.special_requests
+          request.special_requests,
+          request.customer_type
         );
 
         logger.info('ota.reservation.activated', {
@@ -516,6 +562,7 @@ export class OTAService {
           tickets: result.tickets.map(ticket => ({
             code: ticket.ticket_code,
             qr_code: ticket.qr_code,
+            customer_type: ticket.customer_type,
             entitlements: ticket.entitlements,
             status: ticket.status
           })),
@@ -539,7 +586,8 @@ export class OTAService {
     const order = mockDataStore.activateReservation(
       reservationId,
       request.customer_details,
-      request.payment_reference
+      request.payment_reference,
+      request.customer_type
     );
 
     if (!order) {
@@ -648,6 +696,7 @@ export class OTAService {
       return tickets.map((ticket: any) => ({
         ticket_code: ticket.ticket_code,
         qr_code: ticket.qr_code,
+        customer_type: ticket.customer_type,
         entitlements: ticket.entitlements,
         status: ticket.status
       }));
@@ -665,6 +714,7 @@ export class OTAService {
     return (order.tickets || []).map((ticket: any) => ({
         ticket_code: ticket.code,
         qr_code: `data:image/png;base64,${Buffer.from(JSON.stringify({ticket_id: ticket.id, product_id: order.product_id})).toString('base64')}`,
+        customer_type: ticket.customer_type,
         entitlements: ticket.entitlements,
         status: ticket.status
       }));
@@ -718,6 +768,13 @@ export class OTAService {
           currency: request.special_pricing.currency,
           captured_at: new Date().toISOString()
         };
+
+        // DEBUG: Log special pricing before saving
+        logger.info('ota.batch.special_pricing_applied', {
+          batch_id: request.batch_id,
+          product_id: request.product_id,
+          pricing_snapshot: pricingSnapshot
+        });
       } else {
         // Use pricing from product entity
         const basePrice = Number(product.base_price);
@@ -725,21 +782,22 @@ export class OTAService {
         const currency = 'HKD';
 
         // Get customer type pricing from product or calculate defaults
+        // Note: customer_discounts are stored as absolute amounts, not percentages
         const customerTypePricing = product.customer_discounts ? [
           {
             customer_type: 'adult' as const,
-            unit_price: basePrice,
-            discount_applied: 0
+            unit_price: Math.round(basePrice - (product.customer_discounts.adult || 0)),
+            discount_applied: Math.round(product.customer_discounts.adult || 0)
           },
           {
             customer_type: 'child' as const,
-            unit_price: basePrice - (product.customer_discounts.child || 100),
-            discount_applied: product.customer_discounts.child || 100
+            unit_price: Math.round(basePrice - (product.customer_discounts.child || Math.round(basePrice * 0.35))),
+            discount_applied: Math.round(product.customer_discounts.child || Math.round(basePrice * 0.35))
           },
           {
             customer_type: 'elderly' as const,
-            unit_price: basePrice - (product.customer_discounts.elderly || 50),
-            discount_applied: product.customer_discounts.elderly || 50
+            unit_price: Math.round(basePrice - (product.customer_discounts.elderly || Math.round(basePrice * 0.17))),
+            discount_applied: Math.round(product.customer_discounts.elderly || Math.round(basePrice * 0.17))
           }
         ] : [
           // Fallback defaults if no customer discounts defined
@@ -801,13 +859,6 @@ export class OTAService {
         const ticketId = Date.now() + (Math.random() * 1000) + i; // Unique ID with index
         const ticketCode = `CRUISE-${new Date().getFullYear()}-${product.category.toUpperCase()}-${Math.floor(ticketId)}`;
 
-        const qrData = JSON.stringify({
-          ticket_id: ticketId,
-          product_id: product.id,
-          batch_id: request.batch_id,
-          issued_at: new Date().toISOString()
-        });
-
         // Use entitlements from product or default cruise functions
         const entitlements = product.entitlements?.map((entitlement: any) => ({
           function_code: entitlement.type,
@@ -818,6 +869,19 @@ export class OTAService {
           { function_code: 'dining', remaining_uses: 1 }
         ];
 
+        // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
+        const qrResult = await generateSecureQR(ticketCode);
+        const rawMetadata: TicketRawMetadata = {
+          jti: {
+            pre_generated_jti: qrResult.jti,
+            current_jti: qrResult.jti
+          },
+          qr_metadata: {
+            issued_at: new Date().toISOString(),
+            expires_at: qrResult.expires_at
+          }
+        };
+
         const ticket = {
           ticket_code: ticketCode,
           product_id: product.id,
@@ -825,7 +889,8 @@ export class OTAService {
           partner_id: partnerId,
           status: 'PRE_GENERATED' as const,
           entitlements,
-          qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+          qr_code: qrResult.qr_image, // Store QR image for printing/PDF generation
+          raw: rawMetadata,
           created_at: new Date()
         };
 
@@ -835,10 +900,8 @@ export class OTAService {
       // Save to database with inventory update
       const savedTickets = await this.otaRepository!.createPreGeneratedTickets(tickets, channelId);
 
-      // Update batch with actual tickets generated
-      await repo.updateBatchCounters(batch.batch_id, {
-        tickets_generated: savedTickets.length
-      });
+      // Note: Batch statistics (tickets_generated, etc.) are now computed on-demand via JOIN queries
+      // No need to update counters in the batch table
 
       logger.info('ota.tickets.bulk_generation_database_completed', {
         batch_id: request.batch_id,
@@ -889,12 +952,18 @@ export class OTAService {
       const ticketId = mockDataStore.nextTicketId++;
       const ticketCode = `${product.sku}-${ticketId}`;
 
-      const qrData = JSON.stringify({
-        ticket_id: ticketId,
-        product_id: product.id,
-        batch_id: request.batch_id,
-        issued_at: new Date().toISOString()
-      });
+      // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
+      const qrResult = await generateSecureQR(ticketCode);
+      const rawMetadata: TicketRawMetadata = {
+        jti: {
+          pre_generated_jti: qrResult.jti,
+          current_jti: qrResult.jti
+        },
+        qr_metadata: {
+          issued_at: new Date().toISOString(),
+          expires_at: qrResult.expires_at
+        }
+      };
 
       const ticket = {
         id: ticketId,
@@ -907,7 +976,8 @@ export class OTAService {
           function_code: func.function_code,
           remaining_uses: 1
         })),
-        qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+        qr_code: qrResult.qr_image, // Store QR image for printing/PDF generation
+        raw: rawMetadata,
         created_at: new Date(),
         customer_name: null,
         customer_email: null,
@@ -935,10 +1005,26 @@ export class OTAService {
       } : {
         base_product_id: request.product_id,
         base_price: Number(product.unit_price),
-        customer_type_pricing: [
+        customer_type_pricing: product.customer_discounts ? [
+          {
+            customer_type: 'adult',
+            unit_price: Math.round(Number(product.unit_price) - (product.customer_discounts.adult || 0)),
+            discount_applied: Math.round(product.customer_discounts.adult || 0)
+          },
+          {
+            customer_type: 'child',
+            unit_price: Math.round(Number(product.unit_price) - (product.customer_discounts.child || Math.round(Number(product.unit_price) * 0.35))),
+            discount_applied: Math.round(product.customer_discounts.child || Math.round(Number(product.unit_price) * 0.35))
+          },
+          {
+            customer_type: 'elderly',
+            unit_price: Math.round(Number(product.unit_price) - (product.customer_discounts.elderly || Math.round(Number(product.unit_price) * 0.17))),
+            discount_applied: Math.round(product.customer_discounts.elderly || Math.round(Number(product.unit_price) * 0.17))
+          }
+        ] : [
           { customer_type: 'adult', unit_price: Number(product.unit_price), discount_applied: 0 },
-          { customer_type: 'child', unit_price: Number(product.unit_price) - 100, discount_applied: 100 },
-          { customer_type: 'elderly', unit_price: Number(product.unit_price) - 50, discount_applied: 50 }
+          { customer_type: 'child', unit_price: Math.round(Number(product.unit_price) * 0.65), discount_applied: Math.round(Number(product.unit_price) * 0.35) },
+          { customer_type: 'elderly', unit_price: Math.round(Number(product.unit_price) * 0.83), discount_applied: Math.round(Number(product.unit_price) * 0.17) }
         ],
         weekend_premium: 30,
         currency: 'HKD',
@@ -973,7 +1059,7 @@ export class OTAService {
       expires_at: mockBatch.expires_at,
       tickets: tickets.map(ticket => ({
         ticket_code: ticket.code,
-        qr_code: ticket.qr_code,
+        // qr_code removed - will be generated on-demand via POST /qr/{code}
         status: ticket.status,
         entitlements: ticket.entitlements
       })),
@@ -995,22 +1081,87 @@ export class OTAService {
         customer_email: request.customer_details.email
       });
 
-      // Generate order ID
-      const orderId = `ORD-${Date.now()}`;
-      const now = new Date();
-
-      // Prepare order data
-      const orderData = {
-        order_id: orderId,
-        product_id: 0, // Will be set from ticket
-        channel_id: 2, // OTA channel
-        total_amount: 382, // Base price for simplicity
-        status: 'confirmed' as const,
-        confirmation_code: `CONF-${Date.now()}`,
-        created_at: now
-      };
-
       try {
+        const repo = await this.getRepository();
+
+        // First, get the ticket to access batch pricing information
+        const ticket = await repo.findPreGeneratedTicket(ticketCode);
+        if (!ticket || ticket.status !== 'PRE_GENERATED' || ticket.partner_id !== partnerId) {
+          throw {
+            code: 'TICKET_NOT_FOUND',
+            message: `Ticket ${ticketCode} not found or already activated`
+          };
+        }
+
+        // Get batch to retrieve pricing snapshot
+        const batch = await repo.findBatchById(ticket.batch_id);
+        if (!batch) {
+          throw {
+            code: 'BATCH_NOT_FOUND',
+            message: `Batch ${ticket.batch_id} not found`
+          };
+        }
+
+        // DEBUG: Log complete pricing snapshot from database
+        logger.info('ota.ticket.activation_pricing_debug', {
+          ticket_code: ticketCode,
+          batch_id: ticket.batch_id,
+          pricing_snapshot: batch.pricing_snapshot,
+          requested_customer_type: request.customer_type
+        });
+
+        // Find price for customer type from batch pricing snapshot
+        const customerTypePricing = batch.pricing_snapshot.customer_type_pricing.find(
+          (p: any) => p.customer_type === request.customer_type
+        );
+
+        if (!customerTypePricing) {
+          throw {
+            code: 'INVALID_CUSTOMER_TYPE',
+            message: `Customer type ${request.customer_type} not available for this batch`
+          };
+        }
+
+        const ticketPrice = customerTypePricing.unit_price;
+        const currency = batch.pricing_snapshot.currency || 'HKD';
+
+        // DEBUG: Log extracted price details
+        logger.info('ota.ticket.activation_price_extracted', {
+          ticket_code: ticketCode,
+          customer_type: request.customer_type,
+          customer_type_pricing: customerTypePricing,
+          final_ticket_price: ticketPrice,
+          currency: currency
+        });
+
+        // VALIDATION: Check for anomalous pricing
+        const basePrice = batch.pricing_snapshot.base_price || 0;
+        if (ticketPrice > basePrice * 2) {
+          logger.warn('ota.ticket.pricing_anomaly_detected', {
+            ticket_code: ticketCode,
+            batch_id: ticket.batch_id,
+            ticket_price: ticketPrice,
+            base_price: basePrice,
+            ratio: ticketPrice / basePrice,
+            message: 'Ticket price exceeds 2x base price - possible pricing error'
+          });
+        }
+
+        // Generate order ID
+        const orderId = `ORD-${Date.now()}`;
+        const now = new Date();
+
+        // Prepare order data with correct pricing
+        const orderData = {
+          order_id: orderId,
+          product_id: ticket.product_id,
+          channel_id: 2, // OTA channel
+          total_amount: ticketPrice, // Use actual price based on customer type
+          status: 'confirmed' as const,
+          confirmation_code: `CONF-${Date.now()}`,
+          created_at: now
+        };
+
         // Use repository to activate ticket and create order atomically
         const result = await this.otaRepository!.activatePreGeneratedTicket(
           ticketCode,
@@ -1019,6 +1170,7 @@ export class OTAService {
             customer_name: request.customer_details.name,
             customer_email: request.customer_details.email,
             customer_phone: request.customer_details.phone,
+            customer_type: request.customer_type,
             payment_reference: request.payment_reference
           },
           orderData
@@ -1027,13 +1179,18 @@ export class OTAService {
         logger.info('ota.ticket.activation_database_completed', {
           ticket_code: ticketCode,
           order_id: result.order.order_id,
-          customer_name: result.ticket.customer_name
+          customer_name: result.ticket.customer_name,
+          customer_type: request.customer_type,
+          ticket_price: ticketPrice
         });
 
         return {
           ticket_code: ticketCode,
           order_id: result.order.order_id,
           customer_name: result.ticket.customer_name!,
+          customer_type: request.customer_type,
+          ticket_price: ticketPrice,
+          currency: currency,
           status: 'ACTIVE',
           activated_at: result.ticket.activated_at!.toISOString()
         };
@@ -1078,6 +1235,60 @@ export class OTAService {
       };
     }
 
+    // Get batch pricing information
+    const batch = mockDataStore.getBatch(ticket.batch_id);
+    if (!batch) {
+      throw {
+        code: 'BATCH_NOT_FOUND',
+        message: `Batch ${ticket.batch_id} not found`
+      };
+    }
+
+    // DEBUG: Log complete pricing snapshot from mock store
+    logger.info('ota.ticket.activation_pricing_debug_mock', {
+      ticket_code: ticketCode,
+      batch_id: ticket.batch_id,
+      pricing_snapshot: batch.pricing_snapshot,
+      requested_customer_type: request.customer_type
+    });
+
+    // Find price for customer type
+    const customerTypePricing = batch.pricing_snapshot.customer_type_pricing.find(
+      (p: any) => p.customer_type === request.customer_type
+    );
+
+    if (!customerTypePricing) {
+      throw {
+        code: 'INVALID_CUSTOMER_TYPE',
+        message: `Customer type ${request.customer_type} not available for this batch`
+      };
+    }
+
+    const ticketPrice = customerTypePricing.unit_price;
+    const currency = batch.pricing_snapshot.currency || 'HKD';
+
+    // DEBUG: Log extracted price details
+    logger.info('ota.ticket.activation_price_extracted_mock', {
+      ticket_code: ticketCode,
+      customer_type: request.customer_type,
+      customer_type_pricing: customerTypePricing,
+      final_ticket_price: ticketPrice,
+      currency: currency
+    });
+
+    // VALIDATION: Check for anomalous pricing
+    const basePrice = batch.pricing_snapshot.base_price || 0;
+    if (ticketPrice > basePrice * 2) {
+      logger.warn('ota.ticket.pricing_anomaly_detected_mock', {
+        ticket_code: ticketCode,
+        batch_id: ticket.batch_id,
+        ticket_price: ticketPrice,
+        base_price: basePrice,
+        ratio: ticketPrice / basePrice,
+        message: 'Ticket price exceeds 2x base price - possible pricing error'
+      });
+    }
+
     // Create order for this ticket
     const orderId = `ORD-${mockDataStore.nextOrderId++}`;
     const now = new Date();
@@ -1090,19 +1301,24 @@ export class OTAService {
       customer_email: request.customer_details.email,
       customer_phone: request.customer_details.phone,
       payment_reference: request.payment_reference,
-      total_amount: 382, // Base price for simplicity
+      total_amount: ticketPrice, // Use actual price based on customer type
       status: 'confirmed',
       created_at: now,
       confirmation_code: `CONF-${mockDataStore.nextOrderId}`,
       tickets: [ticket]
     };
 
-    // Update ticket with customer details
+    // Generate new QR code with new JTI for activation (90 days expiry)
+    // Update ticket with customer details and activation status
+    // Note: QR codes are generated on-demand when requested via POST /qr/{code}
+    // NOT stored in database to maintain security and freshness
     ticket.customer_name = request.customer_details.name;
     ticket.customer_email = request.customer_details.email;
+    ticket.customer_type = request.customer_type;
     ticket.order_id = orderId;
     ticket.status = 'ACTIVE';
     ticket.activated_at = now;
+    // QR code removed - will be generated on-demand via POST /qr/{code}
 
     // Store the order
     mockDataStore.addOrder(orderId, order);
@@ -1110,13 +1326,18 @@ export class OTAService {
     logger.info('ota.ticket.activation_completed', {
       ticket_code: ticketCode,
       order_id: orderId,
-      customer_name: request.customer_details.name
+      customer_name: request.customer_details.name,
+      customer_type: request.customer_type,
+      ticket_price: ticketPrice
     });
 
     return {
       ticket_code: ticketCode,
       order_id: orderId,
       customer_name: request.customer_details.name,
+      customer_type: request.customer_type,
+      ticket_price: ticketPrice,
+      currency: currency,
       status: 'ACTIVE',
       activated_at: now.toISOString()
     };
@@ -1128,9 +1349,29 @@ export class OTAService {
       const repo = await this.getRepository();
       return await repo.getBatchAnalytics(batchId);
     } else {
-      // Mock implementation - use stored batch data
+      // Mock implementation - dynamically calculate from actual ticket statuses
       const storedBatch = mockDataStore.getBatch(batchId);
       if (!storedBatch) return null;
+
+      // Dynamically count tickets by status
+      const tickets = Array.from(mockDataStore.preGeneratedTickets.values())
+        .filter(t => t.batch_id === batchId);
+
+      const tickets_generated = tickets.length;
+      const tickets_activated = tickets.filter(t => t.status === 'ACTIVE' || t.status === 'REDEEMED').length;
+      const tickets_redeemed = tickets.filter(t => t.status === 'REDEEMED').length;
+
+      const basePrice = storedBatch.pricing_snapshot?.base_price || 288;
+
+      // DEBUG: Log created_at details
+      logger.info('batch.analytics.created_at_debug', {
+        batch_id: batchId,
+        created_at_type: typeof storedBatch.created_at,
+        created_at_value: storedBatch.created_at,
+        created_at_iso: storedBatch.created_at?.toISOString?.(),
+        has_getMilliseconds: typeof storedBatch.created_at?.getMilliseconds === 'function',
+        milliseconds: storedBatch.created_at?.getMilliseconds?.()
+      });
 
       return {
         batch_id: batchId,
@@ -1138,38 +1379,52 @@ export class OTAService {
         campaign_type: storedBatch.batch_metadata?.campaign_type || "standard",
         campaign_name: storedBatch.batch_metadata?.campaign_name || "Standard Batch",
         generated_at: storedBatch.created_at?.toISOString() || new Date().toISOString(),
-        tickets_generated: storedBatch.tickets_generated || 0,
-        tickets_activated: storedBatch.tickets_activated || 0,
-        tickets_redeemed: storedBatch.tickets_redeemed || 0,
+        tickets_generated,
+        tickets_activated,
+        tickets_redeemed,
         conversion_rates: {
-          activation_rate: storedBatch.tickets_generated > 0 ?
-            (storedBatch.tickets_activated || 0) / storedBatch.tickets_generated : 0,
-          redemption_rate: storedBatch.tickets_activated > 0 ?
-            (storedBatch.tickets_redeemed || 0) / storedBatch.tickets_activated : 0,
-          overall_utilization: storedBatch.tickets_generated > 0 ?
-            (storedBatch.tickets_redeemed || 0) / storedBatch.tickets_generated : 0
+          activation_rate: tickets_generated > 0 ? tickets_activated / tickets_generated : 0,
+          redemption_rate: tickets_activated > 0 ? tickets_redeemed / tickets_activated : 0,
+          overall_utilization: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
         },
         revenue_metrics: {
-          potential_revenue: storedBatch.tickets_generated * (storedBatch.pricing_snapshot?.base_price || 288),
-          realized_revenue: (storedBatch.tickets_redeemed || 0) * (storedBatch.pricing_snapshot?.base_price || 288),
-          realization_rate: storedBatch.tickets_generated > 0 ?
-            (storedBatch.tickets_redeemed || 0) / storedBatch.tickets_generated : 0
+          potential_revenue: tickets_generated * basePrice,
+          realized_revenue: tickets_redeemed * basePrice,
+          realization_rate: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
         },
+        wholesale_rate: basePrice,
+        amount_due: (tickets_redeemed * basePrice).toFixed(2),
         batch_metadata: storedBatch.batch_metadata || {}
       };
     }
   }
 
-  async getResellerBillingSummary(reseller: string, period: string): Promise<any> {
+  async getResellerBillingSummary(partnerId: string, reseller: string, period: string): Promise<any> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
       if (reseller === 'all') {
-        // Return aggregated summary for all resellers
-        const batches = await repo.findBatchesByPartner('all');
-        // Implementation would aggregate across all resellers
+        // NEW: Aggregate billing summary across all active resellers
+        const allResellers = await repo.findResellersByPartner(partnerId);
+
+        if (allResellers.length === 0) {
+          return {
+            billing_period: period,
+            reseller_summaries: []
+          };
+        }
+
+        // Get billing summary for each reseller
+        const reseller_summaries = [];
+        for (const resellerEntity of allResellers) {
+          const summary = await repo.getResellerBillingSummary(resellerEntity.reseller_name, period);
+          if (summary.reseller_summaries && summary.reseller_summaries.length > 0) {
+            reseller_summaries.push(...summary.reseller_summaries);
+          }
+        }
+
         return {
           billing_period: period,
-          reseller_summaries: []
+          reseller_summaries
         };
       } else {
         return await repo.getResellerBillingSummary(reseller, period);
@@ -1199,9 +1454,8 @@ export class OTAService {
 
   async getBatchRedemptions(batchId: string): Promise<any[]> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
-      // Would need to join with redemption_events table
-      // This is a complex query that links batch -> tickets -> redemption_events
-      return [];
+      const repo = await this.getRepository();
+      return await repo.getBatchRedemptions(batchId);
     } else {
       // Mock implementation
       return [
@@ -1226,18 +1480,37 @@ export class OTAService {
   async getCampaignAnalytics(campaignType?: string, dateRange?: string): Promise<any> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
+
+      // Use optimized query with stats for ALL cases (no N+1 query problem)
+      const allBatches = await repo.findBatchesWithStats();
+
+      // Filter by campaign_type if specified
+      let filteredBatches = allBatches;
       if (campaignType) {
-        const batches = await repo.findBatchesByCampaignType(campaignType);
-        // Aggregate analytics for this campaign type
-        const totalBatches = batches.length;
-        const totalGenerated = batches.reduce((sum, b) => sum + b.tickets_generated, 0);
-        const totalRedeemed = batches.reduce((sum, b) => sum + b.tickets_redeemed, 0);
+        filteredBatches = allBatches.filter((batch: any) => {
+          const type = batch.batch_metadata?.campaign_type || 'standard';
+          return type === campaignType;
+        });
+      }
+
+      // Filter by date_range if provided
+      if (dateRange) {
+        filteredBatches = filteredBatches.filter((batch: any) => {
+          const batchDate = batch.created_at.toISOString().slice(0, 7); // YYYY-MM
+          return batchDate === dateRange;
+        });
+      }
+
+      if (campaignType) {
+        // Return single campaign type analytics
+        const totalGenerated = filteredBatches.reduce((sum, b) => sum + (b.tickets_generated ?? 0), 0);
+        const totalRedeemed = filteredBatches.reduce((sum, b) => sum + (b.tickets_redeemed ?? 0), 0);
 
         return {
           campaign_summaries: [
             {
               campaign_type: campaignType,
-              total_batches: totalBatches,
+              total_batches: filteredBatches.length,
               total_tickets_generated: totalGenerated,
               total_tickets_redeemed: totalRedeemed,
               average_conversion_rate: totalGenerated > 0 ? totalRedeemed / totalGenerated : 0,
@@ -1246,8 +1519,36 @@ export class OTAService {
           ]
         };
       } else {
-        // Return all campaign types
-        return { campaign_summaries: [] };
+        // Return all campaign types aggregated
+        // Already have filteredBatches from above
+
+        // Group by campaign_type
+        const campaignGroups: { [key: string]: any[] } = {};
+        filteredBatches.forEach((batch: any) => {
+          const type = batch.batch_metadata?.campaign_type || 'standard';
+          if (!campaignGroups[type]) {
+            campaignGroups[type] = [];
+          }
+          campaignGroups[type].push(batch);
+        });
+
+        // Generate summaries for each campaign type
+        const summaries = Object.keys(campaignGroups).map(type => {
+          const batches = campaignGroups[type];
+          const totalGenerated = batches.reduce((sum, b) => sum + (b.tickets_generated ?? 0), 0);
+          const totalRedeemed = batches.reduce((sum, b) => sum + (b.tickets_redeemed ?? 0), 0);
+
+          return {
+            campaign_type: type,
+            total_batches: batches.length,
+            total_tickets_generated: totalGenerated,
+            total_tickets_redeemed: totalRedeemed,
+            average_conversion_rate: totalGenerated > 0 ? totalRedeemed / totalGenerated : 0,
+            top_performing_resellers: []
+          };
+        });
+
+        return { campaign_summaries: summaries };
       }
     } else {
       // Mock implementation
@@ -1323,6 +1624,7 @@ export class OTAService {
             status: ticket.status,
             batch_id: ticket.batch_id,
             product_id: ticket.product_id,
+            qr_code: ticket.qr_code,
             created_at: ticket.created_at.toISOString(),
             activated_at: ticket.activated_at ? ticket.activated_at.toISOString() : null,
             order_id: ticket.order_id || null,
@@ -1394,6 +1696,7 @@ export class OTAService {
         status: ticket.status,
         batch_id: ticket.batch_id,
         product_id: ticket.product_id,
+        qr_code: ticket.qr_code,
         created_at: ticket.created_at.toISOString(),
         activated_at: ticket.activated_at ? ticket.activated_at.toISOString() : null,
         order_id: ticket.order_id,
@@ -1404,6 +1707,371 @@ export class OTAService {
       page,
       page_size: limit
     };
+  }
+
+  // ============= ADMIN MANAGEMENT METHODS =============
+
+  /**
+   * Get all OTA partners
+   * Admin only - requires admin:read permission
+   */
+  async getAllPartners() {
+    logger.info('ota.admin.get_all_partners');
+
+    const partners = Array.from(API_KEYS.entries()).map(([apiKey, data]) => ({
+      partner_id: data.partner_id,
+      partner_name: data.partner_name,
+      api_key_prefix: apiKey.substring(0, 10) + '...', // Security: only show prefix
+      permissions: data.permissions,
+      rate_limit: data.rate_limit,
+      status: 'active' // All current partners are active (hardcoded)
+    }));
+
+    logger.info('ota.admin.partners_retrieved', { count: partners.length });
+
+    return partners;
+  }
+
+  /**
+   * Get statistics for a specific partner
+   * Admin only - requires admin:read permission
+   */
+  async getPartnerStatistics(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
+    logger.info('ota.admin.get_partner_statistics', { partner_id: partnerId, date_range: dateRange });
+
+    // Find partner info
+    const partnerEntry = Array.from(API_KEYS.entries()).find(([_, data]) => data.partner_id === partnerId);
+    if (!partnerEntry) {
+      throw {
+        code: ERR.VALIDATION_ERROR,
+        message: `Partner ${partnerId} not found`
+      };
+    }
+
+    const [_, partnerData] = partnerEntry;
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+
+      // Get aggregated statistics from repository
+      const [ordersSummary, reservationsSummary, ticketsSummary, inventoryUsage] = await Promise.all([
+        repo.getPartnerOrdersSummary(partnerId, dateRange),
+        repo.getPartnerReservationsSummary(partnerId, dateRange),
+        repo.getPartnerTicketsSummary(partnerId),
+        repo.getPartnerInventoryUsage(partnerId)
+      ]);
+
+      return {
+        partner_id: partnerId,
+        partner_name: partnerData.partner_name,
+        date_range: dateRange || { start_date: null, end_date: null },
+        orders: ordersSummary,
+        reservations: reservationsSummary,
+        tickets: ticketsSummary,
+        inventory_usage: inventoryUsage
+      };
+    } else {
+      // Mock mode - return empty statistics
+      return {
+        partner_id: partnerId,
+        partner_name: partnerData.partner_name,
+        date_range: dateRange || { start_date: null, end_date: null },
+        orders: {
+          total_count: 0,
+          total_revenue: 0,
+          avg_order_value: 0,
+          by_status: {}
+        },
+        reservations: {
+          total_count: 0,
+          total_quantity: 0,
+          by_status: {}
+        },
+        tickets: {
+          total_generated: 0,
+          by_status: {}
+        },
+        inventory_usage: {}
+      };
+    }
+  }
+
+  /**
+   * Get platform-wide dashboard summary
+   * Admin only - requires admin:read permission
+   */
+  async getDashboardSummary(dateRange?: { start_date?: string; end_date?: string }) {
+    logger.info('ota.admin.get_dashboard_summary', { date_range: dateRange });
+
+    const totalPartners = API_KEYS.size;
+    const activePartners = totalPartners; // All current partners are active
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+
+      // Get aggregated statistics across all partners
+      const [platformSummary, topPartners, inventoryOverview] = await Promise.all([
+        repo.getPlatformSummary(dateRange),
+        repo.getTopPartners(5, dateRange),
+        repo.getInventoryOverview()
+      ]);
+
+      return {
+        summary: {
+          total_partners: totalPartners,
+          active_partners: activePartners,
+          ...platformSummary
+        },
+        top_partners: topPartners,
+        inventory_overview: inventoryOverview
+      };
+    } else {
+      // Mock mode
+      return {
+        summary: {
+          total_partners: totalPartners,
+          active_partners: activePartners,
+          total_orders: 0,
+          total_revenue: 0,
+          total_tickets_generated: 0,
+          total_tickets_activated: 0
+        },
+        top_partners: [],
+        inventory_overview: {
+          total_allocated: 0,
+          total_reserved: 0,
+          total_sold: 0,
+          overall_utilization: '0%'
+        }
+      };
+    }
+  }
+
+  // ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
+
+  /**
+   * List all resellers for authenticated OTA partner
+   */
+  async listResellers(partnerId: string): Promise<any> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+      const resellers = await repo.findResellersByPartner(partnerId);
+
+      return {
+        total: resellers.length,
+        resellers: resellers.map(r => ({
+          id: r.id,
+          reseller_code: r.reseller_code,
+          reseller_name: r.reseller_name,
+          contact_email: r.contact_email,
+          contact_phone: r.contact_phone,
+          commission_rate: parseFloat(r.commission_rate.toString()),
+          contract_start_date: r.contract_start_date,
+          contract_end_date: r.contract_end_date,
+          status: r.status,
+          settlement_cycle: r.settlement_cycle,
+          payment_terms: r.payment_terms,
+          region: r.region,
+          tier: r.tier,
+          created_at: r.created_at,
+          updated_at: r.updated_at
+        }))
+      };
+    } else {
+      // Mock implementation
+      return {
+        total: 2,
+        resellers: [
+          {
+            id: 1,
+            reseller_code: 'TEST-RESELLER-001',
+            reseller_name: 'Test Reseller Alpha',
+            contact_email: 'alpha@test.com',
+            contact_phone: '+86-138-0000-0001',
+            commission_rate: 0.10,
+            status: 'active',
+            settlement_cycle: 'monthly',
+            region: '华南地区',
+            tier: 'gold',
+            created_at: new Date(),
+            updated_at: new Date()
+          },
+          {
+            id: 2,
+            reseller_code: 'TEST-RESELLER-002',
+            reseller_name: 'Test Reseller Beta',
+            contact_email: 'beta@test.com',
+            commission_rate: 0.12,
+            status: 'active',
+            settlement_cycle: 'monthly',
+            region: '华北地区',
+            tier: 'silver',
+            created_at: new Date(),
+            updated_at: new Date()
+          }
+        ]
+      };
+    }
+  }
+
+  /**
+   * Get single reseller details
+   */
+  async getResellerById(resellerId: number, partnerId: string): Promise<any> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+      const reseller = await repo.findResellerById(resellerId, partnerId);
+
+      if (!reseller) {
+        return null;
+      }
+
+      return {
+        id: reseller.id,
+        reseller_code: reseller.reseller_code,
+        reseller_name: reseller.reseller_name,
+        contact_email: reseller.contact_email,
+        contact_phone: reseller.contact_phone,
+        commission_rate: parseFloat(reseller.commission_rate.toString()),
+        contract_start_date: reseller.contract_start_date,
+        contract_end_date: reseller.contract_end_date,
+        status: reseller.status,
+        settlement_cycle: reseller.settlement_cycle,
+        payment_terms: reseller.payment_terms,
+        region: reseller.region,
+        tier: reseller.tier,
+        notes: reseller.notes,
+        created_at: reseller.created_at,
+        updated_at: reseller.updated_at
+      };
+    } else {
+      // Mock implementation
+      return {
+        id: resellerId,
+        reseller_code: 'TEST-RESELLER-001',
+        reseller_name: 'Test Reseller Alpha',
+        contact_email: 'alpha@test.com',
+        contact_phone: '+86-138-0000-0001',
+        commission_rate: 0.10,
+        status: 'active',
+        settlement_cycle: 'monthly',
+        payment_terms: 'Net 30',
+        region: '华南地区',
+        tier: 'gold',
+        notes: 'Mock reseller for testing',
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+    }
+  }
+
+  /**
+   * Create new reseller
+   */
+  async createReseller(partnerId: string, data: any): Promise<any> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+
+      const reseller = await repo.createReseller({
+        partner_id: partnerId,
+        reseller_code: data.reseller_code,
+        reseller_name: data.reseller_name,
+        contact_email: data.contact_email,
+        contact_phone: data.contact_phone,
+        commission_rate: data.commission_rate || 0.10,
+        contract_start_date: data.contract_start_date ? new Date(data.contract_start_date) : undefined,
+        contract_end_date: data.contract_end_date ? new Date(data.contract_end_date) : undefined,
+        status: data.status || 'active',
+        settlement_cycle: data.settlement_cycle || 'monthly',
+        payment_terms: data.payment_terms,
+        region: data.region,
+        tier: data.tier || 'bronze',
+        notes: data.notes
+      });
+
+      logger.info('ota.reseller.created', {
+        partner_id: partnerId,
+        reseller_id: reseller.id,
+        reseller_code: reseller.reseller_code
+      });
+
+      return {
+        id: reseller.id,
+        reseller_code: reseller.reseller_code,
+        reseller_name: reseller.reseller_name,
+        status: reseller.status,
+        created_at: reseller.created_at
+      };
+    } else {
+      // Mock implementation
+      return {
+        id: Math.floor(Math.random() * 1000),
+        reseller_code: data.reseller_code,
+        reseller_name: data.reseller_name,
+        status: 'active',
+        created_at: new Date()
+      };
+    }
+  }
+
+  /**
+   * Update reseller
+   */
+  async updateReseller(resellerId: number, partnerId: string, data: any): Promise<any> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const repo = await this.getRepository();
+      const reseller = await repo.findResellerById(resellerId, partnerId);
+
+      if (!reseller) {
+        return null;
+      }
+
+      // Update fields
+      if (data.reseller_name) reseller.reseller_name = data.reseller_name;
+      if (data.contact_email !== undefined) reseller.contact_email = data.contact_email;
+      if (data.contact_phone !== undefined) reseller.contact_phone = data.contact_phone;
+      if (data.commission_rate !== undefined) reseller.commission_rate = data.commission_rate;
+      if (data.contract_start_date) reseller.contract_start_date = new Date(data.contract_start_date);
+      if (data.contract_end_date) reseller.contract_end_date = new Date(data.contract_end_date);
+      if (data.status) reseller.status = data.status;
+      if (data.settlement_cycle) reseller.settlement_cycle = data.settlement_cycle;
+      if (data.payment_terms !== undefined) reseller.payment_terms = data.payment_terms;
+      if (data.region !== undefined) reseller.region = data.region;
+      if (data.tier) reseller.tier = data.tier;
+      if (data.notes !== undefined) reseller.notes = data.notes;
+
+      const updated = await repo.createReseller(reseller); // Save uses same method
+
+      logger.info('ota.reseller.updated', {
+        partner_id: partnerId,
+        reseller_id: updated.id,
+        changes: Object.keys(data)
+      });
+
+      return {
+        id: updated.id,
+        reseller_code: updated.reseller_code,
+        reseller_name: updated.reseller_name,
+        status: updated.status,
+        updated_at: updated.updated_at
+      };
+    } else {
+      // Mock implementation
+      return {
+        id: resellerId,
+        reseller_code: 'TEST-RESELLER-001',
+        reseller_name: data.reseller_name || 'Updated Reseller',
+        status: data.status || 'active',
+        updated_at: new Date()
+      };
+    }
+  }
+
+  /**
+   * Deactivate reseller (soft delete)
+   */
+  async deactivateReseller(resellerId: number, partnerId: string): Promise<any> {
+    return this.updateReseller(resellerId, partnerId, { status: 'terminated' });
   }
 }
 

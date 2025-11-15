@@ -50,6 +50,41 @@ related_stories: ["US-001", "US-011"]
 - [ ] Ticket activation includes reseller-to-customer chain tracking
 - [ ] Batch distribution doesn't affect direct OTA sales inventory allocation
 
+#### Reseller Master Data Management *(NEW - 2025-11-14)*
+**Database Schema:**
+- [x] Centralized reseller registry table (ota_resellers) with auto-increment primary key
+- [x] Each reseller linked to specific OTA partner via partner_id foreign key
+- [x] Unique constraint on (partner_id + reseller_code) prevents duplicates
+- [x] Commission rate configuration per reseller (customizable, default 10%)
+- [x] Contract lifecycle tracking (start_date, end_date, status)
+- [x] Settlement cycle configuration (weekly/monthly/quarterly)
+- [x] Regional assignment and tier-based categorization
+- [x] Batch table references reseller via reseller_id foreign key (nullable)
+- [x] Data migration extracts existing resellers from batch JSON metadata
+
+**Reseller CRUD APIs (Implemented 2025-11-14):**
+- [x] GET /api/ota/resellers - List all resellers for authenticated partner
+- [x] POST /api/ota/resellers - Create new reseller with required fields (code, name)
+- [x] GET /api/ota/resellers/:id - Get detailed reseller information
+- [x] PUT /api/ota/resellers/:id - Update reseller fields (commission, tier, etc.)
+- [x] DELETE /api/ota/resellers/:id - Soft delete (sets status to 'terminated')
+- [x] All endpoints enforce partner isolation (only access own resellers)
+- [x] Tested in mock mode with 100% success rate
+- [x] OpenAPI documentation updated with complete endpoint specifications
+
+**Business Logic:**
+- [x] Billing summary API supports 'all' parameter to aggregate across all resellers
+- [ ] Database mode testing with migration 011 (requires migration fixes)
+
+#### Ticket Lifecycle Enhancement Acceptance Criteria *(NEW - 2025-11-14)*
+- [x] OTA tickets support USED status in addition to existing statuses
+- [x] Tickets automatically transition from ACTIVE to USED when all entitlements fully consumed
+- [x] GET /qr/:code/info endpoint returns ticket status and entitlements without generating QR
+- [x] Info endpoint supports both API Key (OTA) and JWT (normal user) authentication
+- [x] Venue scanning workflow supports optional session_code (no longer required)
+- [x] All entitlements.remaining_uses = 0 triggers automatic USED status update
+- [x] USED tickets properly reflected in inventory reconciliation and billing
+
 ### 2. Business Rules Extraction
 
 #### Inventory Allocation Rules
@@ -167,6 +202,23 @@ related_stories: ["US-001", "US-011"]
       - page: current page number
       - page_size: results per page
     errors: 422, 401, 403
+
+/qr/{ticket_code}/info:                                      # NEW ENDPOINT (2025-11-14)
+  get:
+    summary: Get ticket status and entitlements without generating QR
+    security:
+      - ApiKeyAuth: []  # For OTA partners
+      - BearerAuth: []  # For normal users
+    parameters:
+      - ticket_code: string (path)
+    response:
+      - ticket_code: string
+      - ticket_type: "OTA" | "NORMAL"
+      - status: "PRE_GENERATED" | "ACTIVE" | "USED" | "EXPIRED" | "CANCELLED"
+      - entitlements: array of {function_code, remaining_uses}
+      - can_generate_qr: boolean
+      - product_info: {id, name}
+    errors: 401, 403, 404
 ```
 
 ### 4. Data Impact Analysis

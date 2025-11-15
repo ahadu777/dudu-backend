@@ -145,12 +145,91 @@ grep -A 5 -B 5 "pattern.*name" docs/cases/CASE-DISCOVER-AI-WORKFLOW.md
 - [ ] TypeScript compiles
 - [ ] Endpoints respond (curl test)
 - [ ] Card status updated to "Done"
+- [ ] **Integration Proof Complete** (for external APIs):
+  - [ ] Story runbook in `docs/integration/` with copy-paste commands
+  - [ ] Newman E2E test coverage
+  - [ ] TypeScript SDK examples (if applicable)
+  - [ ] Database persistence verified
+- [ ] **Validation Assets Updated** (for stories):
+  - [ ] `validation_assets` section added to `docs/stories/_index.yaml`
+  - [ ] Newman collections documented and working
+  - [ ] Test analysis generated (if applicable)
+  - [ ] Story validation coverage verified
+
+### Testing Standards (Newman-First Approach)
+**Test Generation Hierarchy:**
+1. **STORY (US-xxx)** → Primary test source (user capability)
+2. **CARDS** → Detailed endpoint/API testing (technical implementation)
+3. **PRD** → Business rule validation (requirements compliance)
+
+**Newman Collection Standards:**
+- **Generate from STORIES**: `us-xxx-complete-coverage.postman_collection.json`
+- **Business Rules**: `[domain]-business-rules.postman_collection.json`
+- **Output Format**: XML reports in `reports/newman/` for CI/CD integration
+- **Replace Bash Scripts**: Newman handles all test scenarios
+
+**Testing Workflow:**
+```bash
+# 1. Start server
+npm start
+
+# 2. Health check
+curl http://localhost:8080/healthz
+
+# 3. Run Newman collections (primary standard)
+npx newman run postman/auto-generated/us-xxx-complete-coverage.postman_collection.json
+npx newman run postman/auto-generated/business-rules.postman_collection.json
+
+# 4. Review XML reports
+ls reports/newman/*.xml
+```
+
+**Test Coverage Requirements:**
+- [ ] Multi-partner isolation (for OTA/B2B features)
+- [ ] Performance validation (<2s response times)
+- [ ] API contract verification (OpenAPI compliance)
+- [ ] Business logic validation (PRD requirements)
+- [ ] Complete user workflow (end-to-end story coverage)
+
+**PRD Coverage Tracking (Two-Layer Approach):**
+1. **Explicit Mapping** (Primary): `docs/test-coverage/_index.yaml` - Manually maintained as we code
+2. **Automatic Discovery** (Backup): `node scripts/prd-test-mapper.mjs` - For gap analysis when explicit mapping is incomplete
+
+**When to Update Explicit Mapping:**
+- [ ] When implementing new PRD requirements
+- [ ] When adding new Newman test collections
+- [ ] When discovering coverage gaps during testing
+- [ ] Weekly during sprint planning
+
+**Validation Assets Standards:**
+Stories must include `validation_assets` section in `docs/stories/_index.yaml`:
+```yaml
+validation_assets:
+  newman:
+    - reports/collections/us-xxx-story-coverage.json      # End-to-end workflow tests
+    - postman/auto-generated/component-specific.postman_collection.json  # Component tests
+  runbook: docs/integration/US-XXX-runbook.md            # Optional: Integration guide
+  test_analysis: docs/test-analysis/component-analysis.md # Optional: AI-generated analysis
+```
+- **Newman collections**: All test scenarios for the story (workflow + component tests)
+- **Runbooks**: Copy-paste integration instructions for stakeholders
+- **Test analysis**: AI-generated visual documentation for easy understanding
 
 ### Key Commands
 ```bash
 node scripts/progress-report.js  # Check status
 npm run build && npm start      # Deploy changes
 curl http://localhost:8080/      # Test endpoints
+
+# Test Coverage Analysis
+./scripts/coverage-summary.sh               # Quick coverage overview (explicit mapping)
+node scripts/prd-test-mapper.mjs           # Full automatic discovery (backup analysis)
+node scripts/generate-coverage-report.mjs  # Generate comprehensive coverage status report
+
+# Bug and Issue Tracking
+grep "status: Open" docs/bugs/_index.yaml     # List open bugs
+grep "severity: Critical\|High" docs/bugs/_index.yaml  # Critical/high priority bugs
+grep "US-001" docs/bugs/_index.yaml          # Find bugs affecting specific story
 ```
 
 ### When Stuck
@@ -602,6 +681,79 @@ echo "**Learning**: [What should change in CLAUDE.md]" >> docs/cases/CASE-DISCOV
 
 
 ---
+
+## 🔧 REFACTORING IMPACT ANALYSIS (NEW Pattern - Validated)
+
+### The Problem: Refactoring Without Systematic Impact Analysis
+During OTA partner-specific inventory development, we discovered hardcoded channel references that affected partner isolation. This led to a systematic approach for analyzing refactoring impact.
+
+### When to Use Refactoring Impact Analysis
+**Use before any significant code changes:**
+- Changing core business logic or data models
+- Modifying shared utilities or common patterns
+- Updating API contracts or database schemas
+- Partner-specific customizations that affect multiple areas
+
+### The Refactoring Impact Analysis Tool
+```bash
+# Run comprehensive impact analysis (includes business context)
+node scripts/refactoring-impact-analysis.mjs
+
+# Output includes:
+# • Technical dependencies and affected files
+# • Business impact: Stories, Cards, PRD features affected
+# • User impact: B2B Partners, End Users, Operations teams
+# • Stakeholder notification requirements
+```
+
+### Pattern Recognition for Impact Analysis
+**High-Impact Changes (Requires Careful Analysis):**
+- Database operations (`repository`, `entity`, `migration`)
+- Authentication/authorization (`middleware`, `auth`)
+- Core business logic (`service`, `domain`)
+- API contracts (`router`, `controller`)
+
+**Medium-Impact Changes (Review Dependencies):**
+- Fallback behaviors (`|| 'default'`)
+- Configuration patterns (`config`, `env`)
+- Data transformation (`mapper`, `transformer`)
+
+**Low-Impact Changes (Minimal Validation Needed):**
+- Logging and comments
+- Mock data and test fixtures
+- Development utilities
+
+### Proven Success Example: OTA Channel Fix
+**Issue Found**: `inventory.activateReservation('ota', 1)` hardcoded in repository
+**Technical Impact**: 30 findings across 6 files
+**Business Impact**: 8 stories, 26 cards, 4 PRD features affected
+**User Impact**: B2B Partners (API integration), Finance team (pricing logic)
+**Solution**: Changed to `inventory.activateReservation(partnerId, 1)` for proper partner isolation
+**Validation**: Tested with multiple API keys, confirmed partner-specific inventory tracking
+
+### Channel ID Mapping Patterns (Partner-Specific)
+**Architecture Pattern:**
+```typescript
+// ✅ CORRECT: Use partnerId with fallback
+const channelId = partnerId || 'ota';
+inventory.activateReservation(channelId, quantity);
+
+// ❌ INCORRECT: Hardcoded channel
+inventory.activateReservation('ota', quantity);
+```
+
+**Partner-to-Channel Mapping:**
+- `ota_full_access_partner` → `ota_full_access_partner` (partner-specific channel)
+- `ota251103_partner` → `ota251103_partner` (partner-specific channel)
+- `dudu_partner` → `dudu_partner` (partner-specific channel)
+- Fallback: `'ota'` (legacy default channel)
+
+### Systematic Refactoring Process
+1. **Run Impact Analysis**: `node scripts/refactoring-impact-analysis.mjs`
+2. **Prioritize by Severity**: Start with HIGH severity items
+3. **Test Each Change**: Verify functionality after each modification
+4. **Update Integration Tests**: Ensure cross-module compatibility
+5. **Validate Partner Isolation**: Test with different API keys
 
 **For detailed case studies**: See `docs/cases/CASE-*.md`
 **For complete knowledge graph analysis**: See `docs/KNOWLEDGE_GRAPH_PROOF.md`

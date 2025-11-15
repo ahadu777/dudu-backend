@@ -73,6 +73,29 @@ export interface Order {
 }
 export interface TicketEntitlement { function_code: string; label: string; remaining_uses: number; }
 export interface Ticket { ticket_code: TicketCode; product_id: number; product_name: string; status: TicketStatus; expires_at?: ISODate|null; entitlements: TicketEntitlement[]; user_id: number; order_id: number; cancelled_at?: ISODate|null; cancellation_reason?: string|null; }
+
+// JTI (JWT Token ID) lifecycle tracking for QR code security
+export interface JTIHistoryEntry {
+  jti: string;
+  issued_at: ISODate;
+  status: 'PRE_GENERATED' | 'ACTIVE' | 'INVALIDATED' | 'USED';
+}
+
+export interface TicketRawMetadata {
+  jti?: {
+    pre_generated_jti?: string;    // Original JTI when ticket was bulk-generated
+    current_jti: string;             // Currently valid JTI (updated on activation)
+    jti_history?: JTIHistoryEntry[]; // Complete JTI lifecycle for audit trail
+  };
+  qr_metadata?: {
+    issued_at: ISODate;
+    expires_at: ISODate;
+  };
+  // Future extensibility: device info, customer preferences, etc.
+  device_info?: Record<string, any>;
+  customer_preferences?: Record<string, any>;
+}
+
 export interface QRTokenResponse { token: string; expires_in: number; }
 export interface Operator { operator_id: number; username: string; password_hash: string; roles: string[]; }
 export interface ValidatorSession { session_id: SessionId; operator_id: number; device_id: string; location_id?: number|null; created_at: ISODate; expires_at: ISODate; }

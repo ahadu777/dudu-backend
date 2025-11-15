@@ -2,16 +2,93 @@ import { DataSource, Repository } from 'typeorm';
 import { Venue } from './venue.entity';
 import { VenueSession } from './venue-session.entity';
 import { RedemptionEvent } from './redemption-event.entity';
+import { PreGeneratedTicketEntity } from '../../ota/domain/pre-generated-ticket.entity';
 
 export class VenueRepository {
   private venueRepo: Repository<Venue>;
   private sessionRepo: Repository<VenueSession>;
   private redemptionRepo: Repository<RedemptionEvent>;
+  private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
 
   constructor(dataSource: DataSource) {
     this.venueRepo = dataSource.getRepository(Venue);
     this.sessionRepo = dataSource.getRepository(VenueSession);
     this.redemptionRepo = dataSource.getRepository(RedemptionEvent);
+    this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
+  }
+
+  // Ticket Management
+  async getTicketByCode(ticketCode: string): Promise<any | null> {
+    // Query from pre_generated_tickets table (OTA tickets)
+    const otaTicket = await this.preGeneratedTicketRepo.findOne({
+      where: { ticket_code: ticketCode }
+    });
+
+    if (otaTicket) {
+      return {
+        ticket_code: otaTicket.ticket_code,
+        product_id: otaTicket.product_id,
+        status: otaTicket.status,
+        entitlements: otaTicket.entitlements,
+        ticket_type: 'OTA',
+        order_id: otaTicket.order_id,
+        batch_id: otaTicket.batch_id,
+        partner_id: otaTicket.partner_id,
+        raw: otaTicket.raw
+      };
+    }
+
+    // TODO: Add support for normal tickets from 'tickets' table if needed
+    return null;
+  }
+
+  async decrementEntitlement(ticketCode: string, functionCode: string): Promise<boolean> {
+    const ticket = await this.preGeneratedTicketRepo.findOne({
+      where: { ticket_code: ticketCode }
+    });
+
+    if (!ticket) {
+      return false;
+    }
+
+    // Find and decrement the entitlement
+    const entitlements = ticket.entitlements as Array<{
+      function_code: string;
+      remaining_uses: number;
+    }>;
+
+    const entitlementIndex = entitlements.findIndex(
+      (e: { function_code: string }) => e.function_code === functionCode
+    );
+
+    if (entitlementIndex === -1) {
+      return false;
+    }
+
+    if (entitlements[entitlementIndex].remaining_uses <= 0) {
+      return false;
+    }
+
+    // Decrement the remaining uses
+    entitlements[entitlementIndex].remaining_uses -= 1;
+
+    // Check if all entitlements are fully used
+    const allUsed = entitlements.every((e: { remaining_uses: number }) => e.remaining_uses === 0);
+
+    // Update the ticket in database
+    const updateData: any = { entitlements: entitlements as any };
+
+    // If all entitlements are used up, mark ticket as USED
+    if (allUsed) {
+      updateData.status = 'USED';
+    }
+
+    await this.preGeneratedTicketRepo.update(
+      { ticket_code: ticketCode },
+      updateData
+    );
+
+    return true;
   }
 
   // Venue Management
@@ -68,8 +145,15 @@ export class VenueRepository {
   }
 
   // CRITICAL: Fast JTI duplicate detection for fraud prevention
-  async hasJtiBeenUsed(jti: string): Promise<boolean> {
-    const count = await this.redemptionRepo.count({ where: { jti } });
+  // Check if JTI has been used for a specific function (not just any function)
+  async hasJtiBeenUsedForFunction(jti: string, functionCode: string): Promise<boolean> {
+    const count = await this.redemptionRepo.count({
+      where: {
+        jti,
+        function_code: functionCode,
+        result: 'success'  // Only count successful redemptions
+      }
+    });
     return count > 0;
   }
 

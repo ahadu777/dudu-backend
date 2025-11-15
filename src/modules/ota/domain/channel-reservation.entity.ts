@@ -50,7 +50,14 @@ export class ChannelReservationEntity {
   pricing_snapshot?: {
     base_price: number;
     weekend_premium?: number;
-    customer_discounts?: Record<string, number>;
+    customer_discounts?: Record<string, number>;  // Legacy field (deprecated)
+    customer_type_pricing?: Array<{
+      customer_type: 'adult' | 'child' | 'elderly';
+      unit_price: number;
+      discount_applied: number;
+    }>;
+    currency?: string;
+    captured_at?: string;
   };
 
   @ManyToOne(() => ProductInventoryEntity, inventory => inventory.reservations)

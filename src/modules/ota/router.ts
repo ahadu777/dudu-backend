@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { otaAuthMiddleware } from '../../middlewares/otaAuth';
+import { otaAuthMiddleware, adminAuthMiddleware } from '../../middlewares/otaAuth';
 import { otaService } from './service';
 import { logger } from '../../utils/logger';
 
@@ -177,7 +177,7 @@ router.get('/reservations', async (req: AuthenticatedRequest, res: Response) => 
 router.post('/reservations/:id/activate', otaAuthMiddleware('reserve:activate'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const reservationId = req.params.id;
-    const { customer_details, payment_reference, special_requests } = req.body;
+    const { customer_details, customer_type, payment_reference, special_requests } = req.body;
 
     // Validate required fields
     if (!customer_details || !payment_reference) {
@@ -194,8 +194,29 @@ router.post('/reservations/:id/activate', otaAuthMiddleware('reserve:activate'),
       });
     }
 
+    // Validate customer_type if provided
+    if (customer_type) {
+      if (!Array.isArray(customer_type)) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'customer_type must be an array'
+        });
+      }
+
+      const validTypes = ['adult', 'child', 'elderly'];
+      for (const type of customer_type) {
+        if (!validTypes.includes(type)) {
+          return res.status(400).json({
+            error: 'INVALID_REQUEST',
+            message: 'customer_type elements must be one of: adult, child, elderly'
+          });
+        }
+      }
+    }
+
     const order = await otaService.activateReservation(reservationId, {
       customer_details,
+      customer_type,
       payment_reference,
       special_requests
     });
@@ -447,13 +468,13 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
 router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const ticketCode = req.params.code;
-    const { customer_details, payment_reference } = req.body;
+    const { customer_details, customer_type, payment_reference } = req.body;
 
     // Validate required fields
-    if (!customer_details || !payment_reference) {
+    if (!customer_details || !customer_type || !payment_reference) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details and payment_reference are required'
+        message: 'customer_details, customer_type, and payment_reference are required'
       });
     }
 
@@ -464,9 +485,17 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
       });
     }
 
+    if (!['adult', 'child', 'elderly'].includes(customer_type)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'customer_type must be one of: adult, child, elderly'
+      });
+    }
+
     const partnerId = getPartnerIdWithFallback(req);
     const result = await otaService.activatePreMadeTicket(ticketCode, partnerId, {
       customer_details,
+      customer_type,
       payment_reference
     });
 
@@ -530,7 +559,9 @@ router.get('/billing/summary', async (req: AuthenticatedRequest, res: Response) 
       });
     }
 
+    const partnerId = getPartnerIdWithFallback(req);
     const summary = await otaService.getResellerBillingSummary(
+      partnerId,
       reseller as string || 'all',
       period
     );
@@ -601,6 +632,266 @@ router.get('/campaigns/analytics', async (req: AuthenticatedRequest, res: Respon
     res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Failed to retrieve campaign analytics'
+    });
+  }
+});
+
+// ============= ADMIN MANAGEMENT ENDPOINTS =============
+// These endpoints require admin privileges (admin:read permission)
+
+// GET /api/ota/admin/partners - Get all OTA partners
+router.get('/admin/partners', adminAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const partners = await otaService.getAllPartners();
+
+    res.json({
+      partners,
+      total_count: partners.length
+    });
+
+  } catch (error: any) {
+    logger.error('OTA admin get partners failed', {
+      admin: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve partners list'
+    });
+  }
+});
+
+// GET /api/ota/admin/partners/:partnerId/statistics - Get partner statistics
+router.get('/admin/partners/:partnerId/statistics', adminAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { partnerId } = req.params;
+    const { start_date, end_date } = req.query;
+
+    const stats = await otaService.getPartnerStatistics(
+      partnerId,
+      {
+        start_date: start_date as string,
+        end_date: end_date as string
+      }
+    );
+
+    res.json(stats);
+
+  } catch (error: any) {
+    logger.error('OTA admin get partner statistics failed', {
+      admin: req.ota_partner?.name,
+      partner_id: req.params.partnerId,
+      error: error.message
+    });
+
+    const status = error.code === 'VALIDATION_ERROR' ? 404 : 500;
+    res.status(status).json({
+      error: error.code || 'INTERNAL_ERROR',
+      message: error.message || 'Failed to retrieve partner statistics'
+    });
+  }
+});
+
+// GET /api/ota/admin/dashboard - Get platform dashboard summary
+router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { start_date, end_date } = req.query;
+
+    const summary = await otaService.getDashboardSummary({
+      start_date: start_date as string,
+      end_date: end_date as string
+    });
+
+    res.json(summary);
+
+  } catch (error: any) {
+    logger.error('OTA admin get dashboard failed', {
+      admin: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve dashboard summary'
+    });
+  }
+});
+
+// ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
+
+// GET /api/ota/resellers - List all resellers for current OTA partner
+router.get('/resellers', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const partnerId = getPartnerIdWithFallback(req);
+    const result = await otaService.listResellers(partnerId);
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('OTA list resellers failed', {
+      partner: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to list resellers'
+    });
+  }
+});
+
+// GET /api/ota/resellers/:id - Get single reseller details
+router.get('/resellers/:id', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const resellerId = parseInt(req.params.id);
+    if (isNaN(resellerId)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'Invalid reseller ID'
+      });
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const reseller = await otaService.getResellerById(resellerId, partnerId);
+
+    if (!reseller) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Reseller not found'
+      });
+    }
+
+    res.json(reseller);
+  } catch (error: any) {
+    logger.error('OTA get reseller failed', {
+      partner: req.ota_partner?.name,
+      reseller_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve reseller'
+    });
+  }
+});
+
+// POST /api/ota/resellers - Create new reseller
+router.post('/resellers', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { reseller_code, reseller_name, contact_email, contact_phone, commission_rate,
+            contract_start_date, contract_end_date, settlement_cycle, payment_terms,
+            region, tier, notes } = req.body;
+
+    if (!reseller_code || !reseller_name) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'reseller_code and reseller_name are required'
+      });
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const reseller = await otaService.createReseller(partnerId, {
+      reseller_code,
+      reseller_name,
+      contact_email,
+      contact_phone,
+      commission_rate,
+      contract_start_date,
+      contract_end_date,
+      settlement_cycle,
+      payment_terms,
+      region,
+      tier,
+      notes
+    });
+
+    res.status(201).json(reseller);
+  } catch (error: any) {
+    logger.error('OTA create reseller failed', {
+      partner: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to create reseller'
+    });
+  }
+});
+
+// PUT /api/ota/resellers/:id - Update reseller
+router.put('/resellers/:id', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const resellerId = parseInt(req.params.id);
+    if (isNaN(resellerId)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'Invalid reseller ID'
+      });
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const updated = await otaService.updateReseller(resellerId, partnerId, req.body);
+
+    if (!updated) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Reseller not found'
+      });
+    }
+
+    res.json(updated);
+  } catch (error: any) {
+    logger.error('OTA update reseller failed', {
+      partner: req.ota_partner?.name,
+      reseller_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to update reseller'
+    });
+  }
+});
+
+// DELETE /api/ota/resellers/:id - Deactivate reseller (soft delete)
+router.delete('/resellers/:id', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const resellerId = parseInt(req.params.id);
+    if (isNaN(resellerId)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'Invalid reseller ID'
+      });
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const result = await otaService.deactivateReseller(resellerId, partnerId);
+
+    if (!result) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Reseller not found'
+      });
+    }
+
+    res.json({
+      message: 'Reseller deactivated successfully',
+      reseller_id: resellerId,
+      status: 'terminated'
+    });
+  } catch (error: any) {
+    logger.error('OTA deactivate reseller failed', {
+      partner: req.ota_partner?.name,
+      reseller_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to deactivate reseller'
     });
   }
 });

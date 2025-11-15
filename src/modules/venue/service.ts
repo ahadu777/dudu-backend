@@ -56,6 +56,23 @@ export class VenueOperationsService {
     }
   }
 
+  /**
+   * Detect QR code format
+   * @param qrToken - QR token string
+   * @returns 'ENCRYPTED' for new encrypted format, 'JWT' for old format, 'UNKNOWN' otherwise
+   */
+  private detectQRFormat(qrToken: string): 'ENCRYPTED' | 'JWT' | 'UNKNOWN' {
+    // Encrypted format: iv:encrypted:authTag:signature (4 parts separated by colons)
+    if (qrToken.split(':').length >= 4) {
+      return 'ENCRYPTED';
+    }
+    // JWT format: header.payload.signature (3 parts separated by dots)
+    if (qrToken.split('.').length === 3) {
+      return 'JWT';
+    }
+    return 'UNKNOWN';
+  }
+
   // Create venue operator session (replaces basic operator login)
   async createVenueSession(sessionData: {
     venueCode: string;
@@ -133,31 +150,74 @@ export class VenueOperationsService {
   async validateAndRedeem(request: {
     qrToken: string;
     functionCode: string;
-    sessionCode: string;
+    sessionCode?: string;
     terminalDeviceId?: string;
   }): Promise<VenueOperationsResponse> {
     const startTime = Date.now();
+
     logger.info('venue.scan.started', {
       function_code: request.functionCode,
-      session_code: request.sessionCode,
       terminal_device: request.terminalDeviceId
     });
 
     try {
-      // 1. Parse and verify QR token
-      let tokenPayload;
-      try {
-        tokenPayload = jwt.verify(request.qrToken, env.QR_SIGNER_SECRET) as any;
-      } catch (jwtError) {
-        const response = this.createRejectResponse('TOKEN_EXPIRED', startTime, {
-          session_code: request.sessionCode,
+      // 1. Parse and verify QR token (support both encrypted and JWT formats)
+      let ticketCode: string;
+      let jti: string;
+
+      // Detect QR format: encrypted (4+ colons) or JWT (2 dots)
+      const qrFormat = this.detectQRFormat(request.qrToken);
+
+      if (qrFormat === 'ENCRYPTED') {
+        // New encrypted format: use decryptAndVerifyQR
+        try {
+          const { decryptAndVerifyQR } = await import('../../utils/qr-crypto');
+          const decryptResult = await decryptAndVerifyQR(request.qrToken);
+
+          if (decryptResult.is_expired) {
+            const response = this.createRejectResponse('QR_EXPIRED', startTime, {
+              function_code: request.functionCode
+            });
+            await this.recordRedemptionAttempt(request, null, 'reject', 'QR_EXPIRED');
+            return response;
+          }
+
+          ticketCode = decryptResult.data.ticket_code;
+          jti = decryptResult.data.jti;
+
+        } catch (decryptError) {
+          const errorMsg = decryptError instanceof Error ? decryptError.message : 'Unknown';
+          const reason = errorMsg.includes('QR_SIGNATURE_INVALID') ? 'QR_TAMPERED' : 'QR_INVALID';
+
+          const response = this.createRejectResponse(reason, startTime, {
+            function_code: request.functionCode
+          });
+          await this.recordRedemptionAttempt(request, null, 'reject', reason);
+          return response;
+        }
+
+      } else if (qrFormat === 'JWT') {
+        // Old JWT format: maintain backward compatibility
+        try {
+          const tokenPayload = jwt.verify(request.qrToken, env.QR_SIGNER_SECRET) as any;
+          ticketCode = tokenPayload.tid;
+          jti = tokenPayload.jti;
+        } catch (jwtError) {
+          const response = this.createRejectResponse('TOKEN_EXPIRED', startTime, {
+            function_code: request.functionCode
+          });
+          await this.recordRedemptionAttempt(request, null, 'reject', 'TOKEN_EXPIRED');
+          return response;
+        }
+
+      } else {
+        // Unknown format
+        const response = this.createRejectResponse('QR_FORMAT_INVALID', startTime, {
           function_code: request.functionCode
         });
-        await this.recordRedemptionAttempt(request, null, 'reject', 'TOKEN_EXPIRED');
+        await this.recordRedemptionAttempt(request, null, 'reject', 'QR_FORMAT_INVALID');
         return response;
       }
-
-      const { tid: ticketCode, jti } = tokenPayload;
 
       if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
         return this.handleDatabaseModeValidation(request, ticketCode, jti, startTime);
@@ -168,12 +228,10 @@ export class VenueOperationsService {
     } catch (error) {
       logger.error('venue.scan.error', {
         function_code: request.functionCode,
-        session_code: request.sessionCode,
         error: (error as Error).message
       });
 
       return this.createRejectResponse('INTERNAL_ERROR', startTime, {
-        session_code: request.sessionCode,
         function_code: request.functionCode
       });
     }
@@ -187,140 +245,214 @@ export class VenueOperationsService {
   ): Promise<VenueOperationsResponse> {
     const repo = await this.getRepository();
 
-    // 1. Validate session with venue context
-    const session = await repo.findActiveSession(request.sessionCode);
-    if (!session) {
-      const response = this.createRejectResponse('INVALID_SESSION', startTime, request);
-      await this.recordRedemptionAttempt(request, ticketCode, 'reject', 'INVALID_SESSION');
-      return response;
+    logger.info('venue.scan.database_mode', {
+      ticket_code: ticketCode,
+      function_code: request.functionCode
+    });
+
+    // Get session info if available (session_code is optional)
+    let venueId: number | undefined;
+    let operatorId: number | undefined;
+    let sessionCode: string | undefined;
+
+    if (request.sessionCode) {
+      const session = await repo.findActiveSession(request.sessionCode);
+      if (session) {
+        venueId = session.venue_id;
+        operatorId = session.operator_id;
+        sessionCode = session.session_code;
+      }
     }
 
-    // 2. CRITICAL: Cross-terminal fraud detection
-    const jtiAlreadyUsed = await repo.hasJtiBeenUsed(jti);
-    if (jtiAlreadyUsed) {
+    // CRITICAL: Cross-terminal fraud detection (JTI replay attack prevention)
+    // Check if this JTI has been used for this specific function
+    const jtiAlreadyUsedForFunction = await repo.hasJtiBeenUsedForFunction(jti, request.functionCode);
+    if (jtiAlreadyUsedForFunction) {
       logger.info('venue.scan.fraud_detected', {
         jti,
         ticket_code: ticketCode,
-        venue_code: session.venue.venue_code,
-        function_code: request.functionCode
+        function_code: request.functionCode,
+        reason: 'Same JTI already used for this function'
       });
 
-      await repo.recordRedemption({
-        ticketCode,
-        functionCode: request.functionCode,
-        venueId: session.venue_id,
-        operatorId: session.operator_id,
-        sessionCode: request.sessionCode,
-        terminalDeviceId: request.terminalDeviceId,
-        jti,
-        result: 'reject',
-        reason: 'DUPLICATE_JTI'
-      });
+      // Record fraud attempt
+      if (venueId) {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId,
+          operatorId: operatorId || 0,
+          sessionCode: sessionCode || '',
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'ALREADY_REDEEMED'
+        });
+      }
 
       return this.createRejectResponse('ALREADY_REDEEMED', startTime, {
-        session_code: request.sessionCode,
-        venue_code: session.venue.venue_code,
         fraud_detected: true
       });
     }
 
-    // 3. Validate with existing ticket logic (fallback to mock for ticket data)
-    const ticket = mockStore.getTicket(ticketCode);
+    // Fetch ticket from database (OTA tickets from pre_generated_tickets table)
+    let ticket = await repo.getTicketByCode(ticketCode);
+
     if (!ticket) {
-      await repo.recordRedemption({
-        ticketCode,
-        functionCode: request.functionCode,
-        venueId: session.venue_id,
-        operatorId: session.operator_id,
-        sessionCode: request.sessionCode,
-        terminalDeviceId: request.terminalDeviceId,
-        jti,
-        result: 'reject',
-        reason: 'TICKET_NOT_FOUND'
-      });
+      logger.info('venue.scan.ticket_not_found_in_db', { ticket_code: ticketCode });
+
+      // Record failed attempt
+      if (venueId) {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId,
+          operatorId: operatorId || 0,
+          sessionCode: sessionCode || '',
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'TICKET_NOT_FOUND'
+        });
+      }
 
       return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
     }
 
-    // 4. Function validation
-    const entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);
+    logger.info('venue.scan.ticket_found_in_db', {
+      ticket_code: ticketCode,
+      status: ticket.status,
+      ticket_type: ticket.ticket_type
+    });
+
+    // SECURITY: Validate JTI matches ticket's current_jti (for OTA tickets with raw field)
+    const ticketRaw = (ticket as any).raw;
+    if (ticketRaw && ticketRaw.jti) {
+      const currentJti = ticketRaw.jti.current_jti;
+      const preGeneratedJti = ticketRaw.jti.pre_generated_jti;
+
+      if (currentJti && currentJti !== jti) {
+        logger.warn('venue.scan.jti_mismatch', {
+          ticket_code: ticketCode,
+          qr_jti: jti,
+          ticket_current_jti: currentJti,
+          is_old_pre_generated: jti === preGeneratedJti
+        });
+
+        const reason = jti === preGeneratedJti ? 'QR_CODE_OUTDATED' : 'JTI_MISMATCH';
+        const message = jti === preGeneratedJti
+          ? 'Old pre-generated QR code detected. Please use the QR code received after activation.'
+          : 'QR code does not match current ticket JTI.';
+
+        // Record JTI mismatch attempt
+        if (venueId) {
+          await repo.recordRedemption({
+            ticketCode,
+            functionCode: request.functionCode,
+            venueId,
+            operatorId: operatorId || 0,
+            sessionCode: sessionCode || '',
+            terminalDeviceId: request.terminalDeviceId,
+            jti,
+            result: 'reject',
+            reason
+          });
+        }
+
+        return this.createRejectResponse(reason as any, startTime, {
+          ...request,
+          message,
+          hint: jti === preGeneratedJti ? 'REFRESH_QR_CODE' : undefined
+        });
+      }
+    }
+
+    // Function validation
+    const entitlement = ticket.entitlements.find((e: { function_code: string; remaining_uses: number }) => e.function_code === request.functionCode);
     if (!entitlement) {
-      await repo.recordRedemption({
-        ticketCode,
-        functionCode: request.functionCode,
-        venueId: session.venue_id,
-        operatorId: session.operator_id,
-        sessionCode: request.sessionCode,
-        terminalDeviceId: request.terminalDeviceId,
-        jti,
-        result: 'reject',
-        reason: 'WRONG_FUNCTION'
-      });
+      // Record wrong function attempt
+      if (venueId) {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId,
+          operatorId: operatorId || 0,
+          sessionCode: sessionCode || '',
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'WRONG_FUNCTION'
+        });
+      }
 
       return this.createRejectResponse('WRONG_FUNCTION', startTime, request);
     }
 
-    // 5. Check remaining uses
+    // Check remaining uses
     if (entitlement.remaining_uses <= 0) {
-      await repo.recordRedemption({
-        ticketCode,
-        functionCode: request.functionCode,
-        venueId: session.venue_id,
-        operatorId: session.operator_id,
-        sessionCode: request.sessionCode,
-        terminalDeviceId: request.terminalDeviceId,
-        jti,
-        result: 'reject',
-        reason: 'NO_REMAINING'
-      });
+      // Record no remaining uses attempt
+      if (venueId) {
+        await repo.recordRedemption({
+          ticketCode,
+          functionCode: request.functionCode,
+          venueId,
+          operatorId: operatorId || 0,
+          sessionCode: sessionCode || '',
+          terminalDeviceId: request.terminalDeviceId,
+          jti,
+          result: 'reject',
+          reason: 'NO_REMAINING',
+          remainingUsesAfter: 0
+        });
+      }
 
       return this.createRejectResponse('NO_REMAINING', startTime, request);
     }
 
-    // 6. SUCCESS: Process redemption
-    const success = mockStore.decrementEntitlement(ticketCode, request.functionCode);
+    // SUCCESS: Process redemption (update database)
+    const success = await repo.decrementEntitlement(ticketCode, request.functionCode);
     if (!success) {
       return this.createRejectResponse('INTERNAL_ERROR', startTime, request);
     }
 
-    // Record successful redemption in database
-    await repo.recordRedemption({
-      ticketCode,
-      functionCode: request.functionCode,
-      venueId: session.venue_id,
-      operatorId: session.operator_id,
-      sessionCode: request.sessionCode,
-      terminalDeviceId: request.terminalDeviceId,
-      jti,
-      result: 'success',
-      remainingUsesAfter: entitlement.remaining_uses - 1,
-      additionalData: {
-        venue_code: session.venue.venue_code,
-        venue_name: session.venue.venue_name
-      }
-    });
+    const remainingUsesAfter = entitlement.remaining_uses - 1;
 
-    const updatedTicket = mockStore.getTicket(ticketCode);
+    // CRITICAL: Record successful redemption event
+    if (venueId) {
+      await repo.recordRedemption({
+        ticketCode,
+        functionCode: request.functionCode,
+        venueId,
+        operatorId: operatorId || 0,
+        sessionCode: sessionCode || '',
+        terminalDeviceId: request.terminalDeviceId,
+        jti,
+        result: 'success',
+        remainingUsesAfter
+      });
+    } else {
+      logger.warn('venue.scan.no_venue_context', {
+        ticket_code: ticketCode,
+        message: 'Redemption succeeded but no venue context available for audit trail'
+      });
+    }
+
+    // Fetch updated ticket from database
+    const updatedTicket = await repo.getTicketByCode(ticketCode);
     const responseTime = Date.now() - startTime;
 
     logger.info('venue.scan.success', {
       ticket_code: ticketCode,
       function_code: request.functionCode,
-      venue_code: session.venue.venue_code,
       response_time_ms: responseTime,
-      remaining_uses: entitlement.remaining_uses - 1
+      remaining_uses: remainingUsesAfter
     });
 
     return {
       result: 'success',
       ticket_status: updatedTicket?.status || 'unknown',
       entitlements: updatedTicket?.entitlements || [],
-      remaining_uses: entitlement.remaining_uses - 1,
-      venue_info: {
-        venue_code: session.venue.venue_code,
-        venue_name: session.venue.venue_name,
-        terminal_device: request.terminalDeviceId
-      },
+      remaining_uses: remainingUsesAfter,
       performance_metrics: {
         response_time_ms: responseTime,
         fraud_checks_passed: true
@@ -335,21 +467,43 @@ export class VenueOperationsService {
     jti: string,
     startTime: number
   ): Promise<VenueOperationsResponse> {
-    // Enhanced mock mode with venue context
-    logger.warn('venue.scan.mock_mode', { session_code: request.sessionCode });
+    logger.warn('venue.scan.mock_mode', { ticket_code: ticketCode });
 
-    // Use existing mock validation logic but with venue enhancements
-    if (!mockStore.isSessionValid(request.sessionCode)) {
-      return this.createRejectResponse('INVALID_SESSION', startTime, request);
-    }
-
+    // JTI replay attack prevention
     if (jti && mockStore.hasJti(jti)) {
-      return this.createRejectResponse('ALREADY_REDEEMED', startTime, { ...request, fraud_detected: true });
+      return this.createRejectResponse('ALREADY_REDEEMED', startTime, { fraud_detected: true });
     }
 
     const ticket = mockStore.getTicket(ticketCode);
     if (!ticket) {
       return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
+    }
+
+    // SECURITY: Validate JTI matches ticket's current_jti (for OTA tickets with raw field)
+    const ticketRaw = (ticket as any).raw;
+    if (ticketRaw && ticketRaw.jti) {
+      const currentJti = ticketRaw.jti.current_jti;
+      const preGeneratedJti = ticketRaw.jti.pre_generated_jti;
+
+      if (currentJti && currentJti !== jti) {
+        logger.warn('venue.scan.jti_mismatch_mock', {
+          ticket_code: ticketCode,
+          qr_jti: jti,
+          ticket_current_jti: currentJti,
+          is_old_pre_generated: jti === preGeneratedJti
+        });
+
+        const reason = jti === preGeneratedJti ? 'QR_CODE_OUTDATED' : 'JTI_MISMATCH';
+        const message = jti === preGeneratedJti
+          ? 'Old pre-generated QR code detected. Please use the QR code received after activation.'
+          : 'QR code does not match current ticket JTI.';
+
+        return this.createRejectResponse(reason as any, startTime, {
+          ...request,
+          message,
+          hint: jti === preGeneratedJti ? 'REFRESH_QR_CODE' : undefined
+        });
+      }
     }
 
     const entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);
@@ -363,7 +517,6 @@ export class VenueOperationsService {
       return this.createRejectResponse('INTERNAL_ERROR', startTime, request);
     }
 
-    const session = mockStore.getSession(request.sessionCode);
     const responseTime = Date.now() - startTime;
 
     return {
@@ -371,11 +524,6 @@ export class VenueOperationsService {
       ticket_status: ticket.status,
       entitlements: ticket.entitlements,
       remaining_uses: entitlement.remaining_uses - 1,
-      venue_info: {
-        venue_code: 'mock-venue',
-        venue_name: this.getVenueDisplayName('mock-venue'),
-        terminal_device: request.terminalDeviceId
-      },
       performance_metrics: {
         response_time_ms: responseTime,
         fraud_checks_passed: true
