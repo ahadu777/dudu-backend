@@ -18,6 +18,9 @@ import reservationsRouter from './reservations/router';
 import devRouter from './dev/router';
 import otaRouter from './ota/router';
 import venueRouter from './venue/router';
+import reservationSlotsRouter from './reservationSlots/router';
+import customerReservationRouter from './customerReservation/router';
+import operatorValidationRouter from './operatorValidation/router';
 
 export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
   const apiRouter = Router();
@@ -43,6 +46,11 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/dev', devRouter);
   app.use('/api/ota', otaRouter);
   app.use('/venue', venueRouter);
+
+  // Ticket reservation system
+  app.use('/api/reservation-slots', reservationSlotsRouter);
+  app.use('/api', customerReservationRouter);
+  app.use('/api/operator', operatorValidationRouter);
 
   app.use('/payments', refundsRouter);
   app.use('/', refundsRouter);
