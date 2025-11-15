@@ -7,17 +7,18 @@ product_area: "Commerce"
 owner: "Product Manager"
 status: "Production Ready"
 created_date: "2025-11-03"
-last_updated: "2025-11-06"
+last_updated: "2025-11-14"
 related_stories: ["US-012"]
-implementation_cards: ["ota-channel-management", "ota-authentication-middleware", "ota-order-processing", "channel-inventory-tracking", "ota-premade-tickets"]
+implementation_cards: ["ota-channel-management", "ota-authentication-middleware", "ota-order-processing", "channel-inventory-tracking", "ota-premade-tickets", "qr-generation-api"]
 enhances: "PRD-001"
+enables: "PRD-005"
 deadline: "2025-11-15"
 ```
 
 ## Executive Summary
 **Problem Statement**: External OTA platforms need guaranteed inventory access to sell our cruise packages at scale, but current system only supports direct sales channel, limiting market reach and revenue potential.
 
-**Solution Overview**: Multi-channel inventory management system with dedicated OTA API endpoints, enabling external platforms to reserve and sell cruise packages while maintaining inventory separation and pricing consistency.
+**Solution Overview**: Multi-channel inventory management system with dedicated OTA API endpoints, enabling external platforms to reserve and sell cruise packages while maintaining inventory separation and pricing consistency. Foundation for advanced B2B2C billing workflows (see PRD-005).
 
 **Success Metrics**:
 - 5000 package units allocated to OTA by Nov 15, 2025
@@ -63,20 +64,19 @@ deadline: "2025-11-15"
 - **Revenue Goals**:
   - Maintain existing direct sales revenue (baseline protection)
   - Generate additional revenue through OTA channel (incremental growth)
-  - **NEW**: Enable B2B2C revenue streams through reseller distribution
-  - **NEW**: Support custom pricing overrides for special batch campaigns
+  - Support custom pricing overrides for special batch campaigns
   - Preserve complex pricing model across all channels
 - **Operational Constraints**:
   - Nov 15, 2025 hard deadline for OTA partner launch
   - Must maintain existing cruise platform functionality (PRD-001)
   - Channel inventory separation to prevent overselling
-  - **NEW**: Support for 100+ ticket batch distribution to sub-resellers
+  - Support for 100+ ticket batch distribution to sub-resellers
 - **Partnership Requirements**:
   - Secure API access for external platforms with partner isolation
   - Real-time inventory synchronization
   - Automated reservation expiry to prevent inventory blocking
   - Multi-partner support with segregated ticket management
-  - **NEW**: Batch tracking and audit trail for reseller distribution
+  - Basic batch tracking for distribution
 
 ## Product Specification
 
@@ -114,27 +114,17 @@ deadline: "2025-11-15"
   - Inventory immediately released on expiry
 - **Priority**: High
 
+
 **B2B2C Reseller Batch Management** *(NEW)*
 - **Description**: Bulk ticket generation for OTA partners to distribute to sub-resellers
 - **Business Value**: Expands market reach through reseller networks without direct partnership overhead
 - **User Value**: OTA partners can efficiently distribute tickets to multiple downstream sellers
 - **Acceptance Criteria**:
-  - Support for 100+ ticket batches with reseller tracking metadata
-  - Batch-level expiry management (longer expiry for reseller distribution)
-  - Audit trail for ticket distribution from OTA to reseller to end customer
-  - Reseller-specific batch identification and tracking
+  - Support for 100+ ticket batches with basic reseller tracking
+  - Batch-level expiry management (30 days for reseller distribution vs 7 days direct)
+  - Basic batch identification and metadata tracking
 - **Priority**: Medium
 
-**Usage-Based Reseller Billing** *(NEW)*
-- **Description**: Charge resellers based on actual ticket redemption events, not purchase events
-- **Business Value**: Revenue recognition aligned with actual value delivery, reduces reseller risk
-- **User Value**: Resellers only pay for tickets that customers actually use
-- **Acceptance Criteria**:
-  - Track redemption events back to originating batch and reseller
-  - Generate billing summaries per reseller per billing period
-  - Real-time redemption counts per batch for reseller analytics
-  - Automated billing event generation when tickets are redeemed at venues
-- **Priority**: High
 
 **Special Batch Pricing Override** *(NEW)*
 - **Description**: Enable custom pricing for specific ticket batches independent of standard product pricing
@@ -147,6 +137,47 @@ deadline: "2025-11-15"
   - Default to product pricing when no special pricing is specified
   - Locked-in pricing survives product price changes during batch lifecycle
 - **Priority**: High
+
+**Ticket Status Lifecycle Management** *(NEW - 2025-11-14)*
+- **Description**: Automated ticket status transitions based on entitlement consumption
+- **Business Value**: Provides clear inventory visibility and accurate billing reconciliation for OTA partners
+- **User Value**: Partners can track ticket usage lifecycle from generation through complete consumption
+- **Acceptance Criteria**:
+  - **PRE_GENERATED**: Newly generated tickets awaiting customer activation
+  - **ACTIVE**: Activated tickets ready for redemption
+  - **USED**: Automatically marked when all entitlements fully consumed (all remaining_uses = 0)
+  - **EXPIRED**: Past valid date (manual or automatic)
+  - **CANCELLED**: Partner-initiated cancellation
+  - Automatic ACTIVE → USED transition during venue scanning when last entitlement redeemed
+  - Status visible in ticket info API (`GET /qr/:code/info`) with entitlements breakdown
+  - Audit trail tracks status transitions for billing and analytics
+- **Priority**: High
+
+**Unified QR Code Generation API** *(NEW)*
+- **Description**: On-demand secure QR code generation for both OTA and normal tickets
+- **Business Value**: Enables flexible ticket delivery and reduces storage costs by generating QR codes when needed
+- **User Value**: Users receive secure, time-limited QR codes optimized for venue scanning and WeChat verification
+- **Acceptance Criteria**:
+  - Support both encrypted QR codes (for redemption) and URL-based QR codes (for WeChat scanning)
+  - API key authentication for OTA partners, JWT authentication for normal users
+  - Configurable expiry time (1-1440 minutes, default 30 minutes)
+  - Base64 PNG image output for direct display in applications
+  - AES-256-GCM encryption with HMAC-SHA256 signature for security
+  - Partner isolation ensures OTA partners can only generate QR for their tickets
+  - **NEW**: Info endpoint (`GET /qr/:code/info`) returns ticket status and entitlements without generating QR
+- **Priority**: High
+
+**WeChat QR Code Verification** *(NEW)*
+- **Description**: Browser-based ticket verification endpoint for WeChat users
+- **Business Value**: Improves user experience within WeChat ecosystem without requiring separate app
+- **User Value**: Users can verify ticket validity by scanning QR code within WeChat
+- **Acceptance Criteria**:
+  - HTML page rendering optimized for WeChat in-app browser
+  - Decryption and verification of encrypted QR tokens
+  - Display ticket details (code, product, status, validity)
+  - Support for both Chinese and English bilingual interface
+  - Clear expiry and error messaging
+- **Priority**: Medium
 
 ### Technical Requirements
 - **Performance**:
@@ -368,10 +399,9 @@ POST /api/ota/tickets/bulk-generate:
     quantity: number (1-5000)
     batch_id: string
     distribution_mode: "direct_sale" | "reseller_batch"  # NEW: Specify intended use (affects expiry: 7 days vs 30 days)
-    reseller_metadata?: {                                # NEW: For B2B2C distribution (REQUIRED for reseller_batch mode)
-      intended_reseller: string                        # REQUIRED when distribution_mode = "reseller_batch"
-      batch_purpose: string
-      distribution_notes?: string
+    reseller_info?: {                                    # Basic reseller tracking
+      reseller_name: string                            # Simple reseller identification
+      batch_purpose?: string
     }
     batch_metadata?: {                                   # NEW: Campaign and marketing metadata
       campaign_type: "early_bird" | "flash_sale" | "group_discount" | "seasonal" | "standard"
@@ -480,81 +510,63 @@ GET /api/ota/orders/{order_id}/tickets:
         status: string
       ]
 
-#### Reseller Billing & Analytics *(NEW)*
+
+#### Batch Analytics *(Simplified)*
 ```yaml
-GET /api/ota/batches/{batch_id}/redemptions:
-  summary: Get redemption events for specific batch
-  responses:
-    200:
-      batch_id: string
-      total_redemptions: number
-      redemption_events: array[
-        ticket_code: string
-        function_code: string
-        redeemed_at: string
-        venue_name: string
-        wholesale_price: number
-      ]
-
-GET /api/ota/billing/summary:
-  summary: Get billing summary for reseller
-  parameters:
-    - period: "2025-11" (YYYY-MM format)
-    - reseller: string (optional filter)
-  responses:
-    200:
-      billing_period: string
-      reseller_summaries: array[
-        reseller_name: string
-        total_redemptions: number
-        total_amount_due: number
-        batches: array[
-          batch_id: string
-          redemptions_count: number
-          wholesale_rate: number
-          amount_due: number
-        ]
-      ]
-
 GET /api/ota/batches/{batch_id}/analytics:
-  summary: Real-time batch performance analytics
+  summary: Basic batch performance analytics
   responses:
     200:
       batch_id: string
-      reseller_name: string
-      campaign_type: string      # NEW: e.g., "early_bird", "flash_sale"
-      campaign_name: string      # NEW: e.g., "Spring 2025 Early Bird"
+      campaign_type: string
+      campaign_name: string
       generated_at: string
       tickets_generated: number
       tickets_activated: number
-      tickets_redeemed: number
       conversion_rates:
         activation_rate: number  # activated/generated
-        redemption_rate: number  # redeemed/activated
-        overall_utilization: number  # redeemed/generated
-      revenue_metrics:
-        potential_revenue: number  # all tickets * wholesale_price
-        realized_revenue: number   # redeemed tickets * wholesale_price
-      batch_metadata:            # NEW: Complete campaign context
+      batch_metadata:
         marketing_tags: string[]
-        special_conditions: string[]
         promotional_code: string
+```
 
-GET /api/ota/campaigns/analytics:                        # NEW: Campaign performance
-  summary: Analytics by campaign type across all batches
+#### QR Code Generation *(NEW - Phase 4)*
+```yaml
+POST /qr/{ticket_code}:
+  summary: Generate secure QR code for ticket (OTA or normal)
+  security:
+    - ApiKeyAuth: []  # For OTA partners
+    - BearerAuth: []  # For normal users
   parameters:
-    - campaign_type: "early_bird" | "flash_sale" | "seasonal" (optional)
-    - date_range: "2025-11" (YYYY-MM format)
+    - ticket_code: string (path) - Ticket code to generate QR for
+    - type: "encrypted" | "url" (query, optional) - QR type
+  requestBody:
+    expiry_minutes: number (optional, 1-1440, default: 30)
+    qr_type: "encrypted" | "url" (optional, default: "encrypted")
   responses:
     200:
-      campaign_summaries: array[
-        campaign_type: string
-        total_batches: number
-        total_tickets_generated: number
-        total_tickets_redeemed: number
-        average_conversion_rate: number
-        top_performing_resellers: string[]
-      ]
+      success: boolean
+      qr_image: string (Base64 PNG)
+      qr_type: string
+      ticket_code: string
+      expires_at: string (ISO 8601)
+      valid_for_seconds: number
+      verify_url: string (only for qr_type=url)
+      note: string (usage instructions)
+    400: Invalid ticket code or expiry parameters
+    401: Authentication required
+    403: Ticket type mismatch or unauthorized access
+    404: Ticket not found
+    409: Invalid ticket status
+    500: Server configuration error
+
+GET /qr/verify:
+  summary: Verify QR code for WeChat users
+  parameters:
+    - t: string (query) - Encrypted token from QR code
+  responses:
+    200: HTML page with ticket verification details
+    400: Invalid or missing token (HTML error page)
 ```
 ```
 
@@ -577,14 +589,6 @@ GET /api/ota/campaigns/analytics:                        # NEW: Campaign perform
   - **Target Scenario**: B2B2C distribution networks requiring extended sales cycles
 - **Common Behavior**: Both modes use same `ota_ticket_batches` table with `distribution_mode` field differentiation
 
-### Reseller Billing Logic *(NEW)*
-- **Billing Trigger**: Charge events generated when tickets are redeemed at venues (not when purchased)
-- **Batch Traceability**: Every redemption event links back to originating batch and reseller
-- **Billing Periods**: Monthly billing cycles with real-time redemption tracking
-- **Revenue Recognition**: Payment due when end customer uses the service
-- **Pricing Model**: Resellers pay wholesale price from batch `pricing_snapshot` at redemption time
-- **Special Pricing Support**: Custom batch pricing overrides locked-in at generation time
-- **Settlement**: Automated billing summaries generated per reseller per month
 
 ### System Architecture Flows
 
@@ -809,6 +813,23 @@ Test Scenarios:
 - ✅ Database migration successfully applied
 - ✅ Live production testing completed
 - ✅ Launch readiness confirmation - **10 days early delivery**
+
+**Phase 4** (Nov 10-12, 2025): QR Code Enhancement - ✅ **COMPLETED**
+- ✅ Unified QR generation API (`POST /qr/:code`)
+- ✅ WeChat verification endpoint (`GET /qr/verify`)
+- ✅ AES-256-GCM encryption with HMAC-SHA256 signature
+- ✅ Support for both encrypted and URL-based QR codes
+- ✅ Configurable expiry times (1-1440 minutes)
+- ✅ Partner isolation for OTA ticket QR generation
+- ✅ Integration guide for OTA partners (OTA_QR_CODE_GUIDE.md)
+- ✅ Database migration for tickets.raw field
+
+**Phase 5** (Nov 14, 2025): Ticket Lifecycle Enhancement - ✅ **COMPLETED**
+- ✅ Auto-USED status transition when all entitlements consumed
+- ✅ Ticket info API endpoint (`GET /qr/:code/info`) with entitlements
+- ✅ session_code made optional in venue scanning workflow
+- ✅ Complete documentation synchronization across cards, PRDs, stories
+- ✅ Enhanced OTA ticket lifecycle management for accurate billing reconciliation
 
 ### Resource Requirements
 - **Engineering**: 1 AI developer (full-stack implementation)

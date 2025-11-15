@@ -6,123 +6,6 @@ const router = Router();
 
 /**
  * @swagger
- * /venue/sessions:
- *   post:
- *     summary: Create venue operator session (Enhanced US-002)
- *     description: Creates an operator session tied to a specific venue for PRD-003 multi-terminal operations
- *     tags: [Venue Operations]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - venue_code
- *               - operator_id
- *               - operator_name
- *             properties:
- *               venue_code:
- *                 type: string
- *                 description: Venue identifier (central-pier, cheung-chau, gift-shop-central)
- *                 example: "central-pier"
- *               operator_id:
- *                 type: integer
- *                 description: Operator user ID
- *                 example: 1001
- *               operator_name:
- *                 type: string
- *                 description: Operator display name
- *                 example: "Alice Chan"
- *               terminal_device_id:
- *                 type: string
- *                 description: Physical terminal device identifier
- *                 example: "TERMINAL-CP-001"
- *               duration_hours:
- *                 type: integer
- *                 description: Session duration in hours (default 8)
- *                 example: 8
- *     responses:
- *       201:
- *         description: Venue session created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 session_code:
- *                   type: string
- *                   example: "VS-1699123456789-abc123def"
- *                 venue_code:
- *                   type: string
- *                   example: "central-pier"
- *                 venue_name:
- *                   type: string
- *                   example: "Central Pier Terminal"
- *                 operator_name:
- *                   type: string
- *                   example: "Alice Chan"
- *                 expires_at:
- *                   type: string
- *                   format: date-time
- *                   example: "2025-11-04T16:00:00.000Z"
- *                 supported_functions:
- *                   type: array
- *                   items:
- *                     type: string
- *                   example: ["ferry_boarding", "gift_redemption"]
- */
-router.post('/sessions', async (req, res) => {
-  const { venue_code, operator_id, operator_name, terminal_device_id, duration_hours } = req.body;
-
-  if (!venue_code || !operator_id || !operator_name) {
-    return res.status(400).json({
-      error: 'INVALID_REQUEST',
-      message: 'venue_code, operator_id, and operator_name are required'
-    });
-  }
-
-  try {
-    const session = await venueOperationsService.createVenueSession({
-      venueCode: venue_code,
-      operatorId: operator_id,
-      operatorName: operator_name,
-      terminalDeviceId: terminal_device_id,
-      durationHours: duration_hours
-    });
-
-    if (!session) {
-      return res.status(404).json({
-        error: 'VENUE_NOT_FOUND',
-        message: `Venue ${venue_code} not found or inactive`
-      });
-    }
-
-    logger.info('venue.session.created', {
-      session_code: session.session_code,
-      venue_code: session.venue_code,
-      operator_id,
-      terminal_device: terminal_device_id
-    });
-
-    res.status(201).json(session);
-
-  } catch (error) {
-    logger.error('venue.session.create.error', {
-      venue_code,
-      operator_id,
-      error: (error as Error).message
-    });
-
-    res.status(500).json({
-      error: 'INTERNAL_ERROR',
-      message: 'Failed to create venue session'
-    });
-  }
-});
-
-/**
- * @swagger
  * /venue/scan:
  *   post:
  *     summary: Enhanced venue scanning with fraud prevention (PRD-003)
@@ -225,10 +108,10 @@ router.post('/sessions', async (req, res) => {
 router.post('/scan', async (req, res) => {
   const { qr_token, function_code, session_code, terminal_device_id } = req.body;
 
-  if (!qr_token || !function_code || !session_code) {
+  if (!qr_token || !function_code) {
     return res.status(400).json({
       error: 'INVALID_REQUEST',
-      message: 'qr_token, function_code, and session_code are required'
+      message: 'qr_token and function_code are required'
     });
   }
 
@@ -247,7 +130,6 @@ router.post('/scan', async (req, res) => {
   } catch (error) {
     logger.error('venue.scan.error', {
       function_code,
-      session_code,
       terminal_device: terminal_device_id,
       error: (error as Error).message
     });

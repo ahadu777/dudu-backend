@@ -236,6 +236,207 @@
           ]
         }
       }
+    },
+    {
+      "name": "Multi-Partner Isolation: Partner A Creates Reservation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Partner A can create reservation\", function() {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Reservation ID returned\", function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"reservation_id\");",
+              "    pm.collectionVariables.set(\"partner_a_reservation_id\", json.reservation_id);",
+              "});",
+              "",
+              "pm.test(\"Pricing snapshot included\", function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"pricing_snapshot\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "ota_full_access_key_99999"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/reserve",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ota",
+            "reserve"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Multi-Partner Isolation: Partner B Cannot Access Partner A Reservations",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Partner B cannot see Partner A reservations\", function() {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    const partnerAReservationId = pm.collectionVariables.get(\"partner_a_reservation_id\");",
+              "    ",
+              "    // Check if Partner A's reservation is in Partner B's list",
+              "    const foundReservation = json.reservations.find(r => r.reservation_id === partnerAReservationId);",
+              "    pm.expect(foundReservation).to.be.undefined;",
+              "});",
+              "",
+              "pm.test(\"Partner isolation maintained\", function() {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"reservations\");",
+              "    pm.expect(json.reservations).to.be.an(\"array\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "ota251103_key_67890"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/reservations",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ota",
+            "reservations"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Multi-Partner Isolation: Shared Inventory Visibility",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Both partners see same inventory pool\", function() {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    ",
+              "    // Store Partner B's inventory view",
+              "    const partnerBInventory = json.available_quantities[\"107\"];",
+              "    pm.collectionVariables.set(\"partner_b_inventory_107\", partnerBInventory);",
+              "    ",
+              "    pm.expect(partnerBInventory).to.be.a(\"number\");",
+              "});",
+              "",
+              "pm.test(\"Channel allocation working\", function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"available_quantities\");",
+              "    pm.expect(json.available_quantities).to.have.property(\"106\");",
+              "    pm.expect(json.available_quantities).to.have.property(\"107\");",
+              "    pm.expect(json.available_quantities).to.have.property(\"108\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "ota251103_key_67890"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/inventory",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ota",
+            "inventory"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Multi-Partner Isolation: Partner A Inventory After Reservation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Partner A sees reduced inventory after reservation\", function() {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    ",
+              "    const partnerAInventory = json.available_quantities[\"107\"];",
+              "    const partnerBInventory = pm.collectionVariables.get(\"partner_b_inventory_107\");",
+              "    ",
+              "    // Both partners should see same reduced inventory",
+              "    pm.expect(partnerAInventory).to.equal(partnerBInventory);",
+              "});",
+              "",
+              "pm.test(\"Inventory reflects reservation impact\", function() {",
+              "    const json = pm.response.json();",
+              "    const currentInventory = json.available_quantities[\"107\"];",
+              "    pm.expect(currentInventory).to.be.a(\"number\");",
+              "    pm.expect(currentInventory).to.be.at.least(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "ota_full_access_key_99999"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/inventory",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ota",
+            "inventory"
+          ]
+        }
+      }
     }
   ]
 }

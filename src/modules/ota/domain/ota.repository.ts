@@ -5,6 +5,8 @@ import { ChannelReservationEntity, ReservationStatus } from './channel-reservati
 import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
+import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
+import { generateSecureQR } from '../../../utils/qr-crypto';
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
@@ -13,6 +15,7 @@ export class OTARepository {
   private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
   private otaOrderRepo: Repository<OTAOrderEntity>;
   private batchRepo: Repository<OTATicketBatchEntity>;
+  private resellerRepo: Repository<OTAResellerEntity>;
 
   constructor(private dataSource: DataSource) {
     this.productRepo = dataSource.getRepository(ProductEntity);
@@ -21,6 +24,7 @@ export class OTARepository {
     this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
     this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
     this.batchRepo = dataSource.getRepository(OTATicketBatchEntity);
+    this.resellerRepo = dataSource.getRepository(OTAResellerEntity);
   }
 
   // Product operations
@@ -312,7 +316,8 @@ export class OTARepository {
       phone: string;
     },
     paymentReference: string,
-    specialRequests?: string
+    specialRequests?: string,
+    customerTypes?: Array<'adult' | 'child' | 'elderly'>
   ): Promise<{ order: OTAOrderEntity; tickets: PreGeneratedTicketEntity[] }> {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -359,9 +364,46 @@ export class OTARepository {
       const orderId = `ORD-${Date.now()}`;
       const confirmationCode = `CONF-${Date.now()}`;
 
-      // Calculate total amount based on pricing snapshot
-      const basePrice = reservation.pricing_snapshot?.base_price || Number(product.base_price);
-      const totalAmount = basePrice * reservation.quantity;
+      // Calculate total amount based on customer types (similar to ticket activation logic)
+      let totalAmount = 0;
+
+      if (customerTypes && customerTypes.length > 0 && reservation.pricing_snapshot?.customer_type_pricing) {
+        // Calculate based on each customer type from pricing snapshot
+        for (const customerType of customerTypes) {
+          const pricing = reservation.pricing_snapshot.customer_type_pricing.find(
+            (p: any) => p.customer_type === customerType
+          );
+
+          if (!pricing) {
+            throw new Error(`Customer type ${customerType} not found in pricing snapshot for reservation ${reservationId}`);
+          }
+
+          totalAmount += pricing.unit_price;
+        }
+
+        // DEBUG: Log price calculation
+        console.log('ota.reservation.activation_price_calculated', {
+          reservation_id: reservationId,
+          customer_types: customerTypes,
+          individual_prices: customerTypes.map(ct => {
+            const p = reservation.pricing_snapshot!.customer_type_pricing!.find((x: any) => x.customer_type === ct);
+            return { type: ct, price: p?.unit_price };
+          }),
+          total_amount: totalAmount
+        });
+      } else {
+        // Fallback: use base price for all tickets
+        const basePrice = reservation.pricing_snapshot?.base_price || Number(product.base_price);
+        totalAmount = basePrice * reservation.quantity;
+
+        console.log('ota.reservation.activation_price_fallback', {
+          reservation_id: reservationId,
+          base_price: basePrice,
+          quantity: reservation.quantity,
+          total_amount: totalAmount,
+          reason: !customerTypes ? 'no_customer_types' : 'no_pricing_snapshot'
+        });
+      }
 
       const order = queryRunner.manager.create(OTAOrderEntity, {
         order_id: orderId,
@@ -395,12 +437,21 @@ export class OTARepository {
         const ticketId = Date.now() + (Math.random() * 1000) + i;
         const ticketCode = `${product.category?.toUpperCase() || 'TICKET'}-${new Date().getFullYear()}-P${product.id}-${Math.floor(ticketId)}`;
 
-        const qrData = JSON.stringify({
-          ticket_id: ticketId,
-          product_id: product.id,
-          order_id: orderId,
-          issued_at: new Date().toISOString()
-        });
+        // Get customer_type for this ticket (if provided)
+        const customerType = customerTypes && customerTypes[i] ? customerTypes[i] : undefined;
+
+        // Generate QR code for activated ticket
+        const qrResult = await generateSecureQR(ticketCode);
+        const rawMetadata = {
+          jti: {
+            pre_generated_jti: qrResult.jti,
+            current_jti: qrResult.jti
+          },
+          qr_metadata: {
+            issued_at: new Date().toISOString(),
+            expires_at: qrResult.expires_at
+          }
+        };
 
         const ticket = queryRunner.manager.create(PreGeneratedTicketEntity, {
           ticket_code: ticketCode,
@@ -408,14 +459,16 @@ export class OTARepository {
           batch_id: `RESERVATION-${reservationId}`,
           partner_id: reservation.channel_id,
           status: 'ACTIVE' as TicketStatus,
-          qr_code: `data:image/png;base64,${Buffer.from(qrData).toString('base64')}`,
+          qr_code: qrResult.qr_image,  // Store QR image for immediate use
           entitlements: entitlements,
           customer_name: customerData.name,
           customer_email: customerData.email,
           customer_phone: customerData.phone,
+          customer_type: customerType,
           order_id: orderId,
           payment_reference: paymentReference,
-          activated_at: new Date()
+          activated_at: new Date(),
+          raw: rawMetadata
         });
 
         tickets.push(ticket);
@@ -498,6 +551,7 @@ export class OTARepository {
       customer_name: string;
       customer_email: string;
       customer_phone?: string;
+      customer_type: 'adult' | 'child' | 'elderly';
       payment_reference: string;
     },
     orderData: Partial<OTAOrderEntity>
@@ -519,6 +573,7 @@ export class OTARepository {
       // Create the order
       const order = queryRunner.manager.create(OTAOrderEntity, {
         ...orderData,
+        partner_id: partnerId,  // Add partner_id for order isolation
         customer_name: customerData.customer_name,
         customer_email: customerData.customer_email,
         customer_phone: customerData.customer_phone,
@@ -527,14 +582,18 @@ export class OTARepository {
 
       const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
 
-      // Update the ticket with customer info and link to order
+      // Update the ticket with customer info and activation status
+      // Note: QR codes are generated on-demand when requested via POST /qr/{code}
+      // NOT stored in database to maintain security and freshness
       ticket.customer_name = customerData.customer_name;
       ticket.customer_email = customerData.customer_email;
       ticket.customer_phone = customerData.customer_phone;
+      ticket.customer_type = customerData.customer_type;
       ticket.payment_reference = customerData.payment_reference;
       ticket.order_id = savedOrder.order_id;
       ticket.status = 'ACTIVE';
       ticket.activated_at = new Date();
+      // QR code removed - will be generated on-demand via POST /qr/{code}
 
       const savedTicket = await queryRunner.manager.save(PreGeneratedTicketEntity, ticket);
 
@@ -675,59 +734,497 @@ export class OTARepository {
       .getMany();
   }
 
-  async updateBatchCounters(batchId: string, updates: {
-    tickets_generated?: number;
-    tickets_activated?: number;
-    tickets_redeemed?: number;
-    revenue_realized?: number;
-  }): Promise<boolean> {
-    const batch = await this.batchRepo.findOne({ where: { batch_id: batchId } });
-    if (!batch) return false;
+  // ========================================
+  // Optimized batch queries with statistics (single JOIN query)
+  // ========================================
 
-    if (updates.tickets_generated !== undefined) {
-      batch.tickets_generated = updates.tickets_generated;
-    }
-    if (updates.tickets_activated !== undefined) {
-      batch.tickets_activated = updates.tickets_activated;
-    }
-    if (updates.tickets_redeemed !== undefined) {
-      batch.tickets_redeemed = updates.tickets_redeemed;
-    }
-    if (updates.revenue_realized !== undefined) {
-      batch.total_revenue_realized = updates.revenue_realized;
-    }
+  /**
+   * Find a single batch with statistics computed via JOIN
+   * This is much faster than separate queries
+   */
+  async findBatchWithStats(batchId: string): Promise<OTATicketBatchEntity | null> {
+    const result = await this.dataSource.query(`
+      SELECT
+        b.*,
+        COUNT(t.ticket_code) as tickets_generated,
+        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE
+          WHEN t.status = 'USED' THEN
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
+            CASE
+              WHEN t.customer_type = 'child' THEN 0.65
+              WHEN t.customer_type = 'elderly' THEN 0.83
+              ELSE 1.0
+            END
+          ELSE 0
+        END) as total_revenue_realized
+      FROM ota_ticket_batches b
+      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+      WHERE b.batch_id = ?
+      GROUP BY b.batch_id
+    `, [batchId]);
 
-    await this.batchRepo.save(batch);
-    return true;
+    if (!result || result.length === 0) return null;
+
+    return this.mapRowToBatchWithStats(result[0]);
   }
 
+  /**
+   * Find multiple batches with statistics via JOIN
+   * Optimized for listing pages - avoids N+1 query problem
+   */
+  async findBatchesWithStats(partnerId?: string, limit?: number, offset?: number): Promise<OTATicketBatchEntity[]> {
+    let query = `
+      SELECT
+        b.*,
+        COUNT(t.ticket_code) as tickets_generated,
+        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE
+          WHEN t.status = 'USED' THEN
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
+            CASE
+              WHEN t.customer_type = 'child' THEN 0.65
+              WHEN t.customer_type = 'elderly' THEN 0.83
+              ELSE 1.0
+            END
+          ELSE 0
+        END) as total_revenue_realized
+      FROM ota_ticket_batches b
+      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+    `;
+
+    const params: any[] = [];
+    if (partnerId) {
+      query += ' WHERE b.partner_id = ?';
+      params.push(partnerId);
+    }
+
+    query += ' GROUP BY b.batch_id ORDER BY b.created_at DESC';
+
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(limit);
+      if (offset) {
+        query += ' OFFSET ?';
+        params.push(offset);
+      }
+    }
+
+    const results = await this.dataSource.query(query, params);
+    return results.map((row: any) => this.mapRowToBatchWithStats(row));
+  }
+
+  /**
+   * Helper method to map raw SQL row to entity with stats
+   */
+  private mapRowToBatchWithStats(row: any): OTATicketBatchEntity {
+    const batch = new OTATicketBatchEntity();
+
+    // Map basic fields
+    batch.batch_id = row.batch_id;
+    batch.partner_id = row.partner_id;
+    batch.product_id = row.product_id;
+    batch.total_quantity = row.total_quantity;
+    batch.distribution_mode = row.distribution_mode;
+    batch.pricing_snapshot = typeof row.pricing_snapshot === 'string'
+      ? JSON.parse(row.pricing_snapshot)
+      : row.pricing_snapshot;
+    batch.reseller_metadata = row.reseller_metadata
+      ? (typeof row.reseller_metadata === 'string' ? JSON.parse(row.reseller_metadata) : row.reseller_metadata)
+      : undefined;
+    batch.batch_metadata = row.batch_metadata
+      ? (typeof row.batch_metadata === 'string' ? JSON.parse(row.batch_metadata) : row.batch_metadata)
+      : undefined;
+    batch.expires_at = row.expires_at;
+    batch.status = row.status;
+    batch.created_at = row.created_at;
+    batch.updated_at = row.updated_at;
+
+    // Map computed statistics (transient properties)
+    batch.tickets_generated = parseInt(row.tickets_generated) || 0;
+    batch.tickets_activated = parseInt(row.tickets_activated) || 0;
+    batch.tickets_redeemed = parseInt(row.tickets_redeemed) || 0;
+    batch.total_revenue_realized = parseFloat(row.total_revenue_realized) || 0;
+
+    return batch;
+  }
+
+  /**
+   * Get batch analytics using optimized JOIN query
+   * This is the preferred method for fetching batch statistics
+   */
   async getBatchAnalytics(batchId: string): Promise<any | null> {
-    const batch = await this.findBatchById(batchId);
-    return batch ? batch.getBillingSummary() : null;
+    // Use optimized single-query method
+    const batch = await this.findBatchWithStats(batchId);
+    if (!batch) return null;
+
+    const basePrice = batch.pricing_snapshot.base_price;
+    const tickets_generated = batch.tickets_generated ?? 0;
+    const tickets_activated = batch.tickets_activated ?? 0;
+    const tickets_redeemed = batch.tickets_redeemed ?? 0;
+    const total_revenue = batch.total_revenue_realized ?? 0;
+
+    return {
+      batch_id: batch.batch_id,
+      reseller_name: batch.reseller_metadata?.intended_reseller || 'Direct Sale',
+      campaign_type: batch.batch_metadata?.campaign_type || 'standard',
+      campaign_name: batch.batch_metadata?.campaign_name || 'Standard Batch',
+      generated_at: batch.created_at,
+      tickets_generated,
+      tickets_activated,
+      tickets_redeemed,
+      conversion_rates: {
+        activation_rate: tickets_generated > 0 ? tickets_activated / tickets_generated : 0,
+        redemption_rate: tickets_activated > 0 ? tickets_redeemed / tickets_activated : 0,
+        overall_utilization: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
+      },
+      revenue_metrics: {
+        potential_revenue: tickets_generated * basePrice,
+        realized_revenue: total_revenue,
+        realization_rate: tickets_generated > 0 ? total_revenue / (tickets_generated * basePrice) : 0
+      },
+      wholesale_rate: basePrice,
+      amount_due: total_revenue.toFixed(2),
+      batch_metadata: batch.batch_metadata || {}
+    };
   }
 
+  /**
+   * Get reseller billing summary with optimized query
+   * Uses JOIN to compute statistics in single query
+   */
   async getResellerBillingSummary(resellerName: string, period: string): Promise<any> {
-    const batches = await this.findBatchesByReseller(resellerName);
+    // Optimized query with stats computed via JOIN
+    // Note: batch_id is stored in lowercase in database, so we use LOWER() for comparison
+    // Billing happens when tickets are sold (ACTIVE) not when redeemed (USED)
+    const result = await this.dataSource.query(`
+      SELECT
+        b.*,
+        COUNT(t.ticket_code) as tickets_generated,
+        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_sold,
+        SUM(CASE
+          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'adult' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'child' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+            )
+          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'elderly' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+            )
+          ELSE 0
+        END) as total_revenue_realized
+      FROM ota_ticket_batches b
+      LEFT JOIN pre_generated_tickets t ON LOWER(t.batch_id) = LOWER(b.batch_id)
+      WHERE b.reseller_metadata IS NOT NULL
+        AND JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?
+        AND DATE_FORMAT(b.created_at, '%Y-%m') = ?
+      GROUP BY b.batch_id
+      ORDER BY b.created_at DESC
+    `, [resellerName, period]);
 
-    // Filter by period (YYYY-MM format)
-    const periodBatches = batches.filter(batch => {
-      return batch.created_at.toISOString().slice(0, 7) === period;
-    });
+    // Return empty if no results - this is normal
+    if (result.length === 0) {
+      return {
+        billing_period: period,
+        reseller_summaries: []
+      };
+    }
 
-    const summary = {
-      billing_period: period,
+    const periodBatches = result.map((row: any) => ({
+      batch_id: row.batch_id,
+      tickets_generated: parseInt(row.tickets_generated) || 0,
+      tickets_sold: parseInt(row.tickets_sold) || 0,
+      total_revenue_realized: parseFloat(row.total_revenue_realized) || 0,
+      pricing_snapshot: typeof row.pricing_snapshot === 'string' ? JSON.parse(row.pricing_snapshot) : row.pricing_snapshot
+    }));
+
+    const totalSold = periodBatches.reduce((sum: number, b: any) => sum + b.tickets_sold, 0);
+    const totalRevenue = periodBatches.reduce((sum: number, b: any) => sum + b.total_revenue_realized, 0);
+
+    const resellerSummary = {
       reseller_name: resellerName,
       total_batches: periodBatches.length,
-      total_redemptions: periodBatches.reduce((sum, b) => sum + b.tickets_redeemed, 0),
-      total_amount_due: periodBatches.reduce((sum, b) => sum + b.total_revenue_realized, 0),
-      batches: periodBatches.map(batch => ({
+      total_sales: totalSold,
+      total_amount_due: totalRevenue.toFixed(2),
+      batches: periodBatches.map((batch: any) => ({
         batch_id: batch.batch_id,
-        redemptions_count: batch.tickets_redeemed,
+        sales_count: batch.tickets_sold,
         wholesale_rate: batch.pricing_snapshot.base_price,
-        amount_due: batch.total_revenue_realized
+        amount_due: batch.total_revenue_realized.toFixed(2)
       }))
     };
 
-    return summary;
+    return {
+      billing_period: period,
+      reseller_summaries: [resellerSummary]
+    };
+  }
+
+  async getBatchRedemptions(batchId: string): Promise<any[]> {
+    // Complex JOIN query: redemption_events -> tickets -> batch -> venue
+    const result = await this.dataSource.query(`
+      SELECT
+        r.ticket_code,
+        r.function_code,
+        r.redeemed_at,
+        v.venue_name,
+        JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) as wholesale_price
+      FROM redemption_events r
+      INNER JOIN pre_generated_tickets t ON r.ticket_code = t.ticket_code
+      INNER JOIN ota_ticket_batches b ON t.batch_id = b.batch_id
+      LEFT JOIN venues v ON r.venue_id = v.venue_id
+      WHERE b.batch_id = ?
+        AND r.result = 'success'
+      ORDER BY r.redeemed_at DESC
+    `, [batchId]);
+
+    return result.map((row: any) => ({
+      ticket_code: row.ticket_code,
+      function_code: row.function_code,
+      redeemed_at: row.redeemed_at,
+      venue_name: row.venue_name || 'Unknown Venue',
+      wholesale_price: parseFloat(row.wholesale_price) || 0
+    }));
+  }
+
+  // ============= ADMIN MANAGEMENT QUERIES =============
+
+  /**
+   * Get orders summary for a specific partner
+   */
+  async getPartnerOrdersSummary(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
+    const query = this.otaOrderRepo.createQueryBuilder('order')
+      .where('order.partner_id = :partnerId', { partnerId });
+
+    if (dateRange?.start_date) {
+      query.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
+    }
+    if (dateRange?.end_date) {
+      query.andWhere('order.created_at <= :endDate', { endDate: dateRange.end_date });
+    }
+
+    const orders = await query.getMany();
+
+    const byStatus: any = {};
+    orders.forEach(order => {
+      byStatus[order.status] = (byStatus[order.status] || 0) + 1;
+    });
+
+    return {
+      total_count: orders.length,
+      total_revenue: orders.reduce((sum, o) => sum + Number(o.total_amount), 0),
+      avg_order_value: orders.length > 0
+        ? orders.reduce((sum, o) => sum + Number(o.total_amount), 0) / orders.length
+        : 0,
+      by_status: byStatus
+    };
+  }
+
+  /**
+   * Get reservations summary for a specific partner
+   */
+  async getPartnerReservationsSummary(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
+    const query = this.reservationRepo.createQueryBuilder('reservation')
+      .where('reservation.channel_id = :partnerId', { partnerId });
+
+    if (dateRange?.start_date) {
+      query.andWhere('reservation.created_at >= :startDate', { startDate: dateRange.start_date });
+    }
+    if (dateRange?.end_date) {
+      query.andWhere('reservation.created_at <= :endDate', { endDate: dateRange.end_date });
+    }
+
+    const reservations = await query.getMany();
+
+    const byStatus: any = {};
+    reservations.forEach(res => {
+      byStatus[res.status] = (byStatus[res.status] || 0) + 1;
+    });
+
+    return {
+      total_count: reservations.length,
+      total_quantity: reservations.reduce((sum, r) => sum + r.quantity, 0),
+      by_status: byStatus
+    };
+  }
+
+  /**
+   * Get tickets summary for a specific partner
+   */
+  async getPartnerTicketsSummary(partnerId: string) {
+    const tickets = await this.preGeneratedTicketRepo.find({
+      where: { partner_id: partnerId }
+    });
+
+    const byStatus: any = {};
+    const byProduct: any = {};
+
+    tickets.forEach((ticket: PreGeneratedTicketEntity) => {
+      byStatus[ticket.status] = (byStatus[ticket.status] || 0) + 1;
+      byProduct[ticket.product_id] = (byProduct[ticket.product_id] || 0) + 1;
+    });
+
+    return {
+      total_generated: tickets.length,
+      by_status: byStatus,
+      by_product: byProduct
+    };
+  }
+
+  /**
+   * Get inventory usage for a specific partner
+   */
+  async getPartnerInventoryUsage(partnerId: string) {
+    const inventories = await this.inventoryRepo.find({
+      relations: ['product']
+    });
+
+    const usage: any = {};
+
+    for (const inventory of inventories) {
+      const allocation = inventory.channel_allocations[partnerId];
+      if (allocation) {
+        const total = allocation.allocated;
+        const used = allocation.reserved + allocation.sold;
+        const utilization = total > 0 ? ((used / total) * 100).toFixed(2) + '%' : '0%';
+
+        usage[inventory.product_id] = {
+          product_name: inventory.product?.name || `Product ${inventory.product_id}`,
+          allocated: allocation.allocated,
+          reserved: allocation.reserved,
+          sold: allocation.sold,
+          available: allocation.allocated - allocation.reserved - allocation.sold,
+          utilization_rate: utilization
+        };
+      }
+    }
+
+    return usage;
+  }
+
+  /**
+   * Get platform-wide summary
+   */
+  async getPlatformSummary(dateRange?: { start_date?: string; end_date?: string }) {
+    const orderQuery = this.otaOrderRepo.createQueryBuilder('order');
+
+    if (dateRange?.start_date) {
+      orderQuery.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
+    }
+    if (dateRange?.end_date) {
+      orderQuery.andWhere('order.created_at <= :endDate', { endDate: dateRange.end_date });
+    }
+
+    const orders = await orderQuery.getMany();
+    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
+    const totalTickets = await this.preGeneratedTicketRepo.count();
+    const activeTickets = await this.preGeneratedTicketRepo.count({ where: { status: 'ACTIVE' } });
+
+    return {
+      total_orders: orders.length,
+      total_revenue: totalRevenue,
+      total_tickets_generated: totalTickets,
+      total_tickets_activated: activeTickets
+    };
+  }
+
+  /**
+   * Get top partners by revenue
+   */
+  async getTopPartners(limit: number = 5, dateRange?: { start_date?: string; end_date?: string }) {
+    const query = this.otaOrderRepo.createQueryBuilder('order')
+      .select('order.partner_id', 'partner_id')
+      .addSelect('COUNT(order.order_id)', 'orders_count')
+      .addSelect('SUM(order.total_amount)', 'revenue')
+      .groupBy('order.partner_id')
+      .orderBy('revenue', 'DESC')
+      .limit(limit);
+
+    if (dateRange?.start_date) {
+      query.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
+    }
+    if (dateRange?.end_date) {
+      query.andWhere('order.created_at <= :endDate', { endDate: dateRange.end_date });
+    }
+
+    const results = await query.getRawMany();
+
+    return results.map((r: any) => ({
+      partner_id: r.partner_id,
+      orders_count: parseInt(r.orders_count),
+      revenue: parseFloat(r.revenue)
+    }));
+  }
+
+  /**
+   * Get inventory overview across all partners
+   */
+  async getInventoryOverview() {
+    const inventories = await this.inventoryRepo.find();
+
+    let totalAllocated = 0;
+    let totalReserved = 0;
+    let totalSold = 0;
+
+    inventories.forEach(inv => {
+      Object.values(inv.channel_allocations).forEach((allocation: any) => {
+        totalAllocated += allocation.allocated;
+        totalReserved += allocation.reserved;
+        totalSold += allocation.sold;
+      });
+    });
+
+    const overallUtilization = totalAllocated > 0
+      ? ((totalSold / totalAllocated) * 100).toFixed(2) + '%'
+      : '0%';
+
+    return {
+      total_allocated: totalAllocated,
+      total_reserved: totalReserved,
+      total_sold: totalSold,
+      overall_utilization: overallUtilization
+    };
+  }
+
+  // ============= RESELLER MANAGEMENT (NEW - 2025-11-14) =============
+
+  /**
+   * Find all resellers for a specific OTA partner
+   * Used for: Reseller listing, dropdown selections
+   */
+  async findResellersByPartner(partnerId: string): Promise<OTAResellerEntity[]> {
+    return this.resellerRepo.find({
+      where: { partner_id: partnerId, status: 'active' },
+      order: { reseller_name: 'ASC' }
+    });
+  }
+
+  /**
+   * Find reseller by ID (with partner isolation check)
+   * Used for: Reseller detail views, batch assignments
+   */
+  async findResellerById(id: number, partnerId: string): Promise<OTAResellerEntity | null> {
+    return this.resellerRepo.findOne({
+      where: { id, partner_id: partnerId }
+    });
+  }
+
+  /**
+   * Create new reseller
+   * Used for: Reseller onboarding (future API)
+   */
+  async createReseller(data: Partial<OTAResellerEntity>): Promise<OTAResellerEntity> {
+    const reseller = this.resellerRepo.create(data);
+    return this.resellerRepo.save(reseller);
   }
 }

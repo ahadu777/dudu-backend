@@ -7,8 +7,11 @@ const API_KEYS = new Map<string, { partner_id: string, partner_name: string, per
   ['ota_prod_key_67890', { partner_id: 'prod_partner', partner_name: 'Production OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create'], rate_limit: 1000 }],
   ['dudu_key_12345', { partner_id: 'dudu_partner', partner_name: 'DuDu Travel', permissions: ['inventory:read', 'tickets:bulk-generate', 'tickets:activate', 'orders:read'], rate_limit: 500 }],
   ['ota251103_key_67890', { partner_id: 'ota251103_partner', partner_name: 'OTA251103 Travel Group', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 300 }],
-  ['ota_full_access_key_99999', { partner_id: 'full_access', partner_name: 'OTA Full Access Partner', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'orders:create', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 500 }]
+  ['ota_full_access_key_99999', { partner_id: 'full_access', partner_name: 'OTA Full Access Partner', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'orders:create', 'tickets:bulk-generate', 'tickets:activate', 'admin:read', 'admin:partners:list'], rate_limit: 500 }]
 ]);
+
+// Export API_KEYS for admin services
+export { API_KEYS };
 
 // Rate limiting store (in production would use Redis)
 const rateLimitStore = new Map<string, { count: number, resetTime: number }>();
@@ -116,3 +119,38 @@ export function cleanupRateLimits() {
 
 // Schedule cleanup every 5 minutes
 setInterval(cleanupRateLimits, 5 * 60 * 1000);
+
+// Admin authentication middleware - requires admin:read permission
+export function adminAuthMiddleware() {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.ota_partner) {
+      logger.info('ota.admin.auth_missing', {
+        ip: req.ip,
+        path: req.path
+      });
+      return res.status(401).json({
+        error: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication required for admin endpoints'
+      });
+    }
+
+    if (!req.ota_partner.permissions.includes('admin:read')) {
+      logger.info('ota.admin.insufficient_permissions', {
+        partner: req.ota_partner.name,
+        partner_id: req.ota_partner.id,
+        path: req.path
+      });
+      return res.status(403).json({
+        error: 'ADMIN_ACCESS_REQUIRED',
+        message: 'This endpoint requires admin privileges'
+      });
+    }
+
+    logger.info('ota.admin.auth_success', {
+      partner: req.ota_partner.name,
+      path: req.path
+    });
+
+    next();
+  };
+}

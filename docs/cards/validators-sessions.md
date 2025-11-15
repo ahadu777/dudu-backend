@@ -4,13 +4,33 @@ slug: validators-sessions
 team: "C - Gate"
 oas_paths: ["/validators/sessions"]
 migrations: ["db/migrations/0005_validator_sessions.sql"]
-status: "Done"
+status: "Deprecated"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/validators-sessions-result.json"
-last_update: "2025-10-30T13:54:00+0800"
+last_update: "2025-11-14T20:30:00+08:00"
 related_stories: ["US-002","US-006"]
+deprecated: true
+deprecated_date: "2025-11-14"
+replacement: "Removed - Sessions are no longer needed. Use operator JWT token directly."
+---
+
+## ⚠️ DEPRECATED
+
+**This API endpoint has been removed as of 2025-11-14.**
+
+**Reason**: Sessions add unnecessary complexity. Operator JWT token is sufficient for authentication.
+
+**Migration Path**:
+- **Old**: POST `/operators/login` → POST `/validators/sessions` → use session_id
+- **New**: POST `/operators/login` → use operator_token directly in Authorization header
+
+**Benefits**:
+- Simpler architecture (no session state management)
+- Fewer database tables
+- Operator authentication via standard JWT token
+
 ---
 
 ## Status & Telemetry

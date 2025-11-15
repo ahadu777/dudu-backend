@@ -23,7 +23,7 @@ export const AppDataSource = new DataSource({
   migrations: [__dirname + '/../migrations/*.{ts,js}'],
   subscribers: [],
   charset: 'utf8mb4',
-  timezone: '+08:00',
+  timezone: 'Z', // Use UTC for consistency across all servers
   maxQueryExecutionTime: 1000, // 慢查询警告（超过 1 秒）
   // ssl: false, // Disable SSL for local connections
   extra: {

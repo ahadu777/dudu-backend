@@ -1,0 +1,90 @@
+# Test Coverage Mapping Registry
+# Simple PRD → Test Collections mapping
+# AI reads PRD + test collections to understand coverage scope
+
+coverage_registry:
+  - prd_id: PRD-001
+    title: "Cruise Ticketing Platform"
+    status: "Mostly Covered"
+    test_collections:
+      - "postman/auto-generated/special-pricing-override.postman_collection.json"
+      - "postman/auto-generated/ticket-activation-complete-coverage.postman_collection.json"
+    coverage_gaps:
+      - "Dynamic pricing calculation based on demand"
+      - "Peak/off-peak pricing validation"
+      - "A/B testing for pricing strategies"
+    coverage_notes: "Core pricing and activation workflows tested; dynamic algorithms need work"
+
+  - prd_id: PRD-002
+    title: "OTA Platform Integration"
+    status: "Fully Covered"
+    test_collections:
+      - "postman/auto-generated/ai-generated-tests.postman_collection.json"
+      - "postman/auto-generated/us-012-complete-coverage.postman_collection.json"
+      - "postman/auto-generated/prd-002-load-testing.postman_collection.json"
+      - "reports/collections/us-012-ota-integration.json"
+    coverage_gaps: []
+    coverage_notes: "Complete OTA platform testing: workflows, performance, load testing, multi-partner isolation, expiry modes"
+
+  - prd_id: PRD-003
+    title: "Event Venue Operations"
+    status: "Partially Covered"
+    test_collections:
+      - "reports/collections/us-013-venue-operations.json"
+    coverage_gaps:
+      - "Load testing for high-volume scenarios"
+      - "Failover and recovery testing"
+      - "7-year audit retention compliance"
+      - "Audit trail generation and storage"
+    coverage_notes: "Basic fraud detection works; reliability and compliance testing needed"
+
+  - prd_id: PRD-004
+    title: "WeChat MiniProgram Authentication"
+    status: "Not Covered"
+    test_collections: []
+    coverage_gaps:
+      - "WeChat OAuth integration"
+      - "Phone number binding and verification"
+      - "Login latency < 500ms performance requirement"
+      - "SMS verification workflow"
+    coverage_notes: "Feature not implemented yet - complete test suite needed"
+
+  - prd_id: PRD-005
+    title: "B2B Reseller Billing & Analytics"
+    status: "Not Covered"
+    test_collections: []
+    coverage_gaps:
+      - "Usage-based billing (redemption → charge events)"
+      - "7-year audit trail retention and compliance"
+      - "Reseller master data management with commission rates"
+      - "Monthly billing reconciliation automation"
+      - "Financial audit export capabilities"
+    coverage_notes: "New PRD - requires complete test suite for billing and compliance workflows"
+
+# Coverage Summary
+coverage_summary:
+  by_prd:
+    PRD-001: "Mostly Covered - Core workflows tested, dynamic algorithms needed"
+    PRD-002: "Fully Covered - Complete OTA platform with performance and load testing"
+    PRD-003: "Partially Covered - Basic fraud detection, reliability/compliance gaps"
+    PRD-004: "Not Covered - Feature not implemented"
+    PRD-005: "Not Covered - New billing PRD, complete implementation needed"
+
+# Critical Gaps
+critical_gaps:
+  - "7-year audit retention (PRD-003) - Compliance risk"
+  - "WeChat authentication (PRD-004) - Feature not implemented"
+  - "B2B billing workflows (PRD-005) - New feature, complete testing needed"
+
+# How to Use This Mapping
+usage:
+  for_ai_analysis: "Read PRD file + test collections to understand full coverage scope"
+  for_developers: "Add test collections when implementing PRD features"
+  for_qa: "Run test collections to validate PRD requirements"
+
+# Quick Commands
+commands:
+  view_coverage: "./scripts/coverage-summary.sh"
+  update_mapping: "vim docs/test-coverage/_index.yaml"
+  test_collection: "newman run [collection-path]"
+  analyze_gaps: "node scripts/prd-test-mapper.mjs"
