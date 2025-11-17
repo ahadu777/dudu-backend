@@ -44,11 +44,11 @@ related_stories: ["US-001", "US-011"]
 - [x] Partner isolation ensures tickets are filtered by ownership
 
 #### B2B2C Enhancement Acceptance Criteria *(NEW)*
-- [ ] OTA can generate batches of 100+ tickets with reseller metadata tracking
-- [ ] Batch tickets include intended reseller information for audit trails
-- [ ] Reseller batches have extended expiry periods (configurable beyond 24h)
-- [ ] Ticket activation includes reseller-to-customer chain tracking
-- [ ] Batch distribution doesn't affect direct OTA sales inventory allocation
+- [x] OTA can generate batches of 100+ tickets with reseller metadata tracking
+- [x] Batch tickets include intended reseller information for audit trails
+- [x] Reseller batches have extended provisional sales periods (暂定: direct_sale 7天, reseller_batch 30天, 当前未强制执行)
+- [x] Ticket activation includes reseller-to-customer chain tracking
+- [x] Batch distribution doesn't affect direct OTA sales inventory allocation
 
 #### Reseller Master Data Management *(NEW - 2025-11-14)*
 **Database Schema:**
@@ -135,7 +135,7 @@ related_stories: ["US-001", "US-011"]
       - batch_id: unique batch identifier
       - tickets: array of pre-generated tickets with QR codes
       - reseller_metadata: distribution tracking info
-      - expires_at: batch expiry timestamp
+      - expires_at: 暂定销售期 (Provisional sales period, 当前未强制执行)
     errors: 400, 401, 403, 422
 
 /api/ota/inventory:
@@ -245,6 +245,20 @@ related_stories: ["US-001", "US-011"]
 - **Backfill existing data**: No (new functionality)
 - **Breaking changes**: No (additive changes only)
 - **Performance impact**: Low (additional indexes on new fields)
+
+#### 票据过期机制说明 (Ticket Expiry Mechanism) - 当前状态
+**重要**: 票据暂定为永久有效 (Tickets are provisionally valid permanently)
+
+**过期时间区分 (Expiry Distinctions)**:
+1. **二维码过期 (QR Code Expiry)**: ✅ 已执行 (30分钟默认)
+   - 临时安全令牌, 过期后可重新生成
+2. **批次过期 (Batch expires_at)**: ❌ 暂定未执行
+   - 存储: direct_sale 7天, reseller_batch 30天
+   - 用途: 业务参考, 不影响票据实际有效性
+3. **票据状态 (Ticket Status)**:
+   - 定义: PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED
+   - 当前使用: PRE_GENERATED → ACTIVE → USED
+   - EXPIRED: 已定义但未使用 (tickets remain valid indefinitely)
 
 ### 5. Integration Impact Analysis
 

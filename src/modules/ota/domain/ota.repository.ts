@@ -5,6 +5,7 @@ import { ChannelReservationEntity, ReservationStatus } from './channel-reservati
 import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
+import { OTATicketBatchWithStatsDTO } from './ota-ticket-batch.dto';
 import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 import { generateSecureQR } from '../../../utils/qr-crypto';
 
@@ -553,6 +554,7 @@ export class OTARepository {
       customer_phone?: string;
       customer_type: 'adult' | 'child' | 'elderly';
       payment_reference: string;
+      raw?: Record<string, any>;  // Optional metadata for audit trail
     },
     orderData: Partial<OTAOrderEntity>
   ): Promise<{ ticket: PreGeneratedTicketEntity; order: OTAOrderEntity }> {
@@ -593,6 +595,12 @@ export class OTARepository {
       ticket.order_id = savedOrder.order_id;
       ticket.status = 'ACTIVE';
       ticket.activated_at = new Date();
+
+      // Update raw metadata if provided (for audit trail, e.g., visit_date, pricing breakdown)
+      if (customerData.raw) {
+        ticket.raw = customerData.raw;
+      }
+
       // QR code removed - will be generated on-demand via POST /qr/{code}
 
       const savedTicket = await queryRunner.manager.save(PreGeneratedTicketEntity, ticket);
@@ -742,7 +750,7 @@ export class OTARepository {
    * Find a single batch with statistics computed via JOIN
    * This is much faster than separate queries
    */
-  async findBatchWithStats(batchId: string): Promise<OTATicketBatchEntity | null> {
+  async findBatchWithStats(batchId: string): Promise<OTATicketBatchWithStatsDTO | null> {
     const result = await this.dataSource.query(`
       SELECT
         b.*,
@@ -774,7 +782,7 @@ export class OTARepository {
    * Find multiple batches with statistics via JOIN
    * Optimized for listing pages - avoids N+1 query problem
    */
-  async findBatchesWithStats(partnerId?: string, limit?: number, offset?: number): Promise<OTATicketBatchEntity[]> {
+  async findBatchesWithStats(partnerId?: string, limit?: number, offset?: number): Promise<OTATicketBatchWithStatsDTO[]> {
     let query = `
       SELECT
         b.*,
@@ -817,10 +825,10 @@ export class OTARepository {
   }
 
   /**
-   * Helper method to map raw SQL row to entity with stats
+   * Helper method to map raw SQL row to DTO with stats
    */
-  private mapRowToBatchWithStats(row: any): OTATicketBatchEntity {
-    const batch = new OTATicketBatchEntity();
+  private mapRowToBatchWithStats(row: any): OTATicketBatchWithStatsDTO {
+    const batch = new OTATicketBatchWithStatsDTO();
 
     // Map basic fields
     batch.batch_id = row.batch_id;
@@ -1222,8 +1230,32 @@ export class OTARepository {
   /**
    * Create new reseller
    * Used for: Reseller onboarding (future API)
+   * Auto-generates reseller_code: RSL-{partner_id}-{counter}
    */
   async createReseller(data: Partial<OTAResellerEntity>): Promise<OTAResellerEntity> {
+    // Auto-generate reseller_code if not provided
+    if (!data.reseller_code && data.partner_id) {
+      // Find max counter for this partner
+      const existingResellers = await this.resellerRepo.find({
+        where: { partner_id: data.partner_id },
+        order: { reseller_code: 'DESC' },
+        take: 1
+      });
+
+      let counter = 1;
+      if (existingResellers.length > 0) {
+        const lastCode = existingResellers[0].reseller_code;
+        // Extract counter from format RSL-{partner_id}-{counter}
+        const match = lastCode.match(/-(\d+)$/);
+        if (match) {
+          counter = parseInt(match[1]) + 1;
+        }
+      }
+
+      // Format: RSL-ctrip-001
+      data.reseller_code = `RSL-${data.partner_id}-${counter.toString().padStart(3, '0')}`;
+    }
+
     const reseller = this.resellerRepo.create(data);
     return this.resellerRepo.save(reseller);
   }

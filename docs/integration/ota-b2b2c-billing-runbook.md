@@ -70,7 +70,7 @@ mysql -h $DB_HOST -u $DB_USERNAME -p$DB_PASSWORD $DB_DATABASE \
 
 **Expected Result**: Count includes our new batch (validates JSON index works).
 
-### Step 4: Activate Individual Ticket
+### Step 4: Activate Individual Ticket (Weekday Pricing)
 ```bash
 # Extract ticket_code from Step 1 response, then:
 TICKET_CODE="CRUISE-2025-FERRY-XXXXXXXXX"  # Replace with actual code
@@ -84,11 +84,35 @@ curl -X POST $BASE_URL/api/ota/tickets/$TICKET_CODE/activate \
     "email": "alice.chen@example.com",
     "phone": "+85212345678"
   },
+  "customer_type": "adult",
+  "visit_date": "2025-11-19",
   "payment_reference": "PAY-PREMIUM-2024-001"
 }' | python3 -m json.tool
 ```
 
-**Expected Response**: 200 with order_id and status: "ACTIVE".
+**Expected Response**: 200 with order_id, status: "ACTIVE", ticket_price: 288 (weekday adult price), currency: "HKD".
+
+### Step 4b: Activate Weekend Ticket (Weekend Pricing)
+```bash
+# Test weekend pricing with different customer type
+TICKET_CODE_2="CRUISE-2025-FERRY-YYYYYYYYY"  # Replace with second ticket code
+
+curl -X POST $BASE_URL/api/ota/tickets/$TICKET_CODE_2/activate \
+-H "Content-Type: application/json" \
+-H "X-API-Key: $API_KEY" \
+-d '{
+  "customer_details": {
+    "name": "Bob Li",
+    "email": "bob.li@example.com",
+    "phone": "+85298765432"
+  },
+  "customer_type": "child",
+  "visit_date": "2025-11-23",
+  "payment_reference": "PAY-PREMIUM-2024-002"
+}' | python3 -m json.tool
+```
+
+**Expected Response**: 200 with ticket_price: 218 (child base 188 + weekend premium 30), currency: "HKD".
 
 ### Step 5: Verify Mock vs Database Behavior
 ```bash

@@ -282,17 +282,23 @@ TICKET_CODE=$(curl -s -X POST http://localhost:8080/api/ota/tickets/bulk-generat
 
 echo "Generated ticket: $TICKET_CODE"
 
-# Now activate it for a customer
+# Now activate it for a customer (adult weekday ticket)
 curl -X POST http://localhost:8080/api/ota/tickets/activate \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer test-api-key" \
   -d '{
     "ticket_code": "'$TICKET_CODE'",
-    "customer_name": "Maria Garcia",
-    "customer_email": "maria.garcia@example.com"
+    "customer_details": {
+      "name": "Maria Garcia",
+      "email": "maria.garcia@example.com",
+      "phone": "+85212345678"
+    },
+    "customer_type": "adult",
+    "visit_date": "2025-11-19",
+    "payment_reference": "PAY-GARCIA-001"
   }' | jq
 
-# Expected: Complete activation response with order_id, QR code, and entitlements
+# Expected: Complete activation response with order_id, QR code, entitlements, ticket_price: 288, currency: "HKD"
 # Save order_id for next tests
 ```
 
@@ -378,8 +384,13 @@ curl -X POST http://localhost:8080/api/ota/tickets/activate \
   -H "Authorization: Bearer test-api-key" \
   -d '{
     "ticket_code": "INVALID-TICKET-CODE",
-    "customer_name": "Test User",
-    "customer_email": "test@example.com"
+    "customer_details": {
+      "name": "Test User",
+      "email": "test@example.com",
+      "phone": "+85200000000"
+    },
+    "customer_type": "adult",
+    "payment_reference": "PAY-TEST-001"
   }'
 
 # Expected: {"error":"TICKET_NOT_FOUND","message":"Ticket not found or not available for activation"}
@@ -439,20 +450,26 @@ echo "$GENERATION" | jq
 FIRST_TICKET=$(echo "$GENERATION" | jq -r '.tickets[0].ticket_code')
 echo "Selected ticket: $FIRST_TICKET"
 
-# Step 2: Activate ticket
+# Step 2: Activate ticket (weekend pricing example)
 echo "Step 2: Activating ticket..."
 ACTIVATION=$(curl -s -X POST http://localhost:8080/api/ota/tickets/activate \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer test-api-key" \
   -d '{
     "ticket_code": "'$FIRST_TICKET'",
-    "customer_name": "Elena Rodriguez",
-    "customer_email": "elena.rodriguez@example.com"
+    "customer_details": {
+      "name": "Elena Rodriguez",
+      "email": "elena.rodriguez@example.com",
+      "phone": "+85212345678"
+    },
+    "customer_type": "adult",
+    "visit_date": "2025-11-23",
+    "payment_reference": "PAY-RODRIGUEZ-001"
   }')
 
 echo "$ACTIVATION" | jq
 ORDER_ID=$(echo "$ACTIVATION" | jq -r '.order_id')
-echo "Created order: $ORDER_ID"
+echo "Created order: $ORDER_ID (weekend pricing: 318 HKD)"
 
 # Step 3: Retrieve order and tickets
 echo "Step 3: Retrieving customer order..."
@@ -461,6 +478,171 @@ curl -s "http://localhost:8080/api/ota/orders/$ORDER_ID/tickets" \
 
 echo "✅ Complete workflow successful!"
 ```
+
+### 22. 完整核销流程测试 (Generate QR → Redeem at Venue)
+
+```bash
+echo "🎫 测试完整OTA核销流程 / Testing complete OTA redemption flow..."
+
+# 前提：使用之前工作流中的 ORDER_ID 和 FIRST_TICKET
+# Prerequisite: Use ORDER_ID and FIRST_TICKET from previous workflow
+
+# 步骤 1: 已经在之前测试中激活票券
+# Step 1: Ticket already activated in previous tests
+echo "使用票券 / Using ticket: $FIRST_TICKET"
+
+# 步骤 2: 生成加密QR码用于场馆扫描
+# Step 2: Generate encrypted QR code for venue scanning
+echo "步骤 2: 生成加密QR / Step 2: Generating encrypted QR for venue scanning..."
+QR_RESPONSE=$(curl -s -X POST http://localhost:8080/qr/$FIRST_TICKET \
+  -H "Authorization: Bearer test-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"expiry_minutes": 30}')
+
+echo "$QR_RESPONSE" | jq
+ENCRYPTED_DATA=$(echo "$QR_RESPONSE" | jq -r '.encrypted_data')
+JTI=$(echo "$QR_RESPONSE" | jq -r '.jti')
+
+echo "QR Token JTI: $JTI"
+echo "Encrypted Data (前10个字符 / first 10 chars): ${ENCRYPTED_DATA:0:10}..."
+
+# 步骤 3: [可选] 解密预览（不核销）- 增强版：一次调用获取完整信息
+# Step 3: [Optional] Decrypt to preview (NO redemption) - Enhanced: Get complete info in single call
+echo ""
+echo "步骤 3: 预览完整票券信息（仅解密，不核销）/ Step 3: Preview complete ticket info (decrypt only, NO redemption)..."
+DECRYPT_RESPONSE=$(curl -s -X POST http://localhost:8080/qr/decrypt \
+  -H "Content-Type: application/json" \
+  -d '{"encrypted_data": "'$ENCRYPTED_DATA'"}')
+
+echo "$DECRYPT_RESPONSE" | jq
+
+# 展示关键信息
+CUSTOMER_NAME=$(echo "$DECRYPT_RESPONSE" | jq -r '.ticket_info.customer_info.name // "N/A"')
+CUSTOMER_TYPE=$(echo "$DECRYPT_RESPONSE" | jq -r '.ticket_info.customer_info.type // "N/A"')
+TICKET_STATUS=$(echo "$DECRYPT_RESPONSE" | jq -r '.ticket_info.status // "N/A"')
+
+echo ""
+echo "📋 关键信息 / Key Information:"
+echo "   顾客姓名 / Customer Name: $CUSTOMER_NAME"
+echo "   顾客类型 / Customer Type: $CUSTOMER_TYPE"
+echo "   票券状态 / Ticket Status: $TICKET_STATUS"
+
+echo ""
+echo "✅ 增强版 POST /qr/decrypt 现在返回完整信息（customer_info + entitlements + product_info）"
+echo "✅ Enhanced POST /qr/decrypt now returns complete info (customer_info + entitlements + product_info)"
+echo "✅ 无需再调用 GET /qr/:code/info / No need to call GET /qr/:code/info separately"
+
+echo ""
+echo "⚠️  重要: POST /qr/decrypt 不会消耗权益 / Important: POST /qr/decrypt does NOT consume entitlements"
+echo "⚠️  重要: GET /qr/verify 不是OTA核销流程的一部分 / Important: GET /qr/verify is NOT part of OTA redemption"
+
+# 步骤 4: 实际在场馆核销
+# Step 4: Actual redemption at venue
+echo ""
+echo "步骤 4: 在中环码头核销ferry_boarding / Step 4: Redeeming ferry_boarding at Central Pier..."
+REDEMPTION=$(curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "qr_token": "'$ENCRYPTED_DATA'",
+    "function_code": "ferry_boarding",
+    "terminal_device_id": "TERMINAL-CP-001"
+  }')
+
+echo "$REDEMPTION" | jq
+
+REDEMPTION_RESULT=$(echo "$REDEMPTION" | jq -r '.result')
+if [ "$REDEMPTION_RESULT" = "success" ]; then
+  echo "✅ 核销成功 / Redemption successful"
+else
+  echo "❌ 核销失败 / Redemption failed"
+fi
+
+# 步骤 5: 验证防欺诈机制（同一QR码、同一功能不能重复核销）
+# Step 5: Verify fraud detection (same QR + same function cannot be redeemed twice)
+echo ""
+echo "步骤 5: 测试防欺诈 - 尝试重复核销同一功能 / Step 5: Testing fraud detection - try duplicate redemption..."
+sleep 1
+FRAUD_TEST=$(curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "qr_token": "'$ENCRYPTED_DATA'",
+    "function_code": "ferry_boarding",
+    "terminal_device_id": "TERMINAL-CP-001"
+  }')
+
+echo "$FRAUD_TEST" | jq
+
+FRAUD_REASON=$(echo "$FRAUD_TEST" | jq -r '.reason')
+if [ "$FRAUD_REASON" = "ALREADY_REDEEMED" ]; then
+  echo "✅ 防欺诈机制正常 / Fraud detection working correctly"
+else
+  echo "⚠️  预期应该返回 ALREADY_REDEEMED / Expected ALREADY_REDEEMED"
+fi
+
+# 步骤 6: [可选] 如果票券有其他权益，可以继续核销
+# Step 6: [Optional] If ticket has other entitlements, can continue redeeming
+echo ""
+echo "步骤 6: 尝试核销其他功能（如果有）/ Step 6: Try redeeming other functions (if available)..."
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "qr_token": "'$ENCRYPTED_DATA'",
+    "function_code": "gift_redemption",
+    "terminal_device_id": "TERMINAL-GS-001"
+  }' | jq
+
+echo ""
+echo "✅ 完整核销流程验证成功！/ Complete redemption flow validated!"
+echo ""
+echo "📋 关键要点 / Key Points:"
+echo "   1. POST /qr/:code 生成QR返回 encrypted_data"
+echo "      POST /qr/:code generates QR and returns encrypted_data"
+echo ""
+echo "   2. POST /qr/decrypt 可选预览（不核销）- ⭐ 增强版：返回完整信息"
+echo "      POST /qr/decrypt optional preview (NO redemption) - ⭐ Enhanced: Returns complete info"
+echo "      ✅ 包含: customer_info + entitlements + product_info"
+echo "      ✅ 无需再调用 GET /qr/:code/info"
+echo ""
+echo "   3. POST /venue/scan 使用 qr_token=encrypted_data 实际核销"
+echo "      POST /venue/scan uses qr_token=encrypted_data for actual redemption"
+echo ""
+echo "   4. GET /qr/verify 不用于OTA核销（仅微信查看）"
+echo "      GET /qr/verify NOT used in OTA redemption (WeChat viewing only)"
+echo ""
+echo "   5. 同一QR可核销不同功能，但同一功能只能核销一次"
+echo "      Same QR can redeem different functions, but each function only once"
+```
+
+**核销流程总结 / Redemption Flow Summary:**
+
+```
+激活票券 → 生成QR → [可选：解密预览] → 场馆扫描核销
+Activate → Generate QR → [Optional: Decrypt Preview] → Venue Scan Redeem
+
+1️⃣ POST /api/ota/tickets/activate
+   └─> 票券状态: PRE_GENERATED → ACTIVE
+
+2️⃣ POST /qr/:code
+   └─> 返回 encrypted_data（用于核销）
+
+3️⃣ POST /qr/decrypt (可选 / Optional)
+   └─> 预览信息，不消耗权益
+
+4️⃣ POST /venue/scan
+   └─> qr_token = encrypted_data (步骤2的返回值)
+   └─> 实际核销，减少 remaining_uses
+```
+
+**⚠️ 常见误区 / Common Mistakes:**
+- ❌ 认为 GET /qr/verify 是核销流程的一部分
+- ❌ 混淆查询端点（GET /qr/:code/info、POST /qr/decrypt）和核销端点（POST /venue/scan）
+- ❌ 直接使用 ticket_code 进行核销（应该使用 encrypted_data）
+
+**✅ 正确理解 / Correct Understanding:**
+- GET /qr/verify 仅用于终端消费者在微信中查看票券
+- POST /qr/decrypt ⭐ **增强版**（2025-11-17）：一次调用返回完整信息，无需再调用 GET /qr/:code/info
+- GET /qr/:code/info 现在主要用于已知 ticket_code 直接查询的场景（非QR扫描）
+- POST /venue/scan 是唯一的核销端点
 
 ## 🔍 Validation Checklist for New Features
 

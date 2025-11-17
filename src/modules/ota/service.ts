@@ -48,6 +48,7 @@ export interface OTAActivateRequest {
     phone: string;
   };
   customer_type?: Array<'adult' | 'child' | 'elderly'>;  // Array matching ticket quantity
+  visit_date?: string;  // Intended visit date (YYYY-MM-DD) - used for weekend pricing
   payment_reference: string;
   special_requests?: string;
 }
@@ -108,6 +109,7 @@ export interface OTATicketActivateRequest {
     phone: string;
   };
   customer_type: 'adult' | 'child' | 'elderly';  // Required: determines pricing
+  visit_date?: string;  // Optional: YYYY-MM-DD format - used for weekend pricing calculation
   payment_reference: string;
 }
 
@@ -120,6 +122,17 @@ export interface OTATicketActivateResponse {
   currency: string;
   status: string;
   activated_at: string;
+}
+
+/**
+ * Helper function: Check if a date is a weekend (Saturday or Sunday)
+ * @param dateString - Date in YYYY-MM-DD format or Date object
+ * @returns true if Saturday (6) or Sunday (0), false otherwise
+ */
+function isWeekend(dateString: string | Date): boolean {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6;  // Sunday = 0, Saturday = 6
 }
 
 export class OTAService {
@@ -1122,14 +1135,40 @@ export class OTAService {
           };
         }
 
-        const ticketPrice = customerTypePricing.unit_price;
+        // Calculate ticket price with optional weekend premium
+        let ticketPrice = customerTypePricing.unit_price;
         const currency = batch.pricing_snapshot.currency || 'HKD';
+        let weekendPremiumApplied = 0;
+
+        // Apply weekend premium if visit_date is provided and is a weekend
+        if (request.visit_date && isWeekend(request.visit_date)) {
+          const weekendPremium = batch.pricing_snapshot.weekend_premium || 0;
+          weekendPremiumApplied = weekendPremium;
+          ticketPrice += weekendPremium;
+
+          logger.info('ota.ticket.weekend_pricing_applied', {
+            ticket_code: ticketCode,
+            visit_date: request.visit_date,
+            is_weekend: true,
+            base_price: customerTypePricing.unit_price,
+            weekend_premium: weekendPremium,
+            final_price: ticketPrice
+          });
+        } else if (request.visit_date) {
+          logger.info('ota.ticket.weekday_pricing', {
+            ticket_code: ticketCode,
+            visit_date: request.visit_date,
+            is_weekend: false,
+            price: ticketPrice
+          });
+        }
 
         // DEBUG: Log extracted price details
         logger.info('ota.ticket.activation_price_extracted', {
           ticket_code: ticketCode,
           customer_type: request.customer_type,
           customer_type_pricing: customerTypePricing,
+          weekend_premium_applied: weekendPremiumApplied,
           final_ticket_price: ticketPrice,
           currency: currency
         });
@@ -1162,6 +1201,22 @@ export class OTAService {
           created_at: now
         };
 
+        // Prepare raw metadata for audit trail
+        const rawMetadata: any = {
+          payment_reference: request.payment_reference,
+          pricing_breakdown: {
+            base_price: customerTypePricing.unit_price,
+            weekend_premium_applied: weekendPremiumApplied,
+            final_price: ticketPrice
+          }
+        };
+
+        // Record visit_date in raw field for audit
+        if (request.visit_date) {
+          rawMetadata.visit_date = request.visit_date;
+          rawMetadata.is_weekend_ticket = isWeekend(request.visit_date);
+        }
+
         // Use repository to activate ticket and create order atomically
         const result = await this.otaRepository!.activatePreGeneratedTicket(
           ticketCode,
@@ -1171,7 +1226,8 @@ export class OTAService {
             customer_email: request.customer_details.email,
             customer_phone: request.customer_details.phone,
             customer_type: request.customer_type,
-            payment_reference: request.payment_reference
+            payment_reference: request.payment_reference,
+            raw: rawMetadata
           },
           orderData
         );
@@ -1314,6 +1370,7 @@ export class OTAService {
     // NOT stored in database to maintain security and freshness
     ticket.customer_name = request.customer_details.name;
     ticket.customer_email = request.customer_details.email;
+    ticket.customer_phone = request.customer_details.phone;
     ticket.customer_type = request.customer_type;
     ticket.order_id = orderId;
     ticket.status = 'ACTIVE';
@@ -2004,9 +2061,11 @@ export class OTAService {
       };
     } else {
       // Mock implementation
+      const resellerCode = data.reseller_code || `RSL-${partnerId}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
       return {
         id: Math.floor(Math.random() * 1000),
-        reseller_code: data.reseller_code,
+        reseller_code: resellerCode,
         reseller_name: data.reseller_name,
         status: 'active',
         created_at: new Date()

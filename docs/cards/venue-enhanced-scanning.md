@@ -62,6 +62,21 @@ notes: "Venue architecture under review. Session management removed. Venue entit
 - **Performance optimized**: Sub-second response times with fraud checks
 - **Comprehensive audit trail**: All attempts logged for analytics
 
+### ⚠️ 重要：查询端点 vs 核销端点 / IMPORTANT: Viewing vs Redemption
+
+**查询端点（不消耗权益）/ Viewing/Query Endpoints (NO entitlement consumption):**
+- **POST /qr/decrypt** - 解密并显示票券信息供操作员查看（不核销）
+- **GET /qr/:code/info** - 查询票券详情包括 customer_info（不核销）
+- **GET /qr/verify** - 微信HTML查看页面（**不用于OTA核销流程**）
+
+**核销端点（消耗权益）/ Redemption Endpoint (CONSUMES entitlements):**
+- **POST /venue/scan** - 实际核销，减少 remaining_uses
+
+**❌ 常见错误 / Common mistake**: 将 GET /qr/verify（微信查看）误认为核销流程的一部分
+**✅ 正确的OTA流程 / Correct OTA flow**: POST /qr/:code → [可选: POST /qr/decrypt] → POST /venue/scan
+
+---
+
 ### Core Operations
 
 #### Recommended Workflow: Decrypt → Display → Redeem
@@ -74,19 +89,51 @@ POST /qr/decrypt
 }
 ```
 
-**Response:**
+**Response (Enhanced 2025-11-17):**
 ```json
 {
   "jti": "550e8400-e29b-41d4-a716-446655440000",
-  "ticket_code": "TIX-ABC123",
-  "expires_at": "2025-11-13T19:50:00.000Z",
+  "ticket_code": "OTA-CP-20251103-000001",
+  "expires_at": "2025-11-17T20:00:00.000Z",
   "version": 1,
   "is_expired": false,
-  "remaining_seconds": 1800
+  "remaining_seconds": 1800,
+  "ticket_info": {
+    "ticket_type": "OTA",
+    "status": "ACTIVE",
+    "customer_info": {
+      "type": "adult",
+      "name": "张三",
+      "email": "zhang@example.com",
+      "phone": "+86-13800138000"
+    },
+    "entitlements": [
+      {
+        "function_code": "ferry_boarding",
+        "function_name": "Ferry Ride",
+        "remaining_uses": 1,
+        "total_uses": 1
+      },
+      {
+        "function_code": "gift_redemption",
+        "function_name": "Gift Redemption",
+        "remaining_uses": 1,
+        "total_uses": 1
+      }
+    ],
+    "product_info": {
+      "id": 106,
+      "name": "Premium Plan"
+    },
+    "product_id": 106,
+    "order_id": "OTA-ORDER-20251103-001",
+    "batch_id": "BATCH-20251103-001",
+    "partner_id": "ota_test_partner"
+  }
 }
 ```
 
-**Use Case**: Frontend displays ticket info to operator before redemption confirmation.
+**Use Case**: Frontend displays complete ticket info to operator in single API call (no need for separate GET /qr/:code/info).
 
 ---
 

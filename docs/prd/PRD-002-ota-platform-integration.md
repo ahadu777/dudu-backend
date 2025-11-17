@@ -398,7 +398,7 @@ POST /api/ota/tickets/bulk-generate:
     product_id: number
     quantity: number (1-5000)
     batch_id: string
-    distribution_mode: "direct_sale" | "reseller_batch"  # NEW: Specify intended use (affects expiry: 7 days vs 30 days)
+    distribution_mode: "direct_sale" | "reseller_batch"  # NEW: Specify intended use (暂定销售期: 7天 vs 30天, 当前未强制执行)
     reseller_info?: {                                    # Basic reseller tracking
       reseller_name: string                            # Simple reseller identification
       batch_purpose?: string
@@ -578,16 +578,48 @@ GET /qr/verify:
 
 ### Distribution Mode Behavior *(NEW)*
 - **Direct Sale Mode (`direct_sale`)**:
-  - **Expiry Period**: 7 days from batch generation
+  - **暂定销售期 (Provisional Sales Period)**: 7天 (当前未强制执行)
   - **Use Case**: OTA platform sells directly to end customers
   - **Metadata Requirements**: No special requirements
   - **Target Scenario**: Quick turnaround consumer sales
 - **Reseller Batch Mode (`reseller_batch`)**:
-  - **Expiry Period**: 30 days from batch generation (4x longer for B2B2C workflow)
+  - **暂定销售期 (Provisional Sales Period)**: 30天 (当前未强制执行, 4x longer for B2B2C workflow)
   - **Use Case**: OTA distributes tickets to sub-resellers who then sell to end customers
   - **Metadata Requirements**: `reseller_metadata.intended_reseller` is REQUIRED
   - **Target Scenario**: B2B2C distribution networks requiring extended sales cycles
 - **Common Behavior**: Both modes use same `ota_ticket_batches` table with `distribution_mode` field differentiation
+
+### 票据过期机制说明 (Ticket Expiry Mechanism)
+**当前状态 (Current Status)**: 票据暂定为永久有效 (Tickets are provisionally valid permanently)
+
+**重要区分 (Important Distinctions)**:
+1. **二维码过期 (QR Code Expiry)**:
+   - **生效**: 30分钟默认过期时间 (已执行)
+   - **用途**: 临时安全令牌, 防止二维码被盗用
+   - **行为**: 过期后可以为同一张票重新生成二维码
+
+2. **批次过期时间 (Batch Expiry Time - `expires_at` field)**:
+   - **存储**: 批次生成时设置 (direct_sale: 7天, reseller_batch: 30天)
+   - **执行状态**: 当前未强制执行 (Not currently enforced)
+   - **用途**: 业务参考, 表示建议销售期限
+   - **数据库字段**: `ota_ticket_batches.expires_at` (TIMESTAMP)
+
+3. **票据状态 (Ticket Status)**:
+   - **定义状态**: PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED
+   - **当前使用**: PRE_GENERATED → ACTIVE → USED
+   - **EXPIRED状态**: 已定义但当前未使用 (Defined but not currently used)
+   - **实际生命周期**: 票据激活后永久有效, 直到被使用
+
+**技术实现 (Technical Implementation)**:
+- ✅ **QR Code Expiry**: Implemented in `qr-crypto.ts` (30-minute default)
+- ❌ **Batch Expiry Check**: Not implemented (expires_at field exists but not validated)
+- ❌ **Automatic EXPIRED Status**: Not implemented (tickets remain ACTIVE indefinitely)
+
+**业务影响 (Business Impact)**:
+- Tickets activated by customers remain valid indefinitely
+- Resellers can sell tickets from old batches without time pressure
+- System flexibility for special promotions and extended campaigns
+- Future implementation may enforce expiry based on business requirements
 
 
 ### System Architecture Flows

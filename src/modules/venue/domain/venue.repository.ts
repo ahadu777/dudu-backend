@@ -34,6 +34,11 @@ export class VenueRepository {
         order_id: otaTicket.order_id,
         batch_id: otaTicket.batch_id,
         partner_id: otaTicket.partner_id,
+        // Customer information (顾客信息)
+        customer_name: otaTicket.customer_name,
+        customer_email: otaTicket.customer_email,
+        customer_phone: otaTicket.customer_phone,
+        customer_type: otaTicket.customer_type,
         raw: otaTicket.raw
       };
     }

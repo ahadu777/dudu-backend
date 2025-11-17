@@ -468,7 +468,7 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
 router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const ticketCode = req.params.code;
-    const { customer_details, customer_type, payment_reference } = req.body;
+    const { customer_details, customer_type, visit_date, payment_reference } = req.body;
 
     // Validate required fields
     if (!customer_details || !customer_type || !payment_reference) {
@@ -492,10 +492,31 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
       });
     }
 
+    // Validate visit_date format if provided (optional)
+    if (visit_date) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(visit_date)) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'visit_date must be in YYYY-MM-DD format (e.g., 2025-11-23)'
+        });
+      }
+
+      // Check if date is valid
+      const parsedDate = new Date(visit_date);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'visit_date is not a valid date'
+        });
+      }
+    }
+
     const partnerId = getPartnerIdWithFallback(req);
     const result = await otaService.activatePreMadeTicket(ticketCode, partnerId, {
       customer_details,
       customer_type,
+      visit_date,  // Pass visit_date (optional) for weekend pricing
       payment_reference
     });
 
@@ -783,10 +804,11 @@ router.post('/resellers', async (req: AuthenticatedRequest, res: Response) => {
             contract_start_date, contract_end_date, settlement_cycle, payment_terms,
             region, tier, notes } = req.body;
 
-    if (!reseller_code || !reseller_name) {
+    // Only reseller_name is required; reseller_code will be auto-generated if not provided
+    if (!reseller_name) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'reseller_code and reseller_name are required'
+        message: 'reseller_name is required'
       });
     }
 
