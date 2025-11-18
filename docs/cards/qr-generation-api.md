@@ -552,9 +552,15 @@ paths:
 ```
 
 ## 3) Invariants
-- **QR codes expire** after configurable time (1-1440 minutes, default 30)
+- **QR codes expire** after configurable time (ticket type dependent)
   - **Important**: QR code expiry is distinct from ticket validity
-  - **QR expiry**: Temporary security token (default 30 minutes)
+  - **OTA tickets (CRUISE-*, BATCH-*, FERRY-*, OTA-*)**:
+    - QR expiry: **100 years (permanent)** - 52,560,000 minutes
+    - Ticket usability determined by ticket status (PRE_GENERATED, ACTIVE, USED, etc.)
+    - QR code remains valid indefinitely for partner distribution
+  - **Normal tickets (direct sales)**:
+    - QR expiry: Temporary security token (default 30 minutes)
+    - Configurable range: 1-1440 minutes
   - **Ticket validity**: Permanent after activation (no automatic expiry)
   - Expired QR codes can be regenerated on-demand for same ticket
 - Encrypted QR contains: ticket_code, product_id, status, owner_id, expiry

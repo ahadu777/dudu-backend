@@ -1,10 +1,12 @@
 import { AppDataSource } from '../../config/database';
 import { VenueRepository } from './domain/venue.repository';
 import { mockStore } from '../../core/mock/store';
+import { mockDataStore } from '../../core/mock/data';
 import { dataSourceConfig } from '../../config/data-source';
 import { logger } from '../../utils/logger';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
+import { ScanResult } from '../../types/domain';
 
 export interface VenueOperationsResponse {
   result: 'success' | 'reject';
@@ -22,6 +24,8 @@ export interface VenueOperationsResponse {
     fraud_checks_passed: boolean;
   };
   ts: string;
+  debug_error?: string;
+  debug_stack?: string;
 }
 
 export interface VenueSessionResponse {
@@ -228,12 +232,21 @@ export class VenueOperationsService {
     } catch (error) {
       logger.error('venue.scan.error', {
         function_code: request.functionCode,
-        error: (error as Error).message
+        error: (error as Error).message,
+        stack: (error as Error).stack
       });
 
-      return this.createRejectResponse('INTERNAL_ERROR', startTime, {
-        function_code: request.functionCode
-      });
+      return {
+        result: 'reject',
+        reason: 'INTERNAL_ERROR',
+        debug_error: (error as Error).message,
+        debug_stack: (error as Error).stack?.split('\n').slice(0, 5).join(' | '),
+        performance_metrics: {
+          response_time_ms: Date.now() - startTime,
+          fraud_checks_passed: false
+        },
+        ts: new Date().toISOString()
+      };
     }
   }
 
@@ -472,12 +485,26 @@ export class VenueOperationsService {
   ): Promise<VenueOperationsResponse> {
     logger.warn('venue.scan.mock_mode', { ticket_code: ticketCode });
 
-    // JTI replay attack prevention
-    if (jti && mockStore.hasJti(jti)) {
+    // JTI replay attack prevention (same logic as database mode)
+    // Check if this JTI has been used for THIS specific function
+    // This allows same QR code to redeem different entitlements (ferry, gift, tokens)
+    if (jti && mockStore.hasJtiForFunction(jti, request.functionCode)) {
+      logger.info('venue.scan.fraud_detected_mock', {
+        jti,
+        ticket_code: ticketCode,
+        function_code: request.functionCode,
+        reason: 'Same JTI already used for this function'
+      });
       return this.createRejectResponse('ALREADY_REDEEMED', startTime, { fraud_detected: true });
     }
 
-    const ticket = mockStore.getTicket(ticketCode);
+    // Get ticket from mock store (support both OTA and normal tickets)
+    // First check OTA pre-generated tickets, then normal tickets
+    let ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+    if (!ticket) {
+      ticket = mockStore.getTicket(ticketCode);
+    }
+
     if (!ticket) {
       return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request);
     }
@@ -509,15 +536,46 @@ export class VenueOperationsService {
       }
     }
 
-    const entitlement = ticket.entitlements.find(e => e.function_code === request.functionCode);
+    const entitlement = ticket.entitlements.find((e: { function_code: string; remaining_uses: number }) => e.function_code === request.functionCode);
     if (!entitlement || entitlement.remaining_uses <= 0) {
       return this.createRejectResponse(entitlement ? 'NO_REMAINING' : 'WRONG_FUNCTION', startTime, request);
     }
 
     // SUCCESS in mock mode
-    const success = mockStore.decrementEntitlement(ticketCode, request.functionCode);
-    if (!success) {
-      return this.createRejectResponse('INTERNAL_ERROR', startTime, request);
+    // Check if this is an OTA ticket (stored in mockDataStore) or normal ticket (stored in mockStore)
+    const isOTATicket = mockDataStore.preGeneratedTickets.has(ticketCode);
+
+    if (isOTATicket) {
+      // For OTA tickets: Manually decrement entitlement in mockDataStore
+      entitlement.remaining_uses--;
+
+      // Update ticket status if all entitlements are used
+      const totalRemaining = ticket.entitlements.reduce((sum: number, e: { remaining_uses: number }) => sum + e.remaining_uses, 0);
+      if (totalRemaining === 0) {
+        ticket.status = 'USED';
+      }
+
+      // Record redemption event to JTI cache
+      // Use simplified record since we only need JTI tracking for fraud prevention
+      if (jti) {
+        mockStore.addRedemption({
+          ticket_id: 0, // Not used in mock mode
+          function_code: request.functionCode,
+          operator_id: 0,
+          session_id: 'mock-session',
+          location_id: null,
+          jti,
+          result: ScanResult.SUCCESS,
+          reason: null,
+          ts: new Date().toISOString()
+        });
+      }
+    } else {
+      // For normal tickets: Use mockStore method
+      const success = mockStore.decrementEntitlement(ticketCode, request.functionCode);
+      if (!success) {
+        return this.createRejectResponse('INTERNAL_ERROR', startTime, request);
+      }
     }
 
     const responseTime = Date.now() - startTime;
@@ -526,7 +584,7 @@ export class VenueOperationsService {
       result: 'success',
       ticket_status: ticket.status,
       entitlements: ticket.entitlements,
-      remaining_uses: entitlement.remaining_uses - 1,
+      remaining_uses: entitlement.remaining_uses,
       performance_metrics: {
         response_time_ms: responseTime,
         fraud_checks_passed: true

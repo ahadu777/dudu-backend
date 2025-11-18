@@ -16,6 +16,13 @@ export interface OTAInventoryResponse {
     special_dates: { [date: string]: { multiplier: number } };
     customer_discounts?: { [productId: number]: { [type: string]: number } };
   };
+  product_info: {
+    [productId: number]: {
+      name: string;
+      description: string;
+      category: string;
+    };
+  };
 }
 
 export interface OTAReserveRequest {
@@ -161,12 +168,19 @@ export class OTAService {
   async getInventory(productIds?: number[], partnerId?: string): Promise<OTAInventoryResponse> {
     logger.info('ota.inventory.requested', { product_ids: productIds, partner_id: partnerId });
 
-    const targetProducts = productIds || [106, 107, 108]; // Default to cruise packages
-
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       // Use database
       const repo = await this.getRepository();
-      const inventories = await repo.getInventoryByProductIds(targetProducts);
+
+      // Query strategy based on whether productIds are specified
+      let inventories;
+      if (productIds && productIds.length > 0) {
+        // Query specific products if requested
+        inventories = await repo.getInventoryByProductIds(productIds);
+      } else {
+        // Query all active products (no hardcoded list)
+        inventories = await repo.getAllInventories();
+      }
 
       const availability: { [productId: number]: number } = {};
       const pricing_context = {
@@ -178,14 +192,22 @@ export class OTAService {
         },
         customer_discounts: {} as { [productId: number]: { [type: string]: number } }
       };
+      const product_info: { [productId: number]: { name: string; description: string; category: string } } = {};
+
+      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback to 'ota'
 
       for (const inventory of inventories) {
-        const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback to 'ota'
+        // Get available quantity for this partner's channel
         const available = inventory.getChannelAvailable(channelId);
-        if (available > 0) {
+
+        // Only include products where this partner has allocated inventory (even if currently 0 available)
+        const channelAllocation = inventory.getChannelAllocation(channelId);
+        if (channelAllocation && channelAllocation.allocated > 0) {
+          // Include product even if temporarily sold out (available = 0)
+          // This helps partners see their full product catalog
           availability[inventory.product_id] = available;
 
-          // Get pricing from product
+          // Get pricing and product info
           if (inventory.product) {
             const basePrice = Number(inventory.product.base_price);
             const weekendPremium = Number(inventory.product.weekend_premium || 30);
@@ -198,23 +220,33 @@ export class OTAService {
             if (inventory.product.customer_discounts) {
               pricing_context.customer_discounts[inventory.product_id] = inventory.product.customer_discounts;
             }
+
+            // Add product info
+            product_info[inventory.product_id] = {
+              name: inventory.product.name,
+              description: inventory.product.description,
+              category: inventory.product.category
+            };
           }
         }
       }
 
       logger.info('ota.inventory.response', {
         source: 'database',
+        partner_id: partnerId,
+        channel_id: channelId,
         available_products: Object.keys(availability).length,
         total_units: Object.values(availability).reduce((sum, qty) => sum + qty, 0)
       });
 
-      return { available_quantities: availability, pricing_context };
+      return { available_quantities: availability, pricing_context, product_info };
     } else {
       // Fallback to mock data
       logger.warn('ota.inventory.fallback_to_mock', { reason: 'database_unavailable' });
 
       const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback to 'ota'
-      const availability = mockDataStore.getChannelAvailability(channelId, targetProducts);
+      const mockProducts = productIds || [106, 107, 108]; // Default mock products
+      const availability = mockDataStore.getChannelAvailability(channelId, mockProducts);
       const pricing_context = {
         base_prices: {} as { [productId: number]: { weekday: number; weekend: number } },
         customer_types: ['adult', 'child', 'elderly'],
@@ -224,13 +256,20 @@ export class OTAService {
         },
         customer_discounts: {} as { [productId: number]: { [type: string]: number } }
       };
+      const product_info: { [productId: number]: { name: string; description: string; category: string } } = {};
 
-      for (const productId of targetProducts) {
+      for (const productId of mockProducts) {
         const product = mockDataStore.getProduct(productId);
         if (product && availability[productId] > 0) {
           pricing_context.base_prices[productId] = {
             weekday: product.unit_price,
             weekend: product.unit_price + 30
+          };
+          // Add mock product info
+          product_info[productId] = {
+            name: product.name,
+            description: product.name, // Mock uses name as description
+            category: 'ferry' // Mock default category
           };
         }
       }
@@ -241,7 +280,7 @@ export class OTAService {
         total_units: Object.values(availability).reduce((sum, qty) => sum + qty, 0)
       });
 
-      return { available_quantities: availability, pricing_context };
+      return { available_quantities: availability, pricing_context, product_info };
     }
   }
 
@@ -883,7 +922,8 @@ export class OTAService {
         ];
 
         // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
-        const qrResult = await generateSecureQR(ticketCode);
+        // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
+        const qrResult = await generateSecureQR(ticketCode, 52560000);
         const rawMetadata: TicketRawMetadata = {
           jti: {
             pre_generated_jti: qrResult.jti,
@@ -966,7 +1006,8 @@ export class OTAService {
       const ticketCode = `${product.sku}-${ticketId}`;
 
       // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
-      const qrResult = await generateSecureQR(ticketCode);
+      // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
+      const qrResult = await generateSecureQR(ticketCode, 52560000);
       const rawMetadata: TicketRawMetadata = {
         jti: {
           pre_generated_jti: qrResult.jti,
@@ -1867,11 +1908,45 @@ export class OTAService {
       const repo = await this.getRepository();
 
       // Get aggregated statistics across all partners
-      const [platformSummary, topPartners, inventoryOverview] = await Promise.all([
+      const [platformSummary, topPartnersRaw, inventoryOverview] = await Promise.all([
         repo.getPlatformSummary(dateRange),
         repo.getTopPartners(5, dateRange),
         repo.getInventoryOverview()
       ]);
+
+      // Filter out partners that no longer exist in API_KEYS
+      // Get valid partner IDs from current API_KEYS configuration
+      const validPartnerIds = new Set(
+        Array.from(API_KEYS.values()).map(data => data.partner_id)
+      );
+
+      // Log raw partners from database before filtering
+      const rawPartnerIds = topPartnersRaw.map(p => p.partner_id);
+      logger.info('ota.admin.dashboard.raw_partners', {
+        raw_count: topPartnersRaw.length,
+        raw_partners: rawPartnerIds
+      });
+
+      const topPartners = topPartnersRaw.filter(partner =>
+        validPartnerIds.has(partner.partner_id)
+      );
+
+      // Log filtered partners and any that were removed
+      const filteredPartnerIds = topPartners.map(p => p.partner_id);
+      const removedPartners = rawPartnerIds.filter(id => !validPartnerIds.has(id));
+
+      if (removedPartners.length > 0) {
+        logger.info('ota.admin.dashboard.filtered_partners', {
+          removed_count: removedPartners.length,
+          removed_partners: removedPartners,
+          reason: 'Partner no longer exists in API_KEYS'
+        });
+      }
+
+      logger.info('ota.admin.dashboard.final_partners', {
+        final_count: topPartners.length,
+        final_partners: filteredPartnerIds
+      });
 
       return {
         summary: {

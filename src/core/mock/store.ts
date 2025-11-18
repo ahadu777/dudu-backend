@@ -896,12 +896,27 @@ export class MockStore {
   addRedemption(event: RedemptionEvent): void {
     this.redemptions.push(event);
 
-    // Add jti to cache if present
-    if (event.jti) {
-      this.jtiCache.add(event.jti);
+    // Add jti:function_code combination to cache if present
+    // This prevents replay attacks while allowing same JTI for different functions
+    if (event.jti && event.function_code) {
+      const jtiKey = `${event.jti}:${event.function_code}`;
+      this.jtiCache.add(jtiKey);
     }
   }
 
+  /**
+   * Check if a JTI has been used for a specific function
+   * This allows the same QR code (JTI) to redeem different entitlements
+   */
+  hasJtiForFunction(jti: string, functionCode: string): boolean {
+    const jtiKey = `${jti}:${functionCode}`;
+    return this.jtiCache.has(jtiKey);
+  }
+
+  /**
+   * @deprecated Use hasJtiForFunction(jti, functionCode) instead
+   * Kept for backward compatibility
+   */
   hasJti(jti: string): boolean {
     return this.jtiCache.has(jti);
   }

@@ -3,6 +3,9 @@ import { mockDataStore } from '../../core/mock/data';
 import { generateSecureQR, EncryptedQRResult } from '../../utils/qr-crypto';
 import { logger } from '../../utils/logger';
 import { getAuthContext } from '../../middlewares/unified-auth';
+import { AppDataSource } from '../../config/database';
+import { dataSourceConfig } from '../../config/data-source';
+import { OTARepository } from '../ota/domain/ota.repository';
 
 /**
  * Ticket type detection result
@@ -68,25 +71,55 @@ export class UnifiedQRService {
    */
   private async fetchTicket(ticketCode: string, ticketType: 'OTA' | 'NORMAL'): Promise<TicketInfo | null> {
     if (ticketType === 'OTA') {
-      // Fetch from OTA pre-generated tickets
-      const otaTicket = mockDataStore.preGeneratedTickets.get(ticketCode);
+      // Dual-mode: Database or Mock
+      if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+        // Database mode: Query from pre_generated_tickets table
+        const otaRepo = new OTARepository(AppDataSource);
+        const otaTicket = await otaRepo.findPreGeneratedTicket(ticketCode);
 
-      if (!otaTicket) {
-        logger.info('qr.service.ota_ticket_not_found', { ticket_code: ticketCode });
-        return null;
+        if (!otaTicket) {
+          logger.info('qr.service.ota_ticket_not_found_db', {
+            ticket_code: ticketCode,
+            mode: 'database'
+          });
+          return null;
+        }
+
+        return {
+          ticket_code: otaTicket.ticket_code,
+          product_id: otaTicket.product_id,
+          status: otaTicket.status,
+          ticket_type: 'OTA',
+          owner_id: otaTicket.partner_id,
+          order_id: otaTicket.order_id,
+          batch_id: otaTicket.batch_id,
+          channel_id: 'ota',
+          partner_id: otaTicket.partner_id
+        };
+      } else {
+        // Mock mode: Fetch from in-memory store
+        const otaTicket = mockDataStore.preGeneratedTickets.get(ticketCode);
+
+        if (!otaTicket) {
+          logger.info('qr.service.ota_ticket_not_found_mock', {
+            ticket_code: ticketCode,
+            mode: 'mock'
+          });
+          return null;
+        }
+
+        return {
+          ticket_code: otaTicket.ticket_code,
+          product_id: otaTicket.product_id,
+          status: otaTicket.status,
+          ticket_type: 'OTA',
+          owner_id: otaTicket.partner_id,
+          order_id: otaTicket.order_id,
+          batch_id: otaTicket.batch_id,
+          channel_id: 'ota',
+          partner_id: otaTicket.partner_id
+        };
       }
-
-      return {
-        ticket_code: otaTicket.ticket_code,
-        product_id: otaTicket.product_id,
-        status: otaTicket.status,
-        ticket_type: 'OTA',
-        owner_id: otaTicket.partner_id,
-        order_id: otaTicket.order_id,
-        batch_id: otaTicket.batch_id,
-        channel_id: 'ota', // OTA channel
-        partner_id: otaTicket.partner_id
-      };
     } else {
       // Fetch from normal tickets
       const normalTicket = mockDataStore.getTicketByCode(ticketCode);
@@ -187,11 +220,16 @@ export class UnifiedQRService {
     // Step 4: Validate status
     this.validateStatus(ticket);
 
-    // Step 5: Generate encrypted QR code (only ticket_code is stored in QR)
-    // All other ticket details will be retrieved via ticket_code during verification
+    // Step 5: Generate encrypted QR code with appropriate expiry time
+    // OTA tickets: Permanent QR codes (100 years = 52,560,000 minutes)
+    //   - QR validity is determined by ticket status, not expiry time
+    //   - Ticket status (PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED) controls usability
+    // Normal tickets: Short-lived for security (30 minutes default)
+    const qrExpiryMinutes = expiryMinutes || (ticketType === 'OTA' ? 52560000 : undefined);
+
     const qrResult = await generateSecureQR(
       ticket.ticket_code,
-      expiryMinutes
+      qrExpiryMinutes
     );
 
     logger.info('qr.service.generate_success', {

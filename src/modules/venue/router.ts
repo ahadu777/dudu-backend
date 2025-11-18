@@ -131,12 +131,15 @@ router.post('/scan', async (req, res) => {
     logger.error('venue.scan.error', {
       function_code,
       terminal_device: terminal_device_id,
-      error: (error as Error).message
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
 
     res.status(500).json({
       result: 'reject',
       reason: 'INTERNAL_ERROR',
+      debug_error: (error as Error).message,
+      debug_stack: (error as Error).stack?.split('\n').slice(0, 5),
       performance_metrics: {
         response_time_ms: 0,
         fraud_checks_passed: false

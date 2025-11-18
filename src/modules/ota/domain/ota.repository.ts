@@ -49,6 +49,15 @@ export class OTARepository {
   }
 
   // Inventory operations
+  async getAllInventories(): Promise<ProductInventoryEntity[]> {
+    return this.inventoryRepo.find({
+      relations: ['product'],
+      where: {
+        product: { status: 'active' }
+      }
+    });
+  }
+
   async getInventoryByProductIds(productIds: number[]): Promise<ProductInventoryEntity[]> {
     return this.inventoryRepo.find({
       where: { product_id: In(productIds) },
