@@ -464,4 +464,19 @@ export class VenueOperationsService {
   }
 }
 
-export const venueOperationsService = new VenueOperationsService();
+// 延迟实例化 - 仅在数据库初始化后创建（避免启动时强制要求数据库）
+let venueOperationsServiceInstance: VenueOperationsService | null = null;
+
+export const getVenueOperationsService = (): VenueOperationsService => {
+  if (!venueOperationsServiceInstance) {
+    venueOperationsServiceInstance = new VenueOperationsService();
+  }
+  return venueOperationsServiceInstance;
+};
+
+// 向后兼容的导出（仅在数据库模式下使用）
+export const venueOperationsService = new Proxy({} as VenueOperationsService, {
+  get(_target, prop) {
+    return getVenueOperationsService()[prop as keyof VenueOperationsService];
+  }
+});

@@ -1,0 +1,1806 @@
+{
+  "info": {
+    "name": "US-012: OTA平台完整集成测试2",
+    "description": "包含预订流程、预制票据流程、状态转换验证的完整测试集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "ota_test_key_12345",
+      "type": "string"
+    },
+    {
+      "key": "reservation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_reservation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_ticket_code",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "流程一: 预订激活 → 生成订单",
+      "item": [
+        {
+          "name": "1.0 查询产品目录 📦",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回产品列表\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('products');",
+                  "    pm.expect(jsonData).to.have.property('total_count');",
+                  "    pm.expect(jsonData.products.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test(\"产品包含完整信息\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var product = jsonData.products[0];",
+                  "    pm.expect(product).to.have.property('product_id');",
+                  "    pm.expect(product).to.have.property('name');",
+                  "    pm.expect(product).to.have.property('sku');",
+                  "    pm.expect(product).to.have.property('unit_price');",
+                  "    pm.expect(product).to.have.property('functions');",
+                  "    pm.expect(product).to.have.property('channel_allocations');",
+                  "});",
+                  "",
+                  "console.log(\"产品总数:\", pm.response.json().total_count);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/products?product_ids=106,107,108",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "product_ids",
+                  "value": "106,107,108",
+                  "description": "可选：指定产品ID列表"
+                }
+              ]
+            },
+            "description": "查询OTA可售产品目录，包含产品详情、功能entitlements和渠道库存分配"
+          },
+          "response": []
+        },
+        {
+          "name": "1.1 查询OTA库存",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回库存数据\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('available_quantities');",
+                  "    pm.expect(jsonData.available_quantities).to.have.property('106');",
+                  "    pm.expect(jsonData.available_quantities).to.have.property('107');",
+                  "    pm.expect(jsonData.available_quantities).to.have.property('108');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 可用库存:\", pm.response.json().available_quantities);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "inventory"
+              ]
+            },
+            "description": "查询OTA渠道可用的库存数量"
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 创建预订",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"返回预订ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('reservation_id');",
+                  "    pm.expect(jsonData).to.have.property('reserved_until');",
+                  "    pm.expect(jsonData).to.have.property('pricing_snapshot');",
+                  "    pm.collectionVariables.set('reservation_id', jsonData.reservation_id);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 预订ID:\", pm.response.json().reservation_id);",
+                  "console.log(\"   有效期至:\", pm.response.json().reserved_until);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 25\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reserve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reserve"
+              ]
+            },
+            "description": "为Premium Plan创建25个单位的预订"
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 查询预订详情",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"预订状态为active\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('active');",
+                  "    pm.expect(jsonData.product_id).to.eql(106);",
+                  "    pm.expect(jsonData.quantity).to.eql(25);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 预订详情:\", pm.response.json());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/reservations/{{reservation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reservations",
+                "{{reservation_id}}"
+              ]
+            },
+            "description": "查询刚创建的预订详情"
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 激活预订 → 生成订单和票券 ⭐",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"订单创建成功\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('order_id');",
+                  "    pm.expect(jsonData).to.have.property('tickets');",
+                  "    pm.expect(jsonData).to.have.property('total_amount');",
+                  "    pm.expect(jsonData).to.have.property('confirmation_code');",
+                  "    pm.collectionVariables.set('order_id', jsonData.order_id);",
+                  "});",
+                  "",
+                  "pm.test(\"生成了25张票券\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.tickets).to.have.lengthOf(25);",
+                  "});",
+                  "",
+                  "pm.test(\"票券包含entitlements\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var firstTicket = jsonData.tickets[0];",
+                  "    pm.expect(firstTicket).to.have.property('entitlements');",
+                  "    pm.expect(firstTicket.entitlements.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 订单ID:\", pm.response.json().order_id);",
+                  "console.log(\"   票券数量:\", pm.response.json().tickets.length);",
+                  "console.log(\"   总金额:\", pm.response.json().total_amount);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"张三\",\n    \"email\": \"zhangsan@example.com\",\n    \"phone\": \"+86 138 0000 0001\"\n  },\n  \"payment_reference\": \"PAY-TEST-001\",\n  \"special_requests\": \"请安排靠窗座位\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reservations/{{reservation_id}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reservations",
+                "{{reservation_id}}",
+                "activate"
+              ]
+            },
+            "description": "激活预订，生成订单和票券"
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 查询订单列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回订单列表\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('orders');",
+                  "    pm.expect(jsonData).to.have.property('total_count');",
+                  "    pm.expect(jsonData.orders.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 订单总数:\", pm.response.json().total_count);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "orders"
+              ]
+            },
+            "description": "查询所有OTA订单"
+          },
+          "response": []
+        },
+        {
+          "name": "1.5.1 查询订单详情 📋",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回订单详情\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('order_id');",
+                  "    pm.expect(jsonData).to.have.property('product_id');",
+                  "    pm.expect(jsonData).to.have.property('customer_name');",
+                  "    pm.expect(jsonData).to.have.property('customer_email');",
+                  "    pm.expect(jsonData).to.have.property('total_amount');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('confirmation_code');",
+                  "});",
+                  "",
+                  "pm.test(\"订单包含预订关联\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('reservation_id');",
+                  "});",
+                  "",
+                  "console.log(\"订单详情:\", pm.response.json());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/orders/{{order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "orders",
+                "{{order_id}}"
+              ]
+            },
+            "description": "查询单个订单的完整详情，包括客户信息、金额、状态和预订关联"
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 获取订单票券和QR码",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回票券列表\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('tickets');",
+                  "    pm.expect(jsonData.tickets.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test(\"票券包含QR码\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var firstTicket = jsonData.tickets[0];",
+                  "    pm.expect(firstTicket).to.have.property('ticket_code');",
+                  "    pm.expect(firstTicket).to.have.property('qr_code');",
+                  "    pm.expect(firstTicket).to.have.property('entitlements');",
+                  "    pm.expect(firstTicket).to.have.property('status');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 票券数量:\", pm.response.json().tickets.length);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/orders/{{order_id}}/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "orders",
+                "{{order_id}}",
+                "tickets"
+              ]
+            },
+            "description": "获取订单的所有票券和QR码"
+          },
+          "response": []
+        }
+      ],
+      "description": "测试完整的预订激活流程：库存查询 → 创建预订 → 激活预订 → 生成订单和票券"
+    },
+    {
+      "name": "流程二: 预制票据激活 → 生成订单",
+      "item": [
+        {
+          "name": "2.1 批量生成预制票据",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"批量生成成功\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('batch_id');",
+                  "    pm.expect(jsonData).to.have.property('tickets');",
+                  "    pm.expect(jsonData).to.have.property('total_generated');",
+                  "    pm.expect(jsonData.total_generated).to.eql(10);",
+                  "});",
+                  "",
+                  "pm.test(\"票据状态为PRE_GENERATED\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var firstTicket = jsonData.tickets[0];",
+                  "    pm.expect(firstTicket.status).to.eql('PRE_GENERATED');",
+                  "    pm.collectionVariables.set('ticket_code', firstTicket.ticket_code);",
+                  "});",
+                  "",
+                  "pm.test(\"票据包含QR码和entitlements\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var firstTicket = jsonData.tickets[0];",
+                  "    pm.expect(firstTicket).to.have.property('qr_code');",
+                  "    pm.expect(firstTicket).to.have.property('entitlements');",
+                  "    pm.expect(firstTicket.entitlements.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 批次ID:\", pm.response.json().batch_id);",
+                  "console.log(\"   生成数量:\", pm.response.json().total_generated);",
+                  "console.log(\"   第一张票据码:\", pm.response.json().tickets[0].ticket_code);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 10,\n  \"batch_id\": \"BATCH-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            },
+            "description": "为Pet Plan批量生成10张预制票据"
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 激活预制票据 → 生成订单 ⭐",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"票据激活成功\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('ticket_code');",
+                  "    pm.expect(jsonData).to.have.property('order_id');",
+                  "    pm.expect(jsonData).to.have.property('customer_name');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('activated_at');",
+                  "    pm.expect(jsonData).to.have.property('customer_type');",
+                  "    pm.expect(jsonData).to.have.property('ticket_price');",
+                  "    pm.collectionVariables.set('order_id', jsonData.order_id);",
+                  "});",
+                  "",
+                  "pm.test(\"状态转换为ACTIVE\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('ACTIVE');",
+                  "});",
+                  "",
+                  "pm.test(\"客户信息已绑定\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.customer_name).to.eql('李四');",
+                  "    pm.expect(jsonData.customer_type).to.eql('adult');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 票据码:\", pm.response.json().ticket_code);",
+                  "console.log(\"   订单ID:\", pm.response.json().order_id);",
+                  "console.log(\"   客户类型:\", pm.response.json().customer_type);",
+                  "console.log(\"   票据价格:\", pm.response.json().ticket_price, pm.response.json().currency);",
+                  "console.log(\"   激活状态:\", pm.response.json().status);",
+                  "console.log(\"   激活时间:\", pm.response.json().activated_at);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"李四\",\n    \"email\": \"lisi@example.com\",\n    \"phone\": \"+86 138 0000 0002\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-TEST-002\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{ticket_code}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{ticket_code}}",
+                "activate"
+              ]
+            },
+            "description": "激活预制票据，绑定客户信息并生成订单"
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 验证订单已创建",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"订单票据查询成功\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('tickets');",
+                  "    pm.expect(jsonData.tickets.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 订单票据验证通过\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/orders/{{order_id}}/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "orders",
+                "{{order_id}}",
+                "tickets"
+              ]
+            },
+            "description": "验证订单已创建且包含票据"
+          },
+          "response": []
+        }
+      ],
+      "description": "测试预制票据流程：批量生成票据 → 单张激活 → 绑定客户 → 生成订单"
+    },
+    {
+      "name": "流程三: 票券列表查询测试 🔍",
+      "item": [
+        {
+          "name": "准备: 生成测试票券批次A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"票券生成成功\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.total_generated).to.eql(5);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 批次A生成5张票券\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 5,\n  \"batch_id\": \"BATCH-A-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            },
+            "description": "生成批次A的测试票券"
+          },
+          "response": []
+        },
+        {
+          "name": "准备: 生成测试票券批次B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"票券生成成功\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.total_generated).to.eql(3);",
+                  "    // 保存一个ticket_code用于后续激活测试",
+                  "    pm.collectionVariables.set('test_ticket_for_activation', jsonData.tickets[0].ticket_code);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 批次B生成3张票券\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 3,\n  \"batch_id\": \"BATCH-B-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            },
+            "description": "生成批次B的测试票券"
+          },
+          "response": []
+        },
+        {
+          "name": "3.1 查询所有票券 ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回票券列表\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('tickets');",
+                  "    pm.expect(jsonData).to.have.property('total_count');",
+                  "    pm.expect(jsonData).to.have.property('page');",
+                  "    pm.expect(jsonData).to.have.property('page_size');",
+                  "});",
+                  "",
+                  "pm.test(\"票券包含完整字段\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.tickets.length > 0) {",
+                  "        var ticket = jsonData.tickets[0];",
+                  "        pm.expect(ticket).to.have.property('ticket_code');",
+                  "        pm.expect(ticket).to.have.property('status');",
+                  "        pm.expect(ticket).to.have.property('batch_id');",
+                  "        pm.expect(ticket).to.have.property('product_id');",
+                  "        pm.expect(ticket).to.have.property('created_at');",
+                  "        pm.expect(ticket).to.have.property('activated_at');",
+                  "    }",
+                  "});",
+                  "",
+                  "console.log(\"✅ 票券总数:\", pm.response.json().total_count);",
+                  "console.log(\"   当前页:\", pm.response.json().page);",
+                  "console.log(\"   每页数量:\", pm.response.json().page_size);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets"
+              ]
+            },
+            "description": "查询所有票券,不带任何过滤条件"
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 按状态过滤 - PRE_GENERATED ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"只返回PRE_GENERATED状态的票券\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    jsonData.tickets.forEach(function(ticket) {",
+                  "        pm.expect(ticket.status).to.eql('PRE_GENERATED');",
+                  "    });",
+                  "});",
+                  "",
+                  "console.log(\"✅ PRE_GENERATED票券数量:\", pm.response.json().total_count);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets?status=PRE_GENERATED",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PRE_GENERATED",
+                  "description": "只查询未激活的票券"
+                }
+              ]
+            },
+            "description": "查询所有PRE_GENERATED状态的票券(可售库存)"
+          },
+          "response": []
+        },
+        {
+          "name": "准备: 激活一张票券",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"激活成功\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('ACTIVE');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 票券已激活,用于后续测试\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"测试客户\",\n    \"email\": \"test@example.com\",\n    \"phone\": \"+86 138 0000 0001\"\n  },\n  \"customer_type\": \"child\",\n  \"payment_reference\": \"PAY-LIST-TEST\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{test_ticket_for_activation}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{test_ticket_for_activation}}",
+                "activate"
+              ]
+            },
+            "description": "激活一张票券,用于测试ACTIVE状态过滤"
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 按状态过滤 - ACTIVE ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"只返回ACTIVE状态的票券\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.total_count).to.be.above(0);",
+                  "    jsonData.tickets.forEach(function(ticket) {",
+                  "        pm.expect(ticket.status).to.eql('ACTIVE');",
+                  "        pm.expect(ticket.activated_at).to.not.be.null;",
+                  "        pm.expect(ticket.customer_name).to.not.be.null;",
+                  "    });",
+                  "});",
+                  "",
+                  "console.log(\"✅ ACTIVE票券数量:\", pm.response.json().total_count);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets?status=ACTIVE",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "只查询已激活的票券"
+                }
+              ]
+            },
+            "description": "查询所有ACTIVE状态的票券(已售出)"
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 分页测试 - 第1页 ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回正确的分页信息\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.page).to.eql(1);",
+                  "    pm.expect(jsonData.page_size).to.eql(2);",
+                  "    pm.expect(jsonData.tickets.length).to.be.at.most(2);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 第1页,每页2条:\", pm.response.json().tickets.length, \"条\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets?page=1&limit=2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "页码"
+                },
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "每页数量"
+                }
+              ]
+            },
+            "description": "测试分页功能 - 第1页,每页2条"
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 分页测试 - 第2页 ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回正确的分页信息\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.page).to.eql(2);",
+                  "    pm.expect(jsonData.page_size).to.eql(2);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 第2页,每页2条:\", pm.response.json().tickets.length, \"条\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets?page=2&limit=2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2",
+                  "description": "页码"
+                },
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "每页数量"
+                }
+              ]
+            },
+            "description": "测试分页功能 - 第2页,每页2条"
+          },
+          "response": []
+        },
+        {
+          "name": "3.6 按时间范围过滤 ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"返回的票券都在时间范围内\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var startDate = new Date('2025-11-01T00:00:00Z');",
+                  "    var endDate = new Date('2025-12-31T23:59:59Z');",
+                  "    ",
+                  "    jsonData.tickets.forEach(function(ticket) {",
+                  "        var createdAt = new Date(ticket.created_at);",
+                  "        pm.expect(createdAt.getTime()).to.be.at.least(startDate.getTime());",
+                  "        pm.expect(createdAt.getTime()).to.be.at.most(endDate.getTime());",
+                  "    });",
+                  "});",
+                  "",
+                  "console.log(\"✅ 时间范围内的票券数量:\", pm.response.json().total_count);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets?created_after=2025-11-01T00:00:00Z&created_before=2025-12-31T23:59:59Z",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "created_after",
+                  "value": "2025-11-01T00:00:00Z",
+                  "description": "创建日期起始"
+                },
+                {
+                  "key": "created_before",
+                  "value": "2025-12-31T23:59:59Z",
+                  "description": "创建日期结束"
+                }
+              ]
+            },
+            "description": "按创建时间范围过滤票券"
+          },
+          "response": []
+        },
+        {
+          "name": "3.7 组合过滤 - 状态+分页 ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"状态码是200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"组合过滤生效\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.page).to.eql(1);",
+                  "    pm.expect(jsonData.page_size).to.eql(10);",
+                  "    ",
+                  "    jsonData.tickets.forEach(function(ticket) {",
+                  "        pm.expect(ticket.status).to.eql('PRE_GENERATED');",
+                  "    });",
+                  "});",
+                  "",
+                  "console.log(\"✅ 组合过滤结果:\", pm.response.json().total_count, \"张PRE_GENERATED票券\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets?status=PRE_GENERATED&page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PRE_GENERATED",
+                  "description": "状态过滤"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "页码"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "每页数量"
+                }
+              ]
+            },
+            "description": "组合使用状态过滤和分页"
+          },
+          "response": []
+        },
+        {
+          "name": "3.8 错误测试 - 无效分页参数 ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"返回422验证错误\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test(\"错误信息正确\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.eql('INVALID_PARAMETER');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 参数验证生效\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets?page=0&limit=-5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "无效页码(必须>=1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "-5",
+                  "description": "无效limit(必须>=1)"
+                }
+              ]
+            },
+            "description": "测试无效的分页参数"
+          },
+          "response": []
+        }
+      ],
+      "description": "完整测试票券列表查询API: 状态过滤、分页、时间范围、组合查询"
+    },
+    {
+      "name": "流程四: 状态转换和错误处理验证",
+      "item": [
+        {
+          "name": "准备: 生成测试票据",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"票据生成成功\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('test_ticket_code', jsonData.tickets[0].ticket_code);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 测试票据码:\", pm.response.json().tickets[0].ticket_code);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 1,\n  \"batch_id\": \"TEST-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            },
+            "description": "生成一张测试票据用于后续测试"
+          },
+          "response": []
+        },
+        {
+          "name": "准备: 激活测试票据",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"激活成功\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('ACTIVE');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 票据已激活\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"测试用户\",\n    \"email\": \"test@example.com\",\n    \"phone\": \"+86 138 0000 0001\"\n  },\n  \"customer_type\": \"elderly\",\n  \"payment_reference\": \"PAY-FIRST\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{test_ticket_code}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{test_ticket_code}}",
+                "activate"
+              ]
+            },
+            "description": "首次激活票据"
+          },
+          "response": []
+        },
+        {
+          "name": "3.1 测试重复激活保护 ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"返回409冲突错误\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"错误信息正确\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.eql('TICKET_ALREADY_ACTIVATED');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 重复激活保护生效\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"重复测试\",\n    \"email\": \"duplicate@example.com\",\n    \"phone\": \"+86 138 0000 9999\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-DUPLICATE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{test_ticket_code}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{test_ticket_code}}",
+                "activate"
+              ]
+            },
+            "description": "尝试再次激活同一张票据，应该返回409错误"
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 测试无效票据码 ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"返回404错误\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"错误信息正确\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.eql('TICKET_NOT_FOUND');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 无效票据验证生效\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"测试用户\",\n    \"email\": \"test@example.com\",\n    \"phone\": \"+86 138 0000 0001\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-TEST\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/INVALID-TICKET-CODE/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "INVALID-TICKET-CODE",
+                "activate"
+              ]
+            },
+            "description": "尝试激活不存在的票据"
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 创建预订用于取消测试",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"预订创建成功\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('test_reservation_id', jsonData.reservation_id);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 测试预订ID:\", pm.response.json().reservation_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 108,\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reserve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reserve"
+              ]
+            },
+            "description": "创建一个预订用于取消测试"
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 取消预订",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"返回204 No Content\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "console.log(\"✅ 预订取消成功\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/reservations/{{test_reservation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reservations",
+                "{{test_reservation_id}}"
+              ]
+            },
+            "description": "取消预订，库存应该释放"
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 测试无效API Key ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"返回401未授权\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"错误信息正确\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.eql('INVALID_API_KEY');",
+                  "});",
+                  "",
+                  "console.log(\"✅ API Key验证生效\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "invalid_key_12345",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "inventory"
+              ]
+            },
+            "description": "使用无效API Key测试认证"
+          },
+          "response": []
+        },
+        {
+          "name": "3.6 测试超量预订 ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"返回422验证错误\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test(\"错误信息正确\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.eql('VALIDATION_ERROR');",
+                  "});",
+                  "",
+                  "console.log(\"✅ 数量限制验证生效\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 150\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reserve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reserve"
+              ]
+            },
+            "description": "尝试预订超过限制（100）的数量"
+          },
+          "response": []
+        }
+      ],
+      "description": "测试状态转换、重复激活保护、预订取消等边界场景和错误处理"
+    }
+  ]
+}

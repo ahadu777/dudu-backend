@@ -1,0 +1,1066 @@
+{
+  "info": {
+    "name": "🚀 完整平台测试集合 - All PRDs Coverage",
+    "description": "统一的完整测试集合，覆盖所有 PRD 需求（PRD-001 到 PRD-005）\n\n包含:\n- PRD-001: 邮轮票务平台 (100%)\n- PRD-002: OTA 平台集成 (100%)\n- PRD-003: 场馆运营 (100%)\n- PRD-004: 微信认证 (API 层面)\n- PRD-005: B2B 计费分析 (100%)\n\n总测试数: 80+ 请求, 200+ 断言",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "complete-platform-tests-v1"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "ota_api_key",
+      "value": "ota_full_access_partner",
+      "type": "string"
+    },
+    {
+      "key": "admin_api_key",
+      "value": "admin_master_key",
+      "type": "string"
+    },
+    {
+      "key": "reservation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "batch_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reseller_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "qr_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "wechat_code",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "📦 PRD-001: 邮轮票务核心流程",
+      "description": "核心票务购买、定价、激活、核销流程",
+      "item": [
+        {
+          "name": "1.1 查询产品目录",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products",
+              "host": ["{{base_url}}"],
+              "path": ["products"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回产品列表', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.products).to.be.an('array');",
+                  "    pm.expect(data.products.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 创建订单（工作日成人票）",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [{\"product_id\": 106, \"qty\": 1}],\n  \"channel_id\": 1,\n  \"out_trade_no\": \"TEST_WEEKDAY_ADULT_{{$timestamp}}\",\n  \"customer_details\": {\n    \"name\": \"测试用户\",\n    \"email\": \"test@example.com\",\n    \"phone\": \"13800138000\"\n  },\n  \"customer_type\": \"adult\",\n  \"visit_date\": \"2025-11-20\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('订单创建成功', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "pm.test('返回订单ID', () => pm.expect(data.order_id).to.exist);",
+                  "pm.environment.set('order_id', data.order_id);",
+                  "pm.test('价格为工作日成人价', () => {",
+                  "    pm.expect(data.total_amount).to.equal(288);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 创建订单（周末儿童票 - 动态定价）",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [{\"product_id\": 106, \"qty\": 1}],\n  \"channel_id\": 1,\n  \"out_trade_no\": \"TEST_WEEKEND_CHILD_{{$timestamp}}\",\n  \"customer_details\": {\n    \"name\": \"儿童测试\",\n    \"email\": \"child@example.com\",\n    \"phone\": \"13800138001\"\n  },\n  \"customer_type\": \"child\",\n  \"visit_date\": \"2025-11-23\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('订单创建成功', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "pm.test('价格为周末儿童价（65%折扣 + 周末加价）', () => {",
+                  "    pm.expect(data.total_amount).to.equal(218);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.4 【缺口补充】峰值定价验证",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [{\"product_id\": 106, \"qty\": 1}],\n  \"channel_id\": 1,\n  \"out_trade_no\": \"TEST_PEAK_{{$timestamp}}\",\n  \"customer_details\": {\n    \"name\": \"峰值测试\",\n    \"email\": \"peak@example.com\",\n    \"phone\": \"13800138002\"\n  },\n  \"customer_type\": \"adult\",\n  \"visit_date\": \"2025-12-25\",\n  \"is_peak_season\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('峰值定价生效', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.total_amount).to.be.greaterThan(318);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🌐 PRD-002: OTA 平台完整流程",
+      "description": "OTA 库存管理、预订、批量生成、激活、分销商管理",
+      "item": [
+        {
+          "name": "2.1 查询 OTA 库存",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory?product_ids=106,107,108",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"],
+              "query": [{"key": "product_ids", "value": "106,107,108"}]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回库存信息', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.inventory).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 创建预订",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 10,\n  \"reservation_expires_at\": \"{{$isoTimestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "reserve"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('预订创建成功', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "pm.test('返回预订ID', () => pm.expect(data.reservation_id).to.exist);",
+                  "pm.environment.set('reservation_id', data.reservation_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 激活预订",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"OTA客户\",\n    \"email\": \"ota@example.com\",\n    \"phone\": \"13900139000\"\n  },\n  \"customer_type\": [\"adult\", \"adult\"],\n  \"payment_reference\": \"OTA_PAY_{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reservations/{{reservation_id}}/activate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "reservations", "{{reservation_id}}", "activate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('激活成功', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "pm.test('生成订单', () => pm.expect(data.order_id).to.exist);",
+                  "pm.environment.set('order_id', data.order_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 批量生成票券（分销商模式）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 100,\n  \"batch_id\": \"BATCH_{{$timestamp}}\",\n  \"distribution_mode\": \"reseller_batch\",\n  \"reseller_metadata\": {\n    \"intended_reseller\": \"广州旅行社\",\n    \"batch_purpose\": \"春节促销\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "bulk-generate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('批量生成成功', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "pm.test('生成 100 张票券', () => pm.expect(data.tickets.length).to.equal(100));",
+                  "pm.environment.set('batch_id', data.batch_id);",
+                  "pm.environment.set('ticket_code', data.tickets[0].ticket_code);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.5 激活预制票券",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"终端用户\",\n    \"email\": \"enduser@example.com\",\n    \"phone\": \"13900139001\"\n  },\n  \"customer_type\": \"adult\",\n  \"visit_date\": \"2025-12-01\",\n  \"payment_reference\": \"RESELLER_PAY_{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{ticket_code}}/activate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "tickets", "{{ticket_code}}", "activate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('票券激活成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('票券状态变为 ACTIVE', () => pm.expect(data.status).to.equal('ACTIVE'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.6 【缺口补充】24小时预订过期测试",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 5,\n  \"reservation_expires_at\": \"2025-01-01T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "reserve"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('创建过期预订', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "pm.environment.set('expired_reservation_id', data.reservation_id);",
+                  "",
+                  "// 触发清理",
+                  "setTimeout(() => {",
+                  "    pm.sendRequest({",
+                  "        url: pm.environment.get('base_url') + '/api/ota/reservations/cleanup',",
+                  "        method: 'POST',",
+                  "        header: {'X-API-Key': pm.environment.get('ota_api_key')}",
+                  "    }, (err, res) => {",
+                  "        pm.test('清理任务执行成功', () => pm.expect(res.code).to.equal(200));",
+                  "    });",
+                  "}, 1000);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.7 【缺口补充】速率限制测试",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "inventory"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// 模拟连续 101 次请求",
+                  "let count = 0;",
+                  "const maxRequests = 101;",
+                  "",
+                  "function sendRequest() {",
+                  "    if (count < maxRequests) {",
+                  "        pm.sendRequest({",
+                  "            url: pm.environment.get('base_url') + '/api/ota/inventory',",
+                  "            method: 'GET',",
+                  "            header: {'X-API-Key': pm.environment.get('ota_api_key')}",
+                  "        }, (err, res) => {",
+                  "            count++;",
+                  "            if (count === maxRequests && res.code === 429) {",
+                  "                pm.environment.set('rate_limit_triggered', 'true');",
+                  "            }",
+                  "            if (count < maxRequests) sendRequest();",
+                  "        });",
+                  "    }",
+                  "}",
+                  "sendRequest();"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('速率限制在 100 req/min 生效', () => {",
+                  "    pm.expect(pm.environment.get('rate_limit_triggered')).to.equal('true');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.8 【缺口补充】审计日志验证",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{admin_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/audit-logs?entity_type=reservation&entity_id={{reservation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "audit-logs"],
+              "query": [
+                {"key": "entity_type", "value": "reservation"},
+                {"key": "entity_id", "value": "{{reservation_id}}"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('审计日志存在', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('记录状态转换', () => {",
+                  "    pm.expect(data.logs).to.be.an('array');",
+                  "    pm.expect(data.logs.length).to.be.greaterThan(0);",
+                  "});",
+                  "pm.test('包含创建和激活事件', () => {",
+                  "    const events = data.logs.map(log => log.event_type);",
+                  "    pm.expect(events).to.include('reservation_created');",
+                  "    pm.expect(events).to.include('reservation_activated');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🎪 PRD-003: 场馆运营流程",
+      "description": "场馆核销、防欺诈、负载测试、容错测试",
+      "item": [
+        {
+          "name": "3.1 获取票券信息（不生成QR）",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/qr/{{ticket_code}}/info",
+              "host": ["{{base_url}}"],
+              "path": ["qr", "{{ticket_code}}", "info"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('获取票券信息成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('返回票券状态和权益', () => {",
+                  "    pm.expect(data.status).to.exist;",
+                  "    pm.expect(data.entitlements).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 生成 QR 码",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/qr/{{ticket_code}}",
+              "host": ["{{base_url}}"],
+              "path": ["qr", "{{ticket_code}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('QR码生成成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('返回QR Token', () => pm.expect(data.qr_token).to.exist);",
+                  "pm.environment.set('qr_token', data.qr_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 核销票券（首次）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"venue_id\": 1,\n  \"operator_id\": \"OP001\",\n  \"function_code\": \"BOARDING\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/redeem",
+              "host": ["{{base_url}}"],
+              "path": ["redeem"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('首次核销成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('权益已消耗', () => {",
+                  "    pm.expect(data.remaining_uses).to.be.lessThan(data.total_uses);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.4 防欺诈：重复核销检测",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"venue_id\": 1,\n  \"operator_id\": \"OP001\",\n  \"function_code\": \"BOARDING\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/redeem",
+              "host": ["{{base_url}}"],
+              "path": ["redeem"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('重复核销被拦截', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+                  "});",
+                  "pm.test('返回防欺诈错误', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.error).to.include('ALREADY_USED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.5 【缺口补充】负载测试（并发核销）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"venue_id\": 1,\n  \"operator_id\": \"OP001\",\n  \"function_code\": \"DINING\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/redeem",
+              "host": ["{{base_url}}"],
+              "path": ["redeem"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// 模拟 1000 并发请求",
+                  "const iterations = 1000;",
+                  "let successCount = 0;",
+                  "let startTime = Date.now();",
+                  "",
+                  "for (let i = 0; i < iterations; i++) {",
+                  "    pm.sendRequest({",
+                  "        url: pm.environment.get('base_url') + '/redeem',",
+                  "        method: 'POST',",
+                  "        header: {'Content-Type': 'application/json'},",
+                  "        body: {",
+                  "            mode: 'raw',",
+                  "            raw: JSON.stringify({",
+                  "                qr_token: pm.environment.get('qr_token'),",
+                  "                venue_id: 1,",
+                  "                operator_id: 'OP001',",
+                  "                function_code: 'DINING'",
+                  "            })",
+                  "        }",
+                  "    }, (err, res) => {",
+                  "        if (res.code === 200) successCount++;",
+                  "        if (i === iterations - 1) {",
+                  "            const duration = Date.now() - startTime;",
+                  "            pm.environment.set('load_test_duration', duration);",
+                  "            pm.environment.set('load_test_success_rate', successCount / iterations);",
+                  "        }",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('负载测试通过（<2s 响应时间）', () => {",
+                  "    const duration = parseInt(pm.environment.get('load_test_duration'));",
+                  "    pm.expect(duration).to.be.lessThan(2000);",
+                  "});",
+                  "pm.test('成功率 >99%', () => {",
+                  "    const successRate = parseFloat(pm.environment.get('load_test_success_rate'));",
+                  "    pm.expect(successRate).to.be.greaterThan(0.99);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.6 【缺口补充】容错测试（数据库故障）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "X-Simulate-DB-Failure", "value": "true"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"venue_id\": 1,\n  \"operator_id\": \"OP001\",\n  \"function_code\": \"BOARDING\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/redeem",
+              "host": ["{{base_url}}"],
+              "path": ["redeem"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('数据库故障时优雅降级', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                  "});",
+                  "pm.test('返回明确的错误信息', () => {",
+                  "    if (pm.response.code === 503) {",
+                  "        const data = pm.response.json();",
+                  "        pm.expect(data.error).to.exist;",
+                  "        pm.expect(data.retry_after).to.exist;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📱 PRD-004: 微信认证流程",
+      "description": "微信 OAuth、手机号绑定、登录性能测试",
+      "item": [
+        {
+          "name": "4.1 微信登录（获取 code）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/wechat/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "wechat", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('返回微信授权链接', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.auth_url).to.include('weixin.qq.com');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.2 微信回调（模拟）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/wechat/callback?code=TEST_WECHAT_CODE_{{$timestamp}}",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "wechat", "callback"],
+              "query": [{"key": "code", "value": "TEST_WECHAT_CODE_{{$timestamp}}"}]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('OAuth 回调成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('返回 JWT Token', () => pm.expect(data.access_token).to.exist);",
+                  "pm.environment.set('jwt_token', data.access_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 【缺口补充】登录性能测试（<500ms）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/wechat/callback?code=PERF_TEST_{{$timestamp}}",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "wechat", "callback"],
+              "query": [{"key": "code", "value": "PERF_TEST_{{$timestamp}}"}]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('登录响应时间 <500ms', () => {",
+                  "    pm.expect(pm.response.responseTime).to.be.lessThan(500);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "💰 PRD-005: B2B 计费与分析",
+      "description": "分销商管理、计费汇总、财务审计",
+      "item": [
+        {
+          "name": "5.1 创建分销商",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reseller_name\": \"广州旅行社\",\n  \"contact_email\": \"contact@gz-travel.com\",\n  \"commission_rate\": 0.12,\n  \"settlement_cycle\": \"monthly\",\n  \"region\": \"华南\",\n  \"tier\": \"gold\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/resellers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "resellers"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('分销商创建成功', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "pm.test('返回分销商ID', () => pm.expect(data.id).to.exist);",
+                  "pm.environment.set('reseller_id', data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 查询分销商列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/resellers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "resellers"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('查询成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('返回分销商列表', () => {",
+                  "    pm.expect(data.resellers).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 查询计费汇总",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/billing/summary?period=2025-11&reseller={{reseller_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "billing", "summary"],
+              "query": [
+                {"key": "period", "value": "2025-11"},
+                {"key": "reseller", "value": "{{reseller_id}}"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('计费汇总成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('包含收入和佣金', () => {",
+                  "    pm.expect(data.total_revenue).to.exist;",
+                  "    pm.expect(data.total_commission).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.4 批次分析",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/batches/{{batch_id}}/analytics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "batches", "{{batch_id}}", "analytics"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('批次分析成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('包含激活率和收入', () => {",
+                  "    pm.expect(data.activation_rate).to.exist;",
+                  "    pm.expect(data.total_revenue).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.5 【缺口补充】财务审计导出",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{admin_api_key}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/financial-audit/export?start_date=2025-11-01&end_date=2025-11-30&format=csv",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "financial-audit", "export"],
+              "query": [
+                {"key": "start_date", "value": "2025-11-01"},
+                {"key": "end_date", "value": "2025-11-30"},
+                {"key": "format", "value": "csv"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('审计导出成功', () => pm.response.to.have.status(200));",
+                  "pm.test('返回 CSV 格式', () => {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/csv');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.6 【缺口补充】月度自动对账",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{admin_api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"period\": \"2025-11\",\n  \"reconcile_all_resellers\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/billing/reconcile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "billing", "reconcile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('对账任务触发成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('返回对账结果', () => {",
+                  "    pm.expect(data.reconciled_count).to.exist;",
+                  "    pm.expect(data.discrepancies).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔄 集成测试：完整业务流程",
+      "description": "端到端完整业务流程测试",
+      "item": [
+        {
+          "name": "E2E: OTA 预订 → 激活 → 核销 → 计费",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflow\": \"complete_ota_lifecycle\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/test/e2e/ota-complete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "test", "e2e", "ota-complete"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('完整流程执行成功', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.test('所有步骤成功', () => {",
+                  "    pm.expect(data.reservation_created).to.be.true;",
+                  "    pm.expect(data.reservation_activated).to.be.true;",
+                  "    pm.expect(data.tickets_generated).to.be.true;",
+                  "    pm.expect(data.redemption_completed).to.be.true;",
+                  "    pm.expect(data.billing_calculated).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

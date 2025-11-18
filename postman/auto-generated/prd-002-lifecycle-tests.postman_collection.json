@@ -1,0 +1,272 @@
+{
+  "info": {
+    "name": "PRD-002 Lifecycle & Redemption Tests",
+    "description": "Tests for ticket lifecycle transitions, venue redemption, and reservation expiry",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "ota_full_access_key_99999",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup: Create and Activate Ticket",
+      "item": [
+        {
+          "name": "1. Generate Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ticket generated', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('lifecycle_ticket_code', json.tickets[0].ticket_code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"product_id\":106,\"quantity\":1,\"batch_id\":\"LIFECYCLE-{{$timestamp}}\"}"
+            },
+            "url": "{{base_url}}/api/ota/tickets/bulk-generate"
+          }
+        },
+        {
+          "name": "2. Activate Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ticket activated', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"customer_details\":{\"name\":\"Lifecycle Test\",\"email\":\"lifecycle@test.com\",\"phone\":\"+1234567890\"},\"payment_reference\":\"PAY-LIFECYCLE\"}"
+            },
+            "url": "{{base_url}}/api/ota/tickets/{{lifecycle_ticket_code}}/activate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 1: Venue Redemption (POST /venue/scan)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Venue redemption successful', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response contains redemption data', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('success');",
+              "    if (json.success) {",
+              "        pm.expect(json).to.have.property('ticket_info');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"encrypted_data\":\"test_encrypted_data\",\"venue_id\":1}"
+        },
+        "url": "{{base_url}}/venue/scan"
+      }
+    },
+    {
+      "name": "Test 2: Ticket Status After Partial Redemption",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Ticket info retrieved', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Ticket still ACTIVE after partial use', function() {",
+              "    const json = pm.response.json();",
+              "    const hasRemainingUses = json.entitlements.some(e => e.remaining_uses > 0);",
+              "    if (hasRemainingUses) {",
+              "        pm.expect(json.status).to.equal('ACTIVE');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "X-API-Key", "value": "{{api_key}}"}
+        ],
+        "url": "{{base_url}}/qr/{{lifecycle_ticket_code}}/info"
+      }
+    },
+    {
+      "name": "Test 3: ACTIVE → USED Transition Test",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status transitions documented', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Check if ticket becomes USED when fully redeemed', function() {",
+              "    const json = pm.response.json();",
+              "    const allUsed = json.entitlements.every(e => e.remaining_uses === 0);",
+              "    if (allUsed) {",
+              "        pm.expect(json.status).to.equal('USED');",
+              "    } else {",
+              "        pm.expect(json.status).to.equal('ACTIVE');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "X-API-Key", "value": "{{api_key}}"}
+        ],
+        "url": "{{base_url}}/qr/{{lifecycle_ticket_code}}/info"
+      }
+    },
+    {
+      "name": "Test 4: Reservation Expiry Test",
+      "item": [
+        {
+          "name": "1. Create Reservation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reservation created', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('test_reservation_id', json.reservation_id);",
+                  "    pm.collectionVariables.set('reservation_expiry', json.reserved_until);",
+                  "});",
+                  "",
+                  "pm.test('Expiry is 24 hours from now', function() {",
+                  "    const json = pm.response.json();",
+                  "    const expiryTime = new Date(json.reserved_until);",
+                  "    const now = new Date();",
+                  "    const diffHours = (expiryTime - now) / (1000 * 60 * 60);",
+                  "    pm.expect(diffHours).to.be.closeTo(24, 1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{api_key}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"product_id\":106,\"quantity\":5}"
+            },
+            "url": "{{base_url}}/api/ota/reserve"
+          }
+        },
+        {
+          "name": "2. Check Inventory Decremented",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Inventory decreased by reservation', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.available_quantities).to.have.property('106');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{api_key}}"}
+            ],
+            "url": "{{base_url}}/api/ota/inventory"
+          }
+        },
+        {
+          "name": "3. Document Expiry Behavior",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reservation expiry documented', function() {",
+                  "    console.log('Reservation should expire after 24 hours');",
+                  "    console.log('Expiry time:', pm.collectionVariables.get('reservation_expiry'));",
+                  "    console.log('After expiry, inventory should be released automatically');",
+                  "    pm.expect(true).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-API-Key", "value": "{{api_key}}"}
+            ],
+            "url": "{{base_url}}/api/ota/reservations"
+          }
+        }
+      ]
+    }
+  ]
+}

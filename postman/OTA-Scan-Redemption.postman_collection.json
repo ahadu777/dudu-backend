@@ -1,0 +1,504 @@
+{
+  "info": {
+    "name": "OTA 扫码核销流程",
+    "description": "OTA合作伙伴的完整扫码核销流程\n\n## 业务流程\n\n1. **OTA后台**: 批量生成预制票券 (POST /ota/tickets/bulk-generate)\n2. **OTA后台**: 生成二维码 (POST /qr/:code)\n3. **用户**: 收到二维码，到场馆出示\n4. **核销人员步骤1**: 扫码解密，查看票券信息 (POST /qr/decrypt) - 不消耗权益\n5. **核销人员步骤2**: 确认后核销，消耗权益 (POST /venue/scan) - 消耗权益\n\n## 快速开始\n\n1. 运行 'Step 1: OTA批量生成预制票券' 获取ticket_code\n2. 运行 'Step 2: 生成二维码' 获取encrypted_qr_data\n3. 运行 'Step 3: 核销人员扫码解密' 查看票券信息（不消耗）\n4. 运行 'Step 4: 确认核销ferry' 实际消耗权益\n5. 运行 'Step 5: 再次核销gift' 使用同一QR码核销不同权益\n\n所有变量自动填充。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "ota_api_key",
+      "value": "ota_test_key_12345",
+      "type": "string"
+    },
+    {
+      "key": "ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "encrypted_qr_data",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "batch_id",
+      "value": "OTA-DEMO-{{$timestamp}}",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "完整OTA核销流程 (Complete Flow)",
+      "item": [
+        {
+          "name": "Step 1: OTA批量生成预制票券",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.tickets && response.tickets.length > 0) {",
+                  "        const ticketCode = response.tickets[0].ticket_code;",
+                  "        pm.collectionVariables.set('ticket_code', ticketCode);",
+                  "        console.log('✅ 票券生成成功');",
+                  "        console.log('Ticket Code:', ticketCode);",
+                  "        console.log('批次ID:', response.batch_id);",
+                  "        console.log('生成数量:', response.tickets.length);",
+                  "        console.log('');",
+                  "        console.log('权益列表:');",
+                  "        response.tickets[0].entitlements.forEach(ent => {",
+                  "            console.log(`  - ${ent.function_code}: ${ent.remaining_uses}次`);",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 1,\n  \"batch_id\": \"{{batch_id}}\",\n  \"distribution_mode\": \"direct_sale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ota/tickets/bulk-generate",
+              "host": ["{{base_url}}"],
+              "path": ["ota", "tickets", "bulk-generate"]
+            },
+            "description": "**OTA后台操作**: 批量生成预制票券\n\n- 产品106包含3个权益: ferry(渡轮), gift(礼品), tokens(游乐币)\n- 返回ticket_code用于后续生成二维码\n- 状态: PRE_GENERATED"
+          },
+          "response": []
+        },
+        {
+          "name": "Step 2: 生成二维码 (OTA发给用户)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('encrypted_qr_data', response.encrypted_data);",
+                  "    console.log('✅ 二维码生成成功');",
+                  "    console.log('JTI:', response.jti);",
+                  "    console.log('有效期至:', response.expires_at);",
+                  "    console.log('加密数据已保存，可用于核销');",
+                  "    console.log('');",
+                  "    console.log('📱 此二维码发送给用户，用户到场馆出示');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expiry_minutes\": 1440\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qr/{{ticket_code}}",
+              "host": ["{{base_url}}"],
+              "path": ["qr", "{{ticket_code}}"]
+            },
+            "description": "**OTA后台操作**: 为票券生成二维码\n\n- 使用API Key认证\n- 二维码有效期24小时\n- 返回加密的QR数据和图片\n- QR数据格式: `iv:encrypted:authTag:signature`"
+          },
+          "response": []
+        },
+        {
+          "name": "Step 3: 核销人员扫码解密 (查看信息)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ 二维码解密成功 - 查看票券信息');",
+                  "    console.log('');",
+                  "    console.log('📋 票券信息:');",
+                  "    console.log('  票券号:', response.ticket_code);",
+                  "    console.log('  类型:', response.ticket_info.ticket_type);",
+                  "    console.log('  状态:', response.ticket_info.status);",
+                  "    console.log('');",
+                  "    console.log('👤 顾客信息:');",
+                  "    if (response.ticket_info.customer_info) {",
+                  "        const customer = response.ticket_info.customer_info;",
+                  "        console.log('  类型:', customer.type);",
+                  "        console.log('  姓名:', customer.name || 'N/A');",
+                  "    }",
+                  "    console.log('');",
+                  "    console.log('🎫 可用权益:');",
+                  "    response.ticket_info.entitlements.forEach(ent => {",
+                  "        console.log(`  ✓ ${ent.function_code}: 剩余${ent.remaining_uses}次`);",
+                  "    });",
+                  "    console.log('');",
+                  "    console.log('⚠️  注意: 此操作仅查看信息，未消耗权益');",
+                  "    console.log('➡️  确认信息后，使用 POST /venue/scan 进行实际核销');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"encrypted_data\": \"{{encrypted_qr_data}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qr/decrypt",
+              "host": ["{{base_url}}"],
+              "path": ["qr", "decrypt"]
+            },
+            "description": "**核销人员操作 - 第1步**: 扫码解密，查看票券信息\n\n⚠️ **重要**: 此端点仅用于查看信息，**不会消耗权益**\n\n返回信息:\n- 票券基本信息（状态、类型）\n- 顾客信息（姓名、类型）\n- 可用权益列表（function_code和剩余次数）\n- 产品信息\n\n核销人员查看信息后，确认无误再执行实际核销。"
+          },
+          "response": []
+        },
+        {
+          "name": "Step 4: 确认核销 - ferry (消耗权益)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ 核销成功 - ferry权益已消耗');",
+                  "    console.log('');",
+                  "    console.log('核销结果:', response.result);",
+                  "    console.log('票券状态:', response.ticket_status);",
+                  "    console.log('场馆:', response.venue_info.venue_name);",
+                  "    console.log('终端:', response.venue_info.terminal_device);",
+                  "    console.log('');",
+                  "    console.log('剩余权益:');",
+                  "    response.entitlements.forEach(ent => {",
+                  "        const status = ent.remaining_uses > 0 ? '✓ 可用' : '✗ 已用';",
+                  "        console.log(`  ${status} ${ent.function_code}: ${ent.remaining_uses}次`);",
+                  "    });",
+                  "    console.log('');",
+                  "    console.log('性能指标:');",
+                  "    console.log('  响应时间:', response.performance_metrics.response_time_ms + 'ms');",
+                  "    console.log('  防欺诈检查:', response.performance_metrics.fraud_checks_passed ? '通过' : '失败');",
+                  "} else if (pm.response.code === 422) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('❌ 核销失败');",
+                  "    console.log('原因:', response.reason);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"ferry\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "scan"]
+            },
+            "description": "**核销人员操作 - 第2步**: 实际核销，消耗ferry权益\n\n✅ **重要**: 此端点会**实际消耗权益**，减少remaining_uses\n\n操作:\n1. 使用相同的encrypted_qr_data\n2. 指定要核销的function_code (ferry)\n3. 提供终端设备ID\n\n防欺诈:\n- JTI + function_code组合检查\n- 同一QR码的ferry权益只能核销一次\n- 但可以用同一QR码核销其他权益(gift, tokens)"
+          },
+          "response": []
+        },
+        {
+          "name": "Step 5: 再次核销 - gift (同一QR码)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ 核销成功 - gift权益已消耗');",
+                  "    console.log('');",
+                  "    console.log('核销结果:', response.result);",
+                  "    console.log('票券状态:', response.ticket_status);",
+                  "    console.log('');",
+                  "    console.log('剩余权益:');",
+                  "    response.entitlements.forEach(ent => {",
+                  "        const status = ent.remaining_uses > 0 ? '✓ 可用' : '✗ 已用';",
+                  "        console.log(`  ${status} ${ent.function_code}: ${ent.remaining_uses}次`);",
+                  "    });",
+                  "    console.log('');",
+                  "    console.log('💡 说明: 同一QR码可以核销多个不同的权益');",
+                  "    console.log('   - ferry: 已核销 ✓');",
+                  "    console.log('   - gift: 已核销 ✓');",
+                  "    console.log('   - tokens: 待核销');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"gift\",\n  \"terminal_device_id\": \"TERMINAL-GIFT-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "scan"]
+            },
+            "description": "**演示多权益核销**: 使用同一QR码核销gift权益\n\n关键特性:\n- ✅ 同一QR码可以核销多个不同权益\n- ✅ 每个权益只能核销一次（防重复）\n- ✅ 跨终端、跨场馆的防欺诈检测\n\n示例:\n1. ferry权益在central-pier核销\n2. gift权益在gift-shop核销\n3. tokens权益在playground核销\n\n都使用同一个QR码，但function_code不同。"
+          },
+          "response": []
+        }
+      ],
+      "description": "完整的OTA扫码核销流程，按顺序执行所有步骤"
+    },
+    {
+      "name": "错误场景测试",
+      "item": [
+        {
+          "name": "尝试重复核销 (应被拒绝)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 422) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ 防欺诈检测生效');",
+                  "    console.log('拒绝原因:', response.reason);",
+                  "    console.log('说明: 同一QR码的ferry权益不能核销两次');",
+                  "    ",
+                  "    pm.test('拒绝重复核销', () => {",
+                  "        pm.expect(response.reason).to.be.oneOf(['ALREADY_REDEEMED', 'NO_REMAINING']);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"ferry\",\n  \"terminal_device_id\": \"TERMINAL-CP-002\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "scan"]
+            },
+            "description": "测试防欺诈机制: 尝试用同一QR码重复核销ferry权益\n\n预期结果:\n- HTTP 422\n- reason: ALREADY_REDEEMED 或 NO_REMAINING\n- 防欺诈检查基于 (JTI + function_code) 组合"
+          },
+          "response": []
+        },
+        {
+          "name": "核销不存在的权益 (应被拒绝)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"INVALID_FUNCTION\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "scan"]
+            },
+            "description": "测试业务规则验证: 核销票券不包含的权益\n\n预期结果:\n- HTTP 422\n- reason: WRONG_FUNCTION"
+          },
+          "response": []
+        },
+        {
+          "name": "解密无效二维码",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"encrypted_data\": \"invalid-qr-data\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qr/decrypt",
+              "host": ["{{base_url}}"],
+              "path": ["qr", "decrypt"]
+            },
+            "description": "测试安全验证: 解密格式错误的QR数据\n\n预期结果:\n- HTTP 400 或 401\n- 错误信息: 解密失败"
+          },
+          "response": []
+        }
+      ],
+      "description": "测试各种错误场景和防欺诈机制"
+    },
+    {
+      "name": "查询端点 (不消耗权益)",
+      "item": [
+        {
+          "name": "查询票券信息 - GET方式",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ 票券信息查询成功');",
+                  "    console.log('');",
+                  "    console.log('票券号:', response.ticket_code);",
+                  "    console.log('类型:', response.ticket_type);",
+                  "    console.log('状态:', response.status);",
+                  "    console.log('');",
+                  "    console.log('权益列表:');",
+                  "    response.entitlements.forEach(ent => {",
+                  "        console.log(`  - ${ent.function_code}: ${ent.remaining_uses}次`);",
+                  "    });",
+                  "    console.log('');",
+                  "    console.log('⚠️  注意: GET /qr/:code/info 仅查询，不消耗权益');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/qr/{{ticket_code}}/info",
+              "host": ["{{base_url}}"],
+              "path": ["qr", "{{ticket_code}}", "info"]
+            },
+            "description": "**查询端点**: 根据ticket_code查询票券信息\n\n⚠️ 不消耗权益，仅用于:\n- 后台系统查询\n- 客服查询\n- 统计报表\n\n与 POST /qr/decrypt 的区别:\n- GET /qr/:code/info: 需要ticket_code，不需要QR加密数据\n- POST /qr/decrypt: 需要encrypted_data，模拟扫码场景"
+          },
+          "response": []
+        }
+      ],
+      "description": "查询票券信息的端点，不会消耗权益"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 自动设置批次ID",
+          "if (!pm.collectionVariables.get('batch_id')) {",
+          "    pm.collectionVariables.set('batch_id', 'OTA-DEMO-' + Date.now());",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 全局日志",
+          "console.log('========================================');",
+          "console.log('状态码:', pm.response.code, pm.response.status);",
+          "console.log('========================================');"
+        ]
+      }
+    }
+  ]
+}
