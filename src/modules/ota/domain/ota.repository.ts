@@ -767,13 +767,21 @@ export class OTARepository {
         SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
         SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
         SUM(CASE
-          WHEN t.status = 'USED' THEN
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
-            CASE
-              WHEN t.customer_type = 'child' THEN 0.65
-              WHEN t.customer_type = 'elderly' THEN 0.83
-              ELSE 1.0
-            END
+          WHEN t.status = 'USED' AND t.customer_type = 'adult' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status = 'USED' AND t.customer_type = 'child' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+            )
+          WHEN t.status = 'USED' AND t.customer_type = 'elderly' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+            )
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
@@ -799,13 +807,21 @@ export class OTARepository {
         SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
         SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
         SUM(CASE
-          WHEN t.status = 'USED' THEN
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
-            CASE
-              WHEN t.customer_type = 'child' THEN 0.65
-              WHEN t.customer_type = 'elderly' THEN 0.83
-              ELSE 1.0
-            END
+          WHEN t.status = 'USED' AND t.customer_type = 'adult' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status = 'USED' AND t.customer_type = 'child' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+            )
+          WHEN t.status = 'USED' AND t.customer_type = 'elderly' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+            )
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b

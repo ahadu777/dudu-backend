@@ -1575,12 +1575,13 @@ export class OTAService {
     }
   }
 
-  async getCampaignAnalytics(campaignType?: string, dateRange?: string): Promise<any> {
+  async getCampaignAnalytics(partnerId: string, campaignType?: string, dateRange?: string): Promise<any> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
 
       // Use optimized query with stats for ALL cases (no N+1 query problem)
-      const allBatches = await repo.findBatchesWithStats();
+      // Filter by partnerId to ensure data isolation
+      const allBatches = await repo.findBatchesWithStats(partnerId);
 
       // Filter by campaign_type if specified
       let filteredBatches = allBatches;

@@ -636,7 +636,9 @@ router.get('/campaigns/analytics', async (req: AuthenticatedRequest, res: Respon
   try {
     const { campaign_type, date_range } = req.query;
 
+    const partnerId = getPartnerIdWithFallback(req);
     const analytics = await otaService.getCampaignAnalytics(
+      partnerId,
       campaign_type as string,
       date_range as string
     );
