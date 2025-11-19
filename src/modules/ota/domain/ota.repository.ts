@@ -1290,15 +1290,9 @@ export class OTARepository {
         COALESCE(SUM(batch_stats.activated_count), 0) as total_tickets_activated,
         COALESCE(SUM(batch_stats.used_count), 0) as total_tickets_used,
 
-        -- 收入统计
-        SUM(
-          COALESCE(JSON_EXTRACT(otb.pricing_snapshot, '$.base_price'), 0)
-          * COALESCE(batch_stats.activated_count, 0)
-        ) as total_revenue,
-        SUM(
-          COALESCE(JSON_EXTRACT(otb.pricing_snapshot, '$.base_price'), 0)
-          * COALESCE(batch_stats.used_count, 0)
-        ) as realized_revenue,
+        -- 收入统计（基于实际激活价格，包含客户类型折扣）
+        COALESCE(SUM(batch_stats.total_revenue), 0) as total_revenue,
+        COALESCE(SUM(batch_stats.realized_revenue), 0) as realized_revenue,
 
         -- 最近活动
         MAX(otb.created_at) as last_batch_date,
@@ -1315,7 +1309,25 @@ export class OTARepository {
         SELECT
           batch_id,
           COUNT(CASE WHEN status IN ('ACTIVE', 'USED') THEN 1 END) as activated_count,
-          COUNT(CASE WHEN status = 'USED' THEN 1 END) as used_count
+          COUNT(CASE WHEN status = 'USED' THEN 1 END) as used_count,
+          -- 总收入：所有已激活票券的实际价格（包含客户类型折扣）
+          SUM(
+            CASE WHEN status IN ('ACTIVE', 'USED') THEN
+              COALESCE(
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.pricing_breakdown.final_price')) AS DECIMAL(10,2)),
+                0
+              )
+            ELSE 0 END
+          ) as total_revenue,
+          -- 已实现收入：已核销票券的实际价格
+          SUM(
+            CASE WHEN status = 'USED' THEN
+              COALESCE(
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.pricing_breakdown.final_price')) AS DECIMAL(10,2)),
+                0
+              )
+            ELSE 0 END
+          ) as realized_revenue
         FROM pre_generated_tickets
         WHERE status IN ('ACTIVE', 'USED')
         GROUP BY batch_id

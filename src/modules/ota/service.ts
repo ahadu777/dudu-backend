@@ -327,8 +327,9 @@ export class OTAService {
         const basePrice = Number(product.base_price);
         const weekendPremium = Number(product.weekend_premium || 30.00);
 
-        // Get customer type pricing from product or calculate defaults
+        // Get customer type pricing from product
         // Note: customer_discounts are stored as absolute amounts, not percentages
+        // If a customer type is not configured, no discount is applied (use base price)
         const customerTypePricing = product.customer_discounts ? [
           {
             customer_type: 'adult' as const,
@@ -337,19 +338,19 @@ export class OTAService {
           },
           {
             customer_type: 'child' as const,
-            unit_price: Math.round(basePrice - (product.customer_discounts.child ?? Math.round(basePrice * 0.35))),
-            discount_applied: Math.round(product.customer_discounts.child ?? Math.round(basePrice * 0.35))
+            unit_price: Math.round(basePrice - (product.customer_discounts.child ?? 0)),
+            discount_applied: Math.round(product.customer_discounts.child ?? 0)
           },
           {
             customer_type: 'elderly' as const,
-            unit_price: Math.round(basePrice - (product.customer_discounts.elderly ?? Math.round(basePrice * 0.17))),
-            discount_applied: Math.round(product.customer_discounts.elderly ?? Math.round(basePrice * 0.17))
+            unit_price: Math.round(basePrice - (product.customer_discounts.elderly ?? 0)),
+            discount_applied: Math.round(product.customer_discounts.elderly ?? 0)
           }
         ] : [
-          // Fallback defaults if no customer discounts defined
+          // Fallback if no customer discounts defined at all
           { customer_type: 'adult' as const, unit_price: basePrice, discount_applied: 0 },
-          { customer_type: 'child' as const, unit_price: Math.round(basePrice * 0.65), discount_applied: Math.round(basePrice * 0.35) },
-          { customer_type: 'elderly' as const, unit_price: Math.round(basePrice * 0.83), discount_applied: Math.round(basePrice * 0.17) }
+          { customer_type: 'child' as const, unit_price: basePrice, discount_applied: 0 },
+          { customer_type: 'elderly' as const, unit_price: basePrice, discount_applied: 0 }
         ];
 
         const pricing_snapshot = {
