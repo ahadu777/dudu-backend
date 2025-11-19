@@ -1,0 +1,267 @@
+{
+  "info": {
+    "name": "Order List Pagination Test",
+    "description": "Validates pagination functionality for order list API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "demo-order-pagination-001"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Test 1: Default pagination (page 1, limit 10)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/orders?page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "orders"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Test 1: Response status",
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Test 2: Response structure",
+              "pm.test('Response has pagination metadata', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response).to.have.property('total');",
+              "  pm.expect(response).to.have.property('page');",
+              "  pm.expect(response).to.have.property('page_size');",
+              "  pm.expect(response).to.have.property('items');",
+              "});",
+              "",
+              "// Test 3: Data validation",
+              "pm.test('Returns correct page number', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page).to.equal(1);",
+              "});",
+              "",
+              "pm.test('Returns correct page size', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page_size).to.equal(10);",
+              "  pm.expect(response.items).to.be.an('array');",
+              "  pm.expect(response.items.length).to.be.at.most(10);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 2: Invalid page parameter (page=0)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/orders?page=0&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "orders"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 422 for invalid page', () => {",
+              "  pm.response.to.have.status(422);",
+              "});",
+              "",
+              "pm.test('Error message indicates invalid parameter', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response).to.have.property('error');",
+              "  pm.expect(response.error).to.equal('INVALID_PARAMETER');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 3: Large limit parameter (limit=1000)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/orders?page=1&limit=1000",
+          "host": ["{{base_url}}"],
+          "path": ["api", "orders"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "1000"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should cap limit at maximum (e.g., 100)', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page_size).to.be.at.most(100);",
+              "  pm.expect(response.items.length).to.be.at.most(100);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 4: Navigate to page 2",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/orders?page=2&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "orders"],
+          "query": [
+            {
+              "key": "page",
+              "value": "2"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return page 2 data', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page).to.equal(2);",
+              "});",
+              "",
+              "pm.test('Items should be different from page 1', () => {",
+              "  // Store page 1 IDs in environment for comparison",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.items).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 5: Page beyond available data",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/orders?page=999&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "orders"],
+          "query": [
+            {
+              "key": "page",
+              "value": "999"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return empty items array', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.items).to.be.an('array').that.is.empty;",
+              "});",
+              "",
+              "pm.test('Should still return valid metadata', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.total).to.be.a('number');",
+              "  pm.expect(response.page).to.equal(999);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

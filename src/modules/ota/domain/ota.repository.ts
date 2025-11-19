@@ -1287,7 +1287,18 @@ export class OTARepository {
         -- 统计信息
         COUNT(DISTINCT otb.batch_id) as total_batches,
         SUM(otb.total_quantity) as total_tickets_generated,
-        COALESCE(SUM(batch_activated.activated_count), 0) as total_tickets_activated,
+        COALESCE(SUM(batch_stats.activated_count), 0) as total_tickets_activated,
+        COALESCE(SUM(batch_stats.used_count), 0) as total_tickets_used,
+
+        -- 收入统计
+        SUM(
+          COALESCE(JSON_EXTRACT(otb.pricing_snapshot, '$.base_price'), 0)
+          * COALESCE(batch_stats.activated_count, 0)
+        ) as total_revenue,
+        SUM(
+          COALESCE(JSON_EXTRACT(otb.pricing_snapshot, '$.base_price'), 0)
+          * COALESCE(batch_stats.used_count, 0)
+        ) as realized_revenue,
 
         -- 最近活动
         MAX(otb.created_at) as last_batch_date,
@@ -1303,11 +1314,12 @@ export class OTARepository {
       LEFT JOIN (
         SELECT
           batch_id,
-          COUNT(*) as activated_count
+          COUNT(CASE WHEN status IN ('ACTIVE', 'USED') THEN 1 END) as activated_count,
+          COUNT(CASE WHEN status = 'USED' THEN 1 END) as used_count
         FROM pre_generated_tickets
-        WHERE status = 'ACTIVE'
+        WHERE status IN ('ACTIVE', 'USED')
         GROUP BY batch_id
-      ) batch_activated ON otb.batch_id = batch_activated.batch_id
+      ) batch_stats ON otb.batch_id = batch_stats.batch_id
 
       WHERE otb.partner_id = ?
         AND otb.reseller_metadata IS NOT NULL

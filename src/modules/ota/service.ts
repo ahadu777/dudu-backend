@@ -2033,6 +2033,12 @@ export class OTAService {
               limit: batchesPerReseller
             });
 
+            const totalGenerated = parseInt(r.total_tickets_generated || 0);
+            const totalActivated = parseInt(r.total_tickets_activated || 0);
+            const totalUsed = parseInt(r.total_tickets_used || 0);
+            const totalRevenue = parseFloat(r.total_revenue || 0);
+            const realizedRevenue = parseFloat(r.realized_revenue || 0);
+
             return {
               reseller_name: r.reseller_name,
               contact_email: r.contact_email,
@@ -2040,11 +2046,24 @@ export class OTAService {
 
               statistics: {
                 total_batches: parseInt(r.total_batches || 0),
-                total_tickets_generated: parseInt(r.total_tickets_generated || 0),
-                total_tickets_activated: parseInt(r.total_tickets_activated || 0),
-                activation_rate: r.total_tickets_generated > 0
-                  ? parseFloat((r.total_tickets_activated / r.total_tickets_generated).toFixed(2))
+                total_tickets_generated: totalGenerated,
+                total_tickets_activated: totalActivated,
+                total_tickets_used: totalUsed,
+                activation_rate: totalGenerated > 0
+                  ? parseFloat((totalActivated / totalGenerated).toFixed(2))
+                  : 0,
+                redemption_rate: totalActivated > 0
+                  ? parseFloat((totalUsed / totalActivated).toFixed(2))
+                  : 0,
+                overall_utilization: totalGenerated > 0
+                  ? parseFloat((totalUsed / totalGenerated).toFixed(2))
                   : 0
+              },
+
+              revenue_metrics: {
+                total_revenue: parseFloat(totalRevenue.toFixed(2)),
+                realized_revenue: parseFloat(realizedRevenue.toFixed(2)),
+                currency: 'HKD'  // Default currency, could be extracted from pricing_snapshot if needed
               },
 
               commission: {

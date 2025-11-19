@@ -69,8 +69,12 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/products",
-              "host": ["{{base_url}}"],
-              "path": ["products"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products"
+              ]
             }
           },
           "event": [
@@ -94,15 +98,24 @@
           "name": "1.2 创建订单（工作日成人票）",
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [{\"product_id\": 106, \"qty\": 1}],\n  \"channel_id\": 1,\n  \"out_trade_no\": \"TEST_WEEKDAY_ADULT_{{$timestamp}}\",\n  \"customer_details\": {\n    \"name\": \"测试用户\",\n    \"email\": \"test@example.com\",\n    \"phone\": \"13800138000\"\n  },\n  \"customer_type\": \"adult\",\n  \"visit_date\": \"2025-11-20\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/orders",
-              "host": ["{{base_url}}"],
-              "path": ["orders"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
             }
           },
           "event": [
@@ -127,15 +140,24 @@
           "name": "1.3 创建订单（周末儿童票 - 动态定价）",
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [{\"product_id\": 106, \"qty\": 1}],\n  \"channel_id\": 1,\n  \"out_trade_no\": \"TEST_WEEKEND_CHILD_{{$timestamp}}\",\n  \"customer_details\": {\n    \"name\": \"儿童测试\",\n    \"email\": \"child@example.com\",\n    \"phone\": \"13800138001\"\n  },\n  \"customer_type\": \"child\",\n  \"visit_date\": \"2025-11-23\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/orders",
-              "host": ["{{base_url}}"],
-              "path": ["orders"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
             }
           },
           "event": [
@@ -158,15 +180,24 @@
           "name": "1.4 【缺口补充】峰值定价验证",
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [{\"product_id\": 106, \"qty\": 1}],\n  \"channel_id\": 1,\n  \"out_trade_no\": \"TEST_PEAK_{{$timestamp}}\",\n  \"customer_details\": {\n    \"name\": \"峰值测试\",\n    \"email\": \"peak@example.com\",\n    \"phone\": \"13800138002\"\n  },\n  \"customer_type\": \"adult\",\n  \"visit_date\": \"2025-12-25\",\n  \"is_peak_season\": true\n}"
             },
             "url": {
               "raw": "{{base_url}}/orders",
-              "host": ["{{base_url}}"],
-              "path": ["orders"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
             }
           },
           "event": [
@@ -360,13 +391,27 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/ota/inventory?product_ids=106,107,108",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "inventory"],
-              "query": [{"key": "product_ids", "value": "106,107,108"}]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "inventory"
+              ],
+              "query": [
+                {
+                  "key": "product_ids",
+                  "value": "106,107,108"
+                }
+              ]
             }
           },
           "event": [
@@ -390,8 +435,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -399,8 +450,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/ota/reserve",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "reserve"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reserve"
+              ]
             }
           },
           "event": [
@@ -423,8 +480,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -432,8 +495,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/ota/reservations/{{reservation_id}}/activate",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "reservations", "{{reservation_id}}", "activate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reservations",
+                "{{reservation_id}}",
+                "activate"
+              ]
             }
           },
           "event": [
@@ -456,8 +527,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -465,8 +542,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "tickets", "bulk-generate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
             }
           },
           "event": [
@@ -490,8 +574,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -499,8 +589,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/ota/tickets/{{ticket_code}}/activate",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "tickets", "{{ticket_code}}", "activate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{ticket_code}}",
+                "activate"
+              ]
             }
           },
           "event": [
@@ -522,8 +620,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -531,8 +635,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/ota/reserve",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "reserve"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "reserve"
+              ]
             }
           },
           "event": [
@@ -565,12 +675,21 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/ota/inventory",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "inventory"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "inventory"
+              ]
             }
           },
           "event": [
@@ -620,15 +739,30 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "X-API-Key", "value": "{{admin_api_key}}"}
+              {
+                "key": "X-API-Key",
+                "value": "{{admin_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/admin/audit-logs?entity_type=reservation&entity_id={{reservation_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "admin", "audit-logs"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "audit-logs"
+              ],
               "query": [
-                {"key": "entity_type", "value": "reservation"},
-                {"key": "entity_id", "value": "{{reservation_id}}"}
+                {
+                  "key": "entity_type",
+                  "value": "reservation"
+                },
+                {
+                  "key": "entity_id",
+                  "value": "{{reservation_id}}"
+                }
               ]
             }
           },
@@ -658,19 +792,28 @@
     },
     {
       "name": "🎪 PRD-003: 场馆运营流程",
-      "description": "场馆核销、防欺诈、负载测试、容错测试",
+      "description": "场馆核销（两步流程：解码→核销）、防欺诈、负载测试、容错测试",
       "item": [
         {
           "name": "3.1 获取票券信息（不生成QR）",
           "request": {
             "method": "GET",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/qr/{{ticket_code}}/info",
-              "host": ["{{base_url}}"],
-              "path": ["qr", "{{ticket_code}}", "info"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "qr",
+                "{{ticket_code}}",
+                "info"
+              ]
             }
           },
           "event": [
@@ -678,10 +821,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('获取票券信息成功', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('返回票券状态和权益', () => {",
-                  "    pm.expect(data.status).to.exist;",
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回票券信息', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.ticket_code).to.exist;",
                   "    pm.expect(data.entitlements).to.be.an('array');",
                   "});"
                 ],
@@ -695,12 +838,28 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{jwt_token}}"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"expiry_minutes\": 30}"
+            },
             "url": {
               "raw": "{{base_url}}/qr/{{ticket_code}}",
-              "host": ["{{base_url}}"],
-              "path": ["qr", "{{ticket_code}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "qr",
+                "{{ticket_code}}"
+              ]
             }
           },
           "event": [
@@ -708,77 +867,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('QR码生成成功', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('返回QR Token', () => pm.expect(data.qr_token).to.exist);",
-                  "pm.environment.set('qr_token', data.qr_token);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "3.3 核销票券（首次）",
-          "request": {
-            "method": "POST",
-            "header": [
-              {"key": "Content-Type", "value": "application/json"}
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"venue_id\": 1,\n  \"operator_id\": \"OP001\",\n  \"function_code\": \"BOARDING\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/redeem",
-              "host": ["{{base_url}}"],
-              "path": ["redeem"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('首次核销成功', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('权益已消耗', () => {",
-                  "    pm.expect(data.remaining_uses).to.be.lessThan(data.total_uses);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "3.4 防欺诈：重复核销检测",
-          "request": {
-            "method": "POST",
-            "header": [
-              {"key": "Content-Type", "value": "application/json"}
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"venue_id\": 1,\n  \"operator_id\": \"OP001\",\n  \"function_code\": \"BOARDING\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/redeem",
-              "host": ["{{base_url}}"],
-              "path": ["redeem"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('重复核销被拦截', () => {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
-                  "});",
-                  "pm.test('返回防欺诈错误', () => {",
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回QR数据', () => {",
                   "    const data = pm.response.json();",
-                  "    pm.expect(data.error).to.include('ALREADY_USED');",
+                  "    pm.expect(data.encrypted_data).to.exist;",
+                  "    pm.expect(data.jti).to.exist;",
+                  "    pm.collectionVariables.set('qr_token', data.encrypted_data);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -787,71 +881,48 @@
           ]
         },
         {
-          "name": "3.5 【缺口补充】负载测试（并发核销）",
+          "name": "3.3 解码QR码（查看信息，不消耗权益）",
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"venue_id\": 1,\n  \"operator_id\": \"OP001\",\n  \"function_code\": \"DINING\"\n}"
+              "raw": "{\"encrypted_data\": \"{{qr_token}}\"}"
             },
             "url": {
-              "raw": "{{base_url}}/redeem",
-              "host": ["{{base_url}}"],
-              "path": ["redeem"]
+              "raw": "{{base_url}}/qr/decrypt",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "qr",
+                "decrypt"
+              ]
             }
           },
           "event": [
             {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "// 模拟 1000 并发请求",
-                  "const iterations = 1000;",
-                  "let successCount = 0;",
-                  "let startTime = Date.now();",
-                  "",
-                  "for (let i = 0; i < iterations; i++) {",
-                  "    pm.sendRequest({",
-                  "        url: pm.environment.get('base_url') + '/redeem',",
-                  "        method: 'POST',",
-                  "        header: {'Content-Type': 'application/json'},",
-                  "        body: {",
-                  "            mode: 'raw',",
-                  "            raw: JSON.stringify({",
-                  "                qr_token: pm.environment.get('qr_token'),",
-                  "                venue_id: 1,",
-                  "                operator_id: 'OP001',",
-                  "                function_code: 'DINING'",
-                  "            })",
-                  "        }",
-                  "    }, (err, res) => {",
-                  "        if (res.code === 200) successCount++;",
-                  "        if (i === iterations - 1) {",
-                  "            const duration = Date.now() - startTime;",
-                  "            pm.environment.set('load_test_duration', duration);",
-                  "            pm.environment.set('load_test_success_rate', successCount / iterations);",
-                  "        }",
-                  "    });",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            },
-            {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('负载测试通过（<2s 响应时间）', () => {",
-                  "    const duration = parseInt(pm.environment.get('load_test_duration'));",
-                  "    pm.expect(duration).to.be.lessThan(2000);",
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('成功解码QR数据', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.ticket_code).to.exist;",
+                  "    pm.expect(data.jti).to.exist;",
+                  "    pm.expect(data.ticket_info).to.exist;",
                   "});",
-                  "pm.test('成功率 >99%', () => {",
-                  "    const successRate = parseFloat(pm.environment.get('load_test_success_rate'));",
-                  "    pm.expect(successRate).to.be.greaterThan(0.99);",
-                  "});"
+                  "pm.test('包含权益信息', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.ticket_info.entitlements).to.be.an('array');",
+                  "    pm.expect(data.ticket_info.entitlements.length).to.be.greaterThan(0);",
+                  "});",
+                  "console.log('✅ 解码成功 - 权益未消耗');"
                 ],
                 "type": "text/javascript"
               }
@@ -859,21 +930,28 @@
           ]
         },
         {
-          "name": "3.6 【缺口补充】容错测试（数据库故障）",
+          "name": "3.4 核销票券（首次核销，消耗权益）",
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "X-Simulate-DB-Failure", "value": "true"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"venue_id\": 1,\n  \"operator_id\": \"OP001\",\n  \"function_code\": \"BOARDING\"\n}"
+              "raw": "{\"qr_token\": \"{{qr_token}}\", \"function_code\": \"ferry\", \"terminal_device_id\": \"TERMINAL-TEST-001\"}"
             },
             "url": {
-              "raw": "{{base_url}}/redeem",
-              "host": ["{{base_url}}"],
-              "path": ["redeem"]
+              "raw": "{{base_url}}/venue/scan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "venue",
+                "scan"
+              ]
             }
           },
           "event": [
@@ -881,16 +959,109 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('数据库故障时优雅降级', () => {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('核销成功', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.result).to.equal('success');",
+                  "    pm.expect(data.entitlements).to.be.an('array');",
                   "});",
-                  "pm.test('返回明确的错误信息', () => {",
-                  "    if (pm.response.code === 503) {",
-                  "        const data = pm.response.json();",
-                  "        pm.expect(data.error).to.exist;",
-                  "        pm.expect(data.retry_after).to.exist;",
-                  "    }",
-                  "});"
+                  "pm.test('权益已消耗', () => {",
+                  "    const data = pm.response.json();",
+                  "    const ferry = data.entitlements.find(e => e.function_code === 'ferry');",
+                  "    pm.expect(ferry.remaining_uses).to.equal(0);",
+                  "});",
+                  "console.log('✅ 核销成功 - ferry权益已消耗');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.5 防欺诈：重复核销检测",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"qr_token\": \"{{qr_token}}\", \"function_code\": \"ferry\", \"terminal_device_id\": \"TERMINAL-TEST-002\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "venue",
+                "scan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 422（业务错误）', () => {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('防欺诈检测生效', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.reason).to.be.oneOf(['ALREADY_REDEEMED', 'NO_REMAINING']);",
+                  "});",
+                  "console.log('✅ 防欺诈检测: 拒绝重复核销');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.6 【缺口补充】多权益核销（同一QR码不同权益）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"qr_token\": \"{{qr_token}}\", \"function_code\": \"gift\", \"terminal_device_id\": \"TERMINAL-GIFT-001\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "venue",
+                "scan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('不同权益核销成功', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.result).to.equal('success');",
+                  "});",
+                  "pm.test('gift权益已消耗', () => {",
+                  "    const data = pm.response.json();",
+                  "    const gift = data.entitlements.find(e => e.function_code === 'gift');",
+                  "    pm.expect(gift.remaining_uses).to.equal(0);",
+                  "});",
+                  "console.log('✅ 同一QR码可核销不同权益');"
                 ],
                 "type": "text/javascript"
               }
@@ -910,8 +1081,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/auth/wechat/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "login"
+              ]
             }
           },
           "event": [
@@ -936,9 +1113,20 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/auth/wechat/callback?code=TEST_WECHAT_CODE_{{$timestamp}}",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "callback"],
-              "query": [{"key": "code", "value": "TEST_WECHAT_CODE_{{$timestamp}}"}]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "TEST_WECHAT_CODE_{{$timestamp}}"
+                }
+              ]
             }
           },
           "event": [
@@ -963,9 +1151,20 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/auth/wechat/callback?code=PERF_TEST_{{$timestamp}}",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "callback"],
-              "query": [{"key": "code", "value": "PERF_TEST_{{$timestamp}}"}]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "PERF_TEST_{{$timestamp}}"
+                }
+              ]
             }
           },
           "event": [
@@ -993,8 +1192,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"},
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1002,8 +1207,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/ota/resellers",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "resellers"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "resellers"
+              ]
             }
           },
           "event": [
@@ -1026,12 +1237,21 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/ota/resellers",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "resellers"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "resellers"
+              ]
             }
           },
           "event": [
@@ -1055,15 +1275,31 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/ota/billing/summary?period=2025-11&reseller={{reseller_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "billing", "summary"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "billing",
+                "summary"
+              ],
               "query": [
-                {"key": "period", "value": "2025-11"},
-                {"key": "reseller", "value": "{{reseller_id}}"}
+                {
+                  "key": "period",
+                  "value": "2025-11"
+                },
+                {
+                  "key": "reseller",
+                  "value": "{{reseller_id}}"
+                }
               ]
             }
           },
@@ -1089,12 +1325,23 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "X-API-Key", "value": "{{ota_api_key}}"}
+              {
+                "key": "X-API-Key",
+                "value": "{{ota_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/ota/batches/{{batch_id}}/analytics",
-              "host": ["{{base_url}}"],
-              "path": ["api", "ota", "batches", "{{batch_id}}", "analytics"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "batches",
+                "{{batch_id}}",
+                "analytics"
+              ]
             }
           },
           "event": [
@@ -1119,16 +1366,35 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "X-API-Key", "value": "{{admin_api_key}}"}
+              {
+                "key": "X-API-Key",
+                "value": "{{admin_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/admin/financial-audit/export?start_date=2025-11-01&end_date=2025-11-30&format=csv",
-              "host": ["{{base_url}}"],
-              "path": ["api", "admin", "financial-audit", "export"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "financial-audit",
+                "export"
+              ],
               "query": [
-                {"key": "start_date", "value": "2025-11-01"},
-                {"key": "end_date", "value": "2025-11-30"},
-                {"key": "format", "value": "csv"}
+                {
+                  "key": "start_date",
+                  "value": "2025-11-01"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2025-11-30"
+                },
+                {
+                  "key": "format",
+                  "value": "csv"
+                }
               ]
             }
           },
@@ -1152,8 +1418,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "X-API-Key", "value": "{{admin_api_key}}"},
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "X-API-Key",
+                "value": "{{admin_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1161,8 +1433,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/admin/billing/reconcile",
-              "host": ["{{base_url}}"],
-              "path": ["api", "admin", "billing", "reconcile"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "billing",
+                "reconcile"
+              ]
             }
           },
           "event": [
@@ -1193,7 +1472,10 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1201,8 +1483,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/test/e2e/ota-complete",
-              "host": ["{{base_url}}"],
-              "path": ["api", "test", "e2e", "ota-complete"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "test",
+                "e2e",
+                "ota-complete"
+              ]
             }
           },
           "event": [
