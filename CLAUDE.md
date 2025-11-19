@@ -3,6 +3,8 @@
 ## 🎯 QUICK NAVIGATION
 - **New to project?** → [Project Foundations](#-project-foundations)
 - **Need to implement?** → [The Core Pattern](#-the-core-pattern)
+- **PRD vs Story vs Card?** → [Document Layer Decision Tree](#document-layer-decision-tree-prd-vs-story-vs-card)
+- **Creating new story?** → [Duplicate Story Prevention](#duplicate-story-prevention-mandatory-before-creating-stories)
 - **ALWAYS START HERE** → [Reality Check](#-reality-check)
 - **Complex scenario?** → [Knowledge Graph Patterns](#-knowledge-graph-patterns)
 - **Troubleshooting?** → [When Things Go Wrong](#-when-ai-process-goes-wrong)
@@ -24,6 +26,208 @@
 **"I want users to..."** → COMPLETE AUTONOMY WORKFLOW (Story → Cards → Code)
 **"Implement card XYZ"** → TRADITIONAL WORKFLOW (Work with existing cards)
 
+### Duplicate Story Prevention (Mandatory Before Creating Stories)
+
+**CRITICAL: Before creating any new story, AI MUST check for duplicates to prevent redundant work.**
+
+**When user describes new requirements:**
+
+**AI Auto-Translation for Multi-Language Teams:**
+- When user uses Chinese, AI automatically translates to English for search
+- When user uses English, AI understands Chinese synonyms in docs
+- No need for manual `aliases` field - AI handles translation dynamically
+- Zero maintenance cost - AI adapts to any new terminology
+
+```bash
+# Example: User says "我想实现订单导出功能" (Chinese)
+# AI automatically executes THREE-LAYER multi-language search:
+
+# ========================================
+# Layer 0: PRD Level (Product domain check)
+# ========================================
+grep -ri "订单.*导出\|订单.*分析" docs/prd/              # Chinese
+grep -ri "order.*export\|order.*analytics" docs/prd/  # English
+# Check if this feature is already defined in PRD as planned capability
+
+# ========================================
+# Layer 1: Story Level (User capability check)
+# ========================================
+grep -ri "订单.*导出\|订单.*下载" docs/stories/        # Chinese keywords
+grep -ri "order.*export\|order.*download" docs/stories/  # AI-translated English
+grep -ri "data.*export\|extract.*order" docs/stories/    # AI synonym expansion
+
+# ========================================
+# Layer 2: Card Level (Technical implementation check)
+# ========================================
+grep -r "GET\|POST\|PUT\|DELETE" docs/cards/*.md | grep -i "export\|download"
+find docs/cards/ -name "*order*" -o -name "*export*"
+
+# ========================================
+# Layer 3: Code Level (Actual implementation check)
+# ========================================
+ls src/modules/ | grep -i "order\|export"
+grep -r "router.get.*export\|router.post.*export" src/modules/*/router.ts
+
+# ========================================
+# Layer 4: Relationship metadata check
+# ========================================
+cat docs/stories/_index.yaml | grep -B 3 -A 3 -i "order\|export"
+```
+
+**AI Translation Examples:**
+```
+用户输入: "批量导入票务"
+AI搜索: 批量.*导入 | bulk.*import | batch.*import | ticket.*import
+
+用户输入: "订单统计报表"
+AI搜索: 订单.*统计 | order.*statistic | order.*report | order.*analytics
+
+用户输入: "支付回调"
+AI搜索: 支付.*回调 | payment.*callback | payment.*webhook | payment.*notify
+```
+
+**Similarity Analysis Decision Tree:**
+
+```mermaid
+graph TD
+    A[User describes requirement] --> B[Search existing stories/cards]
+    B --> C{Found similar content?}
+    C -->|No| D[Proceed with new story]
+    C -->|Yes| E[Analyze similarity level]
+    E --> F{>70% overlap?}
+    F -->|Yes| G[Ask: Merge vs Extend vs Separate?]
+    F -->|No| H[Ask: Related or Independent?]
+    G --> I[Execute user choice]
+    H --> I
+```
+
+**AI MUST ask user for clarification when similarity detected:**
+
+- **Same functionality, different description** → Merge into one story
+- **Similar but different business scenarios** → Separate stories with clear distinction
+- **Enhancement to existing capability** → Extend existing story
+
+**Only create new story if:**
+- ✅ User confirms it's a different business scenario
+- ✅ Different user personas or access levels
+- ✅ Different technical requirements or constraints
+- ✅ No existing story can be extended to cover this need
+
+**Red flags indicating potential duplication:**
+- 🚨 Similar verbs in user stories ("查看订单" vs "浏览订单")
+- 🚨 Same domain entities (Order, Ticket, User, etc.)
+- 🚨 Overlapping API endpoints or data models
+- 🚨 Similar success criteria or user value propositions
+
+### Document Layer Decision Tree (PRD vs Story vs Card)
+
+**CRITICAL: AI must determine the correct documentation layer before creating anything.**
+
+**Three-layer documentation hierarchy:**
+```
+PRD (Product Requirements)     ← Product domain, business context, success metrics
+  ↓ has many
+Stories (User Capabilities)    ← User journeys, acceptance criteria
+  ↓ has many
+Cards (Technical Implementation) ← API endpoints, database schemas
+  ↓ maps to
+Code (src/modules/)            ← Actual implementation
+```
+
+**When user describes a requirement, AI asks these questions in order:**
+
+#### **Question 1: Is this a NEW product domain?**
+
+```bash
+# Check if this requires a new PRD
+grep -ri "product-domain-keywords" docs/prd/
+
+# Examples:
+用户: "我想做一个会员积分系统"
+AI判断: NEW product domain → Create PRD-006: Loyalty Program
+
+用户: "我想让用户能够查看订单历史"
+AI判断: Existing domain (Cruise Ticketing) → Continue to Question 2
+```
+
+**Create new PRD if:**
+- ✅ New business model or revenue stream
+- ✅ New customer segment or market
+- ✅ New product category (e.g., Loyalty vs Ticketing)
+- ✅ Requires separate success metrics and business goals
+
+**PRD scope guidelines:**
+- Minimum: 1 Story (simple single-purpose products)
+- Typical: 3-8 Stories (most products)
+- Complex: 8-15 Stories (large platforms)
+- Warning: >15 Stories → Consider splitting PRD
+
+#### **Question 2: Is this a NEW user capability?**
+
+```bash
+# If existing product domain, check if Story already exists
+grep -ri "capability-keywords" docs/stories/
+grep -ri "user.*journey" docs/prd/PRD-XXX.md
+
+# Examples:
+用户: "我想让用户能够导出订单数据"
+AI执行:
+  grep -ri "导出\|export.*order" docs/stories/  # Not found
+  grep -ri "export\|analytics" docs/prd/PRD-001.md  # Found in PRD as planned feature
+
+AI决策:
+  "PRD-001已定义Order Analytics，但没有对应Story。
+   建议: 创建 US-XXX under PRD-001"
+```
+
+**Create new Story if:**
+- ✅ New end-to-end user journey
+- ✅ New actor or user role
+- ✅ Crosses multiple technical components (requires multiple Cards)
+- ✅ Has distinct acceptance criteria
+
+**Story can be shared across PRDs if:**
+- ✅ It's a foundational capability (e.g., US-001: Buy & Redeem)
+- ✅ Multiple product domains use identical workflow
+- ✅ Avoids duplicate implementation
+
+#### **Question 3: Is this a NEW API endpoint or enhancement?**
+
+```bash
+# If enhancing existing Story, check if Card exists
+grep -r "endpoint-path" docs/cards/*.md
+grep -r "GET\|POST.*path" docs/cards/*.md
+
+# Examples:
+用户: "订单列表需要添加分页"
+AI判断: Enhancement to existing Card → Update order-list card
+
+用户: "需要新增批量删除订单的API"
+AI判断: New endpoint → Create new Card under existing Story
+```
+
+**Create new Card if:**
+- ✅ New API endpoint
+- ✅ New database table
+- ✅ New external integration
+- ✅ Distinct technical component
+
+**Update existing Card if:**
+- ✅ Adding fields to existing endpoint
+- ✅ Enhancing existing functionality
+- ✅ Performance optimization
+
+---
+
+**Decision Tree Summary:**
+
+| User Request | Layer | Action | Example |
+|-------------|-------|--------|---------|
+| "我想做会员积分系统" | **PRD** | Create PRD-006 | New product domain |
+| "用户能查看订单历史" | **Story** | Create US-XXX | New user capability |
+| "订单列表需要分页" | **Card** | Update card | Enhance existing API |
+| "修复分页的bug" | **Code** | Update code | Bug fix |
+
 ### Requirements-Code Synchronization (Validated Pattern)
 
 **When user provides new requirements, check documentation first:**
@@ -44,12 +248,14 @@ grep -ri "requirement.*keywords" docs/prd/ docs/stories/ docs/cards/
 
 ### The Working Pattern
 ```
-1. REALITY CHECK: What's actually running? (grep imports, curl endpoints)
-2. Check: docs/cards/ + node scripts/progress-report.js
-3. Status: "Ready" → "In Progress" → "Done"
-4. Code: src/modules/[name]/ following existing patterns
-5. Test: curl http://localhost:8080/endpoint
-6. Mock-first: USE_DATABASE=false (default, faster)
+0. LAYER DECISION: PRD? Story? Card? (Use Document Layer Decision Tree)
+1. DUPLICATE CHECK: grep -ri "keywords" docs/prd/ docs/stories/ docs/cards/
+2. REALITY CHECK: What's actually running? (grep imports, curl endpoints)
+3. Check: docs/cards/ + node scripts/progress-report.js
+4. Status: "Ready" → "In Progress" → "Done"
+5. Code: src/modules/[name]/ following existing patterns
+6. Test: curl http://localhost:8080/endpoint
+7. Mock-first: USE_DATABASE=false (default, faster)
 ```
 
 ### AI Self-Feedback Loop (Validated Pattern)
@@ -157,10 +363,49 @@ grep -A 5 -B 5 "pattern.*name" docs/cases/CASE-DISCOVER-AI-WORKFLOW.md
   - [ ] Story validation coverage verified
 
 ### Testing Standards (Newman-First Approach)
+
 **Test Generation Hierarchy:**
-1. **STORY (US-xxx)** → Primary test source (user capability)
-2. **CARDS** → Detailed endpoint/API testing (technical implementation)
-3. **PRD** → Business rule validation (requirements compliance)
+1. **PRD** → Business rule validation (pricing logic, discount calculations)
+2. **STORY (US-xxx)** → User workflow testing (end-to-end journeys)
+3. **CARDS** → Technical endpoint testing (API contracts, database operations)
+
+**What each layer tests:**
+
+| Layer | Test Focus | Example Tests |
+|-------|-----------|---------------|
+| **PRD** | Business rules & calculations | "Weekend pricing adds $30 premium", "Child discount = fixed $188" |
+| **Story** | User workflows & acceptance criteria | "User can complete purchase flow", "Operator can scan QR code" |
+| **Card** | Technical contracts & data | "POST /orders returns 201 with order_id", "Database stores correct status" |
+
+**PRD Testing Details:**
+
+**From PRD defines business rules:**
+```markdown
+# In PRD-001-cruise-ticketing-platform.md
+**Dynamic Package Pricing**
+- Pricing varies by weekday/weekend (+$30 premium for adults on weekends)
+- Customer type discounts (child/elderly: fixed $188 regardless of package/timing)
+- Package tier pricing (Entry: $188, Standard: $288/$318, Luxury: $788/$888)
+```
+
+**Becomes Newman business-rules test:**
+```javascript
+// PRD-001-business-rules.postman_collection.json
+pm.test("PRD-001: Weekend pricing premium applied correctly", () => {
+  // Adult Standard package on weekend should be $318 (base $288 + $30)
+  pm.expect(response.total_price).to.equal(318);
+});
+
+pm.test("PRD-001: Child discount applied correctly", () => {
+  // Child pays fixed $188 regardless of package tier or timing
+  pm.expect(response.total_price).to.equal(188);
+});
+
+pm.test("PRD-001: Package tier pricing correct", () => {
+  // Entry tier weekday should be $188
+  pm.expect(response.items[0].price).to.equal(188);
+});
+```
 
 **Newman Collection Standards:**
 - **Generate from STORIES**: `us-xxx-complete-coverage.postman_collection.json`
@@ -341,6 +586,51 @@ USE_DATABASE=true npm start
 4. Check both USE_DATABASE=false and USE_DATABASE=true
 ```
 
+### Database Schema Validation (For SQL Errors)
+
+**Proven pattern from CASE-003: OTA Analytics SQL Fix**
+
+When encountering SQL field errors like `ER_BAD_FIELD_ERROR`:
+
+```bash
+# 1. Check Entity Definition (what code thinks exists)
+cat src/modules/[module]/domain/*.entity.ts | grep "@Column"
+grep -A 3 "class.*Entity" src/modules/[module]/domain/*.entity.ts
+
+# 2. Check Actual Database Schema (ground truth)
+# For ENUM types - CRITICAL for status fields
+SHOW COLUMNS FROM [table_name] LIKE 'status';
+# Example result: enum('PRE_GENERATED','ACTIVE','USED','EXPIRED','CANCELLED')
+
+# 3. Find All SQL Queries Using This Field
+grep -n "status.*=" src/modules/[module]/domain/*.repository.ts
+```
+
+**Real Example - ENUM Value Mismatch:**
+```sql
+-- ❌ WRONG: Code uses 'REDEEMED' but database has no such value
+SUM(CASE WHEN t.status = 'REDEEMED' THEN 1 ELSE 0 END)
+
+-- ✅ CORRECT: Use actual ENUM value 'USED'
+SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END)
+```
+
+**API Parameter Validation:**
+```bash
+# Always check router for correct parameter names
+grep -A 5 "req.query" src/modules/[module]/router.ts
+
+# Test with correct parameter name
+# ❌ WRONG: ?reseller_name=XXX
+# ✅ CORRECT: ?reseller=XXX (as defined in router)
+```
+
+**Common SQL Field Issues:**
+- Missing field: Check entity vs actual table columns
+- Wrong ENUM value: Verify with `SHOW COLUMNS`
+- Wrong column name: Check entity property names (e.g., `venue_name` not `name`)
+- Case sensitivity: Use `LOWER()` for batch_id comparisons
+
 ---
 
 ## 🧠 KNOWLEDGE GRAPH PATTERNS (For Complex Scenarios After Reality Check)
@@ -402,6 +692,11 @@ grep "integration_points" docs/cards/card-name.md
 3. **Knowledge Graph Queries**: Relationship discovery prevents duplicate work
 4. **Card-Based Implementation**: Clear specs → predictable outcomes
 5. **Integration Proof**: Runbooks + Newman tests + TypeScript examples
+6. **Database Schema Validation**: ENUM value verification prevents silent failures (CASE-003)
+7. **Pattern Reuse & Discovery**: Search for existing implementations before creating new ones
+8. **Two-Step Query Strategy**: Aggregation + Detail queries for complex data relationships
+9. **User Choice Over Assumptions**: Provide multiple implementation options, let user decide
+10. **AI Auto-Translation for Duplicate Prevention**: AI automatically translates Chinese↔English for similarity detection, zero maintenance (CASE-005)
 
 ### Architectural Patterns Discovered
 **Dual-Mode Service Pattern:**
@@ -418,6 +713,40 @@ if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
 # From docs/stories/_index.yaml
 US-011: [complex-pricing-engine, order-create]
 US-001: [catalog-endpoint, order-create, ...]    # Shared dependency!
+```
+
+**Pattern Reuse Discovery (2025-11-19):**
+```bash
+# Before implementing pagination, search for existing patterns
+grep -r "page.*limit" src/modules/*/router.ts
+grep -A 10 "page.*limit" src/modules/ota/router.ts
+
+# Found existing pagination in GET /api/ota/tickets:
+# - Router validation: parseInt(page), parseInt(limit)
+# - Service defaults: page || 1, Math.min(limit || 100, 1000)
+# - Response format: { total, page, page_size, items: [] }
+
+# Reused pattern → Saved 30+ minutes, ensured consistency
+```
+
+**Two-Step Query Strategy (Aggregation + Details):**
+```typescript
+// For complex data relationships (resellers with batches):
+// Step 1: Get aggregated summary with pagination
+const summary = await repo.getResellersSummaryFromBatches(partnerId, { page, limit });
+
+// Step 2: For each result, fetch detailed data
+const withDetails = await Promise.all(
+  summary.map(async (item) => {
+    const details = await repo.getItemDetails(item.id);
+    return { ...item, details };
+  })
+);
+
+// Advantages:
+// - Clean separation of concerns
+// - Efficient pagination (paginate summaries, not details)
+// - Flexible detail depth control (batches_per_reseller parameter)
 ```
 
 ### Case Study: Complex Pricing Success (US-011)
@@ -440,14 +769,164 @@ US-001: [catalog-endpoint, order-create, ...]    # Shared dependency!
 
 **Outcome**: 99.95% better performance than requirements, complete integration proof
 
+### Case Study: OTA Analytics SQL Fix (CASE-003)
+**Challenge**: 4 OTA analytics APIs failing in database mode with SQL errors
+
+**Systematic Diagnosis:**
+- Step 1: Found `ER_BAD_FIELD_ERROR` for `ticket_price` (field doesn't exist)
+- Step 2: Checked entity definition → price stored in `pricing_snapshot` JSON
+- Step 3: Fixed SQL but still empty results → checked ENUM values
+- Step 4: Critical discovery: Code used 'REDEEMED' but schema only has 'USED'
+- Step 5: Verified API parameters (wrong: `reseller_name`, correct: `reseller`)
+
+**Database Schema Validation Pattern:**
+```bash
+SHOW COLUMNS FROM pre_generated_tickets LIKE 'status';
+# Result: enum('PRE_GENERATED','ACTIVE','USED','EXPIRED','CANCELLED')
+# Discovery: 'REDEEMED' doesn't exist in ENUM!
+```
+
+**SQL Fixes Applied:**
+- Used `pricing_snapshot.base_price` instead of `ticket_price`
+- Changed all 'REDEEMED' → 'USED' in SQL queries
+- Fixed `v.name` → `v.venue_name` (correct column name)
+- Optimized campaign analytics (N+1 → single query)
+- Added customer type discounts (child: 65%, elderly: 83%, adult: 100%)
+
+**Outcome**: All 4 APIs working with accurate revenue calculations from real database
+
+**Key Learning**: Always verify ENUM values with `SHOW COLUMNS` - don't assume!
+
+### Case Study: Reseller Batches Pagination (CASE-004)
+**Challenge**: User requested seeing batch details for each reseller with pagination support
+
+**Pattern Reuse Discovery:**
+- Step 1: User asked "是否有写好分页的中间件" (Is there a pagination middleware?)
+- Step 2: Searched existing code: `grep -r "page.*limit" src/modules/*/router.ts`
+- Step 3: Found working pattern in `/api/ota/tickets` endpoint
+- Step 4: Reused exact validation logic and response format
+
+**Implementation Strategy:**
+- **Provided 3 options** to user (simple array, detailed batches, separate API)
+- User chose **Option 2: Detailed batches with pagination**
+- Implemented **Two-Step Query Strategy**:
+  1. Aggregate resellers with pagination
+  2. For each reseller, fetch batch details
+
+**Code Pattern Applied:**
+```typescript
+// Router: Reused existing validation (lines 757-788)
+if (page) {
+  const pageNum = parseInt(page as string, 10);
+  if (isNaN(pageNum) || pageNum < 1) {
+    return res.status(422).json({ error: 'INVALID_PARAMETER' });
+  }
+}
+
+// Service: Two-step query
+const totalCount = await repo.countResellers(partnerId, filters);
+const summary = await repo.getResellersSummaryFromBatches(partnerId, { page, limit });
+const withBatches = await Promise.all(
+  summary.map(async (r) => {
+    const batches = await repo.getResellerBatches(partnerId, r.reseller_name);
+    return { ...r, batches };
+  })
+);
+```
+
+**Outcome**:
+- ✅ Full pagination support (page, limit, total)
+- ✅ Batch details with configurable depth (batches_per_reseller)
+- ✅ Consistent with existing API patterns
+- ✅ Implementation time: ~45 minutes (vs 2+ hours without pattern reuse)
+
+**Key Learning**:
+- Always search for existing patterns before implementing
+- Provide options to users instead of assuming requirements
+- Two-step queries work well for aggregation + detail scenarios
+
+### Case Study: Duplicate Story Prevention (CASE-005)
+**Challenge**: User pointed out AI could generate two different stories for functionally identical requirements
+
+**Problem Identified:**
+- User describes: "订单统计" (Order Statistics)
+- User describes: "订单报表" (Order Reports)
+- Without duplicate check, AI might create US-XXX and US-YYY for the same feature
+
+**Workflow Improvement Added:**
+```bash
+# Mandatory duplicate check before story creation
+grep -ri "订单.*统计\|订单.*报表\|order.*statistic\|order.*report" docs/stories/
+find docs/stories/ -name "*order*"
+cat docs/stories/_index.yaml | grep -B 3 -A 3 "order"
+```
+
+**AI Decision Tree Implemented:**
+1. **Search for similarity** (multi-language keywords)
+2. **Analyze overlap** (>70% = high similarity)
+3. **Ask user clarification** (Merge? Extend? Separate?)
+4. **Execute user choice** (Don't assume)
+
+**Example User Clarification:**
+```
+🤖 我发现这两个需求非常相似（订单统计 vs 订单报表）：
+
+   选项 1: 合并为一个故事 - 统一的订单分析功能
+   选项 2: 创建两个独立故事 - 请说明业务场景区别
+   选项 3: 扩展现有故事 - 已有类似功能，仅需增强
+
+   您的选择？
+```
+
+**Outcome**:
+- ✅ Prevents duplicate stories for same functionality
+- ✅ Forces AI to search before creating
+- ✅ Puts decision power with user, not AI assumptions
+- ✅ Saves development time by avoiding redundant work
+
+**AI Auto-Translation Implementation:**
+- **No `aliases` field needed** - AI handles translation dynamically
+- **Zero maintenance cost** - No manual metadata to update
+- **Better coverage** - AI understands context and synonyms beyond predefined aliases
+- **Example workflow:**
+  ```bash
+  # User says: "我想实现订单导出功能"
+  # AI automatically searches:
+  grep -ri "订单.*导出\|订单.*下载" docs/stories/        # Chinese
+  grep -ri "order.*export\|order.*download" docs/stories/  # English translation
+  grep -ri "data.*export\|extract" docs/stories/           # Synonym expansion
+
+  # Result: Finds all related stories without manual aliases
+  ```
+
+**Key Learning**:
+- AI must verify similarity BEFORE generating stories
+- User communication patterns matter ("功能基本一致" = red flag)
+- **AI auto-translation > manual aliases** for multi-language teams
+- Asking user > Making assumptions about requirements
+- **Dynamic translation** eliminates metadata maintenance burden
+
 ---
 
 ## 🔧 DETAILED WORKFLOWS (When You Need Step-by-Step)
 
 ### Complete Autonomy Workflow (For "I want users to..." requests)
+
+**Step 0: Duplicate Check (MANDATORY FIRST STEP)**
+```bash
+# Search for similar stories and cards
+grep -ri "core-keywords" docs/stories/ docs/cards/
+find docs/stories/ -name "*domain*"
+cat docs/stories/_index.yaml | grep -B 3 -A 3 "keyword"
+
+# If similarity found (>70% overlap):
+# → Ask user: "Merge with existing?" "Extend existing?" "Create separate?"
+# → Only proceed with new story if user explicitly confirms need
+```
+
 1. **Story Analysis**: Break down business requirements
 2. **Card Generation**: Create technical specs following templates
-3. **Document Everything**: Update `docs/stories/_index.yaml` with relationships
+3. **Document Everything**: Update `docs/stories/_index.yaml` with relationships (AI auto-translation handles multi-language search)
 4. **Implement Code**: Follow card specs in `src/modules/[name]/`
 5. **Integration Proof**: Create runbooks, Newman tests, TypeScript examples
 6. **Validation**: Test end-to-end functionality

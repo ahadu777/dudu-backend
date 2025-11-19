@@ -106,15 +106,13 @@ export class VenueOperationsService {
       // ========================================
       const decryptResult = await decryptAndVerifyQR(request.qrToken);
 
-      // 检查QR码是否过期
-      if (decryptResult.is_expired) {
-        logger.warn('venue.scan.qr_expired', {
-          operator_id: request.operator.operator_id,
-          remaining_seconds: decryptResult.remaining_seconds
-        });
-
-        return this.createRejectResponse('QR_EXPIRED', startTime, request.operator, false);
-      }
+      // OTA票券不进行时间过期校验（QR码长期有效）
+      // QR加密仍然保留用于防篡改，但不强制过期时间
+      logger.info('venue.scan.qr_decryption_success', {
+        operator_id: request.operator.operator_id,
+        qr_expired: decryptResult.is_expired,
+        note: 'OTA tickets do not enforce QR expiry validation'
+      });
 
       const { ticket_code: ticketCode, jti } = decryptResult.data;
 
@@ -183,14 +181,15 @@ export class VenueOperationsService {
         operator_id: request.operator.operator_id
       });
 
-      // 验证票据状态
-      const validStatuses = ['PRE_GENERATED', 'ACTIVE'];
+      // 验证票据状态 - OTA票券必须先激活才能核销
+      const validStatuses = ['ACTIVE'];  // 只允许已激活的票券核销
       if (!validStatuses.includes(ticket.status)) {
         logger.warn('venue.scan.invalid_status', {
           ticket_code: ticketCode,
           status: ticket.status,
           valid_statuses: validStatuses,
-          operator_id: request.operator.operator_id
+          operator_id: request.operator.operator_id,
+          reason: ticket.status === 'PRE_GENERATED' ? 'Ticket not activated yet' : 'Invalid ticket status'
         });
 
         await this.recordRedemption({

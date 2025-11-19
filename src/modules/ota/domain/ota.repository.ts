@@ -1280,48 +1280,56 @@ export class OTARepository {
   async getResellersSummaryFromBatches(partnerId: string, filters?: { status?: string; date_range?: string; page?: number; limit?: number }): Promise<any[]> {
     let query = `
       SELECT
-        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.intended_reseller')) as reseller_name,
-        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.contact_email')) as contact_email,
-        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.contact_phone')) as contact_phone,
+        JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.intended_reseller')) as reseller_name,
+        JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.contact_email')) as contact_email,
+        JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.contact_phone')) as contact_phone,
 
         -- 统计信息
-        COUNT(DISTINCT batch_id) as total_batches,
-        SUM(total_quantity) as total_tickets_generated,
-        0 as total_tickets_activated,  -- TODO: Join with pre_generated_tickets to count activated tickets
+        COUNT(DISTINCT otb.batch_id) as total_batches,
+        SUM(otb.total_quantity) as total_tickets_generated,
+        COALESCE(SUM(batch_activated.activated_count), 0) as total_tickets_activated,
 
         -- 最近活动
-        MAX(created_at) as last_batch_date,
-        MIN(created_at) as first_batch_date,
+        MAX(otb.created_at) as last_batch_date,
+        MIN(otb.created_at) as first_batch_date,
 
         -- 佣金统计(按百分比类型)
-        AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.commission_config.rate')) AS DECIMAL(5,4))) as avg_commission_rate,
+        AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.commission_config.rate')) AS DECIMAL(5,4))) as avg_commission_rate,
 
         -- 结算周期(取最常见的)
-        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.settlement_cycle')) as settlement_cycle
+        JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.settlement_cycle')) as settlement_cycle
 
-      FROM ota_ticket_batches
+      FROM ota_ticket_batches otb
+      LEFT JOIN (
+        SELECT
+          batch_id,
+          COUNT(*) as activated_count
+        FROM pre_generated_tickets
+        WHERE status = 'ACTIVE'
+        GROUP BY batch_id
+      ) batch_activated ON otb.batch_id = batch_activated.batch_id
 
-      WHERE partner_id = ?
-        AND reseller_metadata IS NOT NULL
-        AND distribution_mode = 'reseller_batch'
+      WHERE otb.partner_id = ?
+        AND otb.reseller_metadata IS NOT NULL
+        AND otb.distribution_mode = 'reseller_batch'
     `;
 
     const params: any[] = [partnerId];
 
     // 状态过滤
     if (filters?.status === 'active') {
-      query += ` AND status = 'active'`;
+      query += ` AND otb.status = 'active'`;
     }
 
     // 日期范围过滤
     if (filters?.date_range) {
-      query += ` AND DATE_FORMAT(created_at, '%Y-%m') = ?`;
+      query += ` AND DATE_FORMAT(otb.created_at, '%Y-%m') = ?`;
       params.push(filters.date_range);
     }
 
     query += `
       GROUP BY
-        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.intended_reseller')),
+        reseller_name,
         contact_email,
         contact_phone,
         settlement_cycle
