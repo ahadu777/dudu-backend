@@ -183,6 +183,171 @@
               }
             }
           ]
+        },
+        {
+          "name": "1.5 【新增】复杂定价引擎 - 获取定价规则",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/pricing/rules/106",
+              "host": ["{{base_url}}"],
+              "path": ["pricing", "rules", "106"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回定价规则', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('base_prices');",
+                  "    pm.expect(data).to.have.property('time_rules');",
+                  "    pm.expect(data).to.have.property('customer_rules');",
+                  "    pm.expect(data).to.have.property('available_addons');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.6 【新增】复杂定价引擎 - 计算工作日成人价格",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"booking_dates\": [\"2025-11-10\"],\n  \"customer_breakdown\": [\n    {\"customer_type\": \"adult\", \"count\": 2}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pricing/calculate",
+              "host": ["{{base_url}}"],
+              "path": ["pricing", "calculate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回定价计算结果', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('base_price');",
+                  "    pm.expect(data).to.have.property('final_total');",
+                  "    pm.expect(data).to.have.property('breakdown');",
+                  "    // 2 adults × $288 = $576",
+                  "    pm.expect(data.base_price).to.equal(576);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.7 【新增】复杂定价引擎 - 计算周末价格",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"booking_dates\": [\"2025-11-15\"],\n  \"customer_breakdown\": [\n    {\"customer_type\": \"adult\", \"count\": 2}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pricing/calculate",
+              "host": ["{{base_url}}"],
+              "path": ["pricing", "calculate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('周末价格包含加价', () => {",
+                  "    const data = pm.response.json();",
+                  "    // 2 adults × $318 (weekend) = $636",
+                  "    pm.expect(data.final_total).to.be.at.least(636);",
+                  "    pm.expect(data.breakdown.time_adjustments).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.8 【新增】复杂定价引擎 - 混合客户类型",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"booking_dates\": [\"2025-11-10\"],\n  \"customer_breakdown\": [\n    {\"customer_type\": \"adult\", \"count\": 1},\n    {\"customer_type\": \"child\", \"count\": 2}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pricing/calculate",
+              "host": ["{{base_url}}"],
+              "path": ["pricing", "calculate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('混合类型价格正确', () => {",
+                  "    const data = pm.response.json();",
+                  "    // 1 adult × $288 + 2 children × $188 = $664",
+                  "    pm.expect(data.base_price).to.equal(664);",
+                  "    pm.expect(data.breakdown.per_customer_costs.length).to.equal(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.9 【新增】复杂定价引擎 - 带附加产品",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"booking_dates\": [\"2025-11-10\"],\n  \"customer_breakdown\": [\n    {\"customer_type\": \"adult\", \"count\": 2}\n  ],\n  \"addons\": [\n    {\"addon_id\": \"tokens-plan-a\", \"quantity\": 1}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pricing/calculate",
+              "host": ["{{base_url}}"],
+              "path": ["pricing", "calculate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('附加产品价格包含在总价中', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('addons_total');",
+                  "    pm.expect(data.addons_total).to.equal(100);",
+                  "    // $576 (base) + $100 (addon) = $676",
+                  "    pm.expect(data.final_total).to.equal(676);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     },
