@@ -795,6 +795,17 @@ export class MockStore {
     return this.ordersByOrderId.get(orderId);
   }
 
+  getOrdersByUserId(userId: number): Order[] {
+    return Array.from(this.ordersByOrderId.values())
+      .filter(order => order.user_id === userId)
+      .sort((a, b) => {
+        // Sort by created_at DESC (most recent first)
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+      });
+  }
+
   updateOrderStatus(orderId: number, status: OrderStatus, paidAt?: ISODate): boolean {
     const order = this.ordersByOrderId.get(orderId);
     if (!order) return false;
