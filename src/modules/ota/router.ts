@@ -743,6 +743,68 @@ router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedR
 
 // ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
 
+// GET /api/ota/resellers/summary - Aggregate reseller info from batches (JSON-based with pagination)
+router.get('/resellers/summary', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { status = 'active', date_range, page, limit, batches_per_reseller } = req.query;
+
+    // 验证分页参数
+    const filters: any = {
+      status: status as string,
+      date_range: date_range as string
+    };
+
+    if (page) {
+      const pageNum = parseInt(page as string, 10);
+      if (isNaN(pageNum) || pageNum < 1) {
+        return res.status(422).json({
+          error: 'INVALID_PARAMETER',
+          message: 'page must be a positive integer'
+        });
+      }
+      filters.page = pageNum;
+    }
+
+    if (limit) {
+      const limitNum = parseInt(limit as string, 10);
+      if (isNaN(limitNum) || limitNum < 1) {
+        return res.status(422).json({
+          error: 'INVALID_PARAMETER',
+          message: 'limit must be a positive integer'
+        });
+      }
+      filters.limit = limitNum;
+    }
+
+    if (batches_per_reseller) {
+      const batchesNum = parseInt(batches_per_reseller as string, 10);
+      if (isNaN(batchesNum) || batchesNum < 1) {
+        return res.status(422).json({
+          error: 'INVALID_PARAMETER',
+          message: 'batches_per_reseller must be a positive integer'
+        });
+      }
+      filters.batches_per_reseller = batchesNum;
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const summary = await otaService.getResellersSummary(partnerId, filters);
+
+    res.json(summary);
+  } catch (error: any) {
+    logger.error('OTA reseller summary failed', {
+      partner: req.ota_partner?.name,
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to get reseller summary'
+    });
+  }
+});
+
 // GET /api/ota/resellers - List all resellers for current OTA partner
 router.get('/resellers', async (req: AuthenticatedRequest, res: Response) => {
   try {

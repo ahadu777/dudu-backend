@@ -43,9 +43,25 @@ interface PricingSnapshot {
 
 interface ResellerMetadata {
   intended_reseller: string;
-  batch_purpose: string;
+  contact_email?: string;
+  contact_phone?: string;
+
+  // 佣金配置(按批次设置)
+  commission_config?: {
+    type: 'percentage' | 'fixed_amount';
+    rate?: number;              // 百分比佣金(0.15 = 15%)
+    fixed_amount?: number;      // 固定金额佣金(每张票)
+    min_commission?: number;    // 最低佣金(封底)
+    max_commission?: number;    // 最高佣金(封顶)
+  };
+
+  batch_purpose?: string;
   distribution_notes?: string;
-  margin_guidance?: number; // Suggested markup percentage
+  margin_guidance?: number;     // Suggested markup percentage (deprecated,用commission_config替代)
+
+  // 结算信息
+  settlement_cycle?: 'weekly' | 'monthly' | 'quarterly';
+  payment_terms?: string;       // e.g., "T+30", "T+60"
 }
 
 interface BatchMetadata {

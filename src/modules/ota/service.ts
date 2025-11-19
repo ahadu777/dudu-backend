@@ -868,7 +868,26 @@ export class OTAService {
         };
       }
 
-      // Create batch record
+      // ⚠️ IMPORTANT: Check inventory FIRST before creating batch
+      // This prevents orphaned batches when inventory is insufficient
+      const inventory = product.inventory[0]; // There should be one inventory per product
+      if (!inventory) {
+        throw {
+          code: ERR.PRODUCT_NOT_FOUND,
+          message: `No inventory found for product ${request.product_id}`
+        };
+      }
+
+      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback
+      const available = inventory.getChannelAvailable(channelId);
+      if (available < request.quantity) {
+        throw {
+          code: ERR.SOLD_OUT,
+          message: `Insufficient inventory for channel ${channelId}. Available: ${available}, Requested: ${request.quantity}`
+        };
+      }
+
+      // Create batch record AFTER inventory validation passes
       const expiresAt = request.distribution_mode === 'reseller_batch'
         ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days for reseller
         : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);  // 7 days for direct
@@ -886,24 +905,6 @@ export class OTAService {
       };
 
       const batch = await repo.createTicketBatch(batchData);
-
-      // Check inventory availability - inventory should be included with the product
-      const inventory = product.inventory[0]; // There should be one inventory per product
-      if (!inventory) {
-        throw {
-          code: ERR.PRODUCT_NOT_FOUND,
-          message: `No inventory found for product ${request.product_id}`
-        };
-      }
-
-      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback
-      const available = inventory.getChannelAvailable(channelId);
-      if (available < request.quantity) {
-        throw {
-          code: ERR.SOLD_OUT,
-          message: `Insufficient inventory for channel ${channelId}. Available: ${available}, Requested: ${request.quantity}`
-        };
-      }
 
       // Generate tickets for database
       const tickets = [];
@@ -1981,6 +1982,186 @@ export class OTAService {
   }
 
   // ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
+
+  /**
+   * Get reseller summary aggregated from batch metadata (JSON-based)
+   * 从批次JSON字段中聚合经销商信息
+   */
+  async getResellersSummary(
+    partnerId: string,
+    filters?: {
+      status?: string;
+      date_range?: string;
+      page?: number;
+      limit?: number;
+      batches_per_reseller?: number;  // 每个经销商显示多少个批次
+    }
+  ): Promise<any> {
+    logger.info('ota.resellers.summary.start', { partnerId, filters, useDatabase: dataSourceConfig.useDatabase });
+
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 20, 100); // 默认20个经销商，最多100个
+    const batchesPerReseller = Math.min(filters?.batches_per_reseller || 10, 50); // 每个经销商默认10个批次，最多50个
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      try {
+        logger.info('ota.resellers.summary.using_database', { partnerId, page, limit });
+        const repo = await this.getRepository();
+
+        // 1. 获取总数
+        const totalCount = await repo.countResellers(partnerId, {
+          status: filters?.status,
+          date_range: filters?.date_range
+        });
+
+        // 2. 获取经销商汇总（带分页）
+        const summary = await repo.getResellersSummaryFromBatches(partnerId, {
+          status: filters?.status,
+          date_range: filters?.date_range,
+          page,
+          limit
+        });
+
+        logger.info('ota.resellers.summary.query_result', { count: summary.length, total: totalCount });
+
+        // 3. 为每个经销商获取批次详情
+        const resellersWithBatches = await Promise.all(
+          summary.map(async (r: any) => {
+            // 获取该经销商的批次列表（前N个）
+            const batches = await repo.getResellerBatches(partnerId, r.reseller_name, {
+              status: filters?.status,
+              limit: batchesPerReseller
+            });
+
+            return {
+              reseller_name: r.reseller_name,
+              contact_email: r.contact_email,
+              contact_phone: r.contact_phone,
+
+              statistics: {
+                total_batches: parseInt(r.total_batches || 0),
+                total_tickets_generated: parseInt(r.total_tickets_generated || 0),
+                total_tickets_activated: parseInt(r.total_tickets_activated || 0),
+                activation_rate: r.total_tickets_generated > 0
+                  ? parseFloat((r.total_tickets_activated / r.total_tickets_generated).toFixed(2))
+                  : 0
+              },
+
+              commission: {
+                avg_rate: r.avg_commission_rate ? parseFloat(r.avg_commission_rate) : null,
+                settlement_cycle: r.settlement_cycle
+              },
+
+              // 批次详情列表
+              batches: batches.map((b: any) => ({
+                batch_id: b.batch_id,
+                product_id: b.product_id,
+                tickets_count: b.tickets_count,
+                status: b.status,
+                created_at: b.created_at,
+                expires_at: b.expires_at
+              })),
+
+              first_batch_date: r.first_batch_date,
+              last_batch_date: r.last_batch_date,
+              days_active: r.first_batch_date
+                ? Math.floor((new Date().getTime() - new Date(r.first_batch_date).getTime()) / (1000 * 60 * 60 * 24))
+                : 0
+            };
+          })
+        );
+
+        return {
+          total: totalCount,
+          page,
+          page_size: limit,
+          resellers: resellersWithBatches
+        };
+      } catch (error: any) {
+        logger.error('ota.resellers.summary.database_error', {
+          partnerId,
+          error: error.message,
+          stack: error.stack
+        });
+        // Fall back to mock data on error
+        logger.info('ota.resellers.summary.fallback_to_mock', { partnerId });
+      }
+    }
+
+    // Mock data (default or fallback)
+    logger.info('ota.resellers.summary.using_mock', { partnerId });
+    return {
+        total: 2,
+        page: 1,
+        page_size: 20,
+        resellers: [
+          {
+            reseller_name: "携程旅行社",
+            contact_email: "partner@ctrip.com",
+            contact_phone: "138-1234-5678",
+            statistics: {
+              total_batches: 12,
+              total_tickets_generated: 5000,
+              total_tickets_activated: 4200,
+              activation_rate: 0.84
+            },
+            commission: {
+              avg_rate: 0.15,
+              settlement_cycle: "monthly"
+            },
+            batches: [
+              {
+                batch_id: "BATCH-20251101-001",
+                product_id: 106,
+                tickets_count: 500,
+                status: "active",
+                created_at: "2025-11-01T10:00:00Z",
+                expires_at: "2025-12-01T10:00:00Z"
+              },
+              {
+                batch_id: "BATCH-20251115-002",
+                product_id: 107,
+                tickets_count: 300,
+                status: "active",
+                created_at: "2025-11-15T14:30:00Z",
+                expires_at: "2025-12-15T14:30:00Z"
+              }
+            ],
+            first_batch_date: "2025-10-01",
+            last_batch_date: "2025-11-15",
+            days_active: 48
+          },
+          {
+            reseller_name: "美团门票",
+            contact_email: "tickets@meituan.com",
+            contact_phone: "139-9876-5432",
+            statistics: {
+              total_batches: 8,
+              total_tickets_generated: 3000,
+              total_tickets_activated: 2800,
+              activation_rate: 0.93
+            },
+            commission: {
+              avg_rate: 0.12,
+              settlement_cycle: "weekly"
+            },
+            batches: [
+              {
+                batch_id: "BATCH-20251105-MT-001",
+                product_id: 106,
+                tickets_count: 400,
+                status: "active",
+                created_at: "2025-11-05T09:00:00Z",
+                expires_at: "2025-12-05T09:00:00Z"
+              }
+            ],
+            first_batch_date: "2025-11-01",
+            last_batch_date: "2025-11-18",
+            days_active: 17
+          }
+        ]
+      };
+  }
 
   /**
    * List all resellers for authenticated OTA partner

@@ -3070,6 +3070,171 @@
         }
       }
     },
+    "/api/ota/resellers/summary": {
+      "get": {
+        "tags": [
+          "OTA Integration",
+          "Reseller Management"
+        ],
+        "summary": "Get reseller summary from batch metadata",
+        "description": "Aggregate reseller information and statistics from batch metadata (JSON-based reseller tracking)",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["active", "all"],
+              "default": "all"
+            },
+            "description": "Filter by reseller status (active = only active batches)"
+          },
+          {
+            "name": "date_range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2025-11"
+            },
+            "description": "Filter by date range in YYYY-MM format"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reseller summary retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "example": 2,
+                      "description": "Total number of resellers"
+                    },
+                    "resellers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "reseller_name": {
+                            "type": "string",
+                            "example": "携程旅行社"
+                          },
+                          "contact_email": {
+                            "type": "string",
+                            "format": "email",
+                            "example": "partner@ctrip.com"
+                          },
+                          "contact_phone": {
+                            "type": "string",
+                            "example": "138-1234-5678"
+                          },
+                          "statistics": {
+                            "type": "object",
+                            "properties": {
+                              "total_batches": {
+                                "type": "integer",
+                                "example": 3,
+                                "description": "Total number of batches generated"
+                              },
+                              "total_tickets_generated": {
+                                "type": "integer",
+                                "example": 150,
+                                "description": "Total tickets generated across all batches"
+                              },
+                              "total_tickets_activated": {
+                                "type": "integer",
+                                "example": 45,
+                                "description": "Total tickets activated"
+                              },
+                              "activation_rate": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.30,
+                                "description": "Activation rate (0.30 = 30%)"
+                              }
+                            }
+                          },
+                          "commission": {
+                            "type": "object",
+                            "properties": {
+                              "avg_rate": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.15,
+                                "description": "Average commission rate (0.15 = 15%)"
+                              },
+                              "settlement_cycle": {
+                                "type": "string",
+                                "enum": ["weekly", "monthly", "quarterly"],
+                                "example": "monthly"
+                              }
+                            }
+                          },
+                          "first_batch_date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2025-11-01T10:00:00Z"
+                          },
+                          "last_batch_date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2025-11-18T15:00:00Z"
+                          },
+                          "days_active": {
+                            "type": "integer",
+                            "example": 17,
+                            "description": "Number of days since first batch"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "total": 2,
+                  "resellers": [
+                    {
+                      "reseller_name": "携程旅行社",
+                      "contact_email": "partner@ctrip.com",
+                      "contact_phone": "138-1234-5678",
+                      "statistics": {
+                        "total_batches": 3,
+                        "total_tickets_generated": 150,
+                        "total_tickets_activated": 45,
+                        "activation_rate": 0.30
+                      },
+                      "commission": {
+                        "avg_rate": 0.15,
+                        "settlement_cycle": "monthly"
+                      },
+                      "first_batch_date": "2025-11-01T10:00:00Z",
+                      "last_batch_date": "2025-11-18T15:00:00Z",
+                      "days_active": 17
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/api/ota/batches/{batch_id}/analytics": {
       "get": {
         "tags": [

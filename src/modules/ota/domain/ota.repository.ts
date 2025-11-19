@@ -1232,6 +1232,147 @@ export class OTARepository {
   // ============= RESELLER MANAGEMENT (NEW - 2025-11-14) =============
 
   /**
+   * Get batch details for a specific reseller
+   * 获取某个经销商的批次详情列表
+   */
+  async getResellerBatches(partnerId: string, resellerName: string, filters?: { status?: string; page?: number; limit?: number }): Promise<any[]> {
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 10, 50); // 每个经销商最多50个批次
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT
+        batch_id,
+        product_id,
+        total_quantity as tickets_count,
+        status,
+        created_at,
+        expires_at
+      FROM ota_ticket_batches
+      WHERE partner_id = ?
+        AND reseller_metadata IS NOT NULL
+        AND distribution_mode = 'reseller_batch'
+        AND JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.intended_reseller')) = ?
+    `;
+
+    const params: any[] = [partnerId, resellerName];
+
+    // 状态过滤
+    if (filters?.status === 'active') {
+      query += ` AND status = 'active'`;
+    }
+
+    query += `
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    params.push(limit, offset);
+
+    const results = await this.dataSource.query(query, params);
+    return results;
+  }
+
+  /**
+   * Aggregate reseller summary from batch metadata (JSON-based approach)
+   * 从批次JSON字段聚合经销商信息,用于管理列表
+   */
+  async getResellersSummaryFromBatches(partnerId: string, filters?: { status?: string; date_range?: string; page?: number; limit?: number }): Promise<any[]> {
+    let query = `
+      SELECT
+        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.intended_reseller')) as reseller_name,
+        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.contact_email')) as contact_email,
+        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.contact_phone')) as contact_phone,
+
+        -- 统计信息
+        COUNT(DISTINCT batch_id) as total_batches,
+        SUM(total_quantity) as total_tickets_generated,
+        0 as total_tickets_activated,  -- TODO: Join with pre_generated_tickets to count activated tickets
+
+        -- 最近活动
+        MAX(created_at) as last_batch_date,
+        MIN(created_at) as first_batch_date,
+
+        -- 佣金统计(按百分比类型)
+        AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.commission_config.rate')) AS DECIMAL(5,4))) as avg_commission_rate,
+
+        -- 结算周期(取最常见的)
+        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.settlement_cycle')) as settlement_cycle
+
+      FROM ota_ticket_batches
+
+      WHERE partner_id = ?
+        AND reseller_metadata IS NOT NULL
+        AND distribution_mode = 'reseller_batch'
+    `;
+
+    const params: any[] = [partnerId];
+
+    // 状态过滤
+    if (filters?.status === 'active') {
+      query += ` AND status = 'active'`;
+    }
+
+    // 日期范围过滤
+    if (filters?.date_range) {
+      query += ` AND DATE_FORMAT(created_at, '%Y-%m') = ?`;
+      params.push(filters.date_range);
+    }
+
+    query += `
+      GROUP BY
+        JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.intended_reseller')),
+        contact_email,
+        contact_phone,
+        settlement_cycle
+
+      ORDER BY total_tickets_activated DESC
+    `;
+
+    // 添加分页
+    if (filters?.page && filters?.limit) {
+      const page = filters.page;
+      const limit = Math.min(filters.limit, 100); // 最多100个经销商
+      const offset = (page - 1) * limit;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limit, offset);
+    }
+
+    const results = await this.dataSource.query(query, params);
+    return results;
+  }
+
+  /**
+   * Count total resellers (for pagination)
+   * 计算经销商总数（用于分页）
+   */
+  async countResellers(partnerId: string, filters?: { status?: string; date_range?: string }): Promise<number> {
+    let query = `
+      SELECT COUNT(DISTINCT JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.intended_reseller'))) as total
+      FROM ota_ticket_batches
+      WHERE partner_id = ?
+        AND reseller_metadata IS NOT NULL
+        AND distribution_mode = 'reseller_batch'
+    `;
+
+    const params: any[] = [partnerId];
+
+    // 状态过滤
+    if (filters?.status === 'active') {
+      query += ` AND status = 'active'`;
+    }
+
+    // 日期范围过滤
+    if (filters?.date_range) {
+      query += ` AND DATE_FORMAT(created_at, '%Y-%m') = ?`;
+      params.push(filters.date_range);
+    }
+
+    const result = await this.dataSource.query(query, params);
+    return result[0]?.total || 0;
+  }
+
+  /**
    * Find all resellers for a specific OTA partner
    * Used for: Reseller listing, dropdown selections
    */
