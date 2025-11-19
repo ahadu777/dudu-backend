@@ -3487,6 +3487,238 @@
           }
         }
       }
+    },
+    "/pricing/calculate": {
+      "post": {
+        "tags": [
+          "Commerce"
+        ],
+        "summary": "Calculate total price for complex booking",
+        "description": "Calculates pricing based on multiple variables - dates, customer types, package tiers, add-ons",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "booking_dates",
+                  "customer_breakdown"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "integer",
+                    "description": "Product to price",
+                    "example": 106
+                  },
+                  "booking_dates": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "description": "Dates for usage/booking",
+                    "example": [
+                      "2025-11-10"
+                    ]
+                  },
+                  "customer_breakdown": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "customer_type",
+                        "count"
+                      ],
+                      "properties": {
+                        "customer_type": {
+                          "type": "string",
+                          "enum": [
+                            "adult",
+                            "child",
+                            "elderly"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  },
+                  "addons": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "addon_id": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "package_tier": {
+                    "type": "string",
+                    "enum": [
+                      "premium",
+                      "pet",
+                      "deluxe_tea_set"
+                    ],
+                    "description": "Optional package tier override"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pricing calculation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "base_price": {
+                      "type": "number",
+                      "format": "decimal"
+                    },
+                    "adjustments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rule_type": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "calculation_basis": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "addons_total": {
+                      "type": "number",
+                      "format": "decimal"
+                    },
+                    "final_total": {
+                      "type": "number",
+                      "format": "decimal"
+                    },
+                    "breakdown": {
+                      "type": "object",
+                      "properties": {
+                        "per_customer_costs": {
+                          "type": "array"
+                        },
+                        "addon_details": {
+                          "type": "array"
+                        },
+                        "time_adjustments": {
+                          "type": "array"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "404": {
+            "description": "Product not found or pricing not available"
+          },
+          "422": {
+            "description": "Invalid date range or customer breakdown"
+          }
+        }
+      }
+    },
+    "/pricing/rules/{product_id}": {
+      "get": {
+        "tags": [
+          "Commerce"
+        ],
+        "summary": "Get pricing rules for product",
+        "description": "Returns all pricing rules, tiers, and add-on options for a product",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Product ID to get pricing rules for",
+            "example": 106
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pricing rules retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "base_prices": {
+                      "type": "object",
+                      "properties": {
+                        "adult": {
+                          "type": "number"
+                        },
+                        "child": {
+                          "type": "number"
+                        },
+                        "elderly": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "time_rules": {
+                      "type": "array"
+                    },
+                    "customer_rules": {
+                      "type": "array"
+                    },
+                    "special_dates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "date"
+                      }
+                    },
+                    "package_tiers": {
+                      "type": "array"
+                    },
+                    "available_addons": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product ID"
+          },
+          "404": {
+            "description": "Product not found or pricing rules not available"
+          }
+        }
+      }
     }
   },
   "components": {
