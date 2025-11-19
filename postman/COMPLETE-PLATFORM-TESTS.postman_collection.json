@@ -348,6 +348,68 @@
               }
             }
           ]
+        },
+        {
+          "name": "1.10 【新增】获取用户订单列表 - GET /orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回订单列表', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('orders');",
+                  "    pm.expect(data).to.have.property('total_count');",
+                  "    pm.expect(data.orders).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.11 【新增】获取用户订单列表 - GET /my/orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/my/orders",
+              "host": ["{{base_url}}"],
+              "path": ["my", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码是 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回订单列表', () => {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('orders');",
+                  "    pm.expect(data).to.have.property('total_count');",
+                  "    pm.expect(data.orders).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     },
