@@ -4,24 +4,27 @@ slug: complex-pricing-engine
 team: "A - Commerce"
 oas_paths: ["/pricing/calculate", "/pricing/rules/{product_id}"]
 migrations: ["db/migrations/0010_complex_pricing.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""
 newman_report: "reports/newman/complex-pricing-engine.json"
-last_update: "2025-10-26T10:30:00+0800"
+last_update: "2025-11-06T00:00:00+0800"
 related_stories: ["US-011"]
 ---
 
 # Complex multi-variable pricing calculation engine — Dev Notes
 
 ## Status & Telemetry
-- Status: Ready
+- Status: Done ✅
 - Readiness: mvp
 - Spec Paths: /pricing/calculate, /pricing/rules/{product_id}
 - Migrations: db/migrations/0010_complex_pricing.sql
-- Newman: 0/0 • reports/newman/complex-pricing-engine.json
-- Last Update: 2025-10-26T10:30:00+0800
+- Newman: ✅ Complete • postman/Complex-Pricing-Engine.postman_collection.json
+- Last Update: 2025-11-06T00:00:00+0800
+- Implementation: src/modules/pricing/router.ts
+- Test Script: scripts/test-pricing-endpoints.sh
+- Postman Collection: postman/Complex-Pricing-Engine.postman_collection.json
 
 ## 0) Prerequisites
 - Product catalog endpoint exists (catalog-endpoint card)
@@ -276,3 +279,78 @@ export interface PricingCalculationResponse {
 - Package tiers: Premium, Pet Plan, Deluxe Tea Set pricing
 - Edge cases: Invalid product_id → 404, invalid dates → 422
 - Performance: Measure calculation time for complex scenarios
+
+## 10) Implementation Complete ✅
+
+**Endpoints Implemented:**
+- ✅ `POST /pricing/calculate` - Calculate total price for complex booking
+- ✅ `GET /pricing/rules/:product_id` - Get pricing rules for product
+
+**Test Commands:**
+```bash
+# Get pricing rules
+curl http://localhost:8080/pricing/rules/106
+
+# Calculate pricing - 2 adults on weekday
+curl -X POST http://localhost:8080/pricing/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 106,
+    "booking_dates": ["2025-11-10"],
+    "customer_breakdown": [
+      {"customer_type": "adult", "count": 2}
+    ]
+  }'
+
+# Calculate pricing - 2 adults on weekend
+curl -X POST http://localhost:8080/pricing/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 106,
+    "booking_dates": ["2025-11-15"],
+    "customer_breakdown": [
+      {"customer_type": "adult", "count": 2}
+    ]
+  }'
+
+# Calculate with addons
+curl -X POST http://localhost:8080/pricing/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 106,
+    "booking_dates": ["2025-11-10"],
+    "customer_breakdown": [
+      {"customer_type": "adult", "count": 2}
+    ],
+    "addons": [
+      {"addon_id": "tokens-plan-a", "quantity": 1}
+    ]
+  }'
+```
+
+**Test Script:**
+```bash
+./scripts/test-pricing-endpoints.sh
+```
+
+**Newman Collection:**
+```bash
+# Run Newman tests
+npx newman run postman/Complex-Pricing-Engine.postman_collection.json
+
+# With HTML report
+npx newman run postman/Complex-Pricing-Engine.postman_collection.json \
+  --reporters cli,html \
+  --reporter-html-export reports/newman/complex-pricing-engine.html
+```
+
+**Test Coverage:**
+- ✅ 4 tests for GET /pricing/rules/:product_id
+- ✅ 4 tests for customer type pricing
+- ✅ 2 tests for add-on pricing
+- ✅ 1 test for special date pricing
+- ✅ 2 tests for different products
+- ✅ 4 error handling tests
+- **Total: 17 test cases with assertions**
+
+**Status**: All endpoints implemented, tested, and working. Ready for integration with order creation flow.
