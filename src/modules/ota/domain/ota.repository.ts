@@ -660,7 +660,9 @@ export class OTARepository {
 
   async findTicketsByOrderId(orderId: string): Promise<PreGeneratedTicketEntity[]> {
     return this.preGeneratedTicketRepo.find({
-      where: { order_id: orderId, status: 'ACTIVE' }
+      where: { order_id: orderId }
+      // Removed status: 'ACTIVE' filter - should return tickets in ANY status (ACTIVE, USED, EXPIRED, etc.)
+      // This allows viewing ticket details for completed orders with redeemed tickets
     });
   }
 
