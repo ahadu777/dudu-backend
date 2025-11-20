@@ -3,18 +3,21 @@ import { Venue } from './venue.entity';
 import { VenueSession } from './venue-session.entity';
 import { RedemptionEvent } from './redemption-event.entity';
 import { PreGeneratedTicketEntity } from '../../ota/domain/pre-generated-ticket.entity';
+import { OTAOrderEntity } from '../../ota/domain/ota-order.entity';
 
 export class VenueRepository {
   private venueRepo: Repository<Venue>;
   private sessionRepo: Repository<VenueSession>;
   private redemptionRepo: Repository<RedemptionEvent>;
   private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
+  private otaOrderRepo: Repository<OTAOrderEntity>;
 
   constructor(dataSource: DataSource) {
     this.venueRepo = dataSource.getRepository(Venue);
     this.sessionRepo = dataSource.getRepository(VenueSession);
     this.redemptionRepo = dataSource.getRepository(RedemptionEvent);
     this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
+    this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
   }
 
   // Ticket Management
@@ -93,7 +96,52 @@ export class VenueRepository {
       updateData
     );
 
+    // Update order status if ticket has an order_id
+    if (ticket.order_id) {
+      await this.updateOrderStatusIfNeeded(ticket.order_id);
+    }
+
     return true;
+  }
+
+  /**
+   * Update order status based on ticket redemption status
+   * Called after ticket redemption to keep order status in sync
+   */
+  private async updateOrderStatusIfNeeded(orderId: string): Promise<void> {
+    // Get all tickets for this order
+    const tickets = await this.preGeneratedTicketRepo.find({
+      where: { order_id: orderId }
+    });
+
+    if (tickets.length === 0) {
+      return; // No tickets found, nothing to update
+    }
+
+    // Count ticket statuses
+    const totalTickets = tickets.length;
+    const usedTickets = tickets.filter(t => t.status === 'USED').length;
+    const activeTickets = tickets.filter(t => t.status === 'ACTIVE').length;
+
+    // Determine new order status
+    let newStatus: 'confirmed' | 'in_progress' | 'completed';
+
+    if (usedTickets === totalTickets) {
+      // All tickets are used - order is completed
+      newStatus = 'completed';
+    } else if (usedTickets > 0) {
+      // Some tickets are used - order is in progress
+      newStatus = 'in_progress';
+    } else {
+      // No tickets used yet - keep confirmed
+      newStatus = 'confirmed';
+    }
+
+    // Update order status
+    await this.otaOrderRepo.update(
+      { order_id: orderId },
+      { status: newStatus }
+    );
   }
 
   // Venue Management
