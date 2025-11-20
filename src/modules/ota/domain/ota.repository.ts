@@ -593,6 +593,34 @@ export class OTARepository {
 
       const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
 
+      // Fetch batch to get pricing information
+      const batch = await queryRunner.manager.findOne(OTATicketBatchEntity, {
+        where: { batch_id: ticket.batch_id }
+      });
+
+      // Calculate ticket price from batch pricing snapshot
+      let ticketPrice: number | undefined;
+      if (batch?.pricing_snapshot) {
+        const snapshot = batch.pricing_snapshot;
+        const customerType = customerData.customer_type;
+
+        // Check for custom pricing override first
+        const overridePrice = snapshot.pricing_overrides?.custom_customer_pricing?.[customerType];
+        if (overridePrice !== undefined) {
+          ticketPrice = overridePrice;
+        } else {
+          // Fall back to standard pricing
+          const pricing = snapshot.customer_type_pricing?.find(p => p.customer_type === customerType);
+          ticketPrice = pricing?.unit_price || snapshot.base_price;
+
+          // Apply campaign discount if exists
+          const discountRate = snapshot.pricing_overrides?.campaign_discount_rate || 0;
+          if (discountRate > 0 && ticketPrice) {
+            ticketPrice = ticketPrice * (1 - discountRate);
+          }
+        }
+      }
+
       // Update the ticket with customer info and activation status
       // Note: QR codes are generated on-demand when requested via POST /qr/{code}
       // NOT stored in database to maintain security and freshness
@@ -604,6 +632,7 @@ export class OTARepository {
       ticket.order_id = savedOrder.order_id;
       ticket.status = 'ACTIVE';
       ticket.activated_at = new Date();
+      ticket.ticket_price = ticketPrice;
 
       // Update raw metadata if provided (for audit trail, e.g., visit_date, pricing breakdown)
       if (customerData.raw) {

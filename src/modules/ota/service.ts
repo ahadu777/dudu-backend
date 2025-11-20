@@ -946,7 +946,10 @@ export class OTAService {
           entitlements,
           qr_code: qrResult.qr_image, // Store QR image for printing/PDF generation
           raw: rawMetadata,
-          created_at: new Date()
+          created_at: new Date(),
+          // Export-friendly fields
+          distribution_mode: batch.distribution_mode,
+          reseller_name: batch.reseller_metadata?.intended_reseller
         };
 
         tickets.push(ticket);

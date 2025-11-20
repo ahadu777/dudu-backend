@@ -180,17 +180,17 @@ router.post('/reservations/:id/activate', otaAuthMiddleware('reserve:activate'),
     const { customer_details, customer_type, payment_reference, special_requests } = req.body;
 
     // Validate required fields
-    if (!customer_details || !payment_reference) {
+    if (!customer_details) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details and payment_reference are required'
+        message: 'customer_details is required'
       });
     }
 
-    if (!customer_details.name || !customer_details.email || !customer_details.phone) {
+    if (!customer_details.name) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details must include name, email, and phone'
+        message: 'customer_details must include name'
       });
     }
 
@@ -471,17 +471,17 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
     const { customer_details, customer_type, visit_date, payment_reference } = req.body;
 
     // Validate required fields
-    if (!customer_details || !customer_type || !payment_reference) {
+    if (!customer_details || !customer_type) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details, customer_type, and payment_reference are required'
+        message: 'customer_details and customer_type are required'
       });
     }
 
-    if (!customer_details.name || !customer_details.email || !customer_details.phone) {
+    if (!customer_details.name) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details must include name, email, and phone'
+        message: 'customer_details must include name'
       });
     }
 
