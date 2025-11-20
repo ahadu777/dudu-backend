@@ -26,11 +26,57 @@
 
 **Check what exists first:**
 - `docs/cards/` for existing work
-- `node scripts/progress-report.js` for status
+- `grep "status:" docs/cards/*.md` for status
 - `docs/stories/_index.yaml` for relationships
 
 **"I want users to..."** → COMPLETE AUTONOMY WORKFLOW (Story → Cards → Code)
 **"Implement card XYZ"** → TRADITIONAL WORKFLOW (Work with existing cards)
+
+### Anti-Script Principle (Mandatory - Keep It Simple)
+
+**CRITICAL: Do NOT create scripts. Use simple commands.**
+
+**Core Principle:**
+- ❌ **Default: NO scripts** - Simple commands are always better
+- ✅ **Only exception: Database migrations** (infrastructure necessity)
+- ✅ **Testing: Use Newman** - `npx newman run postman/xxx.postman_collection.json`
+
+**Forbidden Script Scenarios:**
+```bash
+# ❌ NEVER create scripts for:
+- Small feature validation → Use curl
+- One-time checks → Use grep/cat
+- Testing endpoints → Use Newman
+- Viewing files → Use cat/grep
+- Progress queries → Use simple grep
+- Coverage reports → Manual grep is faster
+```
+
+**Allowed Simple Commands:**
+```bash
+# ✅ Always use direct commands:
+curl http://localhost:8080/endpoint              # Test endpoints
+grep "status:" docs/cards/*.md                   # Check status
+cat docs/cards/card-name.md                      # View card
+grep -ri "keywords" docs/                        # Search docs
+npx newman run postman/xxx.postman_collection.json  # Run tests
+```
+
+**AI Mandatory Self-Check Before ANY Script Creation:**
+1. ❓ Can this be done with one command? → Use command
+2. ❓ Can Newman handle this? → Use Newman
+3. ❓ Will user run this >10 times? → Still use command
+4. ❓ Is this database migration? → Only then consider script
+
+**If AI suggests creating a script, user can say: "No scripts, simple command only"**
+
+**Current scripts/ directory (only 4 allowed):**
+- `setup.sh` - Initial project setup
+- `init-db.sql` - Database initialization
+- `run-migration.js` - Migration runner
+- `migrate-*.sql` - Historical migrations
+
+**Everything else: Direct commands or Newman.**
 
 ### Duplicate Story Prevention (Mandatory Before Creating Stories)
 
@@ -139,7 +185,7 @@ grep -ri "requirement.*keywords" docs/prd/ docs/stories/ docs/cards/
 0. LAYER DECISION: PRD? Story? Card? (Use Document Layer Decision Tree)
 1. DUPLICATE CHECK: grep -ri "keywords" docs/prd/ docs/stories/ docs/cards/
 2. REALITY CHECK: What's actually running? (grep imports, curl endpoints)
-3. Check: docs/cards/ + node scripts/progress-report.js
+3. Check: docs/cards/ + grep "status:" docs/cards/*.md
 4. Status: "Ready" → "In Progress" → "Done"
 5. Code: src/modules/[name]/ following existing patterns
 6. Test: curl http://localhost:8080/endpoint
@@ -350,19 +396,22 @@ validation_assets:
 
 ### Key Commands
 ```bash
-node scripts/progress-report.js  # Check status
-npm run build && npm start      # Deploy changes
-curl http://localhost:8080/      # Test endpoints
+# Development
+npm run build && npm start                    # Deploy changes
+curl http://localhost:8080/endpoint           # Test endpoints
 
-# Test Coverage Analysis
-./scripts/coverage-summary.sh               # Quick coverage overview (explicit mapping)
-node scripts/prd-test-mapper.mjs           # Full automatic discovery (backup analysis)
-node scripts/generate-coverage-report.mjs  # Generate comprehensive coverage status report
+# Status Checks
+grep "status:" docs/cards/*.md                # Check card status
+grep "status: In Progress" docs/cards/*.md    # Find in-progress cards
+grep "status: Ready" docs/cards/*.md          # Find ready cards
+
+# Testing
+npx newman run postman/xxx.postman_collection.json  # Run E2E tests
 
 # Bug and Issue Tracking
-grep "status: Open" docs/bugs/_index.yaml     # List open bugs
+grep "status: Open" docs/bugs/_index.yaml           # List open bugs
 grep "severity: Critical\|High" docs/bugs/_index.yaml  # Critical/high priority bugs
-grep "US-001" docs/bugs/_index.yaml          # Find bugs affecting specific story
+grep "US-001" docs/bugs/_index.yaml                 # Find bugs affecting specific story
 ```
 
 ### When Stuck
@@ -820,16 +869,16 @@ grep -r "CREATE TABLE\|@Entity" src/
 ### Common Validation Commands
 ```bash
 # Check implementation progress
-node scripts/progress-report.js
-node scripts/story-coverage.mjs
+grep "status:" docs/cards/*.md | sort | uniq -c
+grep "status: Done" docs/cards/*.md | wc -l
+grep "status: In Progress" docs/cards/*.md
 
 # Test endpoints
 curl http://localhost:8080/healthz
 curl http://localhost:8080/docs
 
 # Run integration tests
-npm run test:e2e
-npm run example:all
+npx newman run postman/xxx.postman_collection.json
 ```
 
 ---

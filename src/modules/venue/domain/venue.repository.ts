@@ -105,8 +105,13 @@ export class VenueRepository {
   }
 
   /**
-   * Update order status based on ticket redemption status
+   * Update order status based on entitlement redemption progress
    * Called after ticket redemption to keep order status in sync
+   *
+   * Status logic:
+   * - confirmed: No entitlements redeemed yet
+   * - in_progress: Some (but not all) entitlements redeemed
+   * - completed: All entitlements redeemed
    */
   private async updateOrderStatusIfNeeded(orderId: string): Promise<void> {
     // Get all tickets for this order
@@ -118,22 +123,36 @@ export class VenueRepository {
       return; // No tickets found, nothing to update
     }
 
-    // Count ticket statuses
-    const totalTickets = tickets.length;
-    const usedTickets = tickets.filter(t => t.status === 'USED').length;
-    const activeTickets = tickets.filter(t => t.status === 'ACTIVE').length;
+    // Count total and used entitlements across all tickets
+    let totalEntitlements = 0;
+    let usedEntitlements = 0;
 
-    // Determine new order status
+    for (const ticket of tickets) {
+      const entitlements = ticket.entitlements as Array<{
+        function_code: string;
+        remaining_uses: number;
+      }>;
+
+      for (const entitlement of entitlements) {
+        totalEntitlements++;
+        // Entitlement is considered "used" if remaining_uses is 0
+        if (entitlement.remaining_uses === 0) {
+          usedEntitlements++;
+        }
+      }
+    }
+
+    // Determine new order status based on entitlement usage
     let newStatus: 'confirmed' | 'in_progress' | 'completed';
 
-    if (usedTickets === totalTickets) {
-      // All tickets are used - order is completed
+    if (usedEntitlements === totalEntitlements && totalEntitlements > 0) {
+      // All entitlements are used - order is completed
       newStatus = 'completed';
-    } else if (usedTickets > 0) {
-      // Some tickets are used - order is in progress
+    } else if (usedEntitlements > 0) {
+      // Some entitlements are used - order is in progress
       newStatus = 'in_progress';
     } else {
-      // No tickets used yet - keep confirmed
+      // No entitlements used yet - keep confirmed
       newStatus = 'confirmed';
     }
 
