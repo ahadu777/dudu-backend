@@ -21,21 +21,20 @@ export const errorHandler = (
 ): void => {
   const statusCode = err instanceof AppError ? err.statusCode : 500;
   const message = err.message || 'Internal Server Error';
+  const code = (err as any).code || 'INTERNAL_ERROR';
 
-  // 开发环境显示详细错误
+  // Standardized error format: { code: string, message: string }
+  const errorResponse: { code: string; message: string; stack?: string } = {
+    code,
+    message: err instanceof AppError ? message : (process.env.NODE_ENV === 'development' ? message : 'Something went wrong'),
+  };
+
+  // Include stack trace in development
   if (process.env.NODE_ENV === 'development') {
-    res.status(statusCode).json({
-      success: false,
-      message,
-      stack: err.stack,
-    });
-  } else {
-    // 生产环境隐藏敏感信息
-    res.status(statusCode).json({
-      success: false,
-      message: err instanceof AppError ? message : 'Something went wrong',
-    });
+    errorResponse.stack = err.stack;
   }
+
+  res.status(statusCode).json(errorResponse);
 };
 
 export const asyncHandler = (fn: Function) => {

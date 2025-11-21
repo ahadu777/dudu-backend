@@ -97,6 +97,10 @@ export interface TicketRawMetadata {
 }
 
 export interface QRTokenResponse { token: string; expires_in: number; }
+/**
+ * @deprecated Use Operator from '../models/operator.entity' or import from '../types' instead
+ * This interface is kept for backward compatibility but should be replaced with the TypeORM entity
+ */
 export interface Operator { operator_id: number; username: string; password_hash: string; roles: string[]; }
 export interface ValidatorSession { session_id: SessionId; operator_id: number; device_id: string; location_id?: number|null; created_at: ISODate; expires_at: ISODate; }
 export interface RedemptionEvent { ticket_id: number; function_code: string; operator_id: number; session_id: SessionId; location_id?: number|null; jti?: string|null; result: ScanResult; reason?: string|null; ts: ISODate; }
