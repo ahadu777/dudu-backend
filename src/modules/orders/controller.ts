@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-// Use centralized mock service
-import { OrderService } from './service.centralized';
+// Use database service
+import { OrderService } from './service';
 import { CreateOrderRequest } from './types';
 import { ERR, ERROR_STATUS_MAP } from '../../core/errors/codes';
 
@@ -47,8 +47,14 @@ export class OrderController {
         }
       }
 
-      // Get user ID from auth (mock for now)
-      const userId = (req as any).userId || 1; // TODO: Get from JWT
+      // Get user ID from authenticated user
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({
+          code: ERR.UNAUTHORIZED,
+          message: 'Authentication required'
+        });
+      }
 
       const request: CreateOrderRequest = {
         items,
