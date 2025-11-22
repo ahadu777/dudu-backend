@@ -17,10 +17,12 @@ import otaRouter from './ota/router';
 import venueRouter from './venue/router';
 import qrGenerationRouter from './qr-generation/router';
 import pricingRouter from './pricing/router';
+import miniprogramRouter from './miniprogram/router';
 
 export const registerModuleRouters = (app: Application): void => {
   app.use('/users', usersRouter);
   app.use('/auth', wechatAuthRouter); // WeChat authentication endpoints
+  app.use('/miniprogram', miniprogramRouter); // WeChat Mini Program endpoints
   app.use('/catalog', catalogRouter);
   app.use('/travel', travelRouter);
   app.use('/reservations', reservationsRouter);

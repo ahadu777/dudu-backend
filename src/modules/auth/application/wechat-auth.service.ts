@@ -146,6 +146,7 @@ export class WeChatAuthService {
         wechat_openid: openid,
         auth_type: 'wechat',
         name: defaultName,
+        email: undefined, // Explicitly set to undefined to avoid unique constraint on empty string
         isActive: true,
       });
 
