@@ -79,7 +79,7 @@ router.get('/inventory', otaAuthMiddleware('inventory:read'), async (req: Authen
     }
 
     res.status(500).json({
-      error: 'INTERNAL_ERROR',
+      code: 'INTERNAL_ERROR',
       message: 'Failed to retrieve inventory information'
     });
   }
@@ -119,7 +119,7 @@ router.post('/reserve', otaAuthMiddleware('reserve:create'), async (req: Authent
                       error.code === 'VALIDATION_ERROR' ? 422 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to create reservation'
     });
   }
@@ -143,7 +143,7 @@ router.get('/reservations/:id', async (req: AuthenticatedRequest, res: Response)
     const statusCode = error.code === 'RESERVATION_NOT_FOUND' ? 404 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve reservation'
     });
   }
@@ -234,7 +234,7 @@ router.post('/reservations/:id/activate', otaAuthMiddleware('reserve:activate'),
                       error.code === 'VALIDATION_ERROR' ? 409 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to activate reservation'
     });
   }
@@ -282,7 +282,7 @@ router.delete('/reservations/:id', async (req: AuthenticatedRequest, res: Respon
                       error.code === 'CANNOT_CANCEL_ACTIVATED' ? 409 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to cancel reservation'
     });
   }
@@ -333,7 +333,7 @@ router.get('/orders/:id/tickets', async (req: AuthenticatedRequest, res: Respons
     const statusCode = error.code === 'ORDER_NOT_FOUND' ? 404 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve order tickets'
     });
   }
@@ -458,7 +458,7 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
                       error.code === 'VALIDATION_ERROR' ? 422 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to generate tickets'
     });
   }
@@ -533,7 +533,7 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
                       error.code === 'TICKET_ALREADY_ACTIVATED' ? 409 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to activate ticket'
     });
   }
@@ -625,7 +625,7 @@ router.get('/batches/:id/redemptions', async (req: AuthenticatedRequest, res: Re
     const statusCode = error.code === 'BATCH_NOT_FOUND' ? 404 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve batch redemptions'
     });
   }
@@ -710,7 +710,7 @@ router.get('/admin/partners/:partnerId/statistics', adminAuthMiddleware(), async
 
     const status = error.code === 'VALIDATION_ERROR' ? 404 : 500;
     res.status(status).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve partner statistics'
     });
   }
