@@ -6,6 +6,7 @@
 - **ALWAYS START HERE** → [Reality Check](#-reality-check) - Verify what's actually running
 - **New to project?** → [Project Foundations](#-project-foundations) - Architecture & stack
 - **Need to implement?** → [The Core Pattern](#-the-core-pattern) - Core workflow steps
+- **Natural language request?** → [Natural Language Optimization](#natural-language-optimization-mandatory-first-step) ([📖 Details](docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md))
 
 **Documentation Guides:**
 - **Creating new story?** → [Duplicate Prevention](#duplicate-story-prevention-mandatory-before-creating-stories) ([📖 Details](docs/reference/DUPLICATE-PREVENTION.md))
@@ -31,6 +32,45 @@
 
 **"I want users to..."** → COMPLETE AUTONOMY WORKFLOW (Story → Cards → Code)
 **"Implement card XYZ"** → TRADITIONAL WORKFLOW (Work with existing cards)
+
+### Natural Language Optimization (Mandatory First Step)
+
+**When user provides requirements in natural language, AI MUST:**
+
+1. **Parse & Understand** - Extract core intent and requirements
+2. **Optimize into Structured Prompt** - Convert to clear, actionable specification
+3. **Present for Confirmation** - Show optimized version to user
+4. **Wait for User Approval** - Don't proceed without confirmation
+5. **Execute Based on Optimized Prompt** - Implement what was confirmed
+
+**Quick Example:**
+```
+User: "我想让用户能够查看他们的订单历史"
+
+AI Response:
+📋 理解你的需求，优化后的提示词：
+
+**功能范围：**
+- API: GET /api/orders/history
+- 返回：分页的订单列表（订单号、状态、金额、创建时间）
+- 权限：需要用户身份认证
+- 文档层级：新用户能力 → 需要创建Story
+
+**需要确认：**
+1. 是否需要筛选功能（按状态/时间范围）？
+2. 是否需要订单详情接口（GET /api/orders/:id）？
+3. 是创建新Story还是扩展现有的订单管理Story？
+
+请确认方向后我再开始实现。
+```
+
+**Why This Works:**
+- ✅ Avoids misunderstanding and rework
+- ✅ User stays in control of requirements
+- ✅ AI gets clear, structured input
+- ✅ Reduces back-and-forth iterations
+
+**📖 Detailed Examples**: See [`docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md`](docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md) for complete workflow scenarios.
 
 ### Anti-Script Principle (Mandatory - Keep It Simple)
 
