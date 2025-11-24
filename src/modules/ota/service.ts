@@ -7,6 +7,7 @@ import { dataSourceConfig } from '../../config/data-source';
 import { API_KEYS } from '../../middlewares/otaAuth';
 import { generateSecureQR } from '../../utils/qr-crypto';
 import { TicketRawMetadata } from '../../types/domain';
+import { directusService } from '../../utils/directus';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -907,11 +908,39 @@ export class OTAService {
 
       const batch = await repo.createTicketBatch(batchData);
 
+      // 🆕 Get partner logo from Directus (cached for performance)
+      const logoBuffer = await directusService.getPartnerLogo(partnerId);
+      if (logoBuffer) {
+        logger.info('ota.batch.logo_loaded', {
+          batch_id: request.batch_id,
+          partner_id: partnerId,
+          size_kb: Math.round(logoBuffer.length / 1024)
+        });
+      } else {
+        logger.info('ota.batch.logo_skipped', {
+          batch_id: request.batch_id,
+          partner_id: partnerId,
+          reason: 'logo_not_available_or_configured'
+        });
+      }
+
       // Generate tickets for database
       const tickets = [];
+
+      // Generate batch hash for ticket code uniqueness
+      const crypto = require('crypto');
+      const batchHash = crypto
+        .createHash('md5')
+        .update(request.batch_id)
+        .digest('hex')
+        .substring(0, 7)  // 7-digit hash for higher uniqueness
+        .toUpperCase();
+
       for (let i = 0; i < request.quantity; i++) {
-        const ticketId = Date.now() + (Math.random() * 1000) + i; // Unique ID with index
-        const ticketCode = `CRUISE-${new Date().getFullYear()}-${product.category.toUpperCase()}-${Math.floor(ticketId)}`;
+        // New format: DT + BatchHash(7) + Sequence(4)
+        // Example: DT3E5F2A10001 (13 characters total, closer to standard airline ticket)
+        const sequence = (i + 1).toString().padStart(4, '0');
+        const ticketCode = `DT-${batchHash}${sequence}`;
 
         // Use entitlements from product or default cruise functions
         const entitlements = product.entitlements?.map((entitlement: any) => ({
@@ -925,7 +954,8 @@ export class OTAService {
 
         // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
         // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
-        const qrResult = await generateSecureQR(ticketCode, 52560000);
+        // 🆕 Pass logoBuffer to generate branded QR codes
+        const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined);
         const rawMetadata: TicketRawMetadata = {
           jti: {
             pre_generated_jti: qrResult.jti,
@@ -1004,15 +1034,38 @@ export class OTAService {
       };
     }
 
+    // 🆕 Get partner logo from Directus (cached for performance) - Mock mode also supports branded QR
+    const logoBuffer = await directusService.getPartnerLogo(partnerId);
+    if (logoBuffer) {
+      logger.info('ota.batch.logo_loaded', {
+        batch_id: request.batch_id,
+        partner_id: partnerId,
+        source: 'mock',
+        size_kb: Math.round(logoBuffer.length / 1024)
+      });
+    }
+
     // Generate pre-made tickets
     const tickets = [];
+
+    // Generate batch hash for ticket code uniqueness (same logic as DB mode)
+    const crypto = require('crypto');
+    const batchHash = crypto
+      .createHash('md5')
+      .update(request.batch_id)
+      .digest('hex')
+      .substring(0, 7)  // 7-digit hash
+      .toUpperCase();
+
     for (let i = 0; i < request.quantity; i++) {
-      const ticketId = mockDataStore.nextTicketId++;
-      const ticketCode = `${product.sku}-${ticketId}`;
+      // New format: DT + BatchHash(7) + Sequence(4)
+      const sequence = (i + 1).toString().padStart(4, '0');
+      const ticketCode = `DT-${batchHash}${sequence}`;
 
       // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
       // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
-      const qrResult = await generateSecureQR(ticketCode, 52560000);
+      // 🆕 Pass logoBuffer to generate branded QR codes (works in both DB and mock modes)
+      const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined);
       const rawMetadata: TicketRawMetadata = {
         jti: {
           pre_generated_jti: qrResult.jti,
@@ -1025,7 +1078,7 @@ export class OTAService {
       };
 
       const ticket = {
-        id: ticketId,
+        id: mockDataStore.nextTicketId++,
         code: ticketCode,
         product_id: product.id,
         batch_id: request.batch_id,

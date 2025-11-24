@@ -43,4 +43,9 @@ export const env = cleanEnv(process.env, {
   // WeChat Mini-Program Configuration
   WECHAT_APPID: str({ default: 'wx39a36fbaaefacd42' }), // WeChat mini-program AppID
   WECHAT_APP_SECRET: str({ default: '6afcba50d4b53ebc6034e213a8bd8592' }), // WeChat mini-program AppSecret
+
+  // Directus CMS Configuration (for QR Code logo images)
+  DIRECTUS_URL: str({ default: 'https://dudu-derp-cxk5g.ondigitalocean.app' }), // Directus instance URL (e.g., https://your-directus.com)
+  DIRECTUS_ACCESS_TOKEN: str({ default: '546owwY8TtkC5hPXi7j97grPbYURK7Eq' }), // Directus access token for file API
+  LOGO_CACHE_TTL: num({ default: 3600 }), // Logo cache TTL in seconds (default 1 hour)
 });

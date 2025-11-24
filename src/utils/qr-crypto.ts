@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import QRCode from 'qrcode';
+import sharp from 'sharp';
 import { env } from '../config/env';
 import { logger } from './logger';
 
@@ -136,16 +137,21 @@ function verifySignature(data: string, signature: string): boolean {
 }
 
 /**
- * Generate PNG QR code image from encrypted data
+ * Generate PNG QR code image from encrypted data with optional logo overlay
  * @param encryptedData - Encrypted data string
+ * @param logoBuffer - Optional logo image buffer to overlay in center
  * @returns Base64-encoded PNG image (data:image/png;base64,...)
  */
-async function generateQRImage(encryptedData: string): Promise<string> {
+async function generateQRImage(
+  encryptedData: string,
+  logoBuffer?: Buffer
+): Promise<string> {
+  const QR_SIZE = 180; // Optimized size: balance between scanning reliability and file size
   const options = {
-    errorCorrectionLevel: 'M' as const, // Medium error correction (better for dense data)
-    type: 'image/png' as const,
-    margin: 2, // Larger margin for better scanning
-    width: 150, 
+    errorCorrectionLevel: logoBuffer ? ('H' as const) : ('M' as const), // High correction when logo present
+    type: 'png' as const,
+    margin: 2,
+    width: QR_SIZE,
     color: {
       dark: '#000000',
       light: '#FFFFFF'
@@ -153,11 +159,62 @@ async function generateQRImage(encryptedData: string): Promise<string> {
   };
 
   try {
-    const qrImage = await QRCode.toDataURL(encryptedData, options);
-    return qrImage;
+    // Step 1: Generate base QR code
+    const qrBuffer = await QRCode.toBuffer(encryptedData, options);
+
+    // Step 2: If logo provided, overlay it in center
+    if (logoBuffer) {
+      const logoSize = Math.floor(QR_SIZE * 0.15); // Logo occupies 15% (further optimized for subtlety)
+      const position = Math.floor((QR_SIZE - logoSize) / 2); // Center position
+
+      logger.info('qr.generation.logo_processing', {
+        qr_size: QR_SIZE,
+        logo_size: logoSize,
+        coverage_percent: 15
+      });
+
+      // Process logo: resize and add white border for contrast
+      const processedLogo = await sharp(logoBuffer)
+        .resize(logoSize, logoSize, {
+          fit: 'contain',
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        })
+        .extend({
+          top: 3,  // Reduced border from 5px to 3px
+          bottom: 3,
+          left: 3,
+          right: 3,
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        })
+        .toBuffer();
+
+      // Overlay logo onto QR code with PNG compression
+      const qrWithLogo = await sharp(qrBuffer).composite([
+        {
+          input: processedLogo,
+          top: position,
+          left: position,
+          blend: 'over'
+        }
+      ])
+      .png({ compressionLevel: 9, quality: 90 }) // Add PNG compression
+      .toBuffer();
+
+      // Convert to base64 data URI
+      const base64 = qrWithLogo.toString('base64');
+      logger.info('qr.generation.logo_applied', {
+        final_size_kb: Math.round(qrWithLogo.length / 1024)
+      });
+      return `data:image/png;base64,${base64}`;
+    }
+
+    // Step 3: No logo - return plain QR code
+    const base64 = Buffer.from(qrBuffer).toString('base64');
+    return `data:image/png;base64,${base64}`;
   } catch (error) {
     logger.error('qr.generation.failed', {
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      has_logo: !!logoBuffer
     });
     throw new Error('Failed to generate QR code image');
   }
@@ -189,11 +246,13 @@ export function getRemainingSeconds(data: QRTicketData): number {
  * Generate secure QR code (encrypt + sign + generate image)
  * @param ticketCode - Ticket code (only essential data stored in QR)
  * @param expiryMinutes - QR code expiration time in minutes (default from env)
+ * @param logoBuffer - Optional logo image buffer to overlay (for branded QR codes)
  * @returns Encrypted QR result with image
  */
 export async function generateSecureQR(
   ticketCode: string,
-  expiryMinutes?: number
+  expiryMinutes?: number,
+  logoBuffer?: Buffer
 ): Promise<EncryptedQRResult> {
   const now = new Date();
   const expiryTime = expiryMinutes || Number(env.QR_EXPIRY_MINUTES) || 30;
@@ -225,8 +284,8 @@ export async function generateSecureQR(
   // Step 3: Combine: encrypted:signature
   const signedData = `${encrypted}:${signature}`;
 
-  // Step 4: Generate QR image
-  const qrImage = await generateQRImage(signedData);
+  // Step 4: Generate QR image with optional logo
+  const qrImage = await generateQRImage(signedData, logoBuffer);
 
   logger.info('qr.generation.success', {
     jti,
