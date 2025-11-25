@@ -49,13 +49,13 @@ router.post('/auth', (req, res) => validationController.login(req, res));
 /**
  * POST /operators/validate-ticket - Validate ticket via QR scan
  * Returns color-coded validation result (GREEN/YELLOW/RED)
- * Body: {ticket_number: string, operator_id: string, terminal_id: string, orq: number}
+ * Body: {ticket_code: string, operator_id: string, terminal_id: string, orq: number}
  */
 router.post('/validate-ticket', (req, res) => validationController.validateTicket(req, res));
 
 /**
  * POST /operators/verify-ticket - Verify ticket entry (mark as verified)
- * Body: {ticket_number: string, operator_id: string, terminal_id: string, validation_decision: 'ALLOW'|'DENY', orq: number}
+ * Body: {ticket_code: string, operator_id: string, terminal_id: string, validation_decision: 'ALLOW'|'DENY', orq: number}
  */
 router.post('/verify-ticket', (req, res) => validationController.verifyTicket(req, res));
 

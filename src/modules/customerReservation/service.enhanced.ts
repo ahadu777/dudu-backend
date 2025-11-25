@@ -16,7 +16,7 @@ import { ReservationSlotServiceMock } from '../reservation-slots/service.mock';
 import { logger } from '../../utils/logger';
 
 interface MockTicket {
-  ticket_number: string;
+  ticket_code: string;
   product_id: number;
   product_name: string;
   status: TicketStatus;
@@ -46,7 +46,7 @@ export class CustomerReservationServiceEnhanced {
     const mockTickets: MockTicket[] = [
       // Active tickets (can reserve)
       {
-        ticket_number: 'TKT-ACTIVE-001',
+        ticket_code: 'TKT-ACTIVE-001',
         product_id: 101,
         product_name: 'Beijing Zoo Adult Ticket',
         status: 'ACTIVATED',
@@ -57,7 +57,7 @@ export class CustomerReservationServiceEnhanced {
         orq: 1,
       },
       {
-        ticket_number: 'TKT-ACTIVE-002',
+        ticket_code: 'TKT-ACTIVE-002',
         product_id: 102,
         product_name: 'Shanghai Museum Ticket',
         status: 'ACTIVATED',
@@ -69,7 +69,7 @@ export class CustomerReservationServiceEnhanced {
       },
       // Inactive ticket (cannot reserve - MUST activate first)
       {
-        ticket_number: 'TKT-INACTIVE-001',
+        ticket_code: 'TKT-INACTIVE-001',
         product_id: 101,
         product_name: 'Beijing Zoo Adult Ticket',
         status: 'PENDING_PAYMENT',
@@ -81,7 +81,7 @@ export class CustomerReservationServiceEnhanced {
       },
       // Already reserved ticket
       {
-        ticket_number: 'TKT-RESERVED-001',
+        ticket_code: 'TKT-RESERVED-001',
         product_id: 101,
         product_name: 'Beijing Zoo Adult Ticket',
         status: 'RESERVED',
@@ -95,7 +95,7 @@ export class CustomerReservationServiceEnhanced {
       },
       // Verified ticket
       {
-        ticket_number: 'TKT-VERIFIED-001',
+        ticket_code: 'TKT-VERIFIED-001',
         product_id: 101,
         product_name: 'Beijing Zoo Adult Ticket',
         status: 'VERIFIED',
@@ -110,7 +110,7 @@ export class CustomerReservationServiceEnhanced {
     ];
 
     mockTickets.forEach(ticket => {
-      this.tickets.set(ticket.ticket_number, ticket);
+      this.tickets.set(ticket.ticket_code, ticket);
     });
 
     logger.info('customer_reservation_enhanced.tickets.seeded', { count: this.tickets.size });
@@ -121,9 +121,9 @@ export class CustomerReservationServiceEnhanced {
    * NEW: Checks activation_status = 'active'
    */
   async validateTicket(request: TicketValidationRequest): Promise<TicketValidationResponse> {
-    const { ticket_number, orq } = request;
+    const { ticket_code, orq } = request;
 
-    const ticket = this.tickets.get(ticket_number);
+    const ticket = this.tickets.get(ticket_code);
 
     // Check if ticket exists
     if (!ticket) {
@@ -152,7 +152,7 @@ export class CustomerReservationServiceEnhanced {
     // Check if ticket is already reserved
     if (ticket.status === 'RESERVED') {
       const reservation = Array.from(this.reservations.values()).find(
-        r => r.ticket_number === ticket_number && r.status === 'RESERVED'
+        r => r.ticket_code === ticket_code && r.status === 'RESERVED'
       );
 
       if (reservation) {
@@ -160,7 +160,7 @@ export class CustomerReservationServiceEnhanced {
           valid: false,
           error: 'TICKET_ALREADY_RESERVED',
           ticket: {
-            ticket_number: ticket.ticket_number,
+            ticket_code: ticket.ticket_code,
             product_id: ticket.product_id,
             product_name: ticket.product_name,
             status: ticket.status,
@@ -190,7 +190,7 @@ export class CustomerReservationServiceEnhanced {
     }
 
     logger.info('ticket.validation.success', {
-      ticket_number,
+      ticket_code,
       status: ticket.status,
       activation_status: ticket.activation_status
     });
@@ -198,7 +198,7 @@ export class CustomerReservationServiceEnhanced {
     return {
       valid: true,
       ticket: {
-        ticket_number: ticket.ticket_number,
+        ticket_code: ticket.ticket_code,
         product_id: ticket.product_id,
         product_name: ticket.product_name,
         status: ticket.status,
@@ -211,10 +211,10 @@ export class CustomerReservationServiceEnhanced {
    * Verify contact information
    */
   async verifyContact(request: VerifyContactRequest): Promise<VerifyContactResponse> {
-    const { ticket_number, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, visitor_name, visitor_phone, orq } = request;
 
     // Validate ticket first
-    const validation = await this.validateTicket({ ticket_number, orq });
+    const validation = await this.validateTicket({ ticket_code, orq });
     if (!validation.valid) {
       return {
         success: false,
@@ -241,7 +241,7 @@ export class CustomerReservationServiceEnhanced {
       };
     }
 
-    logger.info('contact.verification.success', { ticket_number });
+    logger.info('contact.verification.success', { ticket_code });
 
     return {
       success: true,
@@ -253,11 +253,11 @@ export class CustomerReservationServiceEnhanced {
    * Create reservation with slot integration
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_number, slot_id, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, slot_id, visitor_name, visitor_phone, orq } = request;
 
     try {
       // 1. Validate ticket (includes activation check)
-      const validation = await this.validateTicket({ ticket_number, orq });
+      const validation = await this.validateTicket({ ticket_code, orq });
       if (!validation.valid) {
         return {
           success: false,
@@ -307,7 +307,7 @@ export class CustomerReservationServiceEnhanced {
 
       const reservation: TicketReservation = {
         id: reservationId,
-        ticket_number,
+        ticket_code,
         slot_id: parseInt(slot_id), // Convert string to number
         visitor_name,
         visitor_phone,
@@ -325,7 +325,7 @@ export class CustomerReservationServiceEnhanced {
       await this.slotsService.incrementBookedCount(slot_id);
 
       // 6. Update ticket status
-      const ticket = this.tickets.get(ticket_number);
+      const ticket = this.tickets.get(ticket_code);
       if (ticket) {
         ticket.status = 'RESERVED';
         ticket.customer_email = visitor_name; // Using visitor_name as email
@@ -334,7 +334,7 @@ export class CustomerReservationServiceEnhanced {
 
       logger.info('reservation.created', {
         reservation_id: reservationId,
-        ticket_number,
+        ticket_code,
         slot_id,
         slot_date: slot.date
       });
@@ -343,7 +343,7 @@ export class CustomerReservationServiceEnhanced {
         success: true,
         data: {
           reservation_id: reservationId,
-          ticket_number,
+          ticket_code,
           slot_id: parseInt(slot_id),
           slot_date: slot.date,
           slot_time: `${slot.start_time} - ${slot.end_time}`,
@@ -424,7 +424,7 @@ export class CustomerReservationServiceEnhanced {
         success: true,
         data: {
           reservation_id,
-          ticket_number: reservation.ticket_number,
+          ticket_code: reservation.ticket_code,
           new_slot_id: parseInt(new_slot_id),
           new_slot_date: newSlot.date,
           new_slot_time: `${newSlot.start_time} - ${newSlot.end_time}`,
@@ -474,14 +474,14 @@ export class CustomerReservationServiceEnhanced {
       this.reservations.set(reservation_id, reservation);
 
       // 4. Update ticket status back to ACTIVATED
-      const ticket = this.tickets.get(reservation.ticket_number);
+      const ticket = this.tickets.get(reservation.ticket_code);
       if (ticket) {
         ticket.status = 'ACTIVATED';
         ticket.customer_email = undefined;
         ticket.customer_phone = undefined;
       }
 
-      logger.info('reservation.cancelled', { reservation_id, ticket_number: reservation.ticket_number });
+      logger.info('reservation.cancelled', { reservation_id, ticket_code: reservation.ticket_code });
 
       return {
         success: true,

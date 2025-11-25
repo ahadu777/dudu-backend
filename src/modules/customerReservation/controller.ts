@@ -22,17 +22,17 @@ export class CustomerReservationController {
    */
   async validateTicket(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_number, orq } = req.body as TicketValidationRequest;
+      const { ticket_code, orq } = req.body as TicketValidationRequest;
 
-      if (!ticket_number || !orq) {
+      if (!ticket_code || !orq) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_number, orq',
+          error: 'Missing required fields: ticket_code, orq',
         });
         return;
       }
 
-      const result = await this.service.validateTicket({ ticket_number, orq });
+      const result = await this.service.validateTicket({ ticket_code, orq });
 
       if (!result.valid) {
         res.status(400).json({
@@ -48,7 +48,7 @@ export class CustomerReservationController {
         ...result,
       });
 
-      logger.info('tickets.validate.success', { ticket_number });
+      logger.info('tickets.validate.success', { ticket_code });
     } catch (error) {
       logger.error('tickets.validate.error', { error });
       res.status(500).json({
@@ -64,18 +64,18 @@ export class CustomerReservationController {
    */
   async verifyContact(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_number, visitor_name, visitor_phone, orq } = req.body as VerifyContactRequest;
+      const { ticket_code, visitor_name, visitor_phone, orq } = req.body as VerifyContactRequest;
 
-      if (!ticket_number || !visitor_name || !visitor_phone || !orq) {
+      if (!ticket_code || !visitor_name || !visitor_phone || !orq) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_number, visitor_name, visitor_phone, orq',
+          error: 'Missing required fields: ticket_code, visitor_name, visitor_phone, orq',
         });
         return;
       }
 
       const result = await this.service.verifyContact({
-        ticket_number,
+        ticket_code,
         visitor_name,
         visitor_phone,
         orq,
@@ -88,7 +88,7 @@ export class CustomerReservationController {
 
       res.status(200).json(result);
 
-      logger.info('tickets.verify_contact.success', { ticket_number, visitor_name });
+      logger.info('tickets.verify_contact.success', { ticket_code, visitor_name });
     } catch (error) {
       logger.error('tickets.verify_contact.error', { error });
       res.status(500).json({
@@ -104,19 +104,19 @@ export class CustomerReservationController {
    */
   async createReservation(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_number, slot_id, visitor_name, visitor_phone, orq } =
+      const { ticket_code, slot_id, visitor_name, visitor_phone, orq } =
         req.body as CreateReservationRequest;
 
-      if (!ticket_number || !slot_id || !visitor_name || !visitor_phone || !orq) {
+      if (!ticket_code || !slot_id || !visitor_name || !visitor_phone || !orq) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_number, slot_id, visitor_name, visitor_phone, orq',
+          error: 'Missing required fields: ticket_code, slot_id, visitor_name, visitor_phone, orq',
         });
         return;
       }
 
       const result = await this.service.createReservation({
-        ticket_number,
+        ticket_code,
         slot_id,
         visitor_name,
         visitor_phone,
@@ -131,7 +131,7 @@ export class CustomerReservationController {
       res.status(201).json(result);
 
       logger.info('reservations.create.success', {
-        ticket_number,
+        ticket_code,
         slot_id,
         reservation_id: result.data?.reservation_id,
       });

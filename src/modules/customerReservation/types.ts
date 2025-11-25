@@ -1,12 +1,12 @@
 export interface TicketValidationRequest {
-  ticket_number: string;
+  ticket_code: string;
   orq: number;
 }
 
 export interface TicketValidationResponse {
   valid: boolean;
   ticket?: {
-    ticket_number: string;
+    ticket_code: string;
     product_id: number;
     product_name: string;
     status: string;
@@ -16,7 +16,7 @@ export interface TicketValidationResponse {
 }
 
 export interface VerifyContactRequest {
-  ticket_number: string;
+  ticket_code: string;
   visitor_name: string;
   visitor_phone: string;
   orq: number;
@@ -29,7 +29,7 @@ export interface VerifyContactResponse {
 }
 
 export interface CreateReservationRequest {
-  ticket_number: string;
+  ticket_code: string;
   slot_id: string;
   visitor_name: string;
   visitor_phone: string;
@@ -40,7 +40,7 @@ export interface CreateReservationResponse {
   success: boolean;
   data?: {
     reservation_id: string;
-    ticket_number: string;
+    ticket_code: string;
     slot_id: number;
     slot_date: string;
     slot_time: string;
@@ -53,7 +53,7 @@ export interface CreateReservationResponse {
 
 export interface TicketReservation {
   id: string;
-  ticket_number: string;
+  ticket_code: string;
   slot_id: number;
   visitor_name: string;
   visitor_phone: string;
@@ -83,7 +83,7 @@ export interface ModifyReservationResponse {
   success: boolean;
   data?: {
     reservation_id: string;
-    ticket_number: string;
+    ticket_code: string;
     new_slot_id: number;
     new_slot_date: string;
     new_slot_time: string;

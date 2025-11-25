@@ -12,7 +12,7 @@ import { ReservationSlotsServiceMock } from '../reservationSlots/service.mock';
 import { logger } from '../../utils/logger';
 
 interface MockTicket {
-  ticket_number: string;
+  ticket_code: string;
   product_id: number;
   product_name: string;
   status: TicketStatus;
@@ -38,7 +38,7 @@ export class CustomerReservationServiceMock {
   private seedMockTickets() {
     const mockTickets: MockTicket[] = [
       {
-        ticket_number: 'TKT-001-20251114-001',
+        ticket_code: 'TKT-001-20251114-001',
         product_id: 101,
         product_name: 'Beijing Zoo Adult Ticket',
         status: 'ACTIVATED',
@@ -46,7 +46,7 @@ export class CustomerReservationServiceMock {
         orq: 1,
       },
       {
-        ticket_number: 'TKT-001-20251114-002',
+        ticket_code: 'TKT-001-20251114-002',
         product_id: 102,
         product_name: 'Beijing Zoo Child Ticket',
         status: 'ACTIVATED',
@@ -54,7 +54,7 @@ export class CustomerReservationServiceMock {
         orq: 1,
       },
       {
-        ticket_number: 'TKT-001-20251114-003',
+        ticket_code: 'TKT-001-20251114-003',
         product_id: 101,
         product_name: 'Beijing Zoo Adult Ticket',
         status: 'RESERVED',
@@ -64,7 +64,7 @@ export class CustomerReservationServiceMock {
         visitor_phone: '+1234567890',
       },
       {
-        ticket_number: 'TKT-001-20251114-004',
+        ticket_code: 'TKT-001-20251114-004',
         product_id: 101,
         product_name: 'Beijing Zoo Adult Ticket',
         status: 'VERIFIED',
@@ -74,7 +74,7 @@ export class CustomerReservationServiceMock {
         visitor_phone: '+0987654321',
       },
       {
-        ticket_number: 'TKT-001-20251114-005',
+        ticket_code: 'TKT-001-20251114-005',
         product_id: 101,
         product_name: 'Beijing Zoo Adult Ticket',
         status: 'EXPIRED',
@@ -84,7 +84,7 @@ export class CustomerReservationServiceMock {
     ];
 
     mockTickets.forEach(ticket => {
-      this.tickets.set(ticket.ticket_number, ticket);
+      this.tickets.set(ticket.ticket_code, ticket);
     });
 
     logger.info('customer_reservation.tickets.seeded', { count: this.tickets.size });
@@ -94,9 +94,9 @@ export class CustomerReservationServiceMock {
    * Validate ticket for reservation eligibility
    */
   async validateTicket(request: TicketValidationRequest): Promise<TicketValidationResponse> {
-    const { ticket_number, orq } = request;
+    const { ticket_code, orq } = request;
 
-    const ticket = this.tickets.get(ticket_number);
+    const ticket = this.tickets.get(ticket_code);
 
     // Check if ticket exists
     if (!ticket) {
@@ -134,12 +134,12 @@ export class CustomerReservationServiceMock {
       }
     }
 
-    logger.info('ticket.validation.success', { ticket_number, status: ticket.status });
+    logger.info('ticket.validation.success', { ticket_code, status: ticket.status });
 
     return {
       valid: true,
       ticket: {
-        ticket_number: ticket.ticket_number,
+        ticket_code: ticket.ticket_code,
         product_id: ticket.product_id,
         product_name: ticket.product_name,
         status: ticket.status,
@@ -152,10 +152,10 @@ export class CustomerReservationServiceMock {
    * Verify contact information (Step 2 in reservation flow)
    */
   async verifyContact(request: VerifyContactRequest): Promise<VerifyContactResponse> {
-    const { ticket_number, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, visitor_name, visitor_phone, orq } = request;
 
     // Validate ticket first
-    const validation = await this.validateTicket({ ticket_number, orq });
+    const validation = await this.validateTicket({ ticket_code, orq });
     if (!validation.valid) {
       return {
         success: false,
@@ -179,13 +179,13 @@ export class CustomerReservationServiceMock {
     }
 
     // Store contact info temporarily (in real implementation, this would be a transaction)
-    const ticket = this.tickets.get(ticket_number);
+    const ticket = this.tickets.get(ticket_code);
     if (ticket) {
       ticket.visitor_name = visitor_name;
       ticket.visitor_phone = visitor_phone;
     }
 
-    logger.info('contact.verification.success', { ticket_number, visitor_name });
+    logger.info('contact.verification.success', { ticket_code, visitor_name });
 
     return {
       success: true,
@@ -197,11 +197,11 @@ export class CustomerReservationServiceMock {
    * Create reservation (final step)
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_number, slot_id, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, slot_id, visitor_name, visitor_phone, orq } = request;
 
     try {
       // 1. Validate ticket
-      const validation = await this.validateTicket({ ticket_number, orq });
+      const validation = await this.validateTicket({ ticket_code, orq });
       if (!validation.valid) {
         return {
           success: false,
@@ -228,7 +228,7 @@ export class CustomerReservationServiceMock {
 
       // 4. Check if ticket already has reservation
       const existingReservation = Array.from(this.reservations.values()).find(
-        r => r.ticket_number === ticket_number && r.status === 'RESERVED'
+        r => r.ticket_code === ticket_code && r.status === 'RESERVED'
       );
 
       if (existingReservation) {
@@ -242,7 +242,7 @@ export class CustomerReservationServiceMock {
       const reservationId = `RSV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const reservation: TicketReservation = {
         id: reservationId,
-        ticket_number,
+        ticket_code,
         slot_id: parseInt(slot_id),
         visitor_name,
         visitor_phone,
@@ -260,7 +260,7 @@ export class CustomerReservationServiceMock {
       await this.slotsService.incrementBookedCount(parseInt(slot_id));
 
       // 7. Update ticket status to RESERVED
-      const ticket = this.tickets.get(ticket_number);
+      const ticket = this.tickets.get(ticket_code);
       if (ticket) {
         ticket.status = 'RESERVED';
         ticket.visitor_name = visitor_name;
@@ -269,7 +269,7 @@ export class CustomerReservationServiceMock {
 
       logger.info('reservation.created', {
         reservation_id: reservation.id,
-        ticket_number,
+        ticket_code,
         slot_id,
         visitor_name,
       });
@@ -278,7 +278,7 @@ export class CustomerReservationServiceMock {
         success: true,
         data: {
           reservation_id: reservationId,
-          ticket_number,
+          ticket_code,
           slot_id: parseInt(slot_id),
           slot_date: slot.date,
           slot_time: `${slot.start_time} - ${slot.end_time}`,
@@ -288,7 +288,7 @@ export class CustomerReservationServiceMock {
         },
       };
     } catch (error) {
-      logger.error('reservation.creation.error', { error, ticket_number, slot_id });
+      logger.error('reservation.creation.error', { error, ticket_code, slot_id });
       return {
         success: false,
         error: 'Failed to create reservation',
@@ -301,7 +301,7 @@ export class CustomerReservationServiceMock {
    */
   async getReservationByTicket(ticketNumber: string): Promise<TicketReservation | null> {
     const reservation = Array.from(this.reservations.values()).find(
-      r => r.ticket_number === ticketNumber && r.status === 'RESERVED'
+      r => r.ticket_code === ticketNumber && r.status === 'RESERVED'
     );
     return reservation || null;
   }

@@ -170,21 +170,21 @@ export class OperatorValidationServiceEnhanced {
    * - OV-R04: RED - Ticket expired
    */
   async validateTicket(request: ValidateTicketRequest): Promise<ValidateTicketResponse> {
-    const { ticket_number, operator_id, terminal_id, orq } = request;
+    const { ticket_code, operator_id, terminal_id, orq } = request;
 
     try {
       // Validate ticket with activation check
-      const ticketValidation = await this.customerService.validateTicket({ ticket_number, orq });
+      const ticketValidation = await this.customerService.validateTicket({ ticket_code, orq });
 
       if (!ticketValidation.valid || !ticketValidation.ticket) {
         // RED: Invalid ticket (covers OV-R02, OV-R03, OV-R04)
         const errorCode = ticketValidation.error || 'TICKET_NOT_FOUND';
-        this.logValidation(ticket_number, operator_id, terminal_id, 'RED', orq);
+        this.logValidation(ticket_code, operator_id, terminal_id, 'RED', orq);
 
         return {
           success: true,
           validation_result: {
-            ticket_number,
+            ticket_code,
             status: 'INVALID',
             color_code: 'RED',
             message: this.getErrorMessage(errorCode),
@@ -202,16 +202,16 @@ export class OperatorValidationServiceEnhanced {
       const ticket = ticketValidation.ticket;
 
       // Check if ticket has reservation
-      const reservation = await this.customerService.getReservation(ticket_number);
+      const reservation = await this.customerService.getReservation(ticket_code);
 
       if (!reservation) {
         // YELLOW: Valid ticket but no reservation (OV-Y01)
-        this.logValidation(ticket_number, operator_id, terminal_id, 'YELLOW', orq);
+        this.logValidation(ticket_code, operator_id, terminal_id, 'YELLOW', orq);
 
         return {
           success: true,
           validation_result: {
-            ticket_number,
+            ticket_code,
             status: 'RESERVED',
             color_code: 'YELLOW',
             message: 'Warning: No reservation found for this ticket',
@@ -230,12 +230,12 @@ export class OperatorValidationServiceEnhanced {
       const slot = await this.slotsService.getSlotById(reservation.slot_id.toString());
 
       if (!slot) {
-        this.logValidation(ticket_number, operator_id, terminal_id, 'RED', orq);
+        this.logValidation(ticket_code, operator_id, terminal_id, 'RED', orq);
 
         return {
           success: true,
           validation_result: {
-            ticket_number,
+            ticket_code,
             status: 'INVALID',
             color_code: 'RED',
             message: 'Error: Reservation slot not found',
@@ -252,12 +252,12 @@ export class OperatorValidationServiceEnhanced {
 
       // Check if already verified (OV-Y02)
       if (reservation.status === 'VERIFIED') {
-        this.logValidation(ticket_number, operator_id, terminal_id, 'YELLOW', orq);
+        this.logValidation(ticket_code, operator_id, terminal_id, 'YELLOW', orq);
 
         return {
           success: true,
           validation_result: {
-            ticket_number,
+            ticket_code,
             status: 'VERIFIED',
             color_code: 'YELLOW',
             message: `Warning: Ticket already verified at ${reservation.verified_at}`,
@@ -274,14 +274,14 @@ export class OperatorValidationServiceEnhanced {
 
       // Check if reservation is for today (OV-R01)
       if (!this.isToday(slot.date)) {
-        this.logValidation(ticket_number, operator_id, terminal_id, 'RED', orq);
+        this.logValidation(ticket_code, operator_id, terminal_id, 'RED', orq);
 
         const today = new Date().toISOString().split('T')[0];
 
         return {
           success: true,
           validation_result: {
-            ticket_number,
+            ticket_code,
             status: 'RESERVED',
             color_code: 'RED',
             message: `Wrong date: Reserved for ${slot.date}, today is ${today}`,
@@ -297,12 +297,12 @@ export class OperatorValidationServiceEnhanced {
       }
 
       // GREEN: Valid reservation for today (OV-G01)
-      this.logValidation(ticket_number, operator_id, terminal_id, 'GREEN', orq);
+      this.logValidation(ticket_code, operator_id, terminal_id, 'GREEN', orq);
 
       return {
         success: true,
         validation_result: {
-          ticket_number,
+          ticket_code,
           status: 'RESERVED',
           color_code: 'GREEN',
           message: 'Valid reservation - Allow entry',
@@ -316,7 +316,7 @@ export class OperatorValidationServiceEnhanced {
         },
       };
     } catch (error: any) {
-      logger.error('operator.validate_ticket.error', { error: error.message, ticket_number });
+      logger.error('operator.validate_ticket.error', { error: error.message, ticket_code });
       return {
         success: false,
         error: 'Failed to validate ticket',
@@ -328,16 +328,16 @@ export class OperatorValidationServiceEnhanced {
    * Verify ticket (operator decision to allow entry)
    */
   async verifyTicket(request: VerifyTicketRequest): Promise<VerifyTicketResponse> {
-    const { ticket_number, operator_id, terminal_id, validation_decision, orq } = request;
+    const { ticket_code, operator_id, terminal_id, validation_decision, orq } = request;
 
     try {
       if (validation_decision === 'DENY') {
-        logger.info('operator.verify_ticket.denied', { ticket_number, operator_id });
+        logger.info('operator.verify_ticket.denied', { ticket_code, operator_id });
 
         return {
           success: true,
           data: {
-            ticket_number,
+            ticket_code,
             verification_status: 'DENIED',
             verified_at: new Date().toISOString(),
             operator_id,
@@ -347,7 +347,7 @@ export class OperatorValidationServiceEnhanced {
       }
 
       // ALLOW decision - mark ticket as VERIFIED
-      const reservation = await this.customerService.getReservation(ticket_number);
+      const reservation = await this.customerService.getReservation(ticket_code);
 
       if (!reservation) {
         return {
@@ -361,7 +361,7 @@ export class OperatorValidationServiceEnhanced {
         return {
           success: true,
           data: {
-            ticket_number,
+            ticket_code,
             verification_status: 'VERIFIED',
             verified_at: reservation.verified_at || new Date().toISOString(),
             operator_id,
@@ -376,7 +376,7 @@ export class OperatorValidationServiceEnhanced {
       reservation.updated_at = new Date().toISOString();
 
       logger.info('operator.verify_ticket.success', {
-        ticket_number,
+        ticket_code,
         operator_id,
         terminal_id,
         reservation_id: reservation.id,
@@ -385,7 +385,7 @@ export class OperatorValidationServiceEnhanced {
       return {
         success: true,
         data: {
-          ticket_number,
+          ticket_code,
           verification_status: 'VERIFIED',
           verified_at: reservation.verified_at,
           operator_id,
@@ -393,7 +393,7 @@ export class OperatorValidationServiceEnhanced {
         },
       };
     } catch (error: any) {
-      logger.error('operator.verify_ticket.error', { error: error.message, ticket_number });
+      logger.error('operator.verify_ticket.error', { error: error.message, ticket_code });
       return {
         success: false,
         error: 'Failed to verify ticket',
@@ -429,7 +429,7 @@ export class OperatorValidationServiceEnhanced {
   ): void {
     const log: ValidationLog = {
       id: this.nextLogId++,
-      ticket_number: ticketNumber,
+      ticket_code: ticketNumber,
       operator_id: operatorId,
       terminal_id: terminalId,
       validation_result: result,

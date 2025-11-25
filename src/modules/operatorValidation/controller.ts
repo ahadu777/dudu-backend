@@ -55,18 +55,18 @@ export class OperatorValidationController {
    */
   async validateTicket(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_number, operator_id, terminal_id, orq } = req.body as ValidateTicketRequest;
+      const { ticket_code, operator_id, terminal_id, orq } = req.body as ValidateTicketRequest;
 
-      if (!ticket_number || !operator_id || !terminal_id || !orq) {
+      if (!ticket_code || !operator_id || !terminal_id || !orq) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_number, operator_id, terminal_id, orq',
+          error: 'Missing required fields: ticket_code, operator_id, terminal_id, orq',
         });
         return;
       }
 
       const result = await this.service.validateTicket({
-        ticket_number,
+        ticket_code,
         operator_id,
         terminal_id,
         orq,
@@ -80,7 +80,7 @@ export class OperatorValidationController {
       res.status(200).json(result);
 
       logger.info('operator.validate_ticket.api.success', {
-        ticket_number,
+        ticket_code,
         operator_id,
         color_code: result.validation_result?.color_code,
       });
@@ -99,14 +99,14 @@ export class OperatorValidationController {
    */
   async verifyTicket(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_number, operator_id, terminal_id, validation_decision, orq } =
+      const { ticket_code, operator_id, terminal_id, validation_decision, orq } =
         req.body as VerifyTicketRequest;
 
-      if (!ticket_number || !operator_id || !terminal_id || !validation_decision || !orq) {
+      if (!ticket_code || !operator_id || !terminal_id || !validation_decision || !orq) {
         res.status(400).json({
           success: false,
           error:
-            'Missing required fields: ticket_number, operator_id, terminal_id, validation_decision, orq',
+            'Missing required fields: ticket_code, operator_id, terminal_id, validation_decision, orq',
         });
         return;
       }
@@ -120,7 +120,7 @@ export class OperatorValidationController {
       }
 
       const result = await this.service.verifyTicket({
-        ticket_number,
+        ticket_code,
         operator_id,
         terminal_id,
         validation_decision,
@@ -135,7 +135,7 @@ export class OperatorValidationController {
       res.status(200).json(result);
 
       logger.info('operator.verify_ticket.api.success', {
-        ticket_number,
+        ticket_code,
         operator_id,
         decision: validation_decision,
       });

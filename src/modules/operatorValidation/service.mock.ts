@@ -144,20 +144,20 @@ export class OperatorValidationServiceMock {
    * Validate ticket (QR scan)
    */
   async validateTicket(request: ValidateTicketRequest): Promise<ValidateTicketResponse> {
-    const { ticket_number, operator_id, terminal_id, orq } = request;
+    const { ticket_code, operator_id, terminal_id, orq } = request;
 
     try {
       // Get ticket validation info
-      const ticketValidation = await this.customerService.validateTicket({ ticket_number, orq });
+      const ticketValidation = await this.customerService.validateTicket({ ticket_code, orq });
 
       if (!ticketValidation.valid || !ticketValidation.ticket) {
         // RED: Invalid ticket
-        this.logValidation(ticket_number, operator_id, terminal_id, 'RED', orq);
+        this.logValidation(ticket_code, operator_id, terminal_id, 'RED', orq);
 
         return {
           success: true,
           validation_result: {
-            ticket_number,
+            ticket_code,
             status: 'INVALID',
             color_code: 'RED',
             message: ticketValidation.error || 'Invalid ticket',
@@ -175,16 +175,16 @@ export class OperatorValidationServiceMock {
       const ticket = ticketValidation.ticket;
 
       // Check if ticket has reservation
-      const reservation = await this.customerService.getReservationByTicket(ticket_number);
+      const reservation = await this.customerService.getReservationByTicket(ticket_code);
 
       if (!reservation) {
         // YELLOW: Valid ticket but no reservation
-        this.logValidation(ticket_number, operator_id, terminal_id, 'YELLOW', orq);
+        this.logValidation(ticket_code, operator_id, terminal_id, 'YELLOW', orq);
 
         return {
           success: true,
           validation_result: {
-            ticket_number,
+            ticket_code,
             status: 'RESERVED',
             color_code: 'YELLOW',
             message: 'Warning: No reservation found for this ticket',
@@ -202,12 +202,12 @@ export class OperatorValidationServiceMock {
       // Check reservation status
       if (reservation.status === 'VERIFIED') {
         // YELLOW: Already verified (duplicate scan)
-        this.logValidation(ticket_number, operator_id, terminal_id, 'YELLOW', orq);
+        this.logValidation(ticket_code, operator_id, terminal_id, 'YELLOW', orq);
 
         return {
           success: true,
           validation_result: {
-            ticket_number,
+            ticket_code,
             status: 'VERIFIED',
             color_code: 'YELLOW',
             message: 'Warning: Ticket already verified',
@@ -223,12 +223,12 @@ export class OperatorValidationServiceMock {
       }
 
       // GREEN: Valid reservation
-      this.logValidation(ticket_number, operator_id, terminal_id, 'GREEN', orq);
+      this.logValidation(ticket_code, operator_id, terminal_id, 'GREEN', orq);
 
       return {
         success: true,
         validation_result: {
-          ticket_number,
+          ticket_code,
           status: 'RESERVED',
           color_code: 'GREEN',
           message: 'Valid reservation - Allow entry',
@@ -242,7 +242,7 @@ export class OperatorValidationServiceMock {
         },
       };
     } catch (error) {
-      logger.error('operator.validate_ticket.error', { error, ticket_number });
+      logger.error('operator.validate_ticket.error', { error, ticket_code });
       return {
         success: false,
         error: 'Failed to validate ticket',
@@ -254,16 +254,16 @@ export class OperatorValidationServiceMock {
    * Verify ticket (operator decision)
    */
   async verifyTicket(request: VerifyTicketRequest): Promise<VerifyTicketResponse> {
-    const { ticket_number, operator_id, terminal_id, validation_decision, orq } = request;
+    const { ticket_code, operator_id, terminal_id, validation_decision, orq } = request;
 
     try {
       if (validation_decision === 'DENY') {
-        logger.info('operator.verify_ticket.denied', { ticket_number, operator_id });
+        logger.info('operator.verify_ticket.denied', { ticket_code, operator_id });
 
         return {
           success: true,
           data: {
-            ticket_number,
+            ticket_code,
             verification_status: 'DENIED',
             verified_at: new Date().toISOString(),
             operator_id,
@@ -273,7 +273,7 @@ export class OperatorValidationServiceMock {
       }
 
       // ALLOW decision - mark ticket as VERIFIED
-      const reservation = await this.customerService.getReservationByTicket(ticket_number);
+      const reservation = await this.customerService.getReservationByTicket(ticket_code);
 
       if (!reservation) {
         return {
@@ -288,7 +288,7 @@ export class OperatorValidationServiceMock {
       reservation.updated_at = new Date().toISOString();
 
       logger.info('operator.verify_ticket.success', {
-        ticket_number,
+        ticket_code,
         operator_id,
         terminal_id,
         reservation_id: reservation.id,
@@ -297,7 +297,7 @@ export class OperatorValidationServiceMock {
       return {
         success: true,
         data: {
-          ticket_number,
+          ticket_code,
           verification_status: 'VERIFIED',
           verified_at: reservation.verified_at,
           operator_id,
@@ -305,7 +305,7 @@ export class OperatorValidationServiceMock {
         },
       };
     } catch (error) {
-      logger.error('operator.verify_ticket.error', { error, ticket_number });
+      logger.error('operator.verify_ticket.error', { error, ticket_code });
       return {
         success: false,
         error: 'Failed to verify ticket',
@@ -325,7 +325,7 @@ export class OperatorValidationServiceMock {
   ): void {
     const log: ValidationLog = {
       id: this.nextLogId++,
-      ticket_number: ticketNumber,
+      ticket_code: ticketNumber,
       operator_id: operatorId,
       terminal_id: terminalId,
       validation_result: result,

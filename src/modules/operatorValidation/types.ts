@@ -18,7 +18,7 @@ export interface OperatorLoginResponse {
 }
 
 export interface ValidateTicketRequest {
-  ticket_number: string;
+  ticket_code: string;
   operator_id: string;
   terminal_id: string;
   orq: number;
@@ -27,7 +27,7 @@ export interface ValidateTicketRequest {
 export interface ValidateTicketResponse {
   success: boolean;
   validation_result?: {
-    ticket_number: string;
+    ticket_code: string;
     status: 'RESERVED' | 'VERIFIED' | 'EXPIRED' | 'INVALID';
     color_code: 'GREEN' | 'YELLOW' | 'RED';
     message: string;
@@ -43,7 +43,7 @@ export interface ValidateTicketResponse {
 }
 
 export interface VerifyTicketRequest {
-  ticket_number: string;
+  ticket_code: string;
   operator_id: string;
   terminal_id: string;
   validation_decision: 'ALLOW' | 'DENY';
@@ -53,7 +53,7 @@ export interface VerifyTicketRequest {
 export interface VerifyTicketResponse {
   success: boolean;
   data?: {
-    ticket_number: string;
+    ticket_code: string;
     verification_status: 'VERIFIED' | 'DENIED';
     verified_at: string;
     operator_id: string;
@@ -74,7 +74,7 @@ export interface OperatorSession {
 
 export interface ValidationLog {
   id: number;
-  ticket_number: string;
+  ticket_code: string;
   operator_id: string;
   terminal_id: string;
   validation_result: 'GREEN' | 'YELLOW' | 'RED';
