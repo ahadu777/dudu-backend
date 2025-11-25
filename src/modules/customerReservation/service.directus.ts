@@ -39,10 +39,11 @@ export class CustomerReservationServiceDirectus {
     }
 
     // 2. Check if ticket is activated (Phase 2 requirement)
-    if (ticket.activation_status && ticket.activation_status !== 'active') {
+    // Directus uses 'status' field with value 'ACTIVATED' (not activation_status)
+    if (ticket.status !== 'ACTIVATED') {
       logger.warn('directus.customer.validate_ticket.not_activated', {
         ticket_code,
-        activation_status: ticket.activation_status
+        status: ticket.status
       });
       return {
         valid: false,
