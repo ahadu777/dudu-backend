@@ -18,6 +18,9 @@ import devRouter from './dev/router';
 import otaRouter from './ota/router';
 import venueRouter from './venue/router';
 import qrGenerationRouter from './qr-generation/router';
+import ticketReservationRouter from './ticket-reservation/router';
+import reservationSlotsRouter from './reservation-slots/router';
+import customerReservationRouter from './customerReservation/router';
 
 export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
   const apiRouter = Router();
@@ -44,10 +47,10 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/venue', venueRouter);
   app.use('/qr', qrGenerationRouter); // Unified QR generation and verification
 
-  // Ticket reservation system
-  app.use('/api/reservation-slots', reservationSlotsRouter);
-  app.use('/api', customerReservationRouter);
-  app.use('/api/operator', operatorValidationRouter);
+  // Ticket reservation & validation system (PRD-006/PRD-007)
+  app.use('/', ticketReservationRouter);
+  app.use('/api', reservationSlotsRouter); // Operator slot management + customer availability
+  app.use('/api', customerReservationRouter); // Enhanced customer reservation with activation checks
 
   app.use('/payments', refundsRouter);
   app.use('/', refundsRouter);

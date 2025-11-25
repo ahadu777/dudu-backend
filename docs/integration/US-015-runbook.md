@@ -1,9 +1,10 @@
 # US-015: Ticket Reservation & Validation - Integration Runbook
 
 **Story:** US-015 Ticket Reservation & Validation
+**Related PRD:** PRD-007
 **Cards:** reservation-slot-management, customer-reservation-portal, operator-validation-scanner
 **Status:** ✅ Complete
-**Last Updated:** 2025-11-14
+**Last Updated:** 2025-11-25
 
 ---
 

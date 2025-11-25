@@ -10,7 +10,7 @@ branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/operator-validation-scanner.xml"
 last_update: "2025-11-14T19:30:00+08:00"
-related_stories: ["US-015"]
+related_stories: ["US-015", "US-016"]
 relationships:
   depends_on: ["customer-reservation-portal", "operators-login"]
   enhances: ["tickets-scan", "operators-login"]

@@ -30,7 +30,7 @@ export interface VerifyContactResponse {
 
 export interface CreateReservationRequest {
   ticket_number: string;
-  slot_id: number;
+  slot_id: string;
   visitor_name: string;
   visitor_phone: string;
   orq: number;
@@ -39,7 +39,7 @@ export interface CreateReservationRequest {
 export interface CreateReservationResponse {
   success: boolean;
   data?: {
-    reservation_id: number;
+    reservation_id: string;
     ticket_number: string;
     slot_id: number;
     slot_date: string;
@@ -52,7 +52,7 @@ export interface CreateReservationResponse {
 }
 
 export interface TicketReservation {
-  id: number;
+  id: string;
   ticket_number: string;
   slot_id: number;
   visitor_name: string;
@@ -73,3 +73,36 @@ export type TicketStatus =
   | 'VERIFIED'
   | 'EXPIRED'
   | 'CANCELLED';
+
+export interface ModifyReservationRequest {
+  reservation_id: string;
+  new_slot_id: string;
+}
+
+export interface ModifyReservationResponse {
+  success: boolean;
+  data?: {
+    reservation_id: string;
+    ticket_number: string;
+    new_slot_id: number;
+    new_slot_date: string;
+    new_slot_time: string;
+    updated_at: string;
+  };
+  error?: string;
+}
+
+export interface CancelReservationRequest {
+  reservation_id: string;
+}
+
+export interface CancelReservationResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    reservation_id: string;
+    ticket_status: string;
+    cancelled_at: string;
+  };
+  error?: string;
+}

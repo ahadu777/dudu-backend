@@ -382,3 +382,149 @@ export interface RouteFareHistoryResponse {
   routeCode: string;
   revisions: RouteFareConfig[];
 }
+
+// Ticket Reservation & Validation System Types (PRD-005)
+export enum TicketReservationStatus {
+  PENDING_PAYMENT = 'PENDING_PAYMENT',
+  ACTIVATED = 'ACTIVATED',
+  RESERVED = 'RESERVED',
+  VERIFIED = 'VERIFIED',
+  EXPIRED = 'EXPIRED'
+}
+
+export enum ReservationSlotStatus {
+  ACTIVE = 'ACTIVE',
+  FULL = 'FULL',
+  CLOSED = 'CLOSED'
+}
+
+export enum CapacityStatus {
+  AVAILABLE = 'AVAILABLE',
+  LIMITED = 'LIMITED',
+  FULL = 'FULL'
+}
+
+export interface TicketValidationRequest {
+  ticket_code: string;
+}
+
+export interface TicketValidationResponse {
+  success: boolean;
+  data?: {
+    ticket_id: number;
+    ticket_code: string;
+    status: TicketReservationStatus;
+    product_id: number;
+    order_id: number;
+  };
+  error?: {
+    code: string;
+    message: string;
+    reserved_date?: string;
+  };
+}
+
+export interface ReservationSlot {
+  id: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  total_capacity: number;
+  booked_count: number;
+  available_count: number;
+  status: ReservationSlotStatus;
+  capacity_status: CapacityStatus;
+}
+
+export interface AvailableSlotsRequest {
+  month?: string; // YYYY-MM
+  orq: number;
+}
+
+export interface AvailableSlotsResponse {
+  success: boolean;
+  data: ReservationSlot[];
+  metadata: {
+    month: string;
+    total_slots: number;
+  };
+}
+
+export interface CreateReservationRequest {
+  ticket_id: number;
+  slot_id: number;
+  customer_email: string;
+  customer_phone: string;
+}
+
+export interface CreateReservationResponse {
+  success: boolean;
+  data?: {
+    reservation_id: number;
+    ticket_code: string;
+    slot: {
+      date: string;
+      start_time: string;
+      end_time: string;
+    };
+    confirmation_sent: boolean;
+    qr_code?: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+    alternative_slots?: Array<{
+      slot_id: number;
+      date: string;
+      start_time: string;
+    }>;
+  };
+}
+
+export interface OperatorValidateTicketRequest {
+  ticket_code: string;
+}
+
+export interface OperatorValidateTicketResponse {
+  success: boolean;
+  data?: {
+    ticket_id: number;
+    ticket_code: string;
+    status: TicketReservationStatus;
+    customer_email: string;
+    customer_phone: string;
+    reservation?: {
+      date: string;
+      start_time: string;
+      end_time: string;
+      is_today: boolean;
+    };
+    validation_status: 'VALID' | 'INVALID';
+  };
+  error?: {
+    code: 'WRONG_DATE' | 'NO_RESERVATION' | 'ALREADY_VERIFIED' | 'TICKET_NOT_FOUND' | 'TICKET_NOT_ACTIVATED' | 'TICKET_EXPIRED';
+    message: string;
+    reservation_date?: string;
+    today?: string;
+    verified_at?: string;
+    verified_by?: number;
+    operator_name?: string;
+    ticket_status?: string;
+  };
+}
+
+export interface OperatorVerifyTicketRequest {
+  ticket_id: number;
+  operator_id: number;
+}
+
+export interface OperatorVerifyTicketResponse {
+  success: boolean;
+  data: {
+    ticket_id: number;
+    ticket_code: string;
+    status: TicketReservationStatus;
+    verified_at: string;
+    verified_by: number;
+  };
+}

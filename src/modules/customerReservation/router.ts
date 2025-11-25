@@ -28,4 +28,21 @@ router.post('/tickets/verify-contact', (req, res) => controller.verifyContact(re
  */
 router.post('/reservations/create', (req, res) => controller.createReservation(req, res));
 
+/**
+ * @route PUT /api/reservations/:reservation_id
+ * @description Modify existing reservation (change slot)
+ * @params {reservation_id: string}
+ * @body {new_slot_id: string}
+ * @returns {ModifyReservationResponse}
+ */
+router.put('/reservations/:reservation_id', (req, res) => controller.modifyReservation(req, res));
+
+/**
+ * @route DELETE /api/reservations/:reservation_id
+ * @description Cancel reservation
+ * @params {reservation_id: string}
+ * @returns {CancelReservationResponse}
+ */
+router.delete('/reservations/:reservation_id', (req, res) => controller.cancelReservation(req, res));
+
 export default router;

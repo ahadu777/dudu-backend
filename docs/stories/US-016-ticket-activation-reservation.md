@@ -1,8 +1,8 @@
-# US-015: Ticket Activation and Time-Slot Reservation
+# US-016: Ticket Activation and Time-Slot Reservation
 
 ## Story Metadata
 ```yaml
-story_id: "US-015"
+story_id: "US-016"
 title: "Ticket Activation and Time-Slot Reservation System"
 status: "Draft"
 priority: "High"
@@ -10,7 +10,7 @@ business_value: "High"
 complexity: "Medium"
 estimated_effort: "3 weeks"
 created_date: "2025-11-14"
-related_prd: "PRD-005"
+related_prd: "PRD-006"
 depends_on: ["US-001", "US-003"]
 enhances: ["US-001", "US-003", "US-002"]
 ```

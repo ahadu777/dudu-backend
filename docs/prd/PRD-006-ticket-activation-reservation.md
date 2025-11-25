@@ -1,8 +1,8 @@
-# PRD-005: Ticket Activation and Time-Slot Reservation System
+# PRD-006: Ticket Activation and Time-Slot Reservation System
 
 ## Document Metadata
 ```yaml
-prd_id: "PRD-005"
+prd_id: "PRD-006"
 product_area: "Tickets & Fulfillment"
 owner: "Product Manager"
 status: "Draft"

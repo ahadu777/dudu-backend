@@ -24,8 +24,7 @@ interface MockTicket {
 
 export class CustomerReservationServiceMock {
   private tickets: Map<string, MockTicket> = new Map();
-  private reservations: Map<number, TicketReservation> = new Map();
-  private nextReservationId = 1;
+  private reservations: Map<string, TicketReservation> = new Map();
   private slotsService: ReservationSlotsServiceMock;
 
   constructor() {
@@ -210,21 +209,20 @@ export class CustomerReservationServiceMock {
         };
       }
 
-      // 2. Check slot capacity (with locking in real DB)
-      const hasCapacity = await this.slotsService.hasCapacity(slot_id);
-      if (!hasCapacity) {
-        return {
-          success: false,
-          error: 'Selected time slot is full',
-        };
-      }
-
-      // 3. Get slot details
-      const slot = await this.slotsService.getSlotById(slot_id);
+      // 2. Get slot details
+      const slot = await this.slotsService.getSlotById(parseInt(slot_id));
       if (!slot) {
         return {
           success: false,
           error: 'Time slot not found',
+        };
+      }
+
+      // 3. Check slot capacity
+      if (slot.booked_count >= slot.total_capacity) {
+        return {
+          success: false,
+          error: 'Selected time slot is full',
         };
       }
 
@@ -241,10 +239,11 @@ export class CustomerReservationServiceMock {
       }
 
       // 5. Create reservation
+      const reservationId = `RSV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const reservation: TicketReservation = {
-        id: this.nextReservationId++,
+        id: reservationId,
         ticket_number,
-        slot_id,
+        slot_id: parseInt(slot_id),
         visitor_name,
         visitor_phone,
         status: 'RESERVED',
@@ -255,10 +254,10 @@ export class CustomerReservationServiceMock {
         updated_at: new Date().toISOString(),
       };
 
-      this.reservations.set(reservation.id, reservation);
+      this.reservations.set(reservationId, reservation);
 
       // 6. Increment slot booked count
-      await this.slotsService.incrementBookedCount(slot_id);
+      await this.slotsService.incrementBookedCount(parseInt(slot_id));
 
       // 7. Update ticket status to RESERVED
       const ticket = this.tickets.get(ticket_number);
@@ -278,9 +277,9 @@ export class CustomerReservationServiceMock {
       return {
         success: true,
         data: {
-          reservation_id: reservation.id,
+          reservation_id: reservationId,
           ticket_number,
-          slot_id,
+          slot_id: parseInt(slot_id),
           slot_date: slot.date,
           slot_time: `${slot.start_time} - ${slot.end_time}`,
           visitor_name,

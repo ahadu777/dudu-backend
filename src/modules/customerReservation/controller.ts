@@ -1,17 +1,19 @@
 import { Request, Response } from 'express';
-import { CustomerReservationServiceMock } from './service.mock';
+import { CustomerReservationServiceEnhanced } from './service.enhanced';
 import {
   TicketValidationRequest,
   VerifyContactRequest,
   CreateReservationRequest,
+  ModifyReservationRequest,
+  CancelReservationRequest,
 } from './types';
 import { logger } from '../../utils/logger';
 
 export class CustomerReservationController {
-  private service: CustomerReservationServiceMock;
+  private service: CustomerReservationServiceEnhanced;
 
   constructor() {
-    this.service = new CustomerReservationServiceMock();
+    this.service = new CustomerReservationServiceEnhanced();
   }
 
   /**
@@ -138,6 +140,79 @@ export class CustomerReservationController {
       res.status(500).json({
         success: false,
         error: 'Failed to create reservation',
+      });
+    }
+  }
+
+  /**
+   * PUT /api/reservations/:reservation_id
+   * Modify existing reservation (change slot)
+   */
+  async modifyReservation(req: Request, res: Response): Promise<void> {
+    try {
+      const { reservation_id } = req.params;
+      const { new_slot_id } = req.body as ModifyReservationRequest;
+
+      if (!new_slot_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: new_slot_id',
+        });
+        return;
+      }
+
+      const result = await this.service.modifyReservation({
+        reservation_id,
+        new_slot_id,
+      });
+
+      if (!result.success) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(200).json(result);
+
+      logger.info('reservations.modify.success', {
+        reservation_id,
+        new_slot_id,
+      });
+    } catch (error) {
+      logger.error('reservations.modify.error', { error });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to modify reservation',
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/reservations/:reservation_id
+   * Cancel reservation
+   */
+  async cancelReservation(req: Request, res: Response): Promise<void> {
+    try {
+      const { reservation_id } = req.params;
+
+      const result = await this.service.cancelReservation({
+        reservation_id,
+      });
+
+      if (!result.success) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(200).json(result);
+
+      logger.info('reservations.cancel.success', {
+        reservation_id,
+      });
+    } catch (error) {
+      logger.error('reservations.cancel.error', { error });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to cancel reservation',
       });
     }
   }

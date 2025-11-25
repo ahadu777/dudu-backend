@@ -1,8 +1,8 @@
-# PRD-005: Ticket Reservation & Validation System
+# PRD-007: Ticket Reservation & Validation System
 
 ## Document Metadata
 ```yaml
-prd_id: "PRD-005"
+prd_id: "PRD-007"
 product_area: "Tickets & Operations"
 owner: "Product Manager"
 status: "Draft"

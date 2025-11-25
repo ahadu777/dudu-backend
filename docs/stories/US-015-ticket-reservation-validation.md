@@ -10,7 +10,7 @@ business_value: "High"
 complexity: "Medium"
 estimated_effort: "6 weeks (4 sprints)"
 created_date: "2025-11-14"
-related_prd: "PRD-005"
+related_prd: "PRD-007"
 depends_on: ["US-001"]
 enhances: ["US-001", "US-002"]
 ```
