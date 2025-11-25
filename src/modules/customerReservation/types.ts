@@ -46,7 +46,8 @@ export interface CreateReservationResponse {
     slot_id: number;
     slot_date: string;
     slot_time: string;
-    visitor_name: string;
+    customer_email: string;
+    customer_phone: string;
     status: string;
     created_at: string;
   };

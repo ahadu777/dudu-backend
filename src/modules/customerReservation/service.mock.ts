@@ -297,7 +297,8 @@ export class CustomerReservationServiceMock {
           slot_id: parseInt(slot_id),
           slot_date: slot.date,
           slot_time: `${slot.start_time} - ${slot.end_time}`,
-          visitor_name: customer_email, // Return customer_email as visitor_name
+          customer_email,
+          customer_phone,
           status: reservation.status,
           created_at: reservation.created_at,
         },

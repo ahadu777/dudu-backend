@@ -227,7 +227,8 @@ export class CustomerReservationServiceDirectus {
         slot_id: parseInt(slot_id),
         slot_date: '2025-12-01', // TODO: fetch from slot data
         slot_time: '09:00-12:00', // TODO: fetch from slot data
-        visitor_name: customer_email, // Use email as identifier
+        customer_email,
+        customer_phone,
         status: 'RESERVED',
         created_at: result.reservation.reserved_at || new Date().toISOString()
       }
