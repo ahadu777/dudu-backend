@@ -11,6 +11,10 @@ export interface TicketValidationResponse {
     product_name: string;
     status: string;
     expires_at: string | null;
+    reserved_at?: string | null;
+    customer_email?: string | null;
+    customer_phone?: string | null;
+    order_id?: number | null;
   };
   error?: string;
 }

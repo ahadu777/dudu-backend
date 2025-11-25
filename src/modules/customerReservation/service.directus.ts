@@ -90,7 +90,11 @@ export class CustomerReservationServiceDirectus {
         product_id: ticket.product_id,
         product_name: ticket.product_name || 'Unknown Product',
         status: ticket.status,
-        expires_at: ticket.expires_at
+        expires_at: ticket.expires_at,
+        reserved_at: ticket.reserved_at,
+        customer_email: ticket.customer_email,
+        customer_phone: ticket.customer_phone,
+        order_id: ticket.order_id
       }
     };
   }
