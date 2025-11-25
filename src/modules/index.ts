@@ -9,12 +9,10 @@ import refundsRouter from './refunds/router';
 import policiesRouter from './policies/router';
 import profileRouter from './profile/router';
 import usersRouter from './users/router';
-import authDemoRouter from './auth/demo';
 import wechatAuthRouter from './auth/wechat.router';
 import adminRouter from './admin/router';
 import travelRouter from './travel/router';
 import reservationsRouter from './reservations/router';
-import devRouter from './dev/router';
 import otaRouter from './ota/router';
 import venueRouter from './venue/router';
 import qrGenerationRouter from './qr-generation/router';
@@ -28,7 +26,6 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   const apiRouter = Router();
 
   apiRouter.use('/users', usersRouter);
-  apiRouter.use('/auth', authDemoRouter);
   apiRouter.use('/auth', wechatAuthRouter); // WeChat authentication endpoints
 
   app.use(apiPrefix, apiRouter);
@@ -45,7 +42,6 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/operators', operatorsRouter);
   app.use('/validators', operatorsRouter);
   app.use('/reports', reportsRouter);
-  app.use('/dev', devRouter);
   app.use('/api/ota', otaRouter);
   app.use('/venue', venueRouter);
   app.use('/qr', qrGenerationRouter); // Unified QR generation and verification

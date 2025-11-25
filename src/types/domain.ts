@@ -11,7 +11,7 @@ export enum TicketStatus { MINTED='minted', ASSIGNED='assigned', ACTIVE='active'
 export enum ScanResult { SUCCESS='success', REJECT='reject' }
 export enum ErrorCode { IDEMPOTENCY_CONFLICT='IDEMPOTENCY_CONFLICT', TOKEN_EXPIRED='TOKEN_EXPIRED', WRONG_FUNCTION='WRONG_FUNCTION', NO_REMAINING='NO_REMAINING', TICKET_INVALID='TICKET_INVALID', UNAUTHORIZED='UNAUTHORIZED', FORBIDDEN='FORBIDDEN', NOT_FOUND='NOT_FOUND' }
 
-export interface FunctionSpec { function_code: string; label: string; quantity: number; }
+export interface FunctionSpec { function_code: string; label: string; description?: string; quantity: number; }
 export interface Product { id: number; sku: string; name: string; status: 'draft'|'active'|'archived'; sale_start_at?: ISODate|null; sale_end_at?: ISODate|null; functions: FunctionSpec[]; }
 export interface CatalogResponse { products: Product[]; }
 
@@ -71,7 +71,7 @@ export interface Order {
     quote_id?: string;
   };
 }
-export interface TicketEntitlement { function_code: string; label: string; remaining_uses: number; }
+export interface TicketEntitlement { function_code: string; label: string; description?: string; remaining_uses: number; }
 export interface Ticket { ticket_code: TicketCode; product_id: number; product_name: string; status: TicketStatus; expires_at?: ISODate|null; entitlements: TicketEntitlement[]; user_id: number; order_id: number; cancelled_at?: ISODate|null; cancellation_reason?: string|null; }
 
 // JTI (JWT Token ID) lifecycle tracking for QR code security

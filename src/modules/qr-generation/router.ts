@@ -7,6 +7,7 @@ import { mockDataStore } from '../../core/mock/data';
 import { AppDataSource } from '../../config/database';
 import { VenueRepository } from '../venue/domain/venue.repository';
 import { dataSourceConfig } from '../../config/data-source';
+import { ProductEntity } from '../ota/domain/product.entity';
 
 const router = Router();
 
@@ -87,8 +88,23 @@ router.post('/decrypt', async (req: Request, res: Response) => {
       });
     }
 
-    // Get product information
-    const product = mockDataStore.getProduct(ticket.product_id);
+    // Get product information (database first, then fallback to mock)
+    let product: any = null;
+    if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+      const productRepo = AppDataSource.getRepository(ProductEntity);
+      const dbProduct = await productRepo.findOne({ where: { id: ticket.product_id } });
+      if (dbProduct) {
+        product = {
+          id: dbProduct.id,
+          name: dbProduct.name,
+          description: dbProduct.description,
+          entitlements: dbProduct.entitlements
+        };
+      }
+    }
+    if (!product) {
+      product = mockDataStore.getProduct(ticket.product_id);
+    }
     const productInfo = product ? {
       id: product.id,
       name: product.name
@@ -101,6 +117,7 @@ router.post('/decrypt', async (req: Request, res: Response) => {
     const formattedEntitlements = (ticket.entitlements || []).map((e: any) => ({
       function_code: e.function_code,
       function_name: e.label || e.function_code,
+      description: e.description || null,
       remaining_uses: e.remaining_uses,
       total_uses: e.total_uses || e.remaining_uses
     }));
@@ -366,8 +383,23 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
         });
       }
 
-      // Get product information
-      const product = mockDataStore.getProduct(ticket.product_id);
+      // Get product information (database first, then fallback to mock)
+      let product: any = null;
+      if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+        const productRepo = AppDataSource.getRepository(ProductEntity);
+        const dbProduct = await productRepo.findOne({ where: { id: ticket.product_id } });
+        if (dbProduct) {
+          product = {
+            id: dbProduct.id,
+            name: dbProduct.name,
+            description: dbProduct.description,
+            entitlements: dbProduct.entitlements
+          };
+        }
+      }
+      if (!product) {
+        product = mockDataStore.getProduct(ticket.product_id);
+      }
       const productInfo = product ? {
         id: product.id,
         name: product.name
@@ -380,6 +412,7 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
       const formattedEntitlements = (ticket.entitlements || []).map((e: any) => ({
         function_code: e.function_code,
         function_name: e.label || e.function_code,
+        description: e.description || null,
         remaining_uses: e.remaining_uses,
         total_uses: e.total_uses || e.remaining_uses
       }));

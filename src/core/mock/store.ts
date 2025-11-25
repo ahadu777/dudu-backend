@@ -173,9 +173,9 @@ export class MockStore {
       sale_start_at: '2024-10-01T00:00:00Z',
       sale_end_at: '2024-12-31T23:59:59Z',
       functions: [
-        { function_code: 'bus', label: 'Bus Ride', quantity: 2 },
-        { function_code: 'ferry', label: 'Ferry Ride', quantity: 1 },
-        { function_code: 'metro', label: 'Metro Entry', quantity: 1 }
+        { function_code: 'bus', label: 'Bus Ride', description: '市區巴士單程乘車券，可搭乘全市所有公交線路', quantity: 2 },
+        { function_code: 'ferry', label: 'Ferry Ride', description: '渡輪單程船票，適用於所有渡輪航線', quantity: 1 },
+        { function_code: 'metro', label: 'Metro Entry', description: '地鐵單程票，可乘坐所有地鐵線路', quantity: 1 }
       ],
       inventory: {
         sellable_cap: 1000,
@@ -192,8 +192,8 @@ export class MockStore {
       sale_start_at: null,
       sale_end_at: null,
       functions: [
-        { function_code: 'bus', label: 'Unlimited Bus', quantity: 999 },
-        { function_code: 'metro', label: 'Unlimited Metro', quantity: 999 }
+        { function_code: 'bus', label: 'Unlimited Bus', description: '全日無限次巴士乘車券，24小時內不限次數', quantity: 999 },
+        { function_code: 'metro', label: 'Unlimited Metro', description: '全日無限次地鐵乘車券，24小時內不限次數', quantity: 999 }
       ],
       inventory: {
         sellable_cap: 500,
@@ -210,7 +210,7 @@ export class MockStore {
       sale_start_at: null,
       sale_end_at: null,
       functions: [
-        { function_code: 'museum', label: 'Museum Entry', quantity: 1 }
+        { function_code: 'museum', label: 'Museum Entry', description: '博物館入場券，包含所有常設展覽及語音導覽', quantity: 1 }
       ],
       inventory: {
         sellable_cap: 200,
@@ -227,8 +227,8 @@ export class MockStore {
       sale_start_at: '2024-11-01T00:00:00Z',
       sale_end_at: '2025-02-28T23:59:59Z',
       functions: [
-        { function_code: 'park', label: 'Park Entry', quantity: 1 },
-        { function_code: 'ride', label: 'Fast Pass', quantity: 3 }
+        { function_code: 'park', label: 'Park Entry', description: '主題樂園全日入場券，包含所有遊樂設施', quantity: 1 },
+        { function_code: 'ride', label: 'Fast Pass', description: '快速通行券，可優先乘坐指定熱門設施', quantity: 3 }
       ],
       inventory: {
         sellable_cap: 100,
@@ -245,7 +245,7 @@ export class MockStore {
       sale_start_at: null,
       sale_end_at: '2024-01-01T00:00:00Z',
       functions: [
-        { function_code: 'expired', label: 'Expired Function', quantity: 1 }
+        { function_code: 'expired', label: 'Expired Function', description: '已過期的功能', quantity: 1 }
       ],
       inventory: {
         sellable_cap: 0,
@@ -299,16 +299,19 @@ export class MockStore {
         {
           function_code: 'bus',
           label: 'Bus Ride',
+          description: '市區巴士單程乘車券，可搭乘全市所有公交線路',
           remaining_uses: 2
         },
         {
           function_code: 'ferry',
           label: 'Ferry Ride',
+          description: '渡輪單程船票，適用於所有渡輪航線',
           remaining_uses: 1
         },
         {
           function_code: 'metro',
           label: 'Metro Entry',
+          description: '地鐵單程票，可乘坐所有地鐵線路',
           remaining_uses: 1
         }
       ],
@@ -326,6 +329,7 @@ export class MockStore {
         {
           function_code: 'museum',
           label: 'Museum Entry',
+          description: '博物館入場券，包含所有常設展覽及語音導覽',
           remaining_uses: 1
         }
       ],
@@ -577,9 +581,9 @@ export class MockStore {
       sale_start_at: '2025-12-12T00:00:00Z',
       sale_end_at: '2026-03-12T23:59:59Z',
       functions: [
-        { function_code: 'ferry', label: '中環(五號碼頭)至長洲來回船票', quantity: 1 },
-        { function_code: 'monchhichi_gift', label: 'Monchhichi首盒禮品', quantity: 1 },
-        { function_code: 'playground_tokens', label: '遊樂場全日門票及代幣', quantity: 10 }
+        { function_code: 'ferry', label: '中環(五號碼頭)至長洲來回船票', description: '普通艙來回船票，中環五號碼頭出發，暢遊長洲一日', quantity: 1 },
+        { function_code: 'monchhichi_gift', label: 'Monchhichi首盒禮品', description: '限量版Monchhichi主題首盒禮品，憑券於指定地點領取', quantity: 1 },
+        { function_code: 'playground_tokens', label: '遊樂場全日門票及代幣', description: '遊樂場全日無限次入場，附送10個遊戲代幣', quantity: 10 }
       ],
       inventory: {
         sellable_cap: 200,
@@ -596,8 +600,8 @@ export class MockStore {
       sale_start_at: '2025-12-12T00:00:00Z',
       sale_end_at: '2026-03-12T23:59:59Z',
       functions: [
-        { function_code: 'pet_ferry', label: '中環(五號碼頭)至長洲來回船票(寵物)', quantity: 1 },
-        { function_code: 'pet_playground', label: '遊樂場寵物區', quantity: 1 }
+        { function_code: 'pet_ferry', label: '中環(五號碼頭)至長洲來回船票(寵物)', description: '寵物專用艙位，可攜帶一隻寵物同行', quantity: 1 },
+        { function_code: 'pet_playground', label: '遊樂場寵物區', description: '寵物專屬遊樂區域，提供寵物遊玩設施', quantity: 1 }
       ],
       inventory: {
         sellable_cap: 50,
@@ -614,10 +618,10 @@ export class MockStore {
       sale_start_at: '2025-12-12T00:00:00Z',
       sale_end_at: '2026-03-12T23:59:59Z',
       functions: [
-        { function_code: 'vip_ferry', label: '中環(五號碼頭)至長洲來回船票(普通艙VIP船位限量)', quantity: 2 },
-        { function_code: 'monchhichi_gift_x2', label: 'Monchhichi首盒禮品 X2', quantity: 2 },
-        { function_code: 'playground_tokens', label: '遊樂場全日門票 X2 + 遊樂場代幣20個', quantity: 20 },
-        { function_code: 'tea_set', label: 'Monchhichi Tea Set 任何時間船上享用', quantity: 1 }
+        { function_code: 'vip_ferry', label: '中環(五號碼頭)至長洲來回船票(普通艙VIP船位限量)', description: 'VIP專屬船位，限量供應，優先登船享受舒適空間', quantity: 2 },
+        { function_code: 'monchhichi_gift_x2', label: 'Monchhichi首盒禮品 X2', description: '雙份限量版Monchhichi禮品，適合情侶或親子', quantity: 2 },
+        { function_code: 'playground_tokens', label: '遊樂場全日門票 X2 + 遊樂場代幣20個', description: '雙人遊樂場全日票，附送20個遊戲代幣', quantity: 20 },
+        { function_code: 'tea_set', label: 'Monchhichi Tea Set 任何時間船上享用', description: '船上專享Monchhichi主題茶點套餐，任何時段供應', quantity: 1 }
       ],
       inventory: {
         sellable_cap: 30,
