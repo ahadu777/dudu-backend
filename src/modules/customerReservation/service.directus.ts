@@ -23,15 +23,15 @@ export class CustomerReservationServiceDirectus {
    * Checks if ticket is activated and not already reserved
    */
   async validateTicket(request: TicketValidationRequest): Promise<TicketValidationResponse> {
-    const { ticket_number, orq } = request;
+    const { ticket_code, orq } = request;
 
-    logger.info('directus.customer.validate_ticket.start', { ticket_number, orq });
+    logger.info('directus.customer.validate_ticket.start', { ticket_code, orq });
 
     // 1. Check if ticket exists in Directus
-    const ticket = await directusService.getTicketByNumber(ticket_number);
+    const ticket = await directusService.getTicketByNumber(ticket_code);
 
     if (!ticket) {
-      logger.warn('directus.customer.validate_ticket.not_found', { ticket_number });
+      logger.warn('directus.customer.validate_ticket.not_found', { ticket_code });
       return {
         valid: false,
         error: 'Ticket not found'
@@ -41,7 +41,7 @@ export class CustomerReservationServiceDirectus {
     // 2. Check if ticket is activated (Phase 2 requirement)
     if (ticket.activation_status && ticket.activation_status !== 'active') {
       logger.warn('directus.customer.validate_ticket.not_activated', {
-        ticket_number,
+        ticket_code,
         activation_status: ticket.activation_status
       });
       return {
@@ -51,11 +51,11 @@ export class CustomerReservationServiceDirectus {
     }
 
     // 3. Check if ticket already has a reservation
-    const existingReservation = await directusService.getReservationByTicket(ticket_number);
+    const existingReservation = await directusService.getReservationByTicket(ticket_code);
 
     if (existingReservation && existingReservation.status !== 'CANCELLED') {
       logger.warn('directus.customer.validate_ticket.already_reserved', {
-        ticket_number,
+        ticket_code,
         reservation_id: existingReservation.id
       });
       return {
@@ -69,7 +69,7 @@ export class CustomerReservationServiceDirectus {
       const expiryDate = new Date(ticket.expires_at);
       if (expiryDate < new Date()) {
         logger.warn('directus.customer.validate_ticket.expired', {
-          ticket_number,
+          ticket_code,
           expires_at: ticket.expires_at
         });
         return {
@@ -80,12 +80,12 @@ export class CustomerReservationServiceDirectus {
     }
 
     // Ticket is valid for reservation
-    logger.info('directus.customer.validate_ticket.success', { ticket_number });
+    logger.info('directus.customer.validate_ticket.success', { ticket_code });
 
     return {
       valid: true,
       ticket: {
-        ticket_number: ticket.ticket_code || ticket_number,
+        ticket_code: ticket.ticket_code || ticket_code,
         product_id: ticket.product_id,
         product_name: ticket.product_name || 'Unknown Product',
         status: ticket.status,
@@ -98,9 +98,9 @@ export class CustomerReservationServiceDirectus {
    * Verify contact information (simple validation)
    */
   async verifyContact(request: VerifyContactRequest): Promise<VerifyContactResponse> {
-    const { ticket_number, visitor_name, visitor_phone } = request;
+    const { ticket_code, visitor_name, visitor_phone } = request;
 
-    logger.info('directus.customer.verify_contact', { ticket_number });
+    logger.info('directus.customer.verify_contact', { ticket_code });
 
     // Basic validation
     if (!visitor_name || visitor_name.trim().length < 2) {
@@ -127,16 +127,16 @@ export class CustomerReservationServiceDirectus {
    * Create reservation for ticket and time slot
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_number, slot_id, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, slot_id, visitor_name, visitor_phone, orq } = request;
 
     logger.info('directus.customer.create_reservation.start', {
-      ticket_number,
+      ticket_code,
       slot_id,
       orq
     });
 
     // 1. Validate ticket first
-    const validation = await this.validateTicket({ ticket_number, orq });
+    const validation = await this.validateTicket({ ticket_code, orq });
     if (!validation.valid) {
       return {
         success: false,
@@ -146,7 +146,7 @@ export class CustomerReservationServiceDirectus {
 
     // 2. Create reservation in Directus
     const result = await directusService.createReservation({
-      ticket_id: ticket_number,
+      ticket_id: ticket_code,
       slot_id: slot_id.toString(),
       customer_email: visitor_name + '@example.com', // TODO: collect email separately
       customer_phone: visitor_phone,
@@ -155,7 +155,7 @@ export class CustomerReservationServiceDirectus {
 
     if (!result.success) {
       logger.error('directus.customer.create_reservation.failed', {
-        ticket_number,
+        ticket_code,
         slot_id,
         error: result.error
       });
@@ -166,13 +166,13 @@ export class CustomerReservationServiceDirectus {
     }
 
     // 3. Update ticket status to RESERVED
-    await directusService.updateTicket(ticket_number, {
+    await directusService.updateTicket(ticket_code, {
       status: 'RESERVED',
       reserved_at: new Date().toISOString()
     });
 
     logger.info('directus.customer.create_reservation.success', {
-      ticket_number,
+      ticket_code,
       reservation_id: result.reservation.id
     });
 
@@ -180,7 +180,7 @@ export class CustomerReservationServiceDirectus {
       success: true,
       data: {
         reservation_id: result.reservation.id,
-        ticket_number,
+        ticket_code,
         slot_id: parseInt(slot_id),
         slot_date: '2025-12-01', // TODO: fetch from slot data
         slot_time: '09:00-12:00', // TODO: fetch from slot data
@@ -219,7 +219,7 @@ export class CustomerReservationServiceDirectus {
       success: true,
       data: {
         reservation_id,
-        ticket_number: 'TKT-XXX', // TODO: fetch from reservation
+        ticket_code: 'TKT-XXX', // TODO: fetch from reservation
         new_slot_id: parseInt(new_slot_id),
         new_slot_date: '2025-12-02', // TODO: fetch from slot data
         new_slot_time: '14:00-17:00', // TODO: fetch from slot data

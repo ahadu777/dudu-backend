@@ -61,24 +61,24 @@ export class OperatorValidationServiceDirectus {
    * Returns color-coded validation result (GREEN/YELLOW/RED)
    */
   async validateTicket(request: ValidateTicketRequest): Promise<ValidateTicketResponse> {
-    const { ticket_number, operator_id, terminal_id, orq } = request;
+    const { ticket_code, operator_id, terminal_id, orq } = request;
 
     logger.info('directus.operator.validate_ticket.start', {
-      ticket_number,
+      ticket_code,
       operator_id,
       terminal_id,
       orq
     });
 
     // 1. Get ticket from Directus
-    const ticket = await directusService.getTicketByNumber(ticket_number);
+    const ticket = await directusService.getTicketByNumber(ticket_code);
 
     if (!ticket) {
-      logger.warn('directus.operator.validate_ticket.not_found', { ticket_number });
+      logger.warn('directus.operator.validate_ticket.not_found', { ticket_code });
       return {
         success: true, // API call succeeded
         validation_result: {
-          ticket_number,
+          ticket_code,
           status: 'INVALID',
           color_code: 'RED',
           message: 'Invalid ticket - Deny entry',
@@ -96,13 +96,13 @@ export class OperatorValidationServiceDirectus {
     // 2. Check if ticket is activated
     if (ticket.activation_status && ticket.activation_status !== 'active') {
       logger.warn('directus.operator.validate_ticket.not_activated', {
-        ticket_number,
+        ticket_code,
         activation_status: ticket.activation_status
       });
       return {
         success: true,
         validation_result: {
-          ticket_number,
+          ticket_code,
           status: 'INVALID',
           color_code: 'RED',
           message: 'Ticket not activated - Deny entry',
@@ -118,15 +118,15 @@ export class OperatorValidationServiceDirectus {
     }
 
     // 3. Check if ticket has a reservation
-    const reservation = await directusService.getReservationByTicket(ticket_number);
+    const reservation = await directusService.getReservationByTicket(ticket_code);
 
     if (!reservation) {
       // YELLOW: Activated but no reservation
-      logger.warn('directus.operator.validate_ticket.no_reservation', { ticket_number });
+      logger.warn('directus.operator.validate_ticket.no_reservation', { ticket_code });
       return {
         success: true,
         validation_result: {
-          ticket_number,
+          ticket_code,
           status: 'RESERVED', // Status from ticket
           color_code: 'YELLOW',
           message: 'Warning: No reservation found for this ticket',
@@ -148,14 +148,14 @@ export class OperatorValidationServiceDirectus {
     if (reservationDate !== today) {
       // YELLOW: Reservation not for today
       logger.warn('directus.operator.validate_ticket.wrong_date', {
-        ticket_number,
+        ticket_code,
         reservation_date: reservationDate,
         today
       });
       return {
         success: true,
         validation_result: {
-          ticket_number,
+          ticket_code,
           status: 'RESERVED',
           color_code: 'YELLOW',
           message: `Warning: Reservation is for ${reservationDate}, not today`,
@@ -171,11 +171,11 @@ export class OperatorValidationServiceDirectus {
     }
 
     // 5. GREEN: Valid reservation for today
-    logger.info('directus.operator.validate_ticket.valid', { ticket_number });
+    logger.info('directus.operator.validate_ticket.valid', { ticket_code });
     return {
       success: true,
       validation_result: {
-        ticket_number,
+        ticket_code,
         status: 'RESERVED',
         color_code: 'GREEN',
         message: 'Valid reservation - Allow entry',
@@ -194,10 +194,10 @@ export class OperatorValidationServiceDirectus {
    * Verify ticket entry (mark as verified)
    */
   async verifyTicket(request: VerifyTicketRequest): Promise<VerifyTicketResponse> {
-    const { ticket_number, operator_id, terminal_id, validation_decision, orq } = request;
+    const { ticket_code, operator_id, terminal_id, validation_decision, orq } = request;
 
     logger.info('directus.operator.verify_ticket.start', {
-      ticket_number,
+      ticket_code,
       operator_id,
       terminal_id,
       validation_decision,
@@ -205,11 +205,11 @@ export class OperatorValidationServiceDirectus {
     });
 
     if (validation_decision === 'DENY') {
-      logger.info('directus.operator.verify_ticket.denied', { ticket_number, operator_id });
+      logger.info('directus.operator.verify_ticket.denied', { ticket_code, operator_id });
       return {
         success: true,
         data: {
-          ticket_number,
+          ticket_code,
           verification_status: 'DENIED',
           verified_at: new Date().toISOString(),
           operator_id,
@@ -219,14 +219,14 @@ export class OperatorValidationServiceDirectus {
     }
 
     // Update ticket status to VERIFIED
-    const ticketUpdated = await directusService.updateTicket(ticket_number, {
+    const ticketUpdated = await directusService.updateTicket(ticket_code, {
       status: 'VERIFIED',
       verified_at: new Date().toISOString(),
       verified_by: operator_id
     });
 
     // Update reservation status to VERIFIED
-    const reservation = await directusService.getReservationByTicket(ticket_number);
+    const reservation = await directusService.getReservationByTicket(ticket_code);
     if (reservation) {
       await directusService.updateReservation(reservation.id, {
         status: 'VERIFIED',
@@ -235,7 +235,7 @@ export class OperatorValidationServiceDirectus {
     }
 
     if (!ticketUpdated) {
-      logger.error('directus.operator.verify_ticket.failed', { ticket_number });
+      logger.error('directus.operator.verify_ticket.failed', { ticket_code });
       return {
         success: false,
         error: 'Failed to verify ticket'
@@ -243,14 +243,14 @@ export class OperatorValidationServiceDirectus {
     }
 
     logger.info('directus.operator.verify_ticket.success', {
-      ticket_number,
+      ticket_code,
       operator_id
     });
 
     return {
       success: true,
       data: {
-        ticket_number,
+        ticket_code,
         verification_status: 'VERIFIED',
         verified_at: new Date().toISOString(),
         operator_id,
