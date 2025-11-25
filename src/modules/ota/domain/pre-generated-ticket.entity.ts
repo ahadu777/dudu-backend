@@ -1,6 +1,7 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 export type TicketStatus = 'PRE_GENERATED' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'CANCELLED';
+export type DistributionMode = 'direct_sale' | 'reseller_batch';
 
 @Entity('pre_generated_tickets')
 @Index(['batch_id']) // For batch operations
@@ -9,6 +10,7 @@ export type TicketStatus = 'PRE_GENERATED' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'CA
 @Index(['customer_email']) // For customer lookups
 @Index(['partner_id']) // For partner isolation
 @Index(['partner_id', 'status']) // For partner ticket queries
+@Index(['distribution_mode']) // For sales channel analytics
 export class PreGeneratedTicketEntity {
   @PrimaryColumn({ type: 'varchar', length: 100 })
   ticket_code!: string;
@@ -65,6 +67,33 @@ export class PreGeneratedTicketEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   activated_at?: Date;
+
+  // === Export-friendly fields (denormalized from batch and reseller) ===
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    comment: '票券金额（从批次定价快照中提取，便于导出）'
+  })
+  ticket_price?: number;
+
+  @Column({
+    type: 'enum',
+    enum: ['direct_sale', 'reseller_batch'],
+    nullable: true,
+    comment: '销售模式：direct_sale=直销, reseller_batch=分销'
+  })
+  distribution_mode?: DistributionMode;
+
+  @Column({
+    type: 'varchar',
+    length: 200,
+    nullable: true,
+    comment: '分销商名称（仅分销模式时有值）'
+  })
+  reseller_name?: string;
 
   @CreateDateColumn()
   created_at!: Date;

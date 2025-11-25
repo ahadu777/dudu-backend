@@ -67,6 +67,48 @@ sequenceDiagram
   QR-->>-WeChatUser: HTML page with verification result
 ```
 
+## 1.5) Endpoint Purpose Classification
+
+### 查询端点（不消耗权益）Viewing/Query Endpoints (NO Redemption)
+
+这些端点提供票券信息但**不会消耗权益entitlements**：
+
+- **GET /qr/verify** - WeChat HTML 查看页面（仅中文，不用于OTA核销流程）
+  - **用途**: 终端消费者在微信浏览器中查看票券
+  - **使用场景**: 顾客在到访场馆前检查票券状态
+  - **返回**: HTML 页面显示票券详情
+  - **⚠️ 重要**: 此端点**不是**OTA核销流程的一部分
+
+- **POST /qr/decrypt** - 解密二维码并返回完整票券信息（不核销）
+  - **用途**: 操作员在核销前预览完整票券信息
+  - **使用场景**: 扫描QR后一次性获取所有信息（无需再调用其他接口）
+  - **返回**: JSON格式包含 JTI、ticket_code、过期信息 + **完整票券详情**（customer_info, entitlements, product_info）
+  - **增强日期**: 2025-11-17（合并了GET /qr/:code/info功能）
+
+- **GET /qr/:code/info** - 查询票券详细信息（不核销）
+  - **用途**: 获取完整票券信息包括顾客信息
+  - **使用场景**: 前端显示票券详情、顾客类型、权益明细
+  - **返回**: JSON格式包含 customer_info、entitlements、product_info
+
+### 核销端点（消耗权益）Redemption Endpoint (Consumes Entitlements)
+
+- **POST /venue/scan** - 实际核销使用 encrypted_data
+  - **用途**: 核销特定功能并减少剩余使用次数
+  - **使用场景**: 操作员在场馆扫描二维码授予访问/服务
+  - **返回**: 更新后的权益及剩余使用次数
+  - **参考**: [venue-enhanced-scanning](venue-enhanced-scanning.md)
+
+### OTA核销流程（正确流程）
+
+```
+1. POST /qr/:code → 生成加密QR，返回 encrypted_data
+2. [可选] POST /qr/decrypt → 预览票券信息（不核销）
+3. POST /venue/scan → 使用 encrypted_data 作为 qr_token 实际核销
+```
+
+**❌ 常见错误**: 将 GET /qr/verify（微信查看）误认为核销流程的一部分
+**✅ 正确理解**: GET /qr/verify 仅用于终端消费者在微信中查看票券，不参与OTA核销
+
 ## 2) Contract (OAS 3.0.3)
 ```yaml
 paths:
@@ -510,7 +552,17 @@ paths:
 ```
 
 ## 3) Invariants
-- QR codes expire after configurable time (1-1440 minutes, default 30)
+- **QR codes expire** after configurable time (ticket type dependent)
+  - **Important**: QR code expiry is distinct from ticket validity
+  - **OTA tickets (CRUISE-*, BATCH-*, FERRY-*, OTA-*)**:
+    - QR expiry: **100 years (permanent)** - 52,560,000 minutes
+    - Ticket usability determined by ticket status (PRE_GENERATED, ACTIVE, USED, etc.)
+    - QR code remains valid indefinitely for partner distribution
+  - **Normal tickets (direct sales)**:
+    - QR expiry: Temporary security token (default 30 minutes)
+    - Configurable range: 1-1440 minutes
+  - **Ticket validity**: Permanent after activation (no automatic expiry)
+  - Expired QR codes can be regenerated on-demand for same ticket
 - Encrypted QR contains: ticket_code, product_id, status, owner_id, expiry
 - URL-based QR redirects to /qr/verify with encrypted token
 - OTA partners can only generate QR for their own tickets

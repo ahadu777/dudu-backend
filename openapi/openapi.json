@@ -18,7 +18,9 @@
   "paths": {
     "/healthz": {
       "get": {
-        "tags": ["Infrastructure"],
+        "tags": [
+          "Infrastructure"
+        ],
         "summary": "Health check endpoint",
         "description": "Liveness probe for service health monitoring",
         "responses": {
@@ -43,7 +45,9 @@
     },
     "/version": {
       "get": {
-        "tags": ["Infrastructure"],
+        "tags": [
+          "Infrastructure"
+        ],
         "summary": "Service version information",
         "description": "Returns service name and version",
         "responses": {
@@ -72,7 +76,9 @@
     },
     "/catalog": {
       "get": {
-        "tags": ["Commerce"],
+        "tags": [
+          "Commerce"
+        ],
         "summary": "Get product catalog",
         "description": "Retrieve list of available products for purchase",
         "responses": {
@@ -99,7 +105,9 @@
     },
     "/catalog/promotions/{id}": {
       "get": {
-        "tags": ["Commerce"],
+        "tags": [
+          "Commerce"
+        ],
         "summary": "Get detailed promotion information",
         "description": "Returns enhanced product details including description, pricing, features, inventory, and marketing content",
         "parameters": [
@@ -155,7 +163,9 @@
     },
     "/travel/hot-cities": {
       "get": {
-        "tags": ["Travel"],
+        "tags": [
+          "Travel"
+        ],
         "summary": "List popular origins/destinations",
         "description": "Returns the cached list of hot cities shown to travelers",
         "responses": {
@@ -174,7 +184,9 @@
     },
     "/travel/blackout-dates": {
       "get": {
-        "tags": ["Travel"],
+        "tags": [
+          "Travel"
+        ],
         "summary": "Get annual blackout dates",
         "description": "Returns dates where DeepTravel routes are unavailable",
         "responses": {
@@ -193,7 +205,9 @@
     },
     "/travel/search": {
       "get": {
-        "tags": ["Travel"],
+        "tags": [
+          "Travel"
+        ],
         "summary": "Search travel routes and bundles",
         "description": "Search available DeepTravel routes with pricing and bundle suggestions",
         "parameters": [
@@ -243,7 +257,7 @@
               "minimum": 1,
               "maximum": 10
             },
-            "description": "Total passenger count override (≤10)"
+            "description": "Total passenger count override (\u226410)"
           }
         ],
         "responses": {
@@ -265,7 +279,9 @@
     },
     "/orders": {
       "post": {
-        "tags": ["Commerce"],
+        "tags": [
+          "Commerce"
+        ],
         "summary": "Create new order",
         "description": "Create a new order for one or more products",
         "requestBody": {
@@ -274,7 +290,12 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["user_id", "items", "channel_id", "out_trade_no"],
+                "required": [
+                  "user_id",
+                  "items",
+                  "channel_id",
+                  "out_trade_no"
+                ],
                 "properties": {
                   "user_id": {
                     "type": "integer",
@@ -321,7 +342,11 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["pending", "paid", "cancelled"]
+                      "enum": [
+                        "pending",
+                        "paid",
+                        "cancelled"
+                      ]
                     },
                     "amounts": {
                       "type": "object",
@@ -373,7 +398,9 @@
     },
     "/reservations": {
       "post": {
-        "tags": ["Reservations"],
+        "tags": [
+          "Reservations"
+        ],
         "summary": "Create seat reservation",
         "description": "Locks seats for a DeepTravel route before payment",
         "requestBody": {
@@ -421,7 +448,9 @@
     },
     "/reservations/{reservationId}": {
       "delete": {
-        "tags": ["Reservations"],
+        "tags": [
+          "Reservations"
+        ],
         "summary": "Release reservation",
         "description": "Releases a previously held reservation",
         "parameters": [
@@ -449,7 +478,9 @@
     },
     "/payments/notify": {
       "post": {
-        "tags": ["Commerce"],
+        "tags": [
+          "Commerce"
+        ],
         "summary": "Payment notification webhook",
         "description": "Receive payment notification from payment gateway and synchronously issue tickets",
         "requestBody": {
@@ -458,7 +489,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["out_trade_no", "trade_status", "total_amount"],
+                "required": [
+                  "out_trade_no",
+                  "trade_status",
+                  "total_amount"
+                ],
                 "properties": {
                   "out_trade_no": {
                     "type": "string",
@@ -466,7 +501,10 @@
                   },
                   "trade_status": {
                     "type": "string",
-                    "enum": ["TRADE_SUCCESS", "TRADE_FAILED"]
+                    "enum": [
+                      "TRADE_SUCCESS",
+                      "TRADE_FAILED"
+                    ]
                   },
                   "total_amount": {
                     "type": "string",
@@ -524,7 +562,9 @@
     },
     "/payments/wechat/session": {
       "post": {
-        "tags": ["Payments"],
+        "tags": [
+          "Payments"
+        ],
         "summary": "Create WeChat pay session",
         "description": "Generates WeChat prepay parameters for DeepTravel orders",
         "requestBody": {
@@ -559,7 +599,9 @@
     },
     "/my/tickets": {
       "get": {
-        "tags": ["Tickets"],
+        "tags": [
+          "Tickets"
+        ],
         "summary": "Get user's tickets",
         "description": "Retrieve all tickets owned by the authenticated user",
         "security": [
@@ -601,7 +643,9 @@
     },
     "/tickets/{code}/qr-token": {
       "post": {
-        "tags": ["Tickets"],
+        "tags": [
+          "Tickets"
+        ],
         "summary": "Generate QR token for ticket",
         "description": "Generate a time-limited QR token for ticket scanning",
         "security": [
@@ -666,7 +710,9 @@
     },
     "/tickets/{code}/cancel": {
       "post": {
-        "tags": ["Tickets"],
+        "tags": [
+          "Tickets"
+        ],
         "summary": "Cancel ticket and initiate refund",
         "description": "Cancel a ticket and calculate refund amount based on cancellation policies",
         "security": [
@@ -711,7 +757,9 @@
                   "properties": {
                     "ticket_status": {
                       "type": "string",
-                      "enum": ["void"]
+                      "enum": [
+                        "void"
+                      ]
                     },
                     "refund_amount": {
                       "type": "number",
@@ -750,7 +798,9 @@
     },
     "/my/refunds": {
       "get": {
-        "tags": ["Tickets"],
+        "tags": [
+          "Tickets"
+        ],
         "summary": "Get user's refunds",
         "description": "Retrieve all refunds for the authenticated user",
         "security": [
@@ -792,7 +842,9 @@
     },
     "/cancellation-policies": {
       "get": {
-        "tags": ["Policies"],
+        "tags": [
+          "Policies"
+        ],
         "summary": "Get cancellation policies",
         "description": "Retrieve available cancellation policies and examples",
         "responses": {
@@ -825,7 +877,9 @@
     },
     "/profile": {
       "get": {
-        "tags": ["ProfileManagement"],
+        "tags": [
+          "ProfileManagement"
+        ],
         "summary": "Get current user's profile information",
         "description": "Retrieve authenticated user's profile data including personal information and preferences",
         "security": [
@@ -867,7 +921,9 @@
         }
       },
       "put": {
-        "tags": ["ProfileManagement"],
+        "tags": [
+          "ProfileManagement"
+        ],
         "summary": "Update user profile information",
         "description": "Update authenticated user's profile details",
         "security": [
@@ -896,7 +952,11 @@
                     "properties": {
                       "language": {
                         "type": "string",
-                        "enum": ["en", "es", "fr"]
+                        "enum": [
+                          "en",
+                          "es",
+                          "fr"
+                        ]
                       },
                       "timezone": {
                         "type": "string"
@@ -957,7 +1017,9 @@
     },
     "/profile/settings": {
       "get": {
-        "tags": ["ProfileManagement"],
+        "tags": [
+          "ProfileManagement"
+        ],
         "summary": "Get user settings and preferences",
         "description": "Retrieve authenticated user's settings including notifications, privacy, and display preferences",
         "security": [
@@ -989,7 +1051,9 @@
         }
       },
       "put": {
-        "tags": ["ProfileManagement"],
+        "tags": [
+          "ProfileManagement"
+        ],
         "summary": "Update user settings and preferences",
         "description": "Update authenticated user's settings and preferences",
         "security": [
@@ -1029,7 +1093,10 @@
                     "properties": {
                       "profile_visibility": {
                         "type": "string",
-                        "enum": ["public", "private"]
+                        "enum": [
+                          "public",
+                          "private"
+                        ]
                       },
                       "show_purchase_history": {
                         "type": "boolean"
@@ -1044,18 +1111,32 @@
                     "properties": {
                       "language": {
                         "type": "string",
-                        "enum": ["en", "es", "fr", "de"]
+                        "enum": [
+                          "en",
+                          "es",
+                          "fr",
+                          "de"
+                        ]
                       },
                       "timezone": {
                         "type": "string"
                       },
                       "date_format": {
                         "type": "string",
-                        "enum": ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]
+                        "enum": [
+                          "MM/DD/YYYY",
+                          "DD/MM/YYYY",
+                          "YYYY-MM-DD"
+                        ]
                       },
                       "currency_display": {
                         "type": "string",
-                        "enum": ["USD", "EUR", "GBP", "CAD"]
+                        "enum": [
+                          "USD",
+                          "EUR",
+                          "GBP",
+                          "CAD"
+                        ]
                       }
                     }
                   }
@@ -1110,7 +1191,9 @@
     },
     "/profile/activity": {
       "get": {
-        "tags": ["ProfileManagement"],
+        "tags": [
+          "ProfileManagement"
+        ],
         "summary": "Get user activity history",
         "description": "Retrieve authenticated user's activity history with filtering and pagination",
         "security": [
@@ -1149,7 +1232,14 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": ["profile", "order", "ticket", "login", "settings", "all"],
+              "enum": [
+                "profile",
+                "order",
+                "ticket",
+                "login",
+                "settings",
+                "all"
+              ],
               "default": "all"
             }
           },
@@ -1220,7 +1310,9 @@
     },
     "/api/v1/auth/demo-token": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Generate demo JWT token",
         "description": "Generate a demo JWT token for testing authenticated endpoints",
         "requestBody": {
@@ -1289,7 +1381,9 @@
     },
     "/api/v1/auth/wechat/login": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "WeChat mini-program login",
         "description": "Exchange WeChat temporary code for JWT token and user profile. Supports both Mock mode (development) and Database mode (production) with identical API contract.",
         "requestBody": {
@@ -1298,7 +1392,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["code"],
+                "required": [
+                  "code"
+                ],
                 "properties": {
                   "code": {
                     "type": "string",
@@ -1387,7 +1483,9 @@
                       "items": {
                         "type": "string"
                       },
-                      "example": ["code is required"]
+                      "example": [
+                        "code is required"
+                      ]
                     }
                   }
                 }
@@ -1449,7 +1547,9 @@
     },
     "/api/v1/auth/wechat/phone": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Bind WeChat user phone number",
         "description": "Exchange phone authorization code for user phone number. Protected endpoint requiring JWT authentication. Supports both Mock mode (deterministic phone generation) and Database mode (real WeChat API).",
         "security": [
@@ -1463,7 +1563,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["code"],
+                "required": [
+                  "code"
+                ],
                 "properties": {
                   "code": {
                     "type": "string",
@@ -1545,7 +1647,9 @@
                       "items": {
                         "type": "string"
                       },
-                      "example": ["code is required"]
+                      "example": [
+                        "code is required"
+                      ]
                     }
                   }
                 }
@@ -1607,7 +1711,9 @@
     },
     "/api/ota/inventory": {
       "get": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "Get OTA inventory availability",
         "description": "Retrieve real-time availability for cruise packages allocated to OTA channel with pricing context",
         "security": [
@@ -1652,7 +1758,9 @@
     },
     "/api/ota/reserve": {
       "post": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "Create package reservation",
         "description": "Reserve cruise package inventory for OTA sales pipeline with 24-hour automatic expiry",
         "security": [
@@ -1726,7 +1834,9 @@
     },
     "/api/ota/reservations": {
       "get": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "List active reservations",
         "description": "Retrieve all active reservations for the authenticated OTA partner",
         "security": [
@@ -1772,7 +1882,9 @@
     },
     "/api/ota/reservations/{reservationId}": {
       "get": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "Get reservation details",
         "description": "Retrieve detailed information for a specific reservation",
         "security": [
@@ -1827,7 +1939,9 @@
     },
     "/api/ota/reservations/cleanup": {
       "post": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "Manual reservation cleanup",
         "description": "Manually trigger cleanup of expired reservations (for testing purposes)",
         "security": [
@@ -1871,7 +1985,9 @@
     },
     "/api/ota/tickets/bulk-generate": {
       "post": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "Generate pre-made tickets for OTA sales",
         "description": "Create a batch of pre-generated tickets that can be activated later by customers",
         "security": [
@@ -1885,7 +2001,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["product_id", "quantity", "batch_id"],
+                "required": [
+                  "product_id",
+                  "quantity",
+                  "batch_id"
+                ],
                 "properties": {
                   "product_id": {
                     "type": "integer",
@@ -1906,7 +2026,10 @@
                   },
                   "distribution_mode": {
                     "type": "string",
-                    "enum": ["direct_sale", "reseller_batch"],
+                    "enum": [
+                      "direct_sale",
+                      "reseller_batch"
+                    ],
                     "description": "Distribution mode - affects expiration time and validation",
                     "example": "direct_sale",
                     "default": "direct_sale"
@@ -1928,7 +2051,11 @@
                           "properties": {
                             "customer_type": {
                               "type": "string",
-                              "enum": ["adult", "child", "elderly"],
+                              "enum": [
+                                "adult",
+                                "child",
+                                "elderly"
+                              ],
                               "example": "adult"
                             },
                             "unit_price": {
@@ -2019,7 +2146,9 @@
                           },
                           "status": {
                             "type": "string",
-                            "enum": ["PRE_GENERATED"]
+                            "enum": [
+                              "PRE_GENERATED"
+                            ]
                           },
                           "entitlements": {
                             "type": "array",
@@ -2052,7 +2181,9 @@
     },
     "/api/ota/tickets/{code}/activate": {
       "post": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "Activate pre-made ticket with customer details",
         "description": "Convert a PRE_GENERATED ticket to ACTIVE status with customer information",
         "security": [
@@ -2077,11 +2208,19 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["customer_details", "payment_reference"],
+                "required": [
+                  "customer_details",
+                  "payment_reference",
+                  "customer_type"
+                ],
                 "properties": {
                   "customer_details": {
                     "type": "object",
-                    "required": ["name", "email", "phone"],
+                    "required": [
+                      "name",
+                      "email",
+                      "phone"
+                    ],
                     "properties": {
                       "name": {
                         "type": "string",
@@ -2102,6 +2241,22 @@
                     "type": "string",
                     "description": "OTA payment transaction reference",
                     "example": "PAY-OTA-2025-001"
+                  },
+                  "customer_type": {
+                    "type": "string",
+                    "enum": [
+                      "adult",
+                      "child",
+                      "elderly"
+                    ],
+                    "description": "Customer type for pricing calculation",
+                    "example": "adult"
+                  },
+                  "visit_date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Intended visit date (YYYY-MM-DD) - Used for weekend pricing calculation. If omitted, base pricing applies.",
+                    "example": "2025-11-23"
                   }
                 }
               }
@@ -2130,11 +2285,32 @@
                     },
                     "status": {
                       "type": "string",
-                      "enum": ["ACTIVE"]
+                      "enum": [
+                        "ACTIVE"
+                      ]
                     },
                     "activated_at": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "customer_type": {
+                      "type": "string",
+                      "enum": [
+                        "adult",
+                        "child",
+                        "elderly"
+                      ],
+                      "example": "adult"
+                    },
+                    "ticket_price": {
+                      "type": "number",
+                      "description": "Final ticket price (includes weekend premium if applicable)",
+                      "example": 318
+                    },
+                    "currency": {
+                      "type": "string",
+                      "description": "Price currency code",
+                      "example": "HKD"
                     }
                   }
                 }
@@ -2146,7 +2322,9 @@
     },
     "/api/ota/orders": {
       "get": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "List all confirmed OTA orders",
         "description": "Retrieve paginated list of orders created through OTA platform",
         "security": [
@@ -2206,7 +2384,11 @@
                           },
                           "status": {
                             "type": "string",
-                            "enum": ["confirmed", "completed", "cancelled"]
+                            "enum": [
+                              "confirmed",
+                              "completed",
+                              "cancelled"
+                            ]
                           },
                           "created_at": {
                             "type": "string",
@@ -2233,7 +2415,9 @@
     },
     "/api/ota/orders/{id}/tickets": {
       "get": {
-        "tags": ["OTA Integration"],
+        "tags": [
+          "OTA Integration"
+        ],
         "summary": "Get QR codes and ticket details for order",
         "description": "Retrieve all tickets associated with a specific order for customer delivery",
         "security": [
@@ -2292,7 +2476,11 @@
                           },
                           "status": {
                             "type": "string",
-                            "enum": ["ACTIVE", "REDEEMED", "EXPIRED"],
+                            "enum": [
+                              "ACTIVE",
+                              "REDEEMED",
+                              "EXPIRED"
+                            ],
                             "example": "ACTIVE"
                           }
                         }
@@ -2308,7 +2496,10 @@
     },
     "/api/ota/batches/{batch_id}/redemptions": {
       "get": {
-        "tags": ["OTA Integration", "Analytics"],
+        "tags": [
+          "OTA Integration",
+          "Analytics"
+        ],
         "summary": "Get redemption events for specific batch",
         "description": "Retrieve all redemption events for tickets in a specific batch, used for reseller billing and performance tracking",
         "security": [
@@ -2368,7 +2559,7 @@
                           },
                           "wholesale_price": {
                             "type": "number",
-                            "example": 288.00
+                            "example": 288.0
                           }
                         }
                       }
@@ -2403,7 +2594,10 @@
     },
     "/api/ota/billing/summary": {
       "get": {
-        "tags": ["OTA Integration", "Analytics"],
+        "tags": [
+          "OTA Integration",
+          "Analytics"
+        ],
         "summary": "Get billing summary for reseller",
         "description": "Generate billing summary for OTA resellers based on ticket redemptions in a specified period",
         "security": [
@@ -2461,7 +2655,7 @@
                           },
                           "total_amount_due": {
                             "type": "number",
-                            "example": 12960.00
+                            "example": 12960.0
                           },
                           "batches": {
                             "type": "array",
@@ -2478,11 +2672,11 @@
                                 },
                                 "wholesale_rate": {
                                   "type": "number",
-                                  "example": 288.00
+                                  "example": 288.0
                                 },
                                 "amount_due": {
                                   "type": "number",
-                                  "example": 12960.00
+                                  "example": 12960.0
                                 }
                               }
                             }
@@ -2518,9 +2712,535 @@
         }
       }
     },
+    "/api/ota/resellers": {
+      "get": {
+        "tags": [
+          "OTA Integration",
+          "Reseller Management"
+        ],
+        "summary": "List all resellers",
+        "description": "Retrieve all resellers for the authenticated OTA partner with partner isolation",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resellers retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "example": 2
+                    },
+                    "resellers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Reseller"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "OTA Integration",
+          "Reseller Management"
+        ],
+        "summary": "Create new reseller",
+        "description": "Create a new reseller for the authenticated OTA partner",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reseller_name"
+                ],
+                "properties": {
+                  "reseller_code": {
+                    "type": "string",
+                    "example": "RSL-ctrip-001",
+                    "description": "Unique code for the reseller (auto-generated as RSL-{partner_id}-{counter} if not provided)"
+                  },
+                  "reseller_name": {
+                    "type": "string",
+                    "example": "\u5e7f\u5dde\u56fd\u65c5",
+                    "description": "Display name of the reseller"
+                  },
+                  "contact_email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "contact@gdtravel.com"
+                  },
+                  "contact_phone": {
+                    "type": "string",
+                    "example": "+86-138-0000-0001"
+                  },
+                  "commission_rate": {
+                    "type": "number",
+                    "format": "decimal",
+                    "example": 0.15,
+                    "description": "Commission rate (e.g., 0.15 = 15%)"
+                  },
+                  "region": {
+                    "type": "string",
+                    "example": "\u534e\u5357\u5730\u533a"
+                  },
+                  "tier": {
+                    "type": "string",
+                    "enum": [
+                      "platinum",
+                      "gold",
+                      "silver",
+                      "bronze"
+                    ],
+                    "example": "gold"
+                  },
+                  "settlement_cycle": {
+                    "type": "string",
+                    "enum": [
+                      "weekly",
+                      "monthly",
+                      "quarterly"
+                    ],
+                    "example": "monthly"
+                  },
+                  "payment_terms": {
+                    "type": "string",
+                    "example": "Net 30"
+                  },
+                  "notes": {
+                    "type": "string",
+                    "example": "VIP reseller partner"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reseller created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reseller"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Missing required fields"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/ota/resellers/{id}": {
+      "get": {
+        "tags": [
+          "OTA Integration",
+          "Reseller Management"
+        ],
+        "summary": "Get reseller details",
+        "description": "Retrieve detailed information for a specific reseller (partner isolation enforced)",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "Reseller ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reseller details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResellerDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reseller not found or not owned by authenticated partner"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OTA Integration",
+          "Reseller Management"
+        ],
+        "summary": "Update reseller",
+        "description": "Update an existing reseller's information (partner isolation enforced)",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "Reseller ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reseller_name": {
+                    "type": "string",
+                    "example": "\u5e7f\u5dde\u56fd\u65c5 (Updated)"
+                  },
+                  "contact_email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "contact_phone": {
+                    "type": "string"
+                  },
+                  "commission_rate": {
+                    "type": "number",
+                    "format": "decimal",
+                    "example": 0.2
+                  },
+                  "region": {
+                    "type": "string"
+                  },
+                  "tier": {
+                    "type": "string",
+                    "enum": [
+                      "platinum",
+                      "gold",
+                      "silver",
+                      "bronze"
+                    ]
+                  },
+                  "settlement_cycle": {
+                    "type": "string",
+                    "enum": [
+                      "weekly",
+                      "monthly",
+                      "quarterly"
+                    ]
+                  },
+                  "payment_terms": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reseller updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reseller"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reseller not found or not owned by authenticated partner"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "OTA Integration",
+          "Reseller Management"
+        ],
+        "summary": "Deactivate reseller",
+        "description": "Soft delete a reseller by setting status to 'terminated' (partner isolation enforced)",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "Reseller ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reseller deactivated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Reseller deactivated successfully"
+                    },
+                    "reseller_id": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "terminated"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reseller not found or not owned by authenticated partner"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/ota/resellers/summary": {
+      "get": {
+        "tags": [
+          "OTA Integration",
+          "Reseller Management"
+        ],
+        "summary": "Get reseller summary from batch metadata",
+        "description": "Aggregate reseller information and statistics from batch metadata (JSON-based reseller tracking)",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["active", "all"],
+              "default": "all"
+            },
+            "description": "Filter by reseller status (active = only active batches)"
+          },
+          {
+            "name": "date_range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2025-11"
+            },
+            "description": "Filter by date range in YYYY-MM format"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reseller summary retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "example": 2,
+                      "description": "Total number of resellers"
+                    },
+                    "resellers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "reseller_name": {
+                            "type": "string",
+                            "example": "携程旅行社"
+                          },
+                          "contact_email": {
+                            "type": "string",
+                            "format": "email",
+                            "example": "partner@ctrip.com"
+                          },
+                          "contact_phone": {
+                            "type": "string",
+                            "example": "138-1234-5678"
+                          },
+                          "statistics": {
+                            "type": "object",
+                            "properties": {
+                              "total_batches": {
+                                "type": "integer",
+                                "example": 3,
+                                "description": "Total number of batches generated"
+                              },
+                              "total_tickets_generated": {
+                                "type": "integer",
+                                "example": 150,
+                                "description": "Total tickets generated across all batches"
+                              },
+                              "total_tickets_activated": {
+                                "type": "integer",
+                                "example": 45,
+                                "description": "Total tickets activated"
+                              },
+                              "activation_rate": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.30,
+                                "description": "Activation rate (0.30 = 30%)"
+                              }
+                            }
+                          },
+                          "commission": {
+                            "type": "object",
+                            "properties": {
+                              "avg_rate": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.15,
+                                "description": "Average commission rate (0.15 = 15%)"
+                              },
+                              "settlement_cycle": {
+                                "type": "string",
+                                "enum": ["weekly", "monthly", "quarterly"],
+                                "example": "monthly"
+                              }
+                            }
+                          },
+                          "first_batch_date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2025-11-01T10:00:00Z"
+                          },
+                          "last_batch_date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2025-11-18T15:00:00Z"
+                          },
+                          "days_active": {
+                            "type": "integer",
+                            "example": 17,
+                            "description": "Number of days since first batch"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "total": 2,
+                  "resellers": [
+                    {
+                      "reseller_name": "携程旅行社",
+                      "contact_email": "partner@ctrip.com",
+                      "contact_phone": "138-1234-5678",
+                      "statistics": {
+                        "total_batches": 3,
+                        "total_tickets_generated": 150,
+                        "total_tickets_activated": 45,
+                        "activation_rate": 0.30
+                      },
+                      "commission": {
+                        "avg_rate": 0.15,
+                        "settlement_cycle": "monthly"
+                      },
+                      "first_batch_date": "2025-11-01T10:00:00Z",
+                      "last_batch_date": "2025-11-18T15:00:00Z",
+                      "days_active": 17
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/api/ota/batches/{batch_id}/analytics": {
       "get": {
-        "tags": ["OTA Integration", "Analytics"],
+        "tags": [
+          "OTA Integration",
+          "Analytics"
+        ],
         "summary": "Real-time batch performance analytics",
         "description": "Get detailed performance metrics for a specific batch including conversion rates and revenue tracking",
         "security": [
@@ -2591,7 +3311,7 @@
                         },
                         "redemption_rate": {
                           "type": "number",
-                          "example": 0.60,
+                          "example": 0.6,
                           "description": "redeemed/activated"
                         },
                         "overall_utilization": {
@@ -2606,12 +3326,12 @@
                       "properties": {
                         "potential_revenue": {
                           "type": "number",
-                          "example": 28800.00,
+                          "example": 28800.0,
                           "description": "all tickets * wholesale_price"
                         },
                         "realized_revenue": {
                           "type": "number",
-                          "example": 12960.00,
+                          "example": 12960.0,
                           "description": "redeemed tickets * wholesale_price"
                         }
                       }
@@ -2624,14 +3344,19 @@
                           "items": {
                             "type": "string"
                           },
-                          "example": ["luxury_travelers", "asia_pacific"]
+                          "example": [
+                            "luxury_travelers",
+                            "asia_pacific"
+                          ]
                         },
                         "special_conditions": {
                           "type": "array",
                           "items": {
                             "type": "string"
                           },
-                          "example": ["limited_time_offer"]
+                          "example": [
+                            "limited_time_offer"
+                          ]
                         },
                         "promotional_code": {
                           "type": "string",
@@ -2669,7 +3394,10 @@
     },
     "/api/ota/campaigns/analytics": {
       "get": {
-        "tags": ["OTA Integration", "Analytics"],
+        "tags": [
+          "OTA Integration",
+          "Analytics"
+        ],
         "summary": "Analytics by campaign type across all batches",
         "description": "Get aggregated performance analytics across all batches grouped by campaign type",
         "security": [
@@ -2684,7 +3412,13 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": ["early_bird", "flash_sale", "seasonal", "group_booking", "ALL"],
+              "enum": [
+                "early_bird",
+                "flash_sale",
+                "seasonal",
+                "group_booking",
+                "ALL"
+              ],
               "example": "flash_sale"
             },
             "description": "Optional campaign type filter"
@@ -2738,7 +3472,10 @@
                             "items": {
                               "type": "string"
                             },
-                            "example": ["Travel Agency ABC", "Resort Partners Ltd"]
+                            "example": [
+                              "Travel Agency ABC",
+                              "Resort Partners Ltd"
+                            ]
                           }
                         }
                       }
@@ -2747,6 +3484,322 @@
                 }
               }
             }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Commerce"
+        ],
+        "summary": "List user's orders",
+        "description": "Get a list of all orders for the authenticated user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Order"
+                      }
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/my/orders": {
+      "get": {
+        "tags": [
+          "Commerce"
+        ],
+        "summary": "List user's orders",
+        "description": "Get a list of all orders for the authenticated user (alternative endpoint)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Order"
+                      }
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/pricing/calculate": {
+      "post": {
+        "tags": [
+          "Commerce"
+        ],
+        "summary": "Calculate total price for complex booking",
+        "description": "Calculates pricing based on multiple variables - dates, customer types, package tiers, add-ons",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "booking_dates",
+                  "customer_breakdown"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "integer",
+                    "description": "Product to price",
+                    "example": 106
+                  },
+                  "booking_dates": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "description": "Dates for usage/booking",
+                    "example": [
+                      "2025-11-10"
+                    ]
+                  },
+                  "customer_breakdown": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "customer_type",
+                        "count"
+                      ],
+                      "properties": {
+                        "customer_type": {
+                          "type": "string",
+                          "enum": [
+                            "adult",
+                            "child",
+                            "elderly"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  },
+                  "addons": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "addon_id": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "package_tier": {
+                    "type": "string",
+                    "enum": [
+                      "premium",
+                      "pet",
+                      "deluxe_tea_set"
+                    ],
+                    "description": "Optional package tier override"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pricing calculation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "base_price": {
+                      "type": "number",
+                      "format": "decimal"
+                    },
+                    "adjustments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rule_type": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "calculation_basis": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "addons_total": {
+                      "type": "number",
+                      "format": "decimal"
+                    },
+                    "final_total": {
+                      "type": "number",
+                      "format": "decimal"
+                    },
+                    "breakdown": {
+                      "type": "object",
+                      "properties": {
+                        "per_customer_costs": {
+                          "type": "array"
+                        },
+                        "addon_details": {
+                          "type": "array"
+                        },
+                        "time_adjustments": {
+                          "type": "array"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "404": {
+            "description": "Product not found or pricing not available"
+          },
+          "422": {
+            "description": "Invalid date range or customer breakdown"
+          }
+        }
+      }
+    },
+    "/pricing/rules/{product_id}": {
+      "get": {
+        "tags": [
+          "Commerce"
+        ],
+        "summary": "Get pricing rules for product",
+        "description": "Returns all pricing rules, tiers, and add-on options for a product",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Product ID to get pricing rules for",
+            "example": 106
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pricing rules retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "base_prices": {
+                      "type": "object",
+                      "properties": {
+                        "adult": {
+                          "type": "number"
+                        },
+                        "child": {
+                          "type": "number"
+                        },
+                        "elderly": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "time_rules": {
+                      "type": "array"
+                    },
+                    "customer_rules": {
+                      "type": "array"
+                    },
+                    "special_dates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "date"
+                      }
+                    },
+                    "package_tiers": {
+                      "type": "array"
+                    },
+                    "available_addons": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product ID"
+          },
+          "404": {
+            "description": "Product not found or pricing rules not available"
           }
         }
       }
@@ -2768,7 +3821,10 @@
           },
           "status": {
             "type": "string",
-            "enum": ["active", "inactive"]
+            "enum": [
+              "active",
+              "inactive"
+            ]
           },
           "sale_start_at": {
             "type": "string",
@@ -2802,6 +3858,96 @@
           }
         }
       },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer",
+            "description": "Unique order identifier"
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "User who placed the order"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "PENDING_PAYMENT",
+              "PAID",
+              "CANCELLED",
+              "REFUNDED",
+              "PARTIALLY_REFUNDED"
+            ],
+            "description": "Current order status"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product_id": {
+                  "type": "integer"
+                },
+                "qty": {
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Order items"
+          },
+          "channel_id": {
+            "type": "integer",
+            "description": "Sales channel identifier"
+          },
+          "out_trade_no": {
+            "type": "string",
+            "description": "External transaction number"
+          },
+          "amounts": {
+            "type": "object",
+            "properties": {
+              "subtotal": {
+                "type": "number",
+                "format": "decimal"
+              },
+              "discount": {
+                "type": "number",
+                "format": "decimal"
+              },
+              "total": {
+                "type": "number",
+                "format": "decimal"
+              }
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Order creation timestamp"
+          },
+          "paid_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Payment completion timestamp"
+          },
+          "refund_amount": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          },
+          "refund_status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "partial",
+              "full"
+            ],
+            "nullable": true
+          }
+        }
+      },
       "PromotionDetail": {
         "type": "object",
         "properties": {
@@ -2823,7 +3969,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["draft", "active", "archived"]
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ]
           },
           "sale_start_at": {
             "type": "string",
@@ -2896,7 +4046,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["valid", "used", "void"]
+            "enum": [
+              "valid",
+              "used",
+              "void"
+            ]
           },
           "issued_at": {
             "type": "string",
@@ -2925,7 +4079,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["pending", "processed", "failed"]
+            "enum": [
+              "pending",
+              "processed",
+              "failed"
+            ]
           },
           "processed_at": {
             "type": "string",
@@ -3020,7 +4178,10 @@
             "properties": {
               "profile_visibility": {
                 "type": "string",
-                "enum": ["public", "private"]
+                "enum": [
+                  "public",
+                  "private"
+                ]
               },
               "show_purchase_history": {
                 "type": "boolean"
@@ -3035,18 +4196,32 @@
             "properties": {
               "language": {
                 "type": "string",
-                "enum": ["en", "es", "fr", "de"]
+                "enum": [
+                  "en",
+                  "es",
+                  "fr",
+                  "de"
+                ]
               },
               "timezone": {
                 "type": "string"
               },
               "date_format": {
                 "type": "string",
-                "enum": ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]
+                "enum": [
+                  "MM/DD/YYYY",
+                  "DD/MM/YYYY",
+                  "YYYY-MM-DD"
+                ]
               },
               "currency_display": {
                 "type": "string",
-                "enum": ["USD", "EUR", "GBP", "CAD"]
+                "enum": [
+                  "USD",
+                  "EUR",
+                  "GBP",
+                  "CAD"
+                ]
               }
             }
           },
@@ -3093,7 +4268,13 @@
           },
           "type": {
             "type": "string",
-            "enum": ["profile", "order", "ticket", "login", "settings"]
+            "enum": [
+              "profile",
+              "order",
+              "ticket",
+              "login",
+              "settings"
+            ]
           },
           "action": {
             "type": "string",
@@ -3127,7 +4308,11 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["info", "warning", "critical"],
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
             "description": "Importance level of the activity"
           }
         }
@@ -3174,7 +4359,11 @@
       },
       "TravelPassengerType": {
         "type": "string",
-        "enum": ["adult", "child", "senior"]
+        "enum": [
+          "adult",
+          "child",
+          "senior"
+        ]
       },
       "TravelRoutePricingSegment": {
         "type": "object",
@@ -3320,11 +4509,18 @@
             "type": "integer"
           }
         },
-        "required": ["passenger_type", "count"]
+        "required": [
+          "passenger_type",
+          "count"
+        ]
       },
       "ReservationCreateRequest": {
         "type": "object",
-        "required": ["route_id", "travel_date", "seats"],
+        "required": [
+          "route_id",
+          "travel_date",
+          "seats"
+        ],
         "properties": {
           "route_id": {
             "type": "string"
@@ -3358,7 +4554,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["HELD", "RELEASED", "EXPIRED"]
+            "enum": [
+              "HELD",
+              "RELEASED",
+              "EXPIRED"
+            ]
           },
           "lock_expire_at": {
             "type": "string",
@@ -3371,7 +4571,11 @@
       },
       "WeChatSessionRequest": {
         "type": "object",
-        "required": ["orderId", "amount", "currency"],
+        "required": [
+          "orderId",
+          "amount",
+          "currency"
+        ],
         "properties": {
           "orderId": {
             "type": "integer"
@@ -3397,7 +4601,10 @@
             "type": "integer"
           },
           "reservation_id": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "amount": {
             "type": "number"
@@ -3506,9 +4713,18 @@
                   }
                 },
                 "example": {
-                  "106": {"weekday": 288, "weekend": 318},
-                  "107": {"weekday": 188, "weekend": 218},
-                  "108": {"weekday": 788, "weekend": 818}
+                  "106": {
+                    "weekday": 288,
+                    "weekend": 318
+                  },
+                  "107": {
+                    "weekday": 188,
+                    "weekend": 218
+                  },
+                  "108": {
+                    "weekday": 788,
+                    "weekend": 818
+                  }
                 }
               },
               "customer_types": {
@@ -3516,7 +4732,11 @@
                 "items": {
                   "type": "string"
                 },
-                "example": ["adult", "child", "elderly"]
+                "example": [
+                  "adult",
+                  "child",
+                  "elderly"
+                ]
               },
               "special_dates": {
                 "type": "object",
@@ -3530,8 +4750,12 @@
                   }
                 },
                 "example": {
-                  "2025-12-31": {"multiplier": 1.5},
-                  "2026-02-18": {"multiplier": 1.3}
+                  "2025-12-31": {
+                    "multiplier": 1.5
+                  },
+                  "2026-02-18": {
+                    "multiplier": 1.3
+                  }
                 }
               }
             }
@@ -3540,7 +4764,10 @@
       },
       "OTAReservationRequest": {
         "type": "object",
-        "required": ["product_id", "quantity"],
+        "required": [
+          "product_id",
+          "quantity"
+        ],
         "properties": {
           "product_id": {
             "type": "integer",
@@ -3627,7 +4854,12 @@
           },
           "status": {
             "type": "string",
-            "enum": ["active", "expired", "activated", "cancelled"],
+            "enum": [
+              "active",
+              "expired",
+              "activated",
+              "cancelled"
+            ],
             "description": "Current reservation status"
           },
           "expires_at": {
@@ -3639,6 +4871,166 @@
             "type": "string",
             "format": "date-time",
             "description": "Reservation creation timestamp"
+          }
+        }
+      },
+      "Reseller": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "reseller_code": {
+            "type": "string",
+            "example": "GD-TRAVEL-001"
+          },
+          "reseller_name": {
+            "type": "string",
+            "example": "\u5e7f\u5dde\u56fd\u65c5"
+          },
+          "contact_email": {
+            "type": "string",
+            "format": "email",
+            "example": "contact@gdtravel.com"
+          },
+          "contact_phone": {
+            "type": "string",
+            "example": "+86-138-0000-0001"
+          },
+          "commission_rate": {
+            "type": "number",
+            "format": "decimal",
+            "example": 0.15
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "terminated"
+            ],
+            "example": "active"
+          },
+          "settlement_cycle": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "monthly",
+              "quarterly"
+            ],
+            "example": "monthly"
+          },
+          "region": {
+            "type": "string",
+            "example": "\u534e\u5357\u5730\u533a"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "platinum",
+              "gold",
+              "silver",
+              "bronze"
+            ],
+            "example": "gold"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ResellerDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "reseller_code": {
+            "type": "string",
+            "example": "GD-TRAVEL-001"
+          },
+          "reseller_name": {
+            "type": "string",
+            "example": "\u5e7f\u5dde\u56fd\u65c5"
+          },
+          "contact_email": {
+            "type": "string",
+            "format": "email",
+            "example": "contact@gdtravel.com"
+          },
+          "contact_phone": {
+            "type": "string",
+            "example": "+86-138-0000-0001"
+          },
+          "commission_rate": {
+            "type": "number",
+            "format": "decimal",
+            "example": 0.15
+          },
+          "contract_start_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "contract_end_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "terminated"
+            ],
+            "example": "active"
+          },
+          "settlement_cycle": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "monthly",
+              "quarterly"
+            ],
+            "example": "monthly"
+          },
+          "payment_terms": {
+            "type": "string",
+            "example": "Net 30"
+          },
+          "region": {
+            "type": "string",
+            "example": "\u534e\u5357\u5730\u533a"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "platinum",
+              "gold",
+              "silver",
+              "bronze"
+            ],
+            "example": "gold"
+          },
+          "notes": {
+            "type": "string",
+            "example": "VIP reseller partner"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

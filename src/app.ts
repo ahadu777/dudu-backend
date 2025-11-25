@@ -95,7 +95,7 @@ class App {
       this.app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: true }));
     }
 
-    registerModuleRouters(this.app, env.API_PREFIX);
+    registerModuleRouters(this.app);
 
     // Demo dashboard
     this.app.get('/demo', (_req, res) => {

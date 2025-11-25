@@ -7,6 +7,7 @@ import { dataSourceConfig } from '../../config/data-source';
 import { API_KEYS } from '../../middlewares/otaAuth';
 import { generateSecureQR } from '../../utils/qr-crypto';
 import { TicketRawMetadata } from '../../types/domain';
+import { directusService } from '../../utils/directus';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -15,6 +16,13 @@ export interface OTAInventoryResponse {
     customer_types: string[];
     special_dates: { [date: string]: { multiplier: number } };
     customer_discounts?: { [productId: number]: { [type: string]: number } };
+  };
+  product_info: {
+    [productId: number]: {
+      name: string;
+      description: string;
+      category: string;
+    };
   };
 }
 
@@ -48,6 +56,7 @@ export interface OTAActivateRequest {
     phone: string;
   };
   customer_type?: Array<'adult' | 'child' | 'elderly'>;  // Array matching ticket quantity
+  visit_date?: string;  // Intended visit date (YYYY-MM-DD) - used for weekend pricing
   payment_reference: string;
   special_requests?: string;
 }
@@ -108,6 +117,7 @@ export interface OTATicketActivateRequest {
     phone: string;
   };
   customer_type: 'adult' | 'child' | 'elderly';  // Required: determines pricing
+  visit_date?: string;  // Optional: YYYY-MM-DD format - used for weekend pricing calculation
   payment_reference: string;
 }
 
@@ -120,6 +130,17 @@ export interface OTATicketActivateResponse {
   currency: string;
   status: string;
   activated_at: string;
+}
+
+/**
+ * Helper function: Check if a date is a weekend (Saturday or Sunday)
+ * @param dateString - Date in YYYY-MM-DD format or Date object
+ * @returns true if Saturday (6) or Sunday (0), false otherwise
+ */
+function isWeekend(dateString: string | Date): boolean {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6;  // Sunday = 0, Saturday = 6
 }
 
 export class OTAService {
@@ -148,12 +169,19 @@ export class OTAService {
   async getInventory(productIds?: number[], partnerId?: string): Promise<OTAInventoryResponse> {
     logger.info('ota.inventory.requested', { product_ids: productIds, partner_id: partnerId });
 
-    const targetProducts = productIds || [106, 107, 108]; // Default to cruise packages
-
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       // Use database
       const repo = await this.getRepository();
-      const inventories = await repo.getInventoryByProductIds(targetProducts);
+
+      // Query strategy based on whether productIds are specified
+      let inventories;
+      if (productIds && productIds.length > 0) {
+        // Query specific products if requested
+        inventories = await repo.getInventoryByProductIds(productIds);
+      } else {
+        // Query all active products (no hardcoded list)
+        inventories = await repo.getAllInventories();
+      }
 
       const availability: { [productId: number]: number } = {};
       const pricing_context = {
@@ -165,14 +193,22 @@ export class OTAService {
         },
         customer_discounts: {} as { [productId: number]: { [type: string]: number } }
       };
+      const product_info: { [productId: number]: { name: string; description: string; category: string } } = {};
+
+      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback to 'ota'
 
       for (const inventory of inventories) {
-        const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback to 'ota'
+        // Get available quantity for this partner's channel
         const available = inventory.getChannelAvailable(channelId);
-        if (available > 0) {
+
+        // Only include products where this partner has allocated inventory (even if currently 0 available)
+        const channelAllocation = inventory.getChannelAllocation(channelId);
+        if (channelAllocation && channelAllocation.allocated > 0) {
+          // Include product even if temporarily sold out (available = 0)
+          // This helps partners see their full product catalog
           availability[inventory.product_id] = available;
 
-          // Get pricing from product
+          // Get pricing and product info
           if (inventory.product) {
             const basePrice = Number(inventory.product.base_price);
             const weekendPremium = Number(inventory.product.weekend_premium || 30);
@@ -185,23 +221,33 @@ export class OTAService {
             if (inventory.product.customer_discounts) {
               pricing_context.customer_discounts[inventory.product_id] = inventory.product.customer_discounts;
             }
+
+            // Add product info
+            product_info[inventory.product_id] = {
+              name: inventory.product.name,
+              description: inventory.product.description,
+              category: inventory.product.category
+            };
           }
         }
       }
 
       logger.info('ota.inventory.response', {
         source: 'database',
+        partner_id: partnerId,
+        channel_id: channelId,
         available_products: Object.keys(availability).length,
         total_units: Object.values(availability).reduce((sum, qty) => sum + qty, 0)
       });
 
-      return { available_quantities: availability, pricing_context };
+      return { available_quantities: availability, pricing_context, product_info };
     } else {
       // Fallback to mock data
       logger.warn('ota.inventory.fallback_to_mock', { reason: 'database_unavailable' });
 
       const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback to 'ota'
-      const availability = mockDataStore.getChannelAvailability(channelId, targetProducts);
+      const mockProducts = productIds || [106, 107, 108]; // Default mock products
+      const availability = mockDataStore.getChannelAvailability(channelId, mockProducts);
       const pricing_context = {
         base_prices: {} as { [productId: number]: { weekday: number; weekend: number } },
         customer_types: ['adult', 'child', 'elderly'],
@@ -211,13 +257,20 @@ export class OTAService {
         },
         customer_discounts: {} as { [productId: number]: { [type: string]: number } }
       };
+      const product_info: { [productId: number]: { name: string; description: string; category: string } } = {};
 
-      for (const productId of targetProducts) {
+      for (const productId of mockProducts) {
         const product = mockDataStore.getProduct(productId);
         if (product && availability[productId] > 0) {
           pricing_context.base_prices[productId] = {
             weekday: product.unit_price,
             weekend: product.unit_price + 30
+          };
+          // Add mock product info
+          product_info[productId] = {
+            name: product.name,
+            description: product.name, // Mock uses name as description
+            category: 'ferry' // Mock default category
           };
         }
       }
@@ -228,7 +281,7 @@ export class OTAService {
         total_units: Object.values(availability).reduce((sum, qty) => sum + qty, 0)
       });
 
-      return { available_quantities: availability, pricing_context };
+      return { available_quantities: availability, pricing_context, product_info };
     }
   }
 
@@ -275,8 +328,9 @@ export class OTAService {
         const basePrice = Number(product.base_price);
         const weekendPremium = Number(product.weekend_premium || 30.00);
 
-        // Get customer type pricing from product or calculate defaults
+        // Get customer type pricing from product
         // Note: customer_discounts are stored as absolute amounts, not percentages
+        // If a customer type is not configured, no discount is applied (use base price)
         const customerTypePricing = product.customer_discounts ? [
           {
             customer_type: 'adult' as const,
@@ -285,19 +339,19 @@ export class OTAService {
           },
           {
             customer_type: 'child' as const,
-            unit_price: Math.round(basePrice - (product.customer_discounts.child ?? Math.round(basePrice * 0.35))),
-            discount_applied: Math.round(product.customer_discounts.child ?? Math.round(basePrice * 0.35))
+            unit_price: Math.round(basePrice - (product.customer_discounts.child ?? 0)),
+            discount_applied: Math.round(product.customer_discounts.child ?? 0)
           },
           {
             customer_type: 'elderly' as const,
-            unit_price: Math.round(basePrice - (product.customer_discounts.elderly ?? Math.round(basePrice * 0.17))),
-            discount_applied: Math.round(product.customer_discounts.elderly ?? Math.round(basePrice * 0.17))
+            unit_price: Math.round(basePrice - (product.customer_discounts.elderly ?? 0)),
+            discount_applied: Math.round(product.customer_discounts.elderly ?? 0)
           }
         ] : [
-          // Fallback defaults if no customer discounts defined
+          // Fallback if no customer discounts defined at all
           { customer_type: 'adult' as const, unit_price: basePrice, discount_applied: 0 },
-          { customer_type: 'child' as const, unit_price: Math.round(basePrice * 0.65), discount_applied: Math.round(basePrice * 0.35) },
-          { customer_type: 'elderly' as const, unit_price: Math.round(basePrice * 0.83), discount_applied: Math.round(basePrice * 0.17) }
+          { customer_type: 'child' as const, unit_price: basePrice, discount_applied: 0 },
+          { customer_type: 'elderly' as const, unit_price: basePrice, discount_applied: 0 }
         ];
 
         const pricing_snapshot = {
@@ -816,7 +870,26 @@ export class OTAService {
         };
       }
 
-      // Create batch record
+      // ⚠️ IMPORTANT: Check inventory FIRST before creating batch
+      // This prevents orphaned batches when inventory is insufficient
+      const inventory = product.inventory[0]; // There should be one inventory per product
+      if (!inventory) {
+        throw {
+          code: ERR.PRODUCT_NOT_FOUND,
+          message: `No inventory found for product ${request.product_id}`
+        };
+      }
+
+      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback
+      const available = inventory.getChannelAvailable(channelId);
+      if (available < request.quantity) {
+        throw {
+          code: ERR.SOLD_OUT,
+          message: `Insufficient inventory for channel ${channelId}. Available: ${available}, Requested: ${request.quantity}`
+        };
+      }
+
+      // Create batch record AFTER inventory validation passes
       const expiresAt = request.distribution_mode === 'reseller_batch'
         ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days for reseller
         : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);  // 7 days for direct
@@ -835,29 +908,39 @@ export class OTAService {
 
       const batch = await repo.createTicketBatch(batchData);
 
-      // Check inventory availability - inventory should be included with the product
-      const inventory = product.inventory[0]; // There should be one inventory per product
-      if (!inventory) {
-        throw {
-          code: ERR.PRODUCT_NOT_FOUND,
-          message: `No inventory found for product ${request.product_id}`
-        };
-      }
-
-      const channelId = partnerId || 'ota'; // Use partner-specific channel or fallback
-      const available = inventory.getChannelAvailable(channelId);
-      if (available < request.quantity) {
-        throw {
-          code: ERR.SOLD_OUT,
-          message: `Insufficient inventory for channel ${channelId}. Available: ${available}, Requested: ${request.quantity}`
-        };
+      // 🆕 Get partner logo from Directus (cached for performance)
+      const logoBuffer = await directusService.getPartnerLogo(partnerId);
+      if (logoBuffer) {
+        logger.info('ota.batch.logo_loaded', {
+          batch_id: request.batch_id,
+          partner_id: partnerId,
+          size_kb: Math.round(logoBuffer.length / 1024)
+        });
+      } else {
+        logger.info('ota.batch.logo_skipped', {
+          batch_id: request.batch_id,
+          partner_id: partnerId,
+          reason: 'logo_not_available_or_configured'
+        });
       }
 
       // Generate tickets for database
       const tickets = [];
+
+      // Generate batch hash for ticket code uniqueness
+      const crypto = require('crypto');
+      const batchHash = crypto
+        .createHash('md5')
+        .update(request.batch_id)
+        .digest('hex')
+        .substring(0, 7)  // 7-digit hash for higher uniqueness
+        .toUpperCase();
+
       for (let i = 0; i < request.quantity; i++) {
-        const ticketId = Date.now() + (Math.random() * 1000) + i; // Unique ID with index
-        const ticketCode = `CRUISE-${new Date().getFullYear()}-${product.category.toUpperCase()}-${Math.floor(ticketId)}`;
+        // New format: DT + BatchHash(7) + Sequence(4)
+        // Example: DT3E5F2A10001 (13 characters total, closer to standard airline ticket)
+        const sequence = (i + 1).toString().padStart(4, '0');
+        const ticketCode = `DT-${batchHash}${sequence}`;
 
         // Use entitlements from product or default cruise functions
         const entitlements = product.entitlements?.map((entitlement: any) => ({
@@ -870,7 +953,9 @@ export class OTAService {
         ];
 
         // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
-        const qrResult = await generateSecureQR(ticketCode);
+        // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
+        // 🆕 Pass logoBuffer to generate branded QR codes
+        const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined);
         const rawMetadata: TicketRawMetadata = {
           jti: {
             pre_generated_jti: qrResult.jti,
@@ -891,7 +976,10 @@ export class OTAService {
           entitlements,
           qr_code: qrResult.qr_image, // Store QR image for printing/PDF generation
           raw: rawMetadata,
-          created_at: new Date()
+          created_at: new Date(),
+          // Export-friendly fields
+          distribution_mode: batch.distribution_mode,
+          reseller_name: batch.reseller_metadata?.intended_reseller
         };
 
         tickets.push(ticket);
@@ -946,14 +1034,38 @@ export class OTAService {
       };
     }
 
+    // 🆕 Get partner logo from Directus (cached for performance) - Mock mode also supports branded QR
+    const logoBuffer = await directusService.getPartnerLogo(partnerId);
+    if (logoBuffer) {
+      logger.info('ota.batch.logo_loaded', {
+        batch_id: request.batch_id,
+        partner_id: partnerId,
+        source: 'mock',
+        size_kb: Math.round(logoBuffer.length / 1024)
+      });
+    }
+
     // Generate pre-made tickets
     const tickets = [];
+
+    // Generate batch hash for ticket code uniqueness (same logic as DB mode)
+    const crypto = require('crypto');
+    const batchHash = crypto
+      .createHash('md5')
+      .update(request.batch_id)
+      .digest('hex')
+      .substring(0, 7)  // 7-digit hash
+      .toUpperCase();
+
     for (let i = 0; i < request.quantity; i++) {
-      const ticketId = mockDataStore.nextTicketId++;
-      const ticketCode = `${product.sku}-${ticketId}`;
+      // New format: DT + BatchHash(7) + Sequence(4)
+      const sequence = (i + 1).toString().padStart(4, '0');
+      const ticketCode = `DT-${batchHash}${sequence}`;
 
       // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
-      const qrResult = await generateSecureQR(ticketCode);
+      // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
+      // 🆕 Pass logoBuffer to generate branded QR codes (works in both DB and mock modes)
+      const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined);
       const rawMetadata: TicketRawMetadata = {
         jti: {
           pre_generated_jti: qrResult.jti,
@@ -966,7 +1078,7 @@ export class OTAService {
       };
 
       const ticket = {
-        id: ticketId,
+        id: mockDataStore.nextTicketId++,
         code: ticketCode,
         product_id: product.id,
         batch_id: request.batch_id,
@@ -1122,14 +1234,40 @@ export class OTAService {
           };
         }
 
-        const ticketPrice = customerTypePricing.unit_price;
+        // Calculate ticket price with optional weekend premium
+        let ticketPrice = customerTypePricing.unit_price;
         const currency = batch.pricing_snapshot.currency || 'HKD';
+        let weekendPremiumApplied = 0;
+
+        // Apply weekend premium if visit_date is provided and is a weekend
+        if (request.visit_date && isWeekend(request.visit_date)) {
+          const weekendPremium = batch.pricing_snapshot.weekend_premium || 0;
+          weekendPremiumApplied = weekendPremium;
+          ticketPrice += weekendPremium;
+
+          logger.info('ota.ticket.weekend_pricing_applied', {
+            ticket_code: ticketCode,
+            visit_date: request.visit_date,
+            is_weekend: true,
+            base_price: customerTypePricing.unit_price,
+            weekend_premium: weekendPremium,
+            final_price: ticketPrice
+          });
+        } else if (request.visit_date) {
+          logger.info('ota.ticket.weekday_pricing', {
+            ticket_code: ticketCode,
+            visit_date: request.visit_date,
+            is_weekend: false,
+            price: ticketPrice
+          });
+        }
 
         // DEBUG: Log extracted price details
         logger.info('ota.ticket.activation_price_extracted', {
           ticket_code: ticketCode,
           customer_type: request.customer_type,
           customer_type_pricing: customerTypePricing,
+          weekend_premium_applied: weekendPremiumApplied,
           final_ticket_price: ticketPrice,
           currency: currency
         });
@@ -1162,6 +1300,22 @@ export class OTAService {
           created_at: now
         };
 
+        // Prepare raw metadata for audit trail
+        const rawMetadata: any = {
+          payment_reference: request.payment_reference,
+          pricing_breakdown: {
+            base_price: customerTypePricing.unit_price,
+            weekend_premium_applied: weekendPremiumApplied,
+            final_price: ticketPrice
+          }
+        };
+
+        // Record visit_date in raw field for audit
+        if (request.visit_date) {
+          rawMetadata.visit_date = request.visit_date;
+          rawMetadata.is_weekend_ticket = isWeekend(request.visit_date);
+        }
+
         // Use repository to activate ticket and create order atomically
         const result = await this.otaRepository!.activatePreGeneratedTicket(
           ticketCode,
@@ -1171,7 +1325,8 @@ export class OTAService {
             customer_email: request.customer_details.email,
             customer_phone: request.customer_details.phone,
             customer_type: request.customer_type,
-            payment_reference: request.payment_reference
+            payment_reference: request.payment_reference,
+            raw: rawMetadata
           },
           orderData
         );
@@ -1314,6 +1469,7 @@ export class OTAService {
     // NOT stored in database to maintain security and freshness
     ticket.customer_name = request.customer_details.name;
     ticket.customer_email = request.customer_details.email;
+    ticket.customer_phone = request.customer_details.phone;
     ticket.customer_type = request.customer_type;
     ticket.order_id = orderId;
     ticket.status = 'ACTIVE';
@@ -1477,12 +1633,13 @@ export class OTAService {
     }
   }
 
-  async getCampaignAnalytics(campaignType?: string, dateRange?: string): Promise<any> {
+  async getCampaignAnalytics(partnerId: string, campaignType?: string, dateRange?: string): Promise<any> {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const repo = await this.getRepository();
 
       // Use optimized query with stats for ALL cases (no N+1 query problem)
-      const allBatches = await repo.findBatchesWithStats();
+      // Filter by partnerId to ensure data isolation
+      const allBatches = await repo.findBatchesWithStats(partnerId);
 
       // Filter by campaign_type if specified
       let filteredBatches = allBatches;
@@ -1810,11 +1967,45 @@ export class OTAService {
       const repo = await this.getRepository();
 
       // Get aggregated statistics across all partners
-      const [platformSummary, topPartners, inventoryOverview] = await Promise.all([
+      const [platformSummary, topPartnersRaw, inventoryOverview] = await Promise.all([
         repo.getPlatformSummary(dateRange),
         repo.getTopPartners(5, dateRange),
         repo.getInventoryOverview()
       ]);
+
+      // Filter out partners that no longer exist in API_KEYS
+      // Get valid partner IDs from current API_KEYS configuration
+      const validPartnerIds = new Set(
+        Array.from(API_KEYS.values()).map(data => data.partner_id)
+      );
+
+      // Log raw partners from database before filtering
+      const rawPartnerIds = topPartnersRaw.map(p => p.partner_id);
+      logger.info('ota.admin.dashboard.raw_partners', {
+        raw_count: topPartnersRaw.length,
+        raw_partners: rawPartnerIds
+      });
+
+      const topPartners = topPartnersRaw.filter(partner =>
+        validPartnerIds.has(partner.partner_id)
+      );
+
+      // Log filtered partners and any that were removed
+      const filteredPartnerIds = topPartners.map(p => p.partner_id);
+      const removedPartners = rawPartnerIds.filter(id => !validPartnerIds.has(id));
+
+      if (removedPartners.length > 0) {
+        logger.info('ota.admin.dashboard.filtered_partners', {
+          removed_count: removedPartners.length,
+          removed_partners: removedPartners,
+          reason: 'Partner no longer exists in API_KEYS'
+        });
+      }
+
+      logger.info('ota.admin.dashboard.final_partners', {
+        final_count: topPartners.length,
+        final_partners: filteredPartnerIds
+      });
 
       return {
         summary: {
@@ -1848,6 +2039,205 @@ export class OTAService {
   }
 
   // ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
+
+  /**
+   * Get reseller summary aggregated from batch metadata (JSON-based)
+   * 从批次JSON字段中聚合经销商信息
+   */
+  async getResellersSummary(
+    partnerId: string,
+    filters?: {
+      status?: string;
+      date_range?: string;
+      page?: number;
+      limit?: number;
+      batches_per_reseller?: number;  // 每个经销商显示多少个批次
+    }
+  ): Promise<any> {
+    logger.info('ota.resellers.summary.start', { partnerId, filters, useDatabase: dataSourceConfig.useDatabase });
+
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 20, 100); // 默认20个经销商，最多100个
+    const batchesPerReseller = Math.min(filters?.batches_per_reseller || 10, 50); // 每个经销商默认10个批次，最多50个
+
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      try {
+        logger.info('ota.resellers.summary.using_database', { partnerId, page, limit });
+        const repo = await this.getRepository();
+
+        // 1. 获取总数
+        const totalCount = await repo.countResellers(partnerId, {
+          status: filters?.status,
+          date_range: filters?.date_range
+        });
+
+        // 2. 获取经销商汇总（带分页）
+        const summary = await repo.getResellersSummaryFromBatches(partnerId, {
+          status: filters?.status,
+          date_range: filters?.date_range,
+          page,
+          limit
+        });
+
+        logger.info('ota.resellers.summary.query_result', { count: summary.length, total: totalCount });
+
+        // 3. 为每个经销商获取批次详情
+        const resellersWithBatches = await Promise.all(
+          summary.map(async (r: any) => {
+            // 获取该经销商的批次列表（前N个）
+            const batches = await repo.getResellerBatches(partnerId, r.reseller_name, {
+              status: filters?.status,
+              limit: batchesPerReseller
+            });
+
+            const totalGenerated = parseInt(r.total_tickets_generated || 0);
+            const totalActivated = parseInt(r.total_tickets_activated || 0);
+            const totalUsed = parseInt(r.total_tickets_used || 0);
+            const totalRevenue = parseFloat(r.total_revenue || 0);
+            const realizedRevenue = parseFloat(r.realized_revenue || 0);
+
+            return {
+              reseller_name: r.reseller_name,
+              contact_email: r.contact_email,
+              contact_phone: r.contact_phone,
+
+              statistics: {
+                total_batches: parseInt(r.total_batches || 0),
+                total_tickets_generated: totalGenerated,
+                total_tickets_activated: totalActivated,
+                total_tickets_used: totalUsed,
+                activation_rate: totalGenerated > 0
+                  ? parseFloat((totalActivated / totalGenerated).toFixed(2))
+                  : 0,
+                redemption_rate: totalActivated > 0
+                  ? parseFloat((totalUsed / totalActivated).toFixed(2))
+                  : 0,
+                overall_utilization: totalGenerated > 0
+                  ? parseFloat((totalUsed / totalGenerated).toFixed(2))
+                  : 0
+              },
+
+              revenue_metrics: {
+                total_revenue: parseFloat(totalRevenue.toFixed(2)),
+                realized_revenue: parseFloat(realizedRevenue.toFixed(2)),
+                currency: 'HKD'  // Default currency, could be extracted from pricing_snapshot if needed
+              },
+
+              commission: {
+                avg_rate: r.avg_commission_rate ? parseFloat(r.avg_commission_rate) : null,
+                settlement_cycle: r.settlement_cycle
+              },
+
+              // 批次详情列表
+              batches: batches.map((b: any) => ({
+                batch_id: b.batch_id,
+                product_id: b.product_id,
+                tickets_count: b.tickets_count,
+                status: b.status,
+                created_at: b.created_at,
+                expires_at: b.expires_at
+              })),
+
+              first_batch_date: r.first_batch_date,
+              last_batch_date: r.last_batch_date,
+              days_active: r.first_batch_date
+                ? Math.floor((new Date().getTime() - new Date(r.first_batch_date).getTime()) / (1000 * 60 * 60 * 24))
+                : 0
+            };
+          })
+        );
+
+        return {
+          total: totalCount,
+          page,
+          page_size: limit,
+          resellers: resellersWithBatches
+        };
+      } catch (error: any) {
+        logger.error('ota.resellers.summary.database_error', {
+          partnerId,
+          error: error.message,
+          stack: error.stack
+        });
+        // Fall back to mock data on error
+        logger.info('ota.resellers.summary.fallback_to_mock', { partnerId });
+      }
+    }
+
+    // Mock data (default or fallback)
+    logger.info('ota.resellers.summary.using_mock', { partnerId });
+    return {
+        total: 2,
+        page: 1,
+        page_size: 20,
+        resellers: [
+          {
+            reseller_name: "携程旅行社",
+            contact_email: "partner@ctrip.com",
+            contact_phone: "138-1234-5678",
+            statistics: {
+              total_batches: 12,
+              total_tickets_generated: 5000,
+              total_tickets_activated: 4200,
+              activation_rate: 0.84
+            },
+            commission: {
+              avg_rate: 0.15,
+              settlement_cycle: "monthly"
+            },
+            batches: [
+              {
+                batch_id: "BATCH-20251101-001",
+                product_id: 106,
+                tickets_count: 500,
+                status: "active",
+                created_at: "2025-11-01T10:00:00Z",
+                expires_at: "2025-12-01T10:00:00Z"
+              },
+              {
+                batch_id: "BATCH-20251115-002",
+                product_id: 107,
+                tickets_count: 300,
+                status: "active",
+                created_at: "2025-11-15T14:30:00Z",
+                expires_at: "2025-12-15T14:30:00Z"
+              }
+            ],
+            first_batch_date: "2025-10-01",
+            last_batch_date: "2025-11-15",
+            days_active: 48
+          },
+          {
+            reseller_name: "美团门票",
+            contact_email: "tickets@meituan.com",
+            contact_phone: "139-9876-5432",
+            statistics: {
+              total_batches: 8,
+              total_tickets_generated: 3000,
+              total_tickets_activated: 2800,
+              activation_rate: 0.93
+            },
+            commission: {
+              avg_rate: 0.12,
+              settlement_cycle: "weekly"
+            },
+            batches: [
+              {
+                batch_id: "BATCH-20251105-MT-001",
+                product_id: 106,
+                tickets_count: 400,
+                status: "active",
+                created_at: "2025-11-05T09:00:00Z",
+                expires_at: "2025-12-05T09:00:00Z"
+              }
+            ],
+            first_batch_date: "2025-11-01",
+            last_batch_date: "2025-11-18",
+            days_active: 17
+          }
+        ]
+      };
+  }
 
   /**
    * List all resellers for authenticated OTA partner
@@ -2004,9 +2394,11 @@ export class OTAService {
       };
     } else {
       // Mock implementation
+      const resellerCode = data.reseller_code || `RSL-${partnerId}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
       return {
         id: Math.floor(Math.random() * 1000),
-        reseller_code: data.reseller_code,
+        reseller_code: resellerCode,
         reseller_name: data.reseller_name,
         status: 'active',
         created_at: new Date()

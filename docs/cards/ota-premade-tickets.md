@@ -350,7 +350,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [customer_details, payment_reference]
+              required: [customer_details, customer_type, payment_reference]
               properties:
                 customer_details:
                   type: object
@@ -366,6 +366,16 @@ paths:
                     phone:
                       type: string
                       example: "+1234567890"
+                customer_type:
+                  type: string
+                  enum: [adult, child, elderly]
+                  description: Customer type for pricing (determines final ticket price)
+                  example: "adult"
+                visit_date:
+                  type: string
+                  format: date
+                  description: "Intended visit date (YYYY-MM-DD) - OPTIONAL. Used for weekend pricing calculation. If provided and is a weekend (Saturday/Sunday), weekend_premium will be added to the base price."
+                  example: "2025-11-23"
                 payment_reference:
                   type: string
                   description: OTA payment transaction reference
@@ -387,6 +397,17 @@ paths:
                   customer_name:
                     type: string
                     example: "John Smith"
+                  customer_type:
+                    type: string
+                    enum: [adult, child, elderly]
+                    example: "adult"
+                  ticket_price:
+                    type: number
+                    description: "Final ticket price (includes weekend premium if applicable)"
+                    example: 318
+                  currency:
+                    type: string
+                    example: "HKD"
                   status:
                     type: string
                     enum: [ACTIVE]
@@ -407,8 +428,12 @@ paths:
 - Activation creates corresponding OTA order record with correct product_id and partner_id
 - Each ticket can only be activated once
 - Customer details must include name, email, and phone
+- Customer type (adult/child/elderly) is required for pricing determination
 - Payment reference is required for audit trail
 - **Order amount must match customer_type pricing from batch pricing_snapshot**
+- **NEW (2025-11-17)**: Weekend pricing support - If `visit_date` is provided and is a weekend (Saturday/Sunday), `weekend_premium` from batch pricing_snapshot is added to the base price
+- **NEW (2025-11-17)**: visit_date is optional but recommended for accurate pricing - recorded in ticket.raw field for audit purposes
+- **NEW (2025-11-17)**: Weekend is defined as Saturday (day=6) or Sunday (day=0) based on JavaScript Date.getDay()
 - **NEW**: Reseller batches have extended expiry periods (configurable)
 - **NEW**: Reseller metadata is preserved through activation chain
 - **NEW**: Distribution mode cannot be changed after batch creation
@@ -588,7 +613,7 @@ curl -X POST http://localhost:8080/api/ota/tickets/bulk-generate \
 # Expected Response: 201 with batch_id, tickets[], total_generated: 5
 ```
 
-**✅ Valid Activation Request:**
+**✅ Valid Activation Request (Weekday - No Premium):**
 ```bash
 # Use ticket_code from bulk generation response
 curl -X POST http://localhost:8080/api/ota/tickets/{TICKET_CODE}/activate \
@@ -600,10 +625,51 @@ curl -X POST http://localhost:8080/api/ota/tickets/{TICKET_CODE}/activate \
     "email": "john.smith@example.com",
     "phone": "+1234567890"
   },
+  "customer_type": "adult",
+  "visit_date": "2025-11-19",
   "payment_reference": "PAY-TEST-001"
 }'
 
-# Expected Response: 200 with ticket_code, order_id, status: "ACTIVE"
+# Expected Response: 200 with ticket_code, order_id, status: "ACTIVE", ticket_price: 288 (base price)
+```
+
+**✅ Valid Activation Request (Weekend - With Premium):**
+```bash
+# Same ticket activation but for weekend visit
+curl -X POST http://localhost:8080/api/ota/tickets/{TICKET_CODE_2}/activate \
+-H "Content-Type: application/json" \
+-H "X-API-Key: ota_test_key_12345" \
+-d '{
+  "customer_details": {
+    "name": "Jane Doe",
+    "email": "jane.doe@example.com",
+    "phone": "+1234567891"
+  },
+  "customer_type": "adult",
+  "visit_date": "2025-11-23",
+  "payment_reference": "PAY-TEST-002"
+}'
+
+# Expected Response: 200 with ticket_code, order_id, status: "ACTIVE", ticket_price: 318 (288 + 30 weekend premium)
+```
+
+**✅ Valid Activation Request (No visit_date - Uses Base Price):**
+```bash
+# Activation without visit_date (backward compatible)
+curl -X POST http://localhost:8080/api/ota/tickets/{TICKET_CODE_3}/activate \
+-H "Content-Type: application/json" \
+-H "X-API-Key: ota_test_key_12345" \
+-d '{
+  "customer_details": {
+    "name": "Bob Wilson",
+    "email": "bob.wilson@example.com",
+    "phone": "+1234567892"
+  },
+  "customer_type": "child",
+  "payment_reference": "PAY-TEST-003"
+}'
+
+# Expected Response: 200 with ticket_code, order_id, status: "ACTIVE", ticket_price: 188 (child base price)
 ```
 
 ### Error Case Validation

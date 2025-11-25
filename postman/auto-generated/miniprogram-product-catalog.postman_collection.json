@@ -1,0 +1,455 @@
+{
+  "info": {
+    "name": "小程序商品目录 - Complete Test Coverage",
+    "description": "miniprogram-product-catalog 卡片的完整测试覆盖",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "GET /miniprogram/products - 商品列表",
+      "item": [
+        {
+          "name": "1.1 获取商品列表（默认分页）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('返回商品列表', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('products');",
+                  "    pm.expect(data.products).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('包含分页信息', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('total');",
+                  "    pm.expect(data).to.have.property('page');",
+                  "    pm.expect(data).to.have.property('page_size');",
+                  "    pm.expect(data.page).to.equal(1);",
+                  "    pm.expect(data.page_size).to.equal(20);",
+                  "});",
+                  "",
+                  "pm.test('只返回 direct channel 有库存的商品', function() {",
+                  "    var data = pm.response.json();",
+                  "    data.products.forEach(function(product) {",
+                  "        pm.expect(product.availability.available).to.be.above(0);",
+                  "        pm.expect(product.status).to.equal('active');",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test('商品包含必要字段', function() {",
+                  "    var data = pm.response.json();",
+                  "    if (data.products.length > 0) {",
+                  "        var product = data.products[0];",
+                  "        pm.expect(product).to.have.property('id');",
+                  "        pm.expect(product).to.have.property('name');",
+                  "        pm.expect(product).to.have.property('description');",
+                  "        pm.expect(product).to.have.property('base_price');",
+                  "        pm.expect(product).to.have.property('functions');",
+                  "        pm.expect(product).to.have.property('availability');",
+                  "    }",
+                  "});",
+                  "",
+                  "// 保存第一个商品ID供后续测试使用",
+                  "var data = pm.response.json();",
+                  "if (data.products.length > 0) {",
+                  "    pm.environment.set('test_product_id', data.products[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 自定义分页（page=2, limit=2）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products?page=2&limit=2",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products"],
+              "query": [
+                { "key": "page", "value": "2" },
+                { "key": "limit", "value": "2" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('返回第2页数据', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.page).to.equal(2);",
+                  "    pm.expect(data.page_size).to.equal(2);",
+                  "    pm.expect(data.products.length).to.be.at.most(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 超出最大限制（limit=200，应限制为100）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products?limit=200",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products"],
+              "query": [
+                { "key": "limit", "value": "200" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('限制为最大值100', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.page_size).to.equal(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.4 无效页码（page=-1）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products?page=-1",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products"],
+              "query": [
+                { "key": "page", "value": "-1" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 422 状态码', function() {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('返回参数错误信息', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('error');",
+                  "    pm.expect(data.error).to.equal('INVALID_PARAMETER');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GET /miniprogram/products/:id - 商品详情",
+      "item": [
+        {
+          "name": "2.1 获取商品详情（使用存在的商品ID）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/106",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products", "106"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('返回商品详情', function() {",
+                  "    var product = pm.response.json();",
+                  "    pm.expect(product).to.have.property('id');",
+                  "    pm.expect(product).to.have.property('name');",
+                  "    pm.expect(product).to.have.property('description');",
+                  "    pm.expect(product).to.have.property('base_price');",
+                  "});",
+                  "",
+                  "pm.test('包含完整库存信息', function() {",
+                  "    var product = pm.response.json();",
+                  "    pm.expect(product).to.have.property('availability');",
+                  "    var availability = product.availability;",
+                  "    pm.expect(availability).to.have.property('channel');",
+                  "    pm.expect(availability).to.have.property('available');",
+                  "    pm.expect(availability).to.have.property('allocated');",
+                  "    pm.expect(availability).to.have.property('reserved');",
+                  "    pm.expect(availability).to.have.property('sold');",
+                  "    pm.expect(availability).to.have.property('status');",
+                  "    pm.expect(availability.channel).to.equal('direct');",
+                  "});",
+                  "",
+                  "pm.test('包含商品功能', function() {",
+                  "    var product = pm.response.json();",
+                  "    pm.expect(product).to.have.property('functions');",
+                  "    pm.expect(product.functions).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 商品不存在（返回404）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/99999",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products", "99999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 404 状态码', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('返回错误信息', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "    pm.expect(data.code).to.equal('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 无效商品ID（非数字）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/abc",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products", "abc"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 400 状态码', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('返回参数错误信息', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "    pm.expect(data.code).to.equal('INVALID_PRODUCT_ID');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GET /miniprogram/products/:id/availability - 库存查询",
+      "item": [
+        {
+          "name": "3.1 查询库存（默认数量=1）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/106/availability",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products", "106", "availability"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('返回库存信息', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('product_id');",
+                  "    pm.expect(data).to.have.property('channel');",
+                  "    pm.expect(data).to.have.property('available');",
+                  "    pm.expect(data).to.have.property('is_available');",
+                  "    pm.expect(data).to.have.property('requested_quantity');",
+                  "    pm.expect(data).to.have.property('last_updated');",
+                  "    pm.expect(data.channel).to.equal('direct');",
+                  "    pm.expect(data.requested_quantity).to.equal(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 查询指定数量（quantity=5）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/106/availability?quantity=5",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products", "106", "availability"],
+              "query": [
+                { "key": "quantity", "value": "5" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('正确返回请求数量', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.requested_quantity).to.equal(5);",
+                  "});",
+                  "",
+                  "pm.test('正确判断库存是否充足', function() {",
+                  "    var data = pm.response.json();",
+                  "    var expectedAvailable = data.available >= 5;",
+                  "    pm.expect(data.is_available).to.equal(expectedAvailable);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 查询超出库存数量（quantity=100000）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/106/availability?quantity=100000",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products", "106", "availability"],
+              "query": [
+                { "key": "quantity", "value": "100000" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('正确返回库存不足', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.is_available).to.equal(false);",
+                  "    pm.expect(data.requested_quantity).to.equal(100000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.4 商品不存在（返回404）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/99999/availability",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "products", "99999", "availability"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 404 状态码', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('返回错误信息', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "    pm.expect(data.code).to.equal('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

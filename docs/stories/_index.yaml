@@ -22,6 +22,8 @@ stories:
     # Cross-story relationships
     enhances: []
     enhanced_by: [US-011]
+    # Business requirements
+    business_requirement: "PRD-001"
   - id: US-002
     title: Operator scan & redemption
     status: Approved
@@ -33,7 +35,9 @@ stories:
       - operators-login → validators-sessions
       - [validators-sessions, qr-token] → tickets-scan
     enhances: [US-001]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-003
     title: Buyer views tickets & QR
     status: Approved
@@ -44,7 +48,9 @@ stories:
       - tickets-issuance → my-tickets
       - my-tickets → qr-token
     enhances: [US-001]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-004
     title: Payment notify → issue tickets (sync)
     status: Approved
@@ -55,6 +61,9 @@ stories:
       - order-create → payment-webhook
       - payment-webhook → tickets-issuance
     enhances: [US-001]
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-005
     title: Reporting — redemptions list
     status: Approved
@@ -64,7 +73,9 @@ stories:
       - tickets-scan → reports-redemptions
       - refund-processing → reports-redemptions
     enhances: [US-001, US-002, US-007]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-006
     title: Operator auth & session lifecycle
     status: Approved
@@ -74,7 +85,9 @@ stories:
     sequence:
       - operators-login → validators-sessions
     enhances: [US-002]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-007
     title: Ticket cancellation and refund
     status: Approved
@@ -87,7 +100,9 @@ stories:
       - ticket-cancellation → refund-processing
       - refund-processing → payment-webhook
     enhances: [US-001, US-004]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-008
     title: Promotion detail view for dashboard
     status: Approved
@@ -96,7 +111,9 @@ stories:
     sequence:
       - catalog-endpoint → promotion-detail-endpoint
     enhances: [US-001]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-009
     title: User profile and settings management
     status: Approved
@@ -108,7 +125,9 @@ stories:
       - user-profile-endpoint → user-settings-endpoint
       - user-settings-endpoint → user-activity-endpoint
     enhances: []
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-010
     title: DeepTravel 小程序全链路购票与核销体验
     status: Draft
@@ -121,11 +140,15 @@ stories:
       - merchant-redemption-console
       - admin-package-config
       - notification-orchestrator
+      - route-schedule-management
+      - schedule-pricing-rules
     decomposed_into:
       - US-010A
       - US-010B
     enhances: [US-001, US-002, US-004, US-007]
-    
+    # Business requirements
+    business_requirement: "PRD-006"
+
     validation_assets:
       runbook: docs/integration/US-010-runbook.md
       newman:
@@ -139,6 +162,8 @@ stories:
       - seat-lock-service
       - wechat-payment-session
       - bundle-ticket-engine
+      - route-schedule-management
+      - schedule-pricing-rules
     sequence:
       - catalog-endpoint → travel-search-hub
       - travel-search-hub → seat-lock-service
@@ -148,7 +173,9 @@ stories:
       - order-create → wechat-payment-session
       - wechat-payment-session → payment-webhook
     enhances: [US-001, US-003, US-004]
-    
+    # Business requirements
+    business_requirement: "PRD-006"
+
     validation_assets:
       runbook: docs/integration/US-010A-runbook.md
       newman:
@@ -161,6 +188,8 @@ stories:
       - ticket-lifecycle-daemon
       - notification-orchestrator
       - merchant-redemption-console
+      - route-schedule-management
+      - schedule-pricing-rules
     sequence:
       - admin-package-config → ticket-lifecycle-daemon
       - admin-package-config → merchant-redemption-console
@@ -169,7 +198,9 @@ stories:
       - refund-processing → notification-orchestrator
       - [operators-login, validators-sessions] → merchant-redemption-console
     enhances: [US-002, US-005, US-006, US-007]
-    
+    # Business requirements
+    business_requirement: "PRD-006"
+
     validation_assets:
       runbook: docs/integration/US-010B-runbook.md
       newman:
@@ -186,6 +217,8 @@ stories:
     # Cross-story relationships
     enhances: [US-001]
     enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-001"
   - id: US-012
     title: OTA Platform Integration for Bulk Ticket Reservation
     status: Done

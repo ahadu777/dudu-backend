@@ -1,7 +1,7 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from 'typeorm';
 import { PreGeneratedTicketEntity } from './pre-generated-ticket.entity';
 
-export type OrderStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+export type OrderStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'refunded';
 
 @Entity('ota_orders')
 @Index(['customer_email']) // For customer lookups
@@ -40,7 +40,7 @@ export class OTAOrderEntity {
 
   @Column({
     type: 'enum',
-    enum: ['pending', 'confirmed', 'cancelled', 'refunded'],
+    enum: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'refunded'],
     default: 'confirmed'
   })
   status!: OrderStatus;

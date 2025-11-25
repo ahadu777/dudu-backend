@@ -21,6 +21,8 @@ import qrGenerationRouter from './qr-generation/router';
 import ticketReservationRouter from './ticket-reservation/router';
 import reservationSlotsRouter from './reservation-slots/router';
 import customerReservationRouter from './customerReservation/router';
+import pricingRouter from './pricing/router';
+import miniprogramRouter from './miniprogram/router';
 
 export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
   const apiRouter = Router();
@@ -31,6 +33,7 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
 
   app.use(apiPrefix, apiRouter);
 
+  app.use('/miniprogram', miniprogramRouter); // WeChat Mini Program endpoints
   app.use('/catalog', catalogRouter);
   app.use('/travel', travelRouter);
   app.use('/reservations', reservationsRouter);
@@ -46,6 +49,7 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/api/ota', otaRouter);
   app.use('/venue', venueRouter);
   app.use('/qr', qrGenerationRouter); // Unified QR generation and verification
+  app.use('/pricing', pricingRouter);
 
   // Ticket reservation & validation system (PRD-006/PRD-007) - MUST BE BEFORE catch-all routers!
   // Week 3: Operator validation endpoints integrated into /operators router (see operators/router.ts)

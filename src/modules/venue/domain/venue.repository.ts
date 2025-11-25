@@ -3,18 +3,21 @@ import { Venue } from './venue.entity';
 import { VenueSession } from './venue-session.entity';
 import { RedemptionEvent } from './redemption-event.entity';
 import { PreGeneratedTicketEntity } from '../../ota/domain/pre-generated-ticket.entity';
+import { OTAOrderEntity } from '../../ota/domain/ota-order.entity';
 
 export class VenueRepository {
   private venueRepo: Repository<Venue>;
   private sessionRepo: Repository<VenueSession>;
   private redemptionRepo: Repository<RedemptionEvent>;
   private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
+  private otaOrderRepo: Repository<OTAOrderEntity>;
 
   constructor(dataSource: DataSource) {
     this.venueRepo = dataSource.getRepository(Venue);
     this.sessionRepo = dataSource.getRepository(VenueSession);
     this.redemptionRepo = dataSource.getRepository(RedemptionEvent);
     this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
+    this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
   }
 
   // Ticket Management
@@ -34,6 +37,11 @@ export class VenueRepository {
         order_id: otaTicket.order_id,
         batch_id: otaTicket.batch_id,
         partner_id: otaTicket.partner_id,
+        // Customer information (顾客信息)
+        customer_name: otaTicket.customer_name,
+        customer_email: otaTicket.customer_email,
+        customer_phone: otaTicket.customer_phone,
+        customer_type: otaTicket.customer_type,
         raw: otaTicket.raw
       };
     }
@@ -88,12 +96,83 @@ export class VenueRepository {
       updateData
     );
 
+    // Update order status if ticket has an order_id
+    if (ticket.order_id) {
+      await this.updateOrderStatusIfNeeded(ticket.order_id);
+    }
+
     return true;
+  }
+
+  /**
+   * Update order status based on entitlement redemption progress
+   * Called after ticket redemption to keep order status in sync
+   *
+   * Status logic:
+   * - confirmed: No entitlements redeemed yet
+   * - in_progress: Some (but not all) entitlements redeemed
+   * - completed: All entitlements redeemed
+   */
+  private async updateOrderStatusIfNeeded(orderId: string): Promise<void> {
+    // Get all tickets for this order
+    const tickets = await this.preGeneratedTicketRepo.find({
+      where: { order_id: orderId }
+    });
+
+    if (tickets.length === 0) {
+      return; // No tickets found, nothing to update
+    }
+
+    // Count total and used entitlements across all tickets
+    let totalEntitlements = 0;
+    let usedEntitlements = 0;
+
+    for (const ticket of tickets) {
+      const entitlements = ticket.entitlements as Array<{
+        function_code: string;
+        remaining_uses: number;
+      }>;
+
+      for (const entitlement of entitlements) {
+        totalEntitlements++;
+        // Entitlement is considered "used" if remaining_uses is 0
+        if (entitlement.remaining_uses === 0) {
+          usedEntitlements++;
+        }
+      }
+    }
+
+    // Determine new order status based on entitlement usage
+    let newStatus: 'confirmed' | 'in_progress' | 'completed';
+
+    if (usedEntitlements === totalEntitlements && totalEntitlements > 0) {
+      // All entitlements are used - order is completed
+      newStatus = 'completed';
+    } else if (usedEntitlements > 0) {
+      // Some entitlements are used - order is in progress
+      newStatus = 'in_progress';
+    } else {
+      // No entitlements used yet - keep confirmed
+      newStatus = 'confirmed';
+    }
+
+    // Update order status
+    await this.otaOrderRepo.update(
+      { order_id: orderId },
+      { status: newStatus }
+    );
   }
 
   // Venue Management
   async findVenueByCode(venueCode: string): Promise<Venue | null> {
     return this.venueRepo.findOne({ where: { venue_code: venueCode, is_active: true } });
+  }
+
+  async getAllActiveVenues(): Promise<Venue[]> {
+    return this.venueRepo.find({
+      where: { is_active: true },
+      order: { venue_code: 'ASC' }
+    });
   }
 
   async createVenue(venueData: Partial<Venue>): Promise<Venue> {

@@ -79,7 +79,7 @@ router.get('/inventory', otaAuthMiddleware('inventory:read'), async (req: Authen
     }
 
     res.status(500).json({
-      error: 'INTERNAL_ERROR',
+      code: 'INTERNAL_ERROR',
       message: 'Failed to retrieve inventory information'
     });
   }
@@ -119,7 +119,7 @@ router.post('/reserve', otaAuthMiddleware('reserve:create'), async (req: Authent
                       error.code === 'VALIDATION_ERROR' ? 422 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to create reservation'
     });
   }
@@ -143,7 +143,7 @@ router.get('/reservations/:id', async (req: AuthenticatedRequest, res: Response)
     const statusCode = error.code === 'RESERVATION_NOT_FOUND' ? 404 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve reservation'
     });
   }
@@ -180,17 +180,17 @@ router.post('/reservations/:id/activate', otaAuthMiddleware('reserve:activate'),
     const { customer_details, customer_type, payment_reference, special_requests } = req.body;
 
     // Validate required fields
-    if (!customer_details || !payment_reference) {
+    if (!customer_details) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details and payment_reference are required'
+        message: 'customer_details is required'
       });
     }
 
-    if (!customer_details.name || !customer_details.email || !customer_details.phone) {
+    if (!customer_details.name) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details must include name, email, and phone'
+        message: 'customer_details must include name'
       });
     }
 
@@ -234,7 +234,7 @@ router.post('/reservations/:id/activate', otaAuthMiddleware('reserve:activate'),
                       error.code === 'VALIDATION_ERROR' ? 409 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to activate reservation'
     });
   }
@@ -282,7 +282,7 @@ router.delete('/reservations/:id', async (req: AuthenticatedRequest, res: Respon
                       error.code === 'CANNOT_CANCEL_ACTIVATED' ? 409 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to cancel reservation'
     });
   }
@@ -333,7 +333,7 @@ router.get('/orders/:id/tickets', async (req: AuthenticatedRequest, res: Respons
     const statusCode = error.code === 'ORDER_NOT_FOUND' ? 404 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve order tickets'
     });
   }
@@ -458,7 +458,7 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
                       error.code === 'VALIDATION_ERROR' ? 422 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to generate tickets'
     });
   }
@@ -468,20 +468,20 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
 router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const ticketCode = req.params.code;
-    const { customer_details, customer_type, payment_reference } = req.body;
+    const { customer_details, customer_type, visit_date, payment_reference } = req.body;
 
     // Validate required fields
-    if (!customer_details || !customer_type || !payment_reference) {
+    if (!customer_details || !customer_type) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details, customer_type, and payment_reference are required'
+        message: 'customer_details and customer_type are required'
       });
     }
 
-    if (!customer_details.name || !customer_details.email || !customer_details.phone) {
+    if (!customer_details.name) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'customer_details must include name, email, and phone'
+        message: 'customer_details must include name'
       });
     }
 
@@ -492,10 +492,31 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
       });
     }
 
+    // Validate visit_date format if provided (optional)
+    if (visit_date) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(visit_date)) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'visit_date must be in YYYY-MM-DD format (e.g., 2025-11-23)'
+        });
+      }
+
+      // Check if date is valid
+      const parsedDate = new Date(visit_date);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'visit_date is not a valid date'
+        });
+      }
+    }
+
     const partnerId = getPartnerIdWithFallback(req);
     const result = await otaService.activatePreMadeTicket(ticketCode, partnerId, {
       customer_details,
       customer_type,
+      visit_date,  // Pass visit_date (optional) for weekend pricing
       payment_reference
     });
 
@@ -512,7 +533,7 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
                       error.code === 'TICKET_ALREADY_ACTIVATED' ? 409 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to activate ticket'
     });
   }
@@ -604,7 +625,7 @@ router.get('/batches/:id/redemptions', async (req: AuthenticatedRequest, res: Re
     const statusCode = error.code === 'BATCH_NOT_FOUND' ? 404 : 500;
 
     res.status(statusCode).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve batch redemptions'
     });
   }
@@ -615,7 +636,9 @@ router.get('/campaigns/analytics', async (req: AuthenticatedRequest, res: Respon
   try {
     const { campaign_type, date_range } = req.query;
 
+    const partnerId = getPartnerIdWithFallback(req);
     const analytics = await otaService.getCampaignAnalytics(
+      partnerId,
       campaign_type as string,
       date_range as string
     );
@@ -687,7 +710,7 @@ router.get('/admin/partners/:partnerId/statistics', adminAuthMiddleware(), async
 
     const status = error.code === 'VALIDATION_ERROR' ? 404 : 500;
     res.status(status).json({
-      error: error.code || 'INTERNAL_ERROR',
+      code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to retrieve partner statistics'
     });
   }
@@ -719,6 +742,68 @@ router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedR
 });
 
 // ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
+
+// GET /api/ota/resellers/summary - Aggregate reseller info from batches (JSON-based with pagination)
+router.get('/resellers/summary', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { status = 'active', date_range, page, limit, batches_per_reseller } = req.query;
+
+    // 验证分页参数
+    const filters: any = {
+      status: status as string,
+      date_range: date_range as string
+    };
+
+    if (page) {
+      const pageNum = parseInt(page as string, 10);
+      if (isNaN(pageNum) || pageNum < 1) {
+        return res.status(422).json({
+          error: 'INVALID_PARAMETER',
+          message: 'page must be a positive integer'
+        });
+      }
+      filters.page = pageNum;
+    }
+
+    if (limit) {
+      const limitNum = parseInt(limit as string, 10);
+      if (isNaN(limitNum) || limitNum < 1) {
+        return res.status(422).json({
+          error: 'INVALID_PARAMETER',
+          message: 'limit must be a positive integer'
+        });
+      }
+      filters.limit = limitNum;
+    }
+
+    if (batches_per_reseller) {
+      const batchesNum = parseInt(batches_per_reseller as string, 10);
+      if (isNaN(batchesNum) || batchesNum < 1) {
+        return res.status(422).json({
+          error: 'INVALID_PARAMETER',
+          message: 'batches_per_reseller must be a positive integer'
+        });
+      }
+      filters.batches_per_reseller = batchesNum;
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const summary = await otaService.getResellersSummary(partnerId, filters);
+
+    res.json(summary);
+  } catch (error: any) {
+    logger.error('OTA reseller summary failed', {
+      partner: req.ota_partner?.name,
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to get reseller summary'
+    });
+  }
+});
 
 // GET /api/ota/resellers - List all resellers for current OTA partner
 router.get('/resellers', async (req: AuthenticatedRequest, res: Response) => {
@@ -783,10 +868,11 @@ router.post('/resellers', async (req: AuthenticatedRequest, res: Response) => {
             contract_start_date, contract_end_date, settlement_cycle, payment_terms,
             region, tier, notes } = req.body;
 
-    if (!reseller_code || !reseller_name) {
+    // Only reseller_name is required; reseller_code will be auto-generated if not provided
+    if (!reseller_name) {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'reseller_code and reseller_name are required'
+        message: 'reseller_name is required'
       });
     }
 

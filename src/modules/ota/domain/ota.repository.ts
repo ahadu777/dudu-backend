@@ -5,6 +5,7 @@ import { ChannelReservationEntity, ReservationStatus } from './channel-reservati
 import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
+import { OTATicketBatchWithStatsDTO } from './ota-ticket-batch.dto';
 import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 import { generateSecureQR } from '../../../utils/qr-crypto';
 
@@ -48,6 +49,15 @@ export class OTARepository {
   }
 
   // Inventory operations
+  async getAllInventories(): Promise<ProductInventoryEntity[]> {
+    return this.inventoryRepo.find({
+      relations: ['product'],
+      where: {
+        product: { status: 'active' }
+      }
+    });
+  }
+
   async getInventoryByProductIds(productIds: number[]): Promise<ProductInventoryEntity[]> {
     return this.inventoryRepo.find({
       where: { product_id: In(productIds) },
@@ -553,6 +563,7 @@ export class OTARepository {
       customer_phone?: string;
       customer_type: 'adult' | 'child' | 'elderly';
       payment_reference: string;
+      raw?: Record<string, any>;  // Optional metadata for audit trail
     },
     orderData: Partial<OTAOrderEntity>
   ): Promise<{ ticket: PreGeneratedTicketEntity; order: OTAOrderEntity }> {
@@ -582,6 +593,34 @@ export class OTARepository {
 
       const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
 
+      // Fetch batch to get pricing information
+      const batch = await queryRunner.manager.findOne(OTATicketBatchEntity, {
+        where: { batch_id: ticket.batch_id }
+      });
+
+      // Calculate ticket price from batch pricing snapshot
+      let ticketPrice: number | undefined;
+      if (batch?.pricing_snapshot) {
+        const snapshot = batch.pricing_snapshot;
+        const customerType = customerData.customer_type;
+
+        // Check for custom pricing override first
+        const overridePrice = snapshot.pricing_overrides?.custom_customer_pricing?.[customerType];
+        if (overridePrice !== undefined) {
+          ticketPrice = overridePrice;
+        } else {
+          // Fall back to standard pricing
+          const pricing = snapshot.customer_type_pricing?.find(p => p.customer_type === customerType);
+          ticketPrice = pricing?.unit_price || snapshot.base_price;
+
+          // Apply campaign discount if exists
+          const discountRate = snapshot.pricing_overrides?.campaign_discount_rate || 0;
+          if (discountRate > 0 && ticketPrice) {
+            ticketPrice = ticketPrice * (1 - discountRate);
+          }
+        }
+      }
+
       // Update the ticket with customer info and activation status
       // Note: QR codes are generated on-demand when requested via POST /qr/{code}
       // NOT stored in database to maintain security and freshness
@@ -593,6 +632,13 @@ export class OTARepository {
       ticket.order_id = savedOrder.order_id;
       ticket.status = 'ACTIVE';
       ticket.activated_at = new Date();
+      ticket.ticket_price = ticketPrice;
+
+      // Update raw metadata if provided (for audit trail, e.g., visit_date, pricing breakdown)
+      if (customerData.raw) {
+        ticket.raw = customerData.raw;
+      }
+
       // QR code removed - will be generated on-demand via POST /qr/{code}
 
       const savedTicket = await queryRunner.manager.save(PreGeneratedTicketEntity, ticket);
@@ -643,7 +689,9 @@ export class OTARepository {
 
   async findTicketsByOrderId(orderId: string): Promise<PreGeneratedTicketEntity[]> {
     return this.preGeneratedTicketRepo.find({
-      where: { order_id: orderId, status: 'ACTIVE' }
+      where: { order_id: orderId }
+      // Removed status: 'ACTIVE' filter - should return tickets in ANY status (ACTIVE, USED, EXPIRED, etc.)
+      // This allows viewing ticket details for completed orders with redeemed tickets
     });
   }
 
@@ -742,7 +790,7 @@ export class OTARepository {
    * Find a single batch with statistics computed via JOIN
    * This is much faster than separate queries
    */
-  async findBatchWithStats(batchId: string): Promise<OTATicketBatchEntity | null> {
+  async findBatchWithStats(batchId: string): Promise<OTATicketBatchWithStatsDTO | null> {
     const result = await this.dataSource.query(`
       SELECT
         b.*,
@@ -750,13 +798,21 @@ export class OTARepository {
         SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
         SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
         SUM(CASE
-          WHEN t.status = 'USED' THEN
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
-            CASE
-              WHEN t.customer_type = 'child' THEN 0.65
-              WHEN t.customer_type = 'elderly' THEN 0.83
-              ELSE 1.0
-            END
+          WHEN t.status = 'USED' AND t.customer_type = 'adult' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status = 'USED' AND t.customer_type = 'child' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+            )
+          WHEN t.status = 'USED' AND t.customer_type = 'elderly' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+            )
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
@@ -774,7 +830,7 @@ export class OTARepository {
    * Find multiple batches with statistics via JOIN
    * Optimized for listing pages - avoids N+1 query problem
    */
-  async findBatchesWithStats(partnerId?: string, limit?: number, offset?: number): Promise<OTATicketBatchEntity[]> {
+  async findBatchesWithStats(partnerId?: string, limit?: number, offset?: number): Promise<OTATicketBatchWithStatsDTO[]> {
     let query = `
       SELECT
         b.*,
@@ -782,13 +838,21 @@ export class OTARepository {
         SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
         SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
         SUM(CASE
-          WHEN t.status = 'USED' THEN
-            CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) *
-            CASE
-              WHEN t.customer_type = 'child' THEN 0.65
-              WHEN t.customer_type = 'elderly' THEN 0.83
-              ELSE 1.0
-            END
+          WHEN t.status = 'USED' AND t.customer_type = 'adult' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status = 'USED' AND t.customer_type = 'child' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+            )
+          WHEN t.status = 'USED' AND t.customer_type = 'elderly' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+            )
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
@@ -817,10 +881,10 @@ export class OTARepository {
   }
 
   /**
-   * Helper method to map raw SQL row to entity with stats
+   * Helper method to map raw SQL row to DTO with stats
    */
-  private mapRowToBatchWithStats(row: any): OTATicketBatchEntity {
-    const batch = new OTATicketBatchEntity();
+  private mapRowToBatchWithStats(row: any): OTATicketBatchWithStatsDTO {
+    const batch = new OTATicketBatchWithStatsDTO();
 
     // Map basic fields
     batch.batch_id = row.batch_id;
@@ -1199,6 +1263,179 @@ export class OTARepository {
   // ============= RESELLER MANAGEMENT (NEW - 2025-11-14) =============
 
   /**
+   * Get batch details for a specific reseller
+   * 获取某个经销商的批次详情列表
+   */
+  async getResellerBatches(partnerId: string, resellerName: string, filters?: { status?: string; page?: number; limit?: number }): Promise<any[]> {
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 10, 50); // 每个经销商最多50个批次
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT
+        batch_id,
+        product_id,
+        total_quantity as tickets_count,
+        status,
+        created_at,
+        expires_at
+      FROM ota_ticket_batches
+      WHERE partner_id = ?
+        AND reseller_metadata IS NOT NULL
+        AND distribution_mode = 'reseller_batch'
+        AND JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.intended_reseller')) = ?
+    `;
+
+    const params: any[] = [partnerId, resellerName];
+
+    // 状态过滤
+    if (filters?.status === 'active') {
+      query += ` AND status = 'active'`;
+    }
+
+    query += `
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    params.push(limit, offset);
+
+    const results = await this.dataSource.query(query, params);
+    return results;
+  }
+
+  /**
+   * Aggregate reseller summary from batch metadata (JSON-based approach)
+   * 从批次JSON字段聚合经销商信息,用于管理列表
+   */
+  async getResellersSummaryFromBatches(partnerId: string, filters?: { status?: string; date_range?: string; page?: number; limit?: number }): Promise<any[]> {
+    let query = `
+      SELECT
+        JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.intended_reseller')) as reseller_name,
+        JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.contact_email')) as contact_email,
+        JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.contact_phone')) as contact_phone,
+
+        -- 统计信息
+        COUNT(DISTINCT otb.batch_id) as total_batches,
+        SUM(otb.total_quantity) as total_tickets_generated,
+        COALESCE(SUM(batch_stats.activated_count), 0) as total_tickets_activated,
+        COALESCE(SUM(batch_stats.used_count), 0) as total_tickets_used,
+
+        -- 收入统计（基于实际激活价格，包含客户类型折扣）
+        COALESCE(SUM(batch_stats.total_revenue), 0) as total_revenue,
+        COALESCE(SUM(batch_stats.realized_revenue), 0) as realized_revenue,
+
+        -- 最近活动
+        MAX(otb.created_at) as last_batch_date,
+        MIN(otb.created_at) as first_batch_date,
+
+        -- 佣金统计(按百分比类型)
+        AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.commission_config.rate')) AS DECIMAL(5,4))) as avg_commission_rate,
+
+        -- 结算周期(取最常见的)
+        JSON_UNQUOTE(JSON_EXTRACT(otb.reseller_metadata, '$.settlement_cycle')) as settlement_cycle
+
+      FROM ota_ticket_batches otb
+      LEFT JOIN (
+        SELECT
+          batch_id,
+          COUNT(CASE WHEN status IN ('ACTIVE', 'USED') THEN 1 END) as activated_count,
+          COUNT(CASE WHEN status = 'USED' THEN 1 END) as used_count,
+          -- 总收入：所有已激活票券的实际价格（包含客户类型折扣）
+          SUM(
+            CASE WHEN status IN ('ACTIVE', 'USED') THEN
+              COALESCE(
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.pricing_breakdown.final_price')) AS DECIMAL(10,2)),
+                0
+              )
+            ELSE 0 END
+          ) as total_revenue,
+          -- 已实现收入：已核销票券的实际价格
+          SUM(
+            CASE WHEN status = 'USED' THEN
+              COALESCE(
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.pricing_breakdown.final_price')) AS DECIMAL(10,2)),
+                0
+              )
+            ELSE 0 END
+          ) as realized_revenue
+        FROM pre_generated_tickets
+        WHERE status IN ('ACTIVE', 'USED')
+        GROUP BY batch_id
+      ) batch_stats ON otb.batch_id = batch_stats.batch_id
+
+      WHERE otb.partner_id = ?
+        AND otb.reseller_metadata IS NOT NULL
+        AND otb.distribution_mode = 'reseller_batch'
+    `;
+
+    const params: any[] = [partnerId];
+
+    // 状态过滤
+    if (filters?.status === 'active') {
+      query += ` AND otb.status = 'active'`;
+    }
+
+    // 日期范围过滤
+    if (filters?.date_range) {
+      query += ` AND DATE_FORMAT(otb.created_at, '%Y-%m') = ?`;
+      params.push(filters.date_range);
+    }
+
+    query += `
+      GROUP BY
+        reseller_name,
+        contact_email,
+        contact_phone,
+        settlement_cycle
+
+      ORDER BY total_tickets_activated DESC
+    `;
+
+    // 添加分页
+    if (filters?.page && filters?.limit) {
+      const page = filters.page;
+      const limit = Math.min(filters.limit, 100); // 最多100个经销商
+      const offset = (page - 1) * limit;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limit, offset);
+    }
+
+    const results = await this.dataSource.query(query, params);
+    return results;
+  }
+
+  /**
+   * Count total resellers (for pagination)
+   * 计算经销商总数（用于分页）
+   */
+  async countResellers(partnerId: string, filters?: { status?: string; date_range?: string }): Promise<number> {
+    let query = `
+      SELECT COUNT(DISTINCT JSON_UNQUOTE(JSON_EXTRACT(reseller_metadata, '$.intended_reseller'))) as total
+      FROM ota_ticket_batches
+      WHERE partner_id = ?
+        AND reseller_metadata IS NOT NULL
+        AND distribution_mode = 'reseller_batch'
+    `;
+
+    const params: any[] = [partnerId];
+
+    // 状态过滤
+    if (filters?.status === 'active') {
+      query += ` AND status = 'active'`;
+    }
+
+    // 日期范围过滤
+    if (filters?.date_range) {
+      query += ` AND DATE_FORMAT(created_at, '%Y-%m') = ?`;
+      params.push(filters.date_range);
+    }
+
+    const result = await this.dataSource.query(query, params);
+    return result[0]?.total || 0;
+  }
+
+  /**
    * Find all resellers for a specific OTA partner
    * Used for: Reseller listing, dropdown selections
    */
@@ -1222,8 +1459,32 @@ export class OTARepository {
   /**
    * Create new reseller
    * Used for: Reseller onboarding (future API)
+   * Auto-generates reseller_code: RSL-{partner_id}-{counter}
    */
   async createReseller(data: Partial<OTAResellerEntity>): Promise<OTAResellerEntity> {
+    // Auto-generate reseller_code if not provided
+    if (!data.reseller_code && data.partner_id) {
+      // Find max counter for this partner
+      const existingResellers = await this.resellerRepo.find({
+        where: { partner_id: data.partner_id },
+        order: { reseller_code: 'DESC' },
+        take: 1
+      });
+
+      let counter = 1;
+      if (existingResellers.length > 0) {
+        const lastCode = existingResellers[0].reseller_code;
+        // Extract counter from format RSL-{partner_id}-{counter}
+        const match = lastCode.match(/-(\d+)$/);
+        if (match) {
+          counter = parseInt(match[1]) + 1;
+        }
+      }
+
+      // Format: RSL-ctrip-001
+      data.reseller_code = `RSL-${data.partner_id}-${counter.toString().padStart(3, '0')}`;
+    }
+
     const reseller = this.resellerRepo.create(data);
     return this.resellerRepo.save(reseller);
   }

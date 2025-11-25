@@ -2,23 +2,23 @@
 card: "Enhanced venue scanning with cross-terminal fraud detection"
 slug: venue-enhanced-scanning
 team: "C - Gate"
-oas_paths: ["/venue/scan", "/qr/decrypt"]
+oas_paths: ["/venue/scan", "/qr/decrypt", "/venue"]
 migrations: ["db/migrations/redemption_events.sql"]
-status: "Pending"
+status: "Done"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-enhanced-scanning-result.json"
-last_update: "2025-11-14T20:30:00+08:00"
+last_update: "2025-11-25T14:00:00+08:00"
 related_stories: ["US-013", "US-012"]
 relationships:
   replaces: ["tickets-scan"]
   depends_on: ["qr-generation-api", "ota-premade-tickets"]
   triggers: ["venue-analytics-reporting"]
-  data_dependencies: ["RedemptionEvent", "Ticket", "PreGeneratedTicket"]
+  data_dependencies: ["RedemptionEvent", "Ticket", "PreGeneratedTicket", "Venue"]
   integration_points:
     data_stores: ["venue.service.ts", "venue.repository.ts"]
-notes: "Venue architecture under review. Session management removed. Venue entity preserved but may be refactored."
+notes: "Added venue selection feature (2025-11-25). Operators can now select venue during redemption."
 ---
 
 ## ⚠️ STATUS: PENDING REDESIGN
@@ -62,7 +62,65 @@ notes: "Venue architecture under review. Session management removed. Venue entit
 - **Performance optimized**: Sub-second response times with fraud checks
 - **Comprehensive audit trail**: All attempts logged for analytics
 
+### ⚠️ 重要：查询端点 vs 核销端点 / IMPORTANT: Viewing vs Redemption
+
+**查询端点（不消耗权益）/ Viewing/Query Endpoints (NO entitlement consumption):**
+- **POST /qr/decrypt** - 解密并显示票券信息供操作员查看（不核销）
+- **GET /qr/:code/info** - 查询票券详情包括 customer_info（不核销）
+- **GET /qr/verify** - 微信HTML查看页面（**不用于OTA核销流程**）
+
+**核销端点（消耗权益）/ Redemption Endpoint (CONSUMES entitlements):**
+- **POST /venue/scan** - 实际核销，减少 remaining_uses
+
+**❌ 常见错误 / Common mistake**: 将 GET /qr/verify（微信查看）误认为核销流程的一部分
+**✅ 正确的OTA流程 / Correct OTA flow**: POST /qr/:code → [可选: POST /qr/decrypt] → POST /venue/scan
+
+---
+
 ### Core Operations
+
+#### New Feature (2025-11-25): Venue Selection
+
+**Step 0: Get Available Venues (Optional)**
+```http
+GET /venue
+```
+
+**Response:**
+```json
+{
+  "venues": [
+    {
+      "venue_id": 1,
+      "venue_code": "central-pier",
+      "venue_name": "Central Pier Terminal",
+      "venue_type": "ferry_terminal",
+      "supported_functions": ["ferry_boarding"],
+      "is_active": true
+    },
+    {
+      "venue_id": 2,
+      "venue_code": "cheung-chau",
+      "venue_name": "Cheung Chau Terminal",
+      "venue_type": "ferry_terminal",
+      "supported_functions": ["ferry_boarding", "gift_redemption", "playground_token"],
+      "is_active": true
+    },
+    {
+      "venue_id": 3,
+      "venue_code": "gift-shop-central",
+      "venue_name": "Central Gift Shop",
+      "venue_type": "gift_shop",
+      "supported_functions": ["gift_redemption"],
+      "is_active": true
+    }
+  ]
+}
+```
+
+**Use Case**: Frontend displays venue list for operator to select before redemption.
+
+---
 
 #### Recommended Workflow: Decrypt → Display → Redeem
 
@@ -74,19 +132,51 @@ POST /qr/decrypt
 }
 ```
 
-**Response:**
+**Response (Enhanced 2025-11-17):**
 ```json
 {
   "jti": "550e8400-e29b-41d4-a716-446655440000",
-  "ticket_code": "TIX-ABC123",
-  "expires_at": "2025-11-13T19:50:00.000Z",
+  "ticket_code": "OTA-CP-20251103-000001",
+  "expires_at": "2025-11-17T20:00:00.000Z",
   "version": 1,
   "is_expired": false,
-  "remaining_seconds": 1800
+  "remaining_seconds": 1800,
+  "ticket_info": {
+    "ticket_type": "OTA",
+    "status": "ACTIVE",
+    "customer_info": {
+      "type": "adult",
+      "name": "张三",
+      "email": "zhang@example.com",
+      "phone": "+86-13800138000"
+    },
+    "entitlements": [
+      {
+        "function_code": "ferry_boarding",
+        "function_name": "Ferry Ride",
+        "remaining_uses": 1,
+        "total_uses": 1
+      },
+      {
+        "function_code": "gift_redemption",
+        "function_name": "Gift Redemption",
+        "remaining_uses": 1,
+        "total_uses": 1
+      }
+    ],
+    "product_info": {
+      "id": 106,
+      "name": "Premium Plan"
+    },
+    "product_id": 106,
+    "order_id": "OTA-ORDER-20251103-001",
+    "batch_id": "BATCH-20251103-001",
+    "partner_id": "ota_test_partner"
+  }
 }
 ```
 
-**Use Case**: Frontend displays ticket info to operator before redemption confirmation.
+**Use Case**: Frontend displays complete ticket info to operator in single API call (no need for separate GET /qr/:code/info).
 
 ---
 
@@ -96,6 +186,7 @@ POST /venue/scan
 {
   "qr_token": "a1b2c3d4e5f6...89:01ab23cd45ef",
   "function_code": "ferry_boarding",
+  "venue_code": "central-pier",  // NEW (2025-11-25): OPTIONAL venue selection
   "session_code": "VS-MOCK-1762194466702-nlaixr301",  // OPTIONAL (no longer required)
   "terminal_device_id": "TERMINAL-CP-001"
 }
@@ -107,13 +198,19 @@ POST /venue/scan
 
 **Business Rules:**
 1. **Format Detection**: Auto-detects encrypted (4+ colons) vs JWT (3 dots)
-2. **Session Validation (OPTIONAL)**: Venue session provides context but not required
-3. **Token Validation**: Valid encrypted QR or JWT token with JTI
-4. **Fraud Detection**: JTI must not have been used before (across ALL venues)
-5. **Function Validation**: Function must be available on ticket entitlements
-6. **Entitlement Check**: Remaining uses must be > 0
-7. **Atomic Operation**: Success decrements remaining uses
-8. **Auto-USED Status**: When ALL entitlements reach remaining_uses = 0, ticket status automatically changes to USED (OTA tickets)
+2. **Venue Validation (NEW - OPTIONAL)**: If `venue_code` provided, validates function is supported by venue
+3. **Session Validation (OPTIONAL)**: Venue session provides context but not required
+4. **Token Validation**: Valid encrypted QR or JWT token with JTI
+5. **Fraud Detection**: JTI must not have been used before (across ALL venues)
+6. **Function Validation**: Function must be available on ticket entitlements
+7. **Entitlement Check**: Remaining uses must be > 0
+8. **Atomic Operation**: Success decrements remaining uses
+9. **Auto-USED Status**: When ALL entitlements reach remaining_uses = 0, ticket status automatically changes to USED (OTA tickets)
+
+**Venue Validation Logic (NEW):**
+- If `venue_code` is provided → Validate venue exists and supports the `function_code`
+- If `venue_code` is NOT provided → Use default venue or skip venue-specific validation (backward compatible)
+- Rejection reason `WRONG_VENUE_FUNCTION` if function not supported by specified venue
 
 **Success Response (Partially Redeemed):**
 ```json
@@ -238,7 +335,9 @@ POST /venue/scan
 - `ALREADY_REDEEMED`: JTI already used for this specific function (fraud attempt)
 - `DUPLICATE_JTI`: Same as ALREADY_REDEEMED
 - `TICKET_NOT_FOUND`: Ticket doesn't exist
-- `WRONG_FUNCTION`: Function not supported by venue
+- `WRONG_FUNCTION`: Function not available on ticket entitlements
+- `WRONG_VENUE_FUNCTION`: Function not supported by specified venue (NEW - 2025-11-25)
+- `VENUE_NOT_FOUND`: Specified venue_code does not exist or is inactive (NEW - 2025-11-25)
 - `NO_REMAINING`: No remaining uses for function
 
 ### Venue Function Matrix
@@ -278,6 +377,41 @@ POST /venue/scan
 - Fraud detection lookup: < 10ms (achieved: 1-3ms)
 - Support 1000+ scans/hour
 - 99.9% availability during peak hours
+
+### RESTful Compliance Check
+
+**✅ All endpoints follow RESTful design principles (validated 2025-11-25)**
+
+- [x] **Resource naming**: Uses appropriate nouns (`/venue` for module)
+- [x] **No path redundancy**: Fixed `/venue/venues` → `/venue` (GET venue list)
+- [x] **HTTP methods match semantics**:
+  - GET `/venue` - Retrieve venue list ✅
+  - POST `/venue/scan` - Custom action (scanning) ✅
+- [x] **Custom actions use verbs**: `/scan` clearly indicates action
+- [x] **Full URL validation**: Module prefix + router path verified
+
+**Final Endpoints:**
+```
+GET  /venue          → Retrieve all active venues (RESTful resource collection)
+POST /venue/scan     → Perform scan action (RESTful custom action)
+POST /qr/decrypt     → Decrypt QR code (RESTful custom action)
+```
+
+**Module Registration:**
+```typescript
+// src/modules/index.ts
+app.use('/venue', venueRouter);  // Singular module name
+
+// src/modules/venue/router.ts
+router.get('/', ...)             // Maps to: GET /venue ✅
+router.post('/scan', ...)        // Maps to: POST /venue/scan ✅
+```
+
+**Compliance Notes:**
+- Originally had redundant path `/venue/venues` ❌
+- Fixed to `/venue` for venue list (RESTful) ✅
+- Maintains backward compatibility for `/venue/scan` ✅
+- Future expansion: Can add `GET /venue/:venue_code` for single venue retrieval
 
 ### Error Handling
 

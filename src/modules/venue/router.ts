@@ -1,16 +1,79 @@
 import { Router } from 'express';
 import { venueOperationsService } from './service';
 import { logger } from '../../utils/logger';
+import { authenticateOperator } from '../../middlewares/auth';
 
 const router = Router();
 
 /**
  * @swagger
+ * /venue:
+ *   get:
+ *     summary: 获取所有可用场馆列表
+ *     description: 返回所有活跃场馆的列表，供操作员在核销时选择场馆
+ *     tags: [Venue Operations]
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved venue list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 venues:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       venue_id:
+ *                         type: integer
+ *                         example: 1
+ *                       venue_code:
+ *                         type: string
+ *                         example: "central-pier"
+ *                       venue_name:
+ *                         type: string
+ *                         example: "Central Pier Terminal"
+ *                       venue_type:
+ *                         type: string
+ *                         example: "ferry_terminal"
+ *                       supported_functions:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["ferry_boarding", "gift_redemption"]
+ *                       is_active:
+ *                         type: boolean
+ *                         example: true
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/', async (req, res) => {
+  try {
+    const result = await venueOperationsService.getAllVenues();
+    res.json(result);
+  } catch (error) {
+    logger.error('venues.list.error', {
+      error: (error as Error).message,
+      stack: (error as Error).stack
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve venues list'
+    });
+  }
+});
+
+/**
+ * @swagger
  * /venue/scan:
  *   post:
- *     summary: Enhanced venue scanning with fraud prevention (PRD-003)
- *     description: Validates QR tokens with cross-terminal fraud detection and venue-specific analytics
+ *     summary: 核销票券权益（需要操作员JWT认证）
+ *     description: 扫码核销票券的指定权益，通过JTI+function_code防止重复核销，自动记录操作员信息
  *     tags: [Venue Operations]
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -20,25 +83,20 @@ const router = Router();
  *             required:
  *               - qr_token
  *               - function_code
- *               - session_code
  *             properties:
  *               qr_token:
  *                 type: string
- *                 description: JWT QR token from ticket
- *                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 description: 加密的QR码字符串（格式：iv:encrypted:authTag:signature）
+ *                 example: "a1b2c3d4:e5f6g7h8:i9j0k1l2:m3n4o5p6"
  *               function_code:
  *                 type: string
- *                 description: Function being redeemed
+ *                 description: 要核销的权益类型
  *                 enum: [ferry_boarding, gift_redemption, playground_token]
  *                 example: "ferry_boarding"
- *               session_code:
+ *               venue_code:
  *                 type: string
- *                 description: Active venue session code
- *                 example: "VS-1699123456789-abc123def"
- *               terminal_device_id:
- *                 type: string
- *                 description: Physical terminal device identifier
- *                 example: "TERMINAL-CP-001"
+ *                 description: 场馆代码（可选，用于场馆选择和功能验证）
+ *                 example: "central-pier"
  *     responses:
  *       200:
  *         description: Scan processed successfully
@@ -58,22 +116,19 @@ const router = Router();
  *                   type: array
  *                   items:
  *                     type: object
- *                   example: [{"function_code": "ferry_boarding", "remaining_uses": 999}]
+ *                   example: [{"function_code": "ferry_boarding", "remaining_uses": 1}]
  *                 remaining_uses:
  *                   type: integer
- *                   example: 999
- *                 venue_info:
+ *                   example: 1
+ *                 operator_info:
  *                   type: object
  *                   properties:
- *                     venue_code:
+ *                     operator_id:
+ *                       type: number
+ *                       example: 123
+ *                     username:
  *                       type: string
- *                       example: "central-pier"
- *                     venue_name:
- *                       type: string
- *                       example: "Central Pier Terminal"
- *                     terminal_device:
- *                       type: string
- *                       example: "TERMINAL-CP-001"
+ *                       example: "zhangsan"
  *                 performance_metrics:
  *                   type: object
  *                   properties:
@@ -86,9 +141,21 @@ const router = Router();
  *                 ts:
  *                   type: string
  *                   format: date-time
- *                   example: "2025-11-04T12:34:56.789Z"
+ *                   example: "2025-11-18T12:34:56.789Z"
+ *       401:
+ *         description: 未认证或操作员token无效
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "No operator token provided"
+ *                 message:
+ *                   type: string
  *       422:
- *         description: Validation failed (fraud detected, expired token, etc.)
+ *         description: 核销失败（重复核销、无权益、QR过期等）
  *         content:
  *           application/json:
  *             schema:
@@ -105,9 +172,10 @@ const router = Router();
  *                 ts:
  *                   type: string
  */
-router.post('/scan', async (req, res) => {
-  const { qr_token, function_code, session_code, terminal_device_id } = req.body;
+router.post('/scan', authenticateOperator, async (req, res) => {
+  const { qr_token, function_code, venue_code } = req.body;
 
+  // 验证必填参数
   if (!qr_token || !function_code) {
     return res.status(400).json({
       error: 'INVALID_REQUEST',
@@ -116,22 +184,24 @@ router.post('/scan', async (req, res) => {
   }
 
   try {
+    // 调用service，传入操作员信息（从JWT中间件自动注入）
     const result = await venueOperationsService.validateAndRedeem({
       qrToken: qr_token,
       functionCode: function_code,
-      sessionCode: session_code,
-      terminalDeviceId: terminal_device_id
+      venueCode: venue_code,  // 可选的场馆代码（新增）
+      operator: req.operator!  // 操作员信息来自JWT token
     });
 
-    // Return appropriate HTTP status based on result
+    // 返回适当的HTTP状态码
     const statusCode = result.result === 'success' ? 200 : 422;
     res.status(statusCode).json(result);
 
   } catch (error) {
     logger.error('venue.scan.error', {
       function_code,
-      terminal_device: terminal_device_id,
-      error: (error as Error).message
+      operator_id: req.operator?.operator_id,
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
 
     res.status(500).json({

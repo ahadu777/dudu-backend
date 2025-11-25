@@ -50,6 +50,10 @@ export class ProductInventoryEntity {
   updated_at!: Date;
 
   // Helper methods
+  getChannelAllocation(channel: string): ChannelAllocation | null {
+    return this.channel_allocations[channel] || null;
+  }
+
   getChannelAvailable(channel: string): number {
     const allocation = this.channel_allocations[channel];
     if (!allocation) return 0;

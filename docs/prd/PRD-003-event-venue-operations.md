@@ -7,9 +7,9 @@ product_area: "Operations"
 owner: "Product Management"
 status: "Draft"
 created_date: "2025-11-04"
-last_updated: "2025-11-04"
-related_stories: ["US-001", "US-002", "US-004", "US-013"]
-implementation_cards: ["tickets-scan", "operators-login", "validators-sessions"]
+last_updated: "2025-11-19"
+related_stories: ["US-001", "US-002", "US-004", "US-005", "US-006", "US-013"]
+implementation_cards: ["tickets-scan", "operators-login", "validators-sessions", "reports-redemptions"]
 ```
 
 ## Executive Summary

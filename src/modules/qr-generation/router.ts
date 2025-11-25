@@ -13,11 +13,15 @@ const router = Router();
 /**
  * POST /qr/decrypt
  *
- * Decrypt and verify QR code without redemption
- * Used by frontend apps to validate QR before showing to operators
+ * Decrypt and verify QR code with complete ticket information (NO redemption)
+ * Used by frontend apps to display ticket details to operators before redemption
+ *
+ * Enhanced in 2025-11-17: Now returns complete ticket information in single call
+ * - No need to call GET /qr/:code/info separately
+ * - Includes customer_info, entitlements, product_info
  *
  * @body encrypted_data - Encrypted QR token string
- * @returns Decrypted ticket data with expiration status
+ * @returns Decrypted QR data + complete ticket information
  */
 router.post('/decrypt', async (req: Request, res: Response) => {
   try {
@@ -36,23 +40,100 @@ router.post('/decrypt', async (req: Request, res: Response) => {
       });
     }
 
-    // Decrypt and verify QR code
+    // Step 1: Decrypt and verify QR code
     const result = await decryptAndVerifyQR(encrypted_data);
+    const ticketCode = result.data.ticket_code;
 
     logger.info('qr.decrypt.success', {
       jti: result.data.jti,
-      ticket_code: result.data.ticket_code,
+      ticket_code: ticketCode,
       is_expired: result.is_expired
     });
 
-    // Return decrypted data
+    // Step 2: Fetch complete ticket information
+    // Note: No ownership validation here since encrypted_data itself is the security credential
+    // Try all sources without prefix-based restrictions
+
+    let ticket;
+    let ticketType = 'NORMAL';
+
+    // Try database first (if available)
+    if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+      const venueRepo = new VenueRepository(AppDataSource);
+      ticket = await venueRepo.getTicketByCode(ticketCode);
+      if (ticket) {
+        ticketType = 'OTA';
+      }
+    }
+
+    // Fallback to mock stores if not found in database
+    if (!ticket) {
+      ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+      if (ticket) {
+        ticketType = 'OTA';
+      }
+    }
+
+    if (!ticket) {
+      ticket = mockDataStore.getTicketByCode(ticketCode);
+    }
+
+    if (!ticket) {
+      return res.status(404).json({
+        error: 'TICKET_NOT_FOUND',
+        message: 'Ticket not found',
+        jti: result.data.jti,
+        ticket_code: ticketCode
+      });
+    }
+
+    // Get product information
+    const product = mockDataStore.getProduct(ticket.product_id);
+    const productInfo = product ? {
+      id: product.id,
+      name: product.name
+    } : {
+      id: ticket.product_id,
+      name: 'Unknown Product'
+    };
+
+    // Format entitlements with complete information
+    const formattedEntitlements = (ticket.entitlements || []).map((e: any) => ({
+      function_code: e.function_code,
+      function_name: e.label || e.function_code,
+      remaining_uses: e.remaining_uses,
+      total_uses: e.total_uses || e.remaining_uses
+    }));
+
+    // Return complete information: QR metadata + ticket details
     return res.status(200).json({
+      // QR code metadata (解密信息)
       jti: result.data.jti,
-      ticket_code: result.data.ticket_code,
+      ticket_code: ticketCode,
       expires_at: result.data.expires_at,
       version: result.data.version,
       is_expired: result.is_expired,
-      remaining_seconds: result.remaining_seconds
+      remaining_seconds: result.remaining_seconds,
+
+      // Complete ticket information (完整票券信息)
+      ticket_info: {
+        ticket_type: ticketType,
+        status: ticket.status,
+        // Customer information (顾客信息)
+        customer_info: {
+          type: ticket.customer_type || null,        // 'adult' | 'child' | 'elderly' (成人/小孩/老人)
+          name: ticket.customer_name || null,        // 顾客姓名
+          email: ticket.customer_email || null,      // 顾客邮箱
+          phone: ticket.customer_phone || null       // 顾客电话
+        },
+        entitlements: formattedEntitlements,
+        product_info: productInfo,
+        // Additional fields for debugging
+        product_id: ticket.product_id,
+        order_id: ticket.order_id,
+        batch_id: ticket.batch_id,
+        partner_id: ticket.partner_id
+      }
     });
 
   } catch (error) {
@@ -243,29 +324,36 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
         operatorId: req.operator?.operator_id
       };
 
-      // Try to fetch ticket info
-      const ticketType = ticketCode.match(/^(CRUISE-|BATCH-|FERRY-|OTA-)/i) ? 'OTA' : 'NORMAL';
-
+      // Try to fetch ticket info - try all sources without prefix-based restrictions
       let ticket;
-      if (ticketType === 'OTA') {
-        // Try database first for OTA tickets
-        if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
-          const venueRepo = new VenueRepository(AppDataSource);
-          ticket = await venueRepo.getTicketByCode(ticketCode);
-        } else {
-          // Fallback to mock store
-          ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
-        }
+      let ticketType = 'NORMAL';
 
-        // Validate ownership (operators can view any ticket)
-        if (ticket && authContext.authType !== 'OPERATOR' && ticket.partner_id !== authContext.partnerId) {
-          throw new Error('UNAUTHORIZED');
+      // Try database first (if available)
+      if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+        const venueRepo = new VenueRepository(AppDataSource);
+        ticket = await venueRepo.getTicketByCode(ticketCode);
+        if (ticket) {
+          ticketType = 'OTA';
         }
-      } else {
+      }
+
+      // Fallback to mock stores if not found in database
+      if (!ticket) {
+        ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+        if (ticket) {
+          ticketType = 'OTA';
+        }
+      }
+
+      if (!ticket) {
         ticket = mockDataStore.getTicketByCode(ticketCode);
+      }
 
-        // Validate ownership (operators can view any ticket)
-        if (ticket && authContext.authType !== 'OPERATOR' && ticket.user_id !== authContext.userId) {
+      // Validate ownership based on ticket type (operators can view any ticket)
+      if (ticket && authContext.authType !== 'OPERATOR') {
+        if (ticketType === 'OTA' && ticket.partner_id !== authContext.partnerId) {
+          throw new Error('UNAUTHORIZED');
+        } else if (ticketType === 'NORMAL' && ticket.user_id !== authContext.userId) {
           throw new Error('UNAUTHORIZED');
         }
       }
@@ -302,6 +390,13 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
         ticket_code: ticketCode,
         ticket_type: ticketType,
         status: ticket.status,
+        // Customer information (顾客信息)
+        customer_info: {
+          type: ticket.customer_type || null,        // 'adult' | 'child' | 'elderly' (成人/小孩/老人)
+          name: ticket.customer_name || null,        // 顾客姓名
+          email: ticket.customer_email || null,      // 顾客邮箱
+          phone: ticket.customer_phone || null       // 顾客电话
+        },
         entitlements: formattedEntitlements,
         can_generate_qr: ['PRE_GENERATED', 'ACTIVE', 'USED', 'active', 'partially_redeemed'].includes(ticket.status),
         product_info: productInfo,

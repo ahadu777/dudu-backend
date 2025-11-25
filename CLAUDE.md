@@ -1,14 +1,24 @@
 # AI Development Guide
 
 ## 🎯 QUICK NAVIGATION
-- **New to project?** → [Project Foundations](#-project-foundations)
-- **Need to implement?** → [The Core Pattern](#-the-core-pattern)
-- **ALWAYS START HERE** → [Reality Check](#-reality-check)
+
+**Essential Workflows:**
+- **ALWAYS START HERE** → [Reality Check](#-reality-check) - Verify what's actually running
+- **New to project?** → [Project Foundations](#-project-foundations) - Architecture & stack
+- **Need to implement?** → [The Core Pattern](#-the-core-pattern) - Core workflow steps
+- **Natural language request?** → [Natural Language Optimization](#natural-language-optimization-mandatory-first-step) ([📖 Details](docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md))
+
+**Documentation Guides:**
+- **Creating new story?** → [Duplicate Prevention](#duplicate-story-prevention-mandatory-before-creating-stories) ([📖 Details](docs/reference/DUPLICATE-PREVENTION.md))
+- **PRD vs Story vs Card?** → [Document Layer Decision](#document-layer-decision-tree-prd-vs-story-vs-card) ([📖 Details](docs/reference/DOCUMENT-LAYER-DECISION.md))
+- **API changing?** → [API Change Management](#api-change-management-when-existing-apis-evolve) ([📖 Details](docs/reference/API-CHANGE-MANAGEMENT.md))
+- **Implementing new API?** → [RESTful API Design](#restful-api-design-standards-mandatory-for-all-apis) ([📖 Details](docs/reference/RESTFUL-API-DESIGN.md))
+
+**Problem Solving:**
+- **Troubleshooting?** → [When Things Go Wrong](#-when-things-go-wrong)
 - **Complex scenario?** → [Knowledge Graph Patterns](#-knowledge-graph-patterns)
-- **Troubleshooting?** → [When Things Go Wrong](#-when-ai-process-goes-wrong)
 - **Learning context?** → [Proven Patterns](#-proven-patterns--case-studies)
-- **Step-by-step workflow?** → [Detailed Workflows](#-detailed-workflows)
-- **🧠 AI WORKFLOW IMPROVEMENT** → [Experience-Based Learning](#-experience-based-learning)
+- **🧠 AI Improvement** → [Experience-Based Learning](#-experience-based-learning)
 
 ---
 
@@ -18,11 +28,146 @@
 
 **Check what exists first:**
 - `docs/cards/` for existing work
-- `node scripts/progress-report.js` for status
+- `grep "status:" docs/cards/*.md` for status
 - `docs/stories/_index.yaml` for relationships
 
 **"I want users to..."** → COMPLETE AUTONOMY WORKFLOW (Story → Cards → Code)
 **"Implement card XYZ"** → TRADITIONAL WORKFLOW (Work with existing cards)
+
+### Natural Language Optimization (Mandatory First Step)
+
+**When user provides requirements in natural language, AI MUST:**
+
+1. **Parse & Understand** - Extract core intent and requirements
+2. **Optimize into Structured Prompt** - Convert to clear, actionable specification
+3. **Present for Confirmation** - Show optimized version to user
+4. **Wait for User Approval** - Don't proceed without confirmation
+5. **Execute Based on Optimized Prompt** - Implement what was confirmed
+
+**Quick Example:**
+```
+User: "我想让用户能够查看他们的订单历史"
+
+AI Response:
+📋 理解你的需求，优化后的提示词：
+
+**功能范围：**
+- API: GET /api/orders/history
+- 返回：分页的订单列表（订单号、状态、金额、创建时间）
+- 权限：需要用户身份认证
+- 文档层级：新用户能力 → 需要创建Story
+
+**需要确认：**
+1. 是否需要筛选功能（按状态/时间范围）？
+2. 是否需要订单详情接口（GET /api/orders/:id）？
+3. 是创建新Story还是扩展现有的订单管理Story？
+
+请确认方向后我再开始实现。
+```
+
+**Why This Works:**
+- ✅ Avoids misunderstanding and rework
+- ✅ User stays in control of requirements
+- ✅ AI gets clear, structured input
+- ✅ Reduces back-and-forth iterations
+
+**📖 Detailed Examples**: See [`docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md`](docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md) for complete workflow scenarios.
+
+### Anti-Script Principle (Mandatory - Keep It Simple)
+
+**CRITICAL: Do NOT create scripts. Use simple commands.**
+
+**Core Principle:**
+- ❌ **Default: NO scripts** - Simple commands are always better
+- ✅ **Only exception: Database migrations** (infrastructure necessity)
+- ✅ **Testing: Use Newman** - `npx newman run postman/xxx.postman_collection.json`
+
+**Forbidden Script Scenarios:**
+```bash
+# ❌ NEVER create scripts for:
+- Small feature validation → Use curl
+- One-time checks → Use grep/cat
+- Testing endpoints → Use Newman
+- Viewing files → Use cat/grep
+- Progress queries → Use simple grep
+- Coverage reports → Manual grep is faster
+```
+
+**Allowed Simple Commands:**
+```bash
+# ✅ Always use direct commands:
+curl http://localhost:8080/endpoint              # Test endpoints
+grep "status:" docs/cards/*.md                   # Check status
+cat docs/cards/card-name.md                      # View card
+grep -ri "keywords" docs/                        # Search docs
+npx newman run postman/xxx.postman_collection.json  # Run tests
+```
+
+**AI Mandatory Self-Check Before ANY Script Creation:**
+1. ❓ Can this be done with one command? → Use command
+2. ❓ Can Newman handle this? → Use Newman
+3. ❓ Will user run this >10 times? → Still use command
+4. ❓ Is this database migration? → Only then consider script
+
+**If AI suggests creating a script, user can say: "No scripts, simple command only"**
+
+**Current scripts/ directory (only 4 allowed):**
+- `setup.sh` - Initial project setup
+- `init-db.sql` - Database initialization
+- `run-migration.js` - Migration runner
+- `migrate-*.sql` - Historical migrations
+
+**Everything else: Direct commands or Newman.**
+
+### Duplicate Story Prevention (Mandatory Before Creating Stories)
+
+**CRITICAL: AI MUST check for duplicates before creating any new story.**
+
+**Quick Check Pattern:**
+```bash
+# Multi-language search (AI auto-translates Chinese ↔ English)
+grep -ri "关键词\|keywords" docs/prd/ docs/stories/ docs/cards/
+find docs/ -name "*domain*"
+cat docs/stories/_index.yaml | grep -B 3 -A 3 "keyword"
+```
+
+**AI Auto-Translation**: When user uses Chinese, AI automatically translates to English for search. No manual `aliases` needed - zero maintenance cost.
+
+**Decision Rule**: If similarity >70%, ask user: "Merge? Extend? Separate?"
+
+**📖 Detailed Guide**: See [`docs/reference/DUPLICATE-PREVENTION.md`](docs/reference/DUPLICATE-PREVENTION.md) for:
+- Complete multi-layer search workflow
+- AI translation examples
+- Similarity analysis decision tree
+- User clarification templates
+- Real-world examples
+
+### Document Layer Decision Tree (PRD vs Story vs Card)
+
+**Three Questions to Ask:**
+1. **New product domain?** → Create PRD
+2. **New user capability?** → Create Story
+3. **New API/enhancement?** → Create/Update Card
+
+**Quick Decision Matrix:**
+
+| User Request | Layer | Action |
+|-------------|-------|--------|
+| "我想做会员积分系统" | **PRD** | Create PRD-006 |
+| "用户能查看订单历史" | **Story** | Create US-XXX |
+| "订单列表需要分页" | **Card** | Update card |
+| "修复分页的bug" | **Code** | Fix code only |
+
+**PRD Scope Guidelines:**
+- Typical: 3-8 Stories per PRD
+- Warning: >15 Stories → Consider splitting
+
+**📖 Detailed Guide**: See [`docs/reference/DOCUMENT-LAYER-DECISION.md`](docs/reference/DOCUMENT-LAYER-DECISION.md) for:
+- Complete decision workflow with examples
+- When to create vs update each layer
+- Real examples from project (DeepTravel, OTA, Venue)
+- Common mistakes to avoid
+- Validation commands
 
 ### Requirements-Code Synchronization (Validated Pattern)
 
@@ -42,14 +187,50 @@ grep -ri "requirement.*keywords" docs/prd/ docs/stories/ docs/cards/
 - After updating docs, verify code implements the documented requirements
 - Use grep to check code matches the documentation patterns
 
+### API Change Management (When Existing APIs Evolve)
+
+**Change Type Classification:**
+
+| Change Type | Breaking? | Document Updates |
+|------------|-----------|------------------|
+| Add optional field | ✅ Safe | Card only |
+| Add required field | ❌ Breaking | Card + Version + Story/PRD |
+| Remove/rename field | ❌ Breaking | Card + Version + Story/PRD |
+| Business logic | ⚠️ Depends | PRD + Card + Tests |
+| New endpoint | ✅ Safe | Card (new section) |
+
+**Key Principles:**
+- ✅ Manage versions in SAME file (no `order-create-v2.md`)
+- 🚨 Warn user for breaking changes, offer migration options
+- ✅ Test backward compatibility for non-breaking changes
+- ✅ Update PRD business-rules tests for logic changes
+
+**Quick Workflow:**
+```bash
+# 1. Classify change type
+# 2. Update appropriate layers (Card always, PRD/Story if needed)
+# 3. Add version section to Card if breaking
+# 4. Test backward compatibility
+# 5. Update Newman test collections
+```
+
+**📖 Detailed Guide**: See [`docs/reference/API-CHANGE-MANAGEMENT.md`](docs/reference/API-CHANGE-MANAGEMENT.md) for:
+- Complete workflow for each change type
+- Card version management templates
+- Breaking change migration strategies
+- Business logic change examples
+- Real-world cases (channel_id→partner_id, tax calculation)
+
 ### The Working Pattern
 ```
-1. REALITY CHECK: What's actually running? (grep imports, curl endpoints)
-2. Check: docs/cards/ + node scripts/progress-report.js
-3. Status: "Ready" → "In Progress" → "Done"
-4. Code: src/modules/[name]/ following existing patterns
-5. Test: curl http://localhost:8080/endpoint
-6. Mock-first: USE_DATABASE=false (default, faster)
+0. LAYER DECISION: PRD? Story? Card? (Use Document Layer Decision Tree)
+1. DUPLICATE CHECK: grep -ri "keywords" docs/prd/ docs/stories/ docs/cards/
+2. REALITY CHECK: What's actually running? (grep imports, curl endpoints)
+3. Check: docs/cards/ + grep "status:" docs/cards/*.md
+4. Status: "Ready" → "In Progress" → "Done"
+5. Code: src/modules/[name]/ following existing patterns
+6. Test: curl http://localhost:8080/endpoint
+7. Mock-first: USE_DATABASE=false (default, faster)
 ```
 
 ### AI Self-Feedback Loop (Validated Pattern)
@@ -116,24 +297,6 @@ User: "ai driven workflow is fulfilled right?"
 AI Response: Used above template to show B2B2C billing workflow completion
 User Satisfaction: ✅ Confirmed this response style matched their validation goals
 
-### Experience-Based Learning (Validated Approach)
-
-**Before adding any pattern to CLAUDE.md:**
-```bash
-# Check what's been tested in case studies
-grep -A 5 -B 5 "pattern.*name" docs/cases/CASE-DISCOVER-AI-WORKFLOW.md
-```
-
-**Only add if:**
-- ✅ Pattern tested with real scenario
-- ✅ Results documented in case studies
-- ✅ Proven more effective than existing approach
-
-**Never add:**
-- ❌ Theoretical concepts that "sound good"
-- ❌ Abstract principles about improvement
-- ❌ Untested frameworks or meta-patterns
-
 ### Standards (DoR/DoD Checklists)
 **Definition of Ready:**
 - [ ] Complete API contract in card
@@ -156,80 +319,47 @@ grep -A 5 -B 5 "pattern.*name" docs/cases/CASE-DISCOVER-AI-WORKFLOW.md
   - [ ] Test analysis generated (if applicable)
   - [ ] Story validation coverage verified
 
+### RESTful API Design Standards (Mandatory for All APIs)
+
+**📖 Complete Guide**: See [`docs/reference/RESTFUL-API-DESIGN.md`](docs/reference/RESTFUL-API-DESIGN.md)
+
+**Quick Check (before implementing any API):**
+- [ ] Path uses plural nouns (`/venues` not `/venue`)
+- [ ] No path redundancy (not `/venue/venues`)
+- [ ] Custom actions: `/:id/action` ✅ not `/action/:id` ❌
+- [ ] Ask user if uncertain
+
 ### Testing Standards (Newman-First Approach)
-**Test Generation Hierarchy:**
-1. **STORY (US-xxx)** → Primary test source (user capability)
-2. **CARDS** → Detailed endpoint/API testing (technical implementation)
-3. **PRD** → Business rule validation (requirements compliance)
 
-**Newman Collection Standards:**
-- **Generate from STORIES**: `us-xxx-complete-coverage.postman_collection.json`
-- **Business Rules**: `[domain]-business-rules.postman_collection.json`
-- **Output Format**: XML reports in `reports/newman/` for CI/CD integration
-- **Replace Bash Scripts**: Newman handles all test scenarios
+**Test Hierarchy:** PRD (business rules) → Story (workflows) → Card (endpoints)
 
-**Testing Workflow:**
+**Newman Commands:**
 ```bash
-# 1. Start server
-npm start
-
-# 2. Health check
-curl http://localhost:8080/healthz
-
-# 3. Run Newman collections (primary standard)
-npx newman run postman/auto-generated/us-xxx-complete-coverage.postman_collection.json
-npx newman run postman/auto-generated/business-rules.postman_collection.json
-
-# 4. Review XML reports
-ls reports/newman/*.xml
+npm start                                                    # Start server
+curl http://localhost:8080/healthz                          # Health check
+npx newman run postman/auto-generated/us-xxx.postman_collection.json  # Run tests
 ```
 
-**Test Coverage Requirements:**
-- [ ] Multi-partner isolation (for OTA/B2B features)
-- [ ] Performance validation (<2s response times)
-- [ ] API contract verification (OpenAPI compliance)
-- [ ] Business logic validation (PRD requirements)
-- [ ] Complete user workflow (end-to-end story coverage)
-
-**PRD Coverage Tracking (Two-Layer Approach):**
-1. **Explicit Mapping** (Primary): `docs/test-coverage/_index.yaml` - Manually maintained as we code
-2. **Automatic Discovery** (Backup): `node scripts/prd-test-mapper.mjs` - For gap analysis when explicit mapping is incomplete
-
-**When to Update Explicit Mapping:**
-- [ ] When implementing new PRD requirements
-- [ ] When adding new Newman test collections
-- [ ] When discovering coverage gaps during testing
-- [ ] Weekly during sprint planning
-
-**Validation Assets Standards:**
-Stories must include `validation_assets` section in `docs/stories/_index.yaml`:
-```yaml
-validation_assets:
-  newman:
-    - reports/collections/us-xxx-story-coverage.json      # End-to-end workflow tests
-    - postman/auto-generated/component-specific.postman_collection.json  # Component tests
-  runbook: docs/integration/US-XXX-runbook.md            # Optional: Integration guide
-  test_analysis: docs/test-analysis/component-analysis.md # Optional: AI-generated analysis
-```
-- **Newman collections**: All test scenarios for the story (workflow + component tests)
-- **Runbooks**: Copy-paste integration instructions for stakeholders
-- **Test analysis**: AI-generated visual documentation for easy understanding
+**Coverage Tracking:** `docs/test-coverage/_index.yaml`
 
 ### Key Commands
 ```bash
-node scripts/progress-report.js  # Check status
-npm run build && npm start      # Deploy changes
-curl http://localhost:8080/      # Test endpoints
+# Development
+npm run build && npm start                    # Deploy changes
+curl http://localhost:8080/endpoint           # Test endpoints
 
-# Test Coverage Analysis
-./scripts/coverage-summary.sh               # Quick coverage overview (explicit mapping)
-node scripts/prd-test-mapper.mjs           # Full automatic discovery (backup analysis)
-node scripts/generate-coverage-report.mjs  # Generate comprehensive coverage status report
+# Status Checks
+grep "status:" docs/cards/*.md                # Check card status
+grep "status: In Progress" docs/cards/*.md    # Find in-progress cards
+grep "status: Ready" docs/cards/*.md          # Find ready cards
+
+# Testing
+npx newman run postman/xxx.postman_collection.json  # Run E2E tests
 
 # Bug and Issue Tracking
-grep "status: Open" docs/bugs/_index.yaml     # List open bugs
+grep "status: Open" docs/bugs/_index.yaml           # List open bugs
 grep "severity: Critical\|High" docs/bugs/_index.yaml  # Critical/high priority bugs
-grep "US-001" docs/bugs/_index.yaml          # Find bugs affecting specific story
+grep "US-001" docs/bugs/_index.yaml                 # Find bugs affecting specific story
 ```
 
 ### When Stuck
@@ -341,6 +471,51 @@ USE_DATABASE=true npm start
 4. Check both USE_DATABASE=false and USE_DATABASE=true
 ```
 
+### Database Schema Validation (For SQL Errors)
+
+**Proven pattern from CASE-003: OTA Analytics SQL Fix**
+
+When encountering SQL field errors like `ER_BAD_FIELD_ERROR`:
+
+```bash
+# 1. Check Entity Definition (what code thinks exists)
+cat src/modules/[module]/domain/*.entity.ts | grep "@Column"
+grep -A 3 "class.*Entity" src/modules/[module]/domain/*.entity.ts
+
+# 2. Check Actual Database Schema (ground truth)
+# For ENUM types - CRITICAL for status fields
+SHOW COLUMNS FROM [table_name] LIKE 'status';
+# Example result: enum('PRE_GENERATED','ACTIVE','USED','EXPIRED','CANCELLED')
+
+# 3. Find All SQL Queries Using This Field
+grep -n "status.*=" src/modules/[module]/domain/*.repository.ts
+```
+
+**Real Example - ENUM Value Mismatch:**
+```sql
+-- ❌ WRONG: Code uses 'REDEEMED' but database has no such value
+SUM(CASE WHEN t.status = 'REDEEMED' THEN 1 ELSE 0 END)
+
+-- ✅ CORRECT: Use actual ENUM value 'USED'
+SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END)
+```
+
+**API Parameter Validation:**
+```bash
+# Always check router for correct parameter names
+grep -A 5 "req.query" src/modules/[module]/router.ts
+
+# Test with correct parameter name
+# ❌ WRONG: ?reseller_name=XXX
+# ✅ CORRECT: ?reseller=XXX (as defined in router)
+```
+
+**Common SQL Field Issues:**
+- Missing field: Check entity vs actual table columns
+- Wrong ENUM value: Verify with `SHOW COLUMNS`
+- Wrong column name: Check entity property names (e.g., `venue_name` not `name`)
+- Case sensitivity: Use `LOWER()` for batch_id comparisons
+
 ---
 
 ## 🧠 KNOWLEDGE GRAPH PATTERNS (For Complex Scenarios After Reality Check)
@@ -402,6 +577,11 @@ grep "integration_points" docs/cards/card-name.md
 3. **Knowledge Graph Queries**: Relationship discovery prevents duplicate work
 4. **Card-Based Implementation**: Clear specs → predictable outcomes
 5. **Integration Proof**: Runbooks + Newman tests + TypeScript examples
+6. **Database Schema Validation**: ENUM value verification prevents silent failures (CASE-003)
+7. **Pattern Reuse & Discovery**: Search for existing implementations before creating new ones
+8. **Two-Step Query Strategy**: Aggregation + Detail queries for complex data relationships
+9. **User Choice Over Assumptions**: Provide multiple implementation options, let user decide
+10. **AI Auto-Translation for Duplicate Prevention**: AI automatically translates Chinese↔English for similarity detection, zero maintenance (CASE-005)
 
 ### Architectural Patterns Discovered
 **Dual-Mode Service Pattern:**
@@ -420,34 +600,94 @@ US-011: [complex-pricing-engine, order-create]
 US-001: [catalog-endpoint, order-create, ...]    # Shared dependency!
 ```
 
-### Case Study: Complex Pricing Success (US-011)
-**Challenge**: Implement cruise package tiers with different capabilities
+**Pattern Reuse Discovery (2025-11-19):**
+```bash
+# Before implementing pagination, search for existing patterns
+grep -r "page.*limit" src/modules/*/router.ts
+grep -A 10 "page.*limit" src/modules/ota/router.ts
 
-**Knowledge Graph Discovery:**
-- Constraint: `Product.functions → Ticket.entitlements` (distinct functions required)
-- Dependency: `order-create` shared with US-001 (backward compatibility needed)
-- Pattern: Follow existing product structure (106-108 cruise examples)
+# Found existing pagination in GET /api/ota/tickets:
+# - Router validation: parseInt(page), parseInt(limit)
+# - Service defaults: page || 1, Math.min(limit || 100, 1000)
+# - Response format: { total, page, page_size, items: [] }
 
-**Outcome**: 3 separate products with correct function mappings, zero breaking changes
+# Reused pattern → Saved 30+ minutes, ensured consistency
+```
 
-### Case Study: Venue Operations (US-013)
-**Challenge**: Multi-terminal fraud detection with performance requirements
+**Two-Step Query Strategy (Aggregation + Details):**
+```typescript
+// For complex data relationships (resellers with batches):
+// Step 1: Get aggregated summary with pagination
+const summary = await repo.getResellersSummaryFromBatches(partnerId, { page, limit });
 
-**Mock-First Success:**
-- Business logic: 1ms response times in mock mode
-- Production ready: Database mode with proper indexing
-- Fraud detection: JTI tracking across venues
+// Step 2: For each result, fetch detailed data
+const withDetails = await Promise.all(
+  summary.map(async (item) => {
+    const details = await repo.getItemDetails(item.id);
+    return { ...item, details };
+  })
+);
 
-**Outcome**: 99.95% better performance than requirements, complete integration proof
+// Advantages:
+// - Clean separation of concerns
+// - Efficient pagination (paginate summaries, not details)
+// - Flexible detail depth control (batches_per_reseller parameter)
+```
+
+### Key Case Studies (See `docs/cases/` for details)
+
+**CASE-001: Complex Pricing (US-011)**
+- Challenge: Package tiers with different capabilities
+- Discovery: `Product.functions → Ticket.entitlements` constraint
+- Outcome: 3 products, zero breaking changes
+
+**CASE-002: Venue Operations (US-013)**
+- Challenge: Multi-terminal fraud detection
+- Mock-First: 1ms response times enabled rapid validation
+- Outcome: 99.95% better performance than requirements
+
+**CASE-003: OTA Analytics SQL Fix**
+- Challenge: SQL errors in database mode (ENUM mismatch)
+- Key Learning: **Always verify ENUM values with `SHOW COLUMNS`**
+- Fixed: 'REDEEMED' → 'USED' (actual database ENUM value)
+- Outcome: All 4 APIs working with accurate revenue calculations
+
+**CASE-004: Reseller Batches Pagination**
+- Pattern Reuse: Found existing pagination in `/api/ota/tickets`
+- Two-Step Query: Aggregation + Detail fetching
+- Key Learning: **Search for patterns first** (saved 1.5 hours)
+- Outcome: Consistent API, ~45 min implementation
+
+**CASE-005: Duplicate Story Prevention**
+- Problem: AI generating duplicate stories for similar requirements
+- Solution: Mandatory multi-language similarity check before creation
+- AI Auto-Translation: Dynamic Chinese↔English, zero maintenance
+- Key Learning: **Ask user > Make assumptions**
+- Outcome: Prevents redundant work, user controls decisions
+
+**📖 Full Details**: See `docs/cases/CASE-*.md` for complete analysis and code examples
 
 ---
 
 ## 🔧 DETAILED WORKFLOWS (When You Need Step-by-Step)
 
 ### Complete Autonomy Workflow (For "I want users to..." requests)
+
+**Step 0: Duplicate Check (MANDATORY FIRST STEP)**
+```bash
+# Search for similar stories and cards
+grep -ri "core-keywords" docs/stories/ docs/cards/
+find docs/stories/ -name "*domain*"
+cat docs/stories/_index.yaml | grep -B 3 -A 3 "keyword"
+
+# If similarity found (>70% overlap):
+# → Ask user: "Merge with existing?" "Extend existing?" "Create separate?"
+# → Only proceed with new story if user explicitly confirms need
+```
+
 1. **Story Analysis**: Break down business requirements
 2. **Card Generation**: Create technical specs following templates
-3. **Document Everything**: Update `docs/stories/_index.yaml` with relationships
+3. **Document Everything**: Update `docs/stories/_index.yaml` with relationships (AI auto-translation handles multi-language search)
 4. **Implement Code**: Follow card specs in `src/modules/[name]/`
 5. **Integration Proof**: Create runbooks, Newman tests, TypeScript examples
 6. **Validation**: Test end-to-end functionality
@@ -577,19 +817,17 @@ grep -r "CREATE TABLE\|@Entity" src/
 ### Common Validation Commands
 ```bash
 # Check implementation progress
-node scripts/progress-report.js
-node scripts/story-coverage.mjs
+grep "status:" docs/cards/*.md | sort | uniq -c
+grep "status: Done" docs/cards/*.md | wc -l
+grep "status: In Progress" docs/cards/*.md
 
 # Test endpoints
 curl http://localhost:8080/healthz
 curl http://localhost:8080/docs
 
 # Run integration tests
-npm run test:e2e
-npm run example:all
+npx newman run postman/xxx.postman_collection.json
 ```
-
----
 
 ---
 
@@ -754,8 +992,3 @@ inventory.activateReservation('ota', quantity);
 3. **Test Each Change**: Verify functionality after each modification
 4. **Update Integration Tests**: Ensure cross-module compatibility
 5. **Validate Partner Isolation**: Test with different API keys
-
-**For detailed case studies**: See `docs/cases/CASE-*.md`
-**For complete knowledge graph analysis**: See `docs/KNOWLEDGE_GRAPH_PROOF.md`
-**For integration proof details**: See `docs/INTEGRATION_PROOF.md`
-

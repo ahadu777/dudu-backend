@@ -130,13 +130,8 @@ export const unifiedAuth = () => {
     });
 
     res.status(401).json({
-      error: 'AUTHENTICATION_REQUIRED',
-      message: 'Valid authentication required. Provide Bearer token (user/operator JWT) or X-API-Key header.',
-      details: {
-        user_jwt: 'Authorization: Bearer <user_jwt_token>',
-        operator_jwt: 'Authorization: Bearer <operator_jwt_token>',
-        api_key: 'X-API-Key: <ota_partner_key>'
-      }
+      code: 'AUTHENTICATION_REQUIRED',
+      message: 'Valid authentication required. Provide Bearer token (user/operator JWT) or X-API-Key header.'
     });
   };
 };

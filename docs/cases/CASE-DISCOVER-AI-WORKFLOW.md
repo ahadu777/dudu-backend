@@ -284,4 +284,69 @@ Rule: Documentation status is irrelevant if reality doesn't match.
 
 ---
 
+### 2025-11-19: Pattern Reuse Discovery (CASE-004)
+
+**Pattern Tested**: Searching for existing implementations before creating new ones
+
+**Scenario**: User requested batch details for resellers with pagination support
+
+**AI Workflow**:
+1. User asked: "是否有写好分页的中间件" (Is there a pagination middleware?)
+2. AI searched: `grep -r "page.*limit" src/modules/*/router.ts`
+3. Found existing pattern in `/api/ota/tickets` endpoint
+4. Reused exact validation logic and response format
+5. Provided 3 implementation options to user
+6. User chose Option 2 (detailed batches with pagination)
+7. Implemented using two-step query strategy
+
+**Commands Used**:
+```bash
+# Pattern discovery
+grep -r "page.*limit" src/modules/*/router.ts
+grep -A 10 "page.*limit" src/modules/ota/router.ts
+
+# Found working pattern with:
+# - Router validation: parseInt(page), parseInt(limit)
+# - Service defaults: page || 1, Math.min(limit || 100, 1000)
+# - Response format: { total, page, page_size, items: [] }
+```
+
+**Implementation Strategy**:
+- Router: Reused existing parameter validation (lines 757-788)
+- Service: Two-step query (aggregation + details)
+- Repository: Separate methods for summary and batch details
+
+**Test Result**: ✅ **SUCCESS**
+- Full pagination working (page=1&limit=3 returned 3 resellers)
+- Batch details included in response
+- Consistent with existing API patterns
+- Implementation time: ~45 minutes (vs estimated 2+ hours without reuse)
+
+**Evidence of Success**:
+```bash
+curl 'http://localhost:8080/api/ota/resellers/summary?page=1&limit=3&batches_per_reseller=5' \
+  -H 'X-API-Key: ota_full_access_key_99999'
+
+# Returned:
+# - total: 24
+# - page: 1
+# - page_size: 3
+# - resellers: [... with batches array ...]
+```
+
+**What Worked**:
+- ✅ Searching for existing patterns before implementing
+- ✅ Providing multiple options for user to choose
+- ✅ Two-step query strategy (aggregation + detail)
+- ✅ Pattern consistency across codebase
+
+**Added to CLAUDE.md**:
+1. "Pattern Reuse & Discovery" in What Actually Works
+2. "Two-Step Query Strategy" architectural pattern
+3. Full case study documentation
+
+**Key Learning**: Always search project for existing implementations. Pattern reuse saves time and ensures consistency. Providing options to users reduces assumption-based errors.
+
+---
+
 *This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns.***

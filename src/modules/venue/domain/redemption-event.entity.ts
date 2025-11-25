@@ -2,9 +2,10 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDa
 import { Venue } from './venue.entity';
 
 @Entity('redemption_events')
-@Index('idx_redemption_jti', ['jti']) // Critical for fast JTI duplicate detection
+@Index('idx_redemption_jti', ['jti']) // Fast JTI lookup
 @Index('idx_redemption_venue_time', ['venue_id', 'redeemed_at'])
 @Index('idx_redemption_ticket', ['ticket_code', 'function_code'])
+@Index('idx_redemption_jti_function', ['jti', 'function_code'], { unique: true }) // CRITICAL: Prevent replay per function
 export class RedemptionEvent {
   @PrimaryGeneratedColumn()
   event_id!: number;
@@ -27,8 +28,8 @@ export class RedemptionEvent {
   @Column({ type: 'varchar', length: 50, nullable: true })
   terminal_device_id!: string;
 
-  @Column({ type: 'varchar', length: 36, unique: true })
-  jti!: string; // JWT Token ID for fraud prevention
+  @Column({ type: 'varchar', length: 36 })
+  jti!: string; // JWT Token ID - uniqueness enforced with function_code
 
   @Column({ type: 'varchar', length: 20 })
   result!: string; // 'success', 'reject'
