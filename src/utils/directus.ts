@@ -308,7 +308,19 @@ export class DirectusService {
         errorDetails: JSON.stringify(errorDetails),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
-      return { success: false, error: 'Failed to create reservation' };
+
+      // Check for specific error types
+      const errorCode = error?.response?.data?.errors?.[0]?.extensions?.code;
+      const errorMessage = error?.response?.data?.errors?.[0]?.message;
+
+      // Handle unique constraint violation (ticket already has reservation)
+      if (errorCode === 'RECORD_NOT_UNIQUE') {
+        return { success: false, error: 'Ticket already has an active reservation' };
+      }
+
+      // Return specific error message or generic one
+      const specificError = errorMessage || error?.message || 'Failed to create reservation';
+      return { success: false, error: specificError };
     }
   }
 
