@@ -45,9 +45,10 @@ export const registerModuleRouters = (app: Application): void => {
 
   // Ticket reservation & validation system (PRD-006/PRD-007) - MUST BE BEFORE catch-all routers!
   // Week 3: Operator validation endpoints integrated into /operators router (see operators/router.ts)
-  app.use('/', ticketReservationRouter);
+  // NOTE: Old ticket-reservation router commented out - replaced by customerReservation with Directus support
+  // app.use('/', ticketReservationRouter);
   app.use('/api', reservationSlotsRouter); // Operator slot management + customer availability
-  app.use('/api', customerReservationRouter); // Enhanced customer reservation with activation checks
+  app.use('/api', customerReservationRouter); // Enhanced customer reservation with activation checks + Directus
 
   // These have catch-all routes, so register them LAST
   app.use('/payments', refundsRouter);

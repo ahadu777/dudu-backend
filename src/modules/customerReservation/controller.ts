@@ -9,13 +9,14 @@ import {
   CancelReservationRequest,
 } from './types';
 import { logger } from '../../utils/logger';
+import { env } from '../../config/env';
 
 export class CustomerReservationController {
   private service: CustomerReservationServiceEnhanced | CustomerReservationServiceDirectus;
 
   constructor() {
-    // Use Directus service if USE_DIRECTUS env variable is set to 'true'
-    const useDirectus = process.env.USE_DIRECTUS === 'true';
+    // Use Directus service if USE_DIRECTUS env variable is set to true
+    const useDirectus = env.USE_DIRECTUS;
 
     if (useDirectus) {
       logger.info('customer_reservation.controller.using_directus');

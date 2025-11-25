@@ -7,13 +7,14 @@ import {
   VerifyTicketRequest,
 } from './types';
 import { logger } from '../../utils/logger';
+import { env } from '../../config/env';
 
 export class OperatorValidationController {
   private service: OperatorValidationServiceEnhanced | OperatorValidationServiceDirectus;
 
   constructor() {
     // Use Directus service if USE_DIRECTUS env variable is set to 'true'
-    const useDirectus = process.env.USE_DIRECTUS === 'true';
+    const useDirectus = env.USE_DIRECTUS;
 
     if (useDirectus) {
       logger.info('operator_validation.controller.using_directus');
