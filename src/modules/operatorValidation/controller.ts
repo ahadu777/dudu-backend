@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { OperatorValidationServiceEnhanced } from './service.enhanced';
+import { OperatorValidationServiceDirectus } from './service.directus';
 import {
   OperatorLoginRequest,
   ValidateTicketRequest,
@@ -8,10 +9,19 @@ import {
 import { logger } from '../../utils/logger';
 
 export class OperatorValidationController {
-  private service: OperatorValidationServiceEnhanced;
+  private service: OperatorValidationServiceEnhanced | OperatorValidationServiceDirectus;
 
   constructor() {
-    this.service = new OperatorValidationServiceEnhanced();
+    // Use Directus service if USE_DIRECTUS env variable is set to 'true'
+    const useDirectus = process.env.USE_DIRECTUS === 'true';
+
+    if (useDirectus) {
+      logger.info('operator_validation.controller.using_directus');
+      this.service = new OperatorValidationServiceDirectus();
+    } else {
+      logger.info('operator_validation.controller.using_mock');
+      this.service = new OperatorValidationServiceEnhanced();
+    }
   }
 
   /**

@@ -140,6 +140,188 @@ export class DirectusService {
       stats: logoCache.getStats()
     };
   }
+
+  // ========================================
+  // Ticket Reservation & Activation Methods
+  // ========================================
+
+  /**
+   * Get ticket by ticket_number
+   */
+  async getTicketByNumber(ticketNumber: string): Promise<any | null> {
+    if (!this.baseURL) {
+      logger.warn('directus.ticket.get_skipped', { reason: 'directus_not_configured' });
+      return null;
+    }
+
+    try {
+      const url = `${this.baseURL}/items/tickets`;
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        params: {
+          filter: { ticket_code: { _eq: ticketNumber } },
+          limit: 1
+        },
+        timeout: 5000
+      });
+
+      return response.data?.data?.[0] || null;
+    } catch (error) {
+      logger.error('directus.ticket.get_failed', {
+        ticket_number: ticketNumber,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Update ticket status and fields
+   */
+  async updateTicket(ticketNumber: string, updates: any): Promise<boolean> {
+    if (!this.baseURL) return false;
+
+    try {
+      const url = `${this.baseURL}/items/tickets/${ticketNumber}`;
+      await axios.patch(url, updates, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        timeout: 5000
+      });
+
+      logger.info('directus.ticket.updated', { ticket_number: ticketNumber, fields: Object.keys(updates) });
+      return true;
+    } catch (error) {
+      logger.error('directus.ticket.update_failed', {
+        ticket_number: ticketNumber,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Get available reservation slots
+   */
+  async getAvailableSlots(filters: { month?: string; orq?: number; venue_id?: number }): Promise<any[]> {
+    if (!this.baseURL) return [];
+
+    try {
+      const url = `${this.baseURL}/items/reservation_slots`;
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        params: {
+          filter: {
+            ...(filters.orq && { orq: { _eq: filters.orq } }),
+            ...(filters.venue_id && { venue_id: { _eq: filters.venue_id } }),
+            status: { _eq: 'ACTIVE' }
+          },
+          sort: ['date', 'start_time'],
+          limit: -1 // Get all
+        },
+        timeout: 10000
+      });
+
+      return response.data?.data || [];
+    } catch (error) {
+      logger.error('directus.slots.get_failed', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Get reservation by ticket_number
+   */
+  async getReservationByTicket(ticketNumber: string): Promise<any | null> {
+    if (!this.baseURL) return null;
+
+    try {
+      const url = `${this.baseURL}/items/ticket_reservations`;
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        params: {
+          filter: { ticket_id: { _eq: ticketNumber } },
+          limit: 1
+        },
+        timeout: 5000
+      });
+
+      return response.data?.data?.[0] || null;
+    } catch (error) {
+      logger.error('directus.reservation.get_failed', {
+        ticket_number: ticketNumber,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Create ticket reservation (atomic transaction)
+   */
+  async createReservation(data: {
+    ticket_id: string;
+    slot_id: string;
+    customer_email: string;
+    customer_phone: string;
+    orq: number;
+  }): Promise<{ success: boolean; reservation?: any; error?: string }> {
+    if (!this.baseURL) {
+      return { success: false, error: 'Directus not configured' };
+    }
+
+    try {
+      // TODO: Implement atomic transaction with slot capacity check
+      // For now, simple insert
+      const url = `${this.baseURL}/items/ticket_reservations`;
+      const response = await axios.post(url, {
+        ...data,
+        status: 'RESERVED',
+        reserved_at: new Date().toISOString()
+      }, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        timeout: 5000
+      });
+
+      logger.info('directus.reservation.created', {
+        ticket_id: data.ticket_id,
+        slot_id: data.slot_id
+      });
+
+      return { success: true, reservation: response.data?.data };
+    } catch (error) {
+      logger.error('directus.reservation.create_failed', {
+        ticket_id: data.ticket_id,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return { success: false, error: 'Failed to create reservation' };
+    }
+  }
+
+  /**
+   * Update reservation status
+   */
+  async updateReservation(reservationId: string, updates: any): Promise<boolean> {
+    if (!this.baseURL) return false;
+
+    try {
+      const url = `${this.baseURL}/items/ticket_reservations/${reservationId}`;
+      await axios.patch(url, updates, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        timeout: 5000
+      });
+
+      logger.info('directus.reservation.updated', { reservation_id: reservationId });
+      return true;
+    } catch (error) {
+      logger.error('directus.reservation.update_failed', {
+        reservation_id: reservationId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return false;
+    }
+  }
 }
 
 // 导出单例

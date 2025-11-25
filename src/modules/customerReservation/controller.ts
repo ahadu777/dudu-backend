@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { CustomerReservationServiceEnhanced } from './service.enhanced';
+import { CustomerReservationServiceDirectus } from './service.directus';
 import {
   TicketValidationRequest,
   VerifyContactRequest,
@@ -10,10 +11,19 @@ import {
 import { logger } from '../../utils/logger';
 
 export class CustomerReservationController {
-  private service: CustomerReservationServiceEnhanced;
+  private service: CustomerReservationServiceEnhanced | CustomerReservationServiceDirectus;
 
   constructor() {
-    this.service = new CustomerReservationServiceEnhanced();
+    // Use Directus service if USE_DIRECTUS env variable is set to 'true'
+    const useDirectus = process.env.USE_DIRECTUS === 'true';
+
+    if (useDirectus) {
+      logger.info('customer_reservation.controller.using_directus');
+      this.service = new CustomerReservationServiceDirectus();
+    } else {
+      logger.info('customer_reservation.controller.using_mock');
+      this.service = new CustomerReservationServiceEnhanced();
+    }
   }
 
   /**
