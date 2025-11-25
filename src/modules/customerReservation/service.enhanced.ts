@@ -209,23 +209,33 @@ export class CustomerReservationServiceEnhanced {
 
   /**
    * Verify contact information
+   * Gets customer info from ticket data
    */
   async verifyContact(request: VerifyContactRequest): Promise<VerifyContactResponse> {
-    const { ticket_code, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, orq } = request;
 
     // Validate ticket first
     const validation = await this.validateTicket({ ticket_code, orq });
-    if (!validation.valid) {
+    if (!validation.valid || !validation.ticket) {
       return {
         success: false,
         error: validation.error,
       };
     }
 
+    // Get customer info from ticket
+    const { customer_email, customer_phone } = validation.ticket;
+
+    if (!customer_email || !customer_phone) {
+      return {
+        success: false,
+        error: 'Missing customer contact information in ticket',
+      };
+    }
+
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (visitor_name && !emailRegex.test(visitor_name)) {
-      // Assuming visitor_name is email in request
+    if (!emailRegex.test(customer_email)) {
       return {
         success: false,
         error: 'INVALID_EMAIL_FORMAT',
@@ -234,7 +244,7 @@ export class CustomerReservationServiceEnhanced {
 
     // Phone validation (E.164 format)
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(visitor_phone.replace(/[\s\-\(\)]/g, ''))) {
+    if (!phoneRegex.test(customer_phone.replace(/[\s\-\(\)]/g, ''))) {
       return {
         success: false,
         error: 'INVALID_PHONE_FORMAT',
@@ -251,17 +261,28 @@ export class CustomerReservationServiceEnhanced {
 
   /**
    * Create reservation with slot integration
+   * Uses customer_email and customer_phone from ticket data
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_code, slot_id, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, slot_id, orq } = request;
 
     try {
       // 1. Validate ticket (includes activation check)
       const validation = await this.validateTicket({ ticket_code, orq });
-      if (!validation.valid) {
+      if (!validation.valid || !validation.ticket) {
         return {
           success: false,
           error: validation.error,
+        };
+      }
+
+      // Get customer info from validated ticket
+      const { customer_email, customer_phone } = validation.ticket;
+
+      if (!customer_email || !customer_phone) {
+        return {
+          success: false,
+          error: 'Missing customer contact information in ticket',
         };
       }
 
@@ -309,8 +330,8 @@ export class CustomerReservationServiceEnhanced {
         id: reservationId,
         ticket_code,
         slot_id: parseInt(slot_id), // Convert string to number
-        visitor_name,
-        visitor_phone,
+        visitor_name: customer_email, // Use customer_email from ticket
+        visitor_phone: customer_phone, // Use customer_phone from ticket
         status: 'RESERVED',
         reserved_at: new Date().toISOString(),
         verified_at: null,
@@ -328,8 +349,8 @@ export class CustomerReservationServiceEnhanced {
       const ticket = this.tickets.get(ticket_code);
       if (ticket) {
         ticket.status = 'RESERVED';
-        ticket.customer_email = visitor_name; // Using visitor_name as email
-        ticket.customer_phone = visitor_phone;
+        ticket.customer_email = customer_email;
+        ticket.customer_phone = customer_phone;
       }
 
       logger.info('reservation.created', {
@@ -347,7 +368,7 @@ export class CustomerReservationServiceEnhanced {
           slot_id: parseInt(slot_id),
           slot_date: slot.date,
           slot_time: `${slot.start_time} - ${slot.end_time}`,
-          visitor_name,
+          visitor_name: customer_email, // Return customer_email as visitor_name
           status: 'RESERVED',
           created_at: reservation.created_at
         },

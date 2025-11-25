@@ -21,8 +21,6 @@ export interface TicketValidationResponse {
 
 export interface VerifyContactRequest {
   ticket_code: string;
-  visitor_name: string;
-  visitor_phone: string;
   orq: number;
 }
 
@@ -35,8 +33,6 @@ export interface VerifyContactResponse {
 export interface CreateReservationRequest {
   ticket_code: string;
   slot_id: string;
-  visitor_name: string;
-  visitor_phone: string;
   orq: number;
 }
 

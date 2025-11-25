@@ -75,20 +75,18 @@ export class CustomerReservationController {
    */
   async verifyContact(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_code, visitor_name, visitor_phone, orq } = req.body as VerifyContactRequest;
+      const { ticket_code, orq } = req.body as VerifyContactRequest;
 
-      if (!ticket_code || !visitor_name || !visitor_phone || !orq) {
+      if (!ticket_code || !orq) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_code, visitor_name, visitor_phone, orq',
+          error: 'Missing required fields: ticket_code, orq',
         });
         return;
       }
 
       const result = await this.service.verifyContact({
         ticket_code,
-        visitor_name,
-        visitor_phone,
         orq,
       });
 
@@ -99,7 +97,7 @@ export class CustomerReservationController {
 
       res.status(200).json(result);
 
-      logger.info('tickets.verify_contact.success', { ticket_code, visitor_name });
+      logger.info('tickets.verify_contact.success', { ticket_code });
     } catch (error) {
       logger.error('tickets.verify_contact.error', { error });
       res.status(500).json({
@@ -115,13 +113,13 @@ export class CustomerReservationController {
    */
   async createReservation(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_code, slot_id, visitor_name, visitor_phone, orq } =
+      const { ticket_code, slot_id, orq } =
         req.body as CreateReservationRequest;
 
-      if (!ticket_code || !slot_id || !visitor_name || !visitor_phone || !orq) {
+      if (!ticket_code || !slot_id || !orq) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_code, slot_id, visitor_name, visitor_phone, orq',
+          error: 'Missing required fields: ticket_code, slot_id, orq',
         });
         return;
       }
@@ -129,8 +127,6 @@ export class CustomerReservationController {
       const result = await this.service.createReservation({
         ticket_code,
         slot_id,
-        visitor_name,
-        visitor_phone,
         orq,
       });
 

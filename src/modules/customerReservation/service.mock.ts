@@ -18,8 +18,8 @@ interface MockTicket {
   status: TicketStatus;
   expires_at: string | null;
   orq: number;
-  visitor_name?: string;
-  visitor_phone?: string;
+  customer_email?: string;
+  customer_phone?: string;
 }
 
 export class CustomerReservationServiceMock {
@@ -60,8 +60,8 @@ export class CustomerReservationServiceMock {
         status: 'RESERVED',
         expires_at: '2025-12-31T23:59:59Z',
         orq: 1,
-        visitor_name: 'John Doe',
-        visitor_phone: '+1234567890',
+        customer_email: 'john.doe@example.com',
+        customer_phone: '+1234567890',
       },
       {
         ticket_code: 'TKT-001-20251114-004',
@@ -70,8 +70,8 @@ export class CustomerReservationServiceMock {
         status: 'VERIFIED',
         expires_at: '2025-12-31T23:59:59Z',
         orq: 1,
-        visitor_name: 'Jane Smith',
-        visitor_phone: '+0987654321',
+        customer_email: 'jane.smith@example.com',
+        customer_phone: '+0987654321',
       },
       {
         ticket_code: 'TKT-001-20251114-005',
@@ -150,42 +150,46 @@ export class CustomerReservationServiceMock {
 
   /**
    * Verify contact information (Step 2 in reservation flow)
+   * Gets customer info from ticket data
    */
   async verifyContact(request: VerifyContactRequest): Promise<VerifyContactResponse> {
-    const { ticket_code, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, orq } = request;
 
     // Validate ticket first
     const validation = await this.validateTicket({ ticket_code, orq });
-    if (!validation.valid) {
+    if (!validation.valid || !validation.ticket) {
       return {
         success: false,
         error: validation.error,
       };
     }
 
-    // Basic validation of contact info
-    if (!visitor_name || visitor_name.trim().length < 2) {
+    // Get customer info from ticket
+    const { customer_email, customer_phone } = validation.ticket;
+
+    if (!customer_email || !customer_phone) {
       return {
         success: false,
-        error: 'Valid visitor name is required',
+        error: 'Missing customer contact information in ticket',
       };
     }
 
-    if (!visitor_phone || !/^[\d\s\+\-\(\)]+$/.test(visitor_phone)) {
+    // Basic validation of contact info
+    if (customer_email.trim().length < 3) {
+      return {
+        success: false,
+        error: 'Valid customer email is required',
+      };
+    }
+
+    if (!/^[\d\s\+\-\(\)]+$/.test(customer_phone)) {
       return {
         success: false,
         error: 'Valid phone number is required',
       };
     }
 
-    // Store contact info temporarily (in real implementation, this would be a transaction)
-    const ticket = this.tickets.get(ticket_code);
-    if (ticket) {
-      ticket.visitor_name = visitor_name;
-      ticket.visitor_phone = visitor_phone;
-    }
-
-    logger.info('contact.verification.success', { ticket_code, visitor_name });
+    logger.info('contact.verification.success', { ticket_code, customer_email });
 
     return {
       success: true,
@@ -195,17 +199,28 @@ export class CustomerReservationServiceMock {
 
   /**
    * Create reservation (final step)
+   * Uses customer_email and customer_phone from ticket data
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_code, slot_id, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, slot_id, orq } = request;
 
     try {
       // 1. Validate ticket
       const validation = await this.validateTicket({ ticket_code, orq });
-      if (!validation.valid) {
+      if (!validation.valid || !validation.ticket) {
         return {
           success: false,
           error: validation.error,
+        };
+      }
+
+      // Get customer info from validated ticket
+      const { customer_email, customer_phone } = validation.ticket;
+
+      if (!customer_email || !customer_phone) {
+        return {
+          success: false,
+          error: 'Missing customer contact information in ticket',
         };
       }
 
@@ -244,8 +259,8 @@ export class CustomerReservationServiceMock {
         id: reservationId,
         ticket_code,
         slot_id: parseInt(slot_id),
-        visitor_name,
-        visitor_phone,
+        visitor_name: customer_email, // Use customer_email from ticket
+        visitor_phone: customer_phone, // Use customer_phone from ticket
         status: 'RESERVED',
         reserved_at: new Date().toISOString(),
         verified_at: null,
@@ -263,15 +278,15 @@ export class CustomerReservationServiceMock {
       const ticket = this.tickets.get(ticket_code);
       if (ticket) {
         ticket.status = 'RESERVED';
-        ticket.visitor_name = visitor_name;
-        ticket.visitor_phone = visitor_phone;
+        ticket.customer_email = customer_email;
+        ticket.customer_phone = customer_phone;
       }
 
       logger.info('reservation.created', {
         reservation_id: reservation.id,
         ticket_code,
         slot_id,
-        visitor_name,
+        customer_email,
       });
 
       return {
@@ -282,7 +297,7 @@ export class CustomerReservationServiceMock {
           slot_id: parseInt(slot_id),
           slot_date: slot.date,
           slot_time: `${slot.start_time} - ${slot.end_time}`,
-          visitor_name,
+          visitor_name: customer_email, // Return customer_email as visitor_name
           status: reservation.status,
           created_at: reservation.created_at,
         },

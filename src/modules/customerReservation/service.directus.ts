@@ -101,24 +101,36 @@ export class CustomerReservationServiceDirectus {
 
   /**
    * Verify contact information (simple validation)
+   * Gets customer info from ticket data
    */
   async verifyContact(request: VerifyContactRequest): Promise<VerifyContactResponse> {
-    const { ticket_code, visitor_name, visitor_phone } = request;
+    const { ticket_code, orq } = request;
 
     logger.info('directus.customer.verify_contact', { ticket_code });
 
-    // Basic validation
-    if (!visitor_name || visitor_name.trim().length < 2) {
+    // Get ticket data to verify contact information
+    const ticket = await directusService.getTicketByNumber(ticket_code);
+
+    if (!ticket) {
       return {
         success: false,
-        error: 'Invalid visitor name'
+        error: 'Ticket not found'
       };
     }
 
-    if (!visitor_phone || visitor_phone.trim().length < 10) {
+    // Verify customer email exists
+    if (!ticket.customer_email || ticket.customer_email.trim().length < 3) {
       return {
         success: false,
-        error: 'Invalid phone number'
+        error: 'Invalid customer email in ticket'
+      };
+    }
+
+    // Verify customer phone exists
+    if (!ticket.customer_phone || ticket.customer_phone.trim().length < 10) {
+      return {
+        success: false,
+        error: 'Invalid customer phone in ticket'
       };
     }
 
@@ -130,9 +142,10 @@ export class CustomerReservationServiceDirectus {
 
   /**
    * Create reservation for ticket and time slot
+   * Uses customer_email and customer_phone from ticket data
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_code, slot_id, visitor_name, visitor_phone, orq } = request;
+    const { ticket_code, slot_id, orq } = request;
 
     logger.info('directus.customer.create_reservation.start', {
       ticket_code,
@@ -142,19 +155,29 @@ export class CustomerReservationServiceDirectus {
 
     // 1. Validate ticket first
     const validation = await this.validateTicket({ ticket_code, orq });
-    if (!validation.valid) {
+    if (!validation.valid || !validation.ticket) {
       return {
         success: false,
         error: validation.error
       };
     }
 
-    // 2. Create reservation in Directus
+    // 2. Get customer info from validated ticket
+    const { customer_email, customer_phone } = validation.ticket;
+
+    if (!customer_email || !customer_phone) {
+      return {
+        success: false,
+        error: 'Missing customer contact information in ticket'
+      };
+    }
+
+    // 3. Create reservation in Directus
     const result = await directusService.createReservation({
       ticket_id: ticket_code,
       slot_id: slot_id.toString(),
-      customer_email: visitor_name + '@example.com', // TODO: collect email separately
-      customer_phone: visitor_phone,
+      customer_email,
+      customer_phone,
       orq
     });
 
@@ -170,7 +193,7 @@ export class CustomerReservationServiceDirectus {
       };
     }
 
-    // 3. Update ticket status to RESERVED
+    // 4. Update ticket status to RESERVED
     await directusService.updateTicket(ticket_code, {
       status: 'RESERVED',
       reserved_at: new Date().toISOString()
@@ -189,7 +212,7 @@ export class CustomerReservationServiceDirectus {
         slot_id: parseInt(slot_id),
         slot_date: '2025-12-01', // TODO: fetch from slot data
         slot_time: '09:00-12:00', // TODO: fetch from slot data
-        visitor_name,
+        visitor_name: customer_email, // Use email as identifier
         status: 'RESERVED',
         created_at: result.reservation.reserved_at || new Date().toISOString()
       }
