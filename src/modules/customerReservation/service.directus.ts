@@ -145,31 +145,46 @@ export class CustomerReservationServiceDirectus {
    * Uses customer_email and customer_phone from ticket data
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_code, slot_id, orq } = request;
+    const { ticket_code, slot_id, orq, customer_email: providedEmail, customer_phone: providedPhone } = request;
 
     logger.info('directus.customer.create_reservation.start', {
       ticket_code,
       slot_id,
-      orq
+      orq,
+      has_provided_email: !!providedEmail,
+      has_provided_phone: !!providedPhone
     });
 
-    // 1. Validate ticket first
-    const validation = await this.validateTicket({ ticket_code, orq });
-    if (!validation.valid || !validation.ticket) {
-      return {
-        success: false,
-        error: validation.error
-      };
-    }
+    let customer_email: string;
+    let customer_phone: string;
 
-    // 2. Get customer info from validated ticket
-    const { customer_email, customer_phone } = validation.ticket;
+    // If customer info is provided in request, use it directly
+    if (providedEmail && providedPhone) {
+      customer_email = providedEmail;
+      customer_phone = providedPhone;
+      logger.info('directus.customer.create_reservation.using_provided_contact', {
+        ticket_code
+      });
+    } else {
+      // Otherwise, validate ticket and get customer info from ticket
+      const validation = await this.validateTicket({ ticket_code, orq });
+      if (!validation.valid || !validation.ticket) {
+        return {
+          success: false,
+          error: validation.error
+        };
+      }
 
-    if (!customer_email || !customer_phone) {
-      return {
-        success: false,
-        error: 'Missing customer contact information in ticket'
-      };
+      // Get customer info from validated ticket
+      customer_email = validation.ticket.customer_email || '';
+      customer_phone = validation.ticket.customer_phone || '';
+
+      if (!customer_email || !customer_phone) {
+        return {
+          success: false,
+          error: 'Missing customer contact information in ticket'
+        };
+      }
     }
 
     // 3. Create reservation in Directus

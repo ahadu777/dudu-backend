@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ReservationSlotServiceMock } from './service.mock';
+import { ReservationSlotServiceDirectus } from './service.directus';
 import {
   CreateSlotRequest,
   CreateSlotResponse,
@@ -10,13 +11,15 @@ import {
   SlotAvailabilityResponse
 } from './types';
 import { logger } from '../../utils/logger';
+import { env } from '../../config/env';
 
 export class ReservationSlotController {
   private service: ReservationSlotServiceMock;
+  private directusService: ReservationSlotServiceDirectus;
 
   constructor() {
-    // TODO: Add dual-mode support (Directus vs Mock)
     this.service = new ReservationSlotServiceMock();
+    this.directusService = new ReservationSlotServiceDirectus();
   }
 
   /**
@@ -232,7 +235,17 @@ export class ReservationSlotController {
       const orq = parseInt((req.query.orq as string) || '1');
       const venueId = req.query.venue_id ? parseInt(req.query.venue_id as string) : undefined;
 
-      const slots = await this.service.getAvailableSlots(month, orq, venueId);
+      logger.info('reservation-slot.available.request', {
+        month,
+        orq,
+        venueId,
+        useDirectus: env.USE_DIRECTUS
+      });
+
+      // Use Directus service if enabled, otherwise fallback to mock
+      const slots = env.USE_DIRECTUS
+        ? await this.directusService.getAvailableSlots(month, orq, venueId)
+        : await this.service.getAvailableSlots(month, orq, venueId);
 
       const response: SlotAvailabilityResponse = {
         success: true,
