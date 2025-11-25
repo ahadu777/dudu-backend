@@ -18,13 +18,15 @@
     "example:us002": "ts-node examples/us002.ts",
     "example:us003": "ts-node examples/us003.ts",
     "example:us008": "ts-node examples/us008.ts",
+    "example:us015": "ts-node examples/us015-reservation.ts",
     "example:all": "ts-node examples/all-stories.ts",
     "sdk:generate": "npx openapi-typescript-codegen --input openapi/openapi.json --output sdk --client fetch",
     "validate:integration": "node scripts/integration-proof-validator.js",
     "validate:autonomy": "node scripts/fresh-ai-readiness.js",
     "demo:promotions": "node scripts/demo-launcher.js",
     "demo:dashboard": "echo '🎫 Dashboard available at: http://localhost:8080/demo' && echo '🎯 Promotion showcase at: http://localhost:8080/demo/promotions'",
-    "test:e2e:story": "node scripts/run-e2e-by-context.mjs --story"
+    "test:e2e:story": "node scripts/run-e2e-by-context.mjs --story",
+    "test:e2e:us015": "newman run tests/postman/US-015-reservation-flow.postman_collection.json --reporters cli,json --reporter-json-export reports/newman/us015-results.json"
   },
   "keywords": [
     "express",
@@ -52,6 +54,7 @@
     "class-validator": "^0.14.1",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
     "envalid": "^8.1.0",
     "express": "^5.1.0",

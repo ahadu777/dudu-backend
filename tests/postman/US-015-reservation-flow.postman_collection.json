@@ -1,0 +1,528 @@
+{
+  "info": {
+    "name": "US-015: Ticket Reservation & Validation",
+    "description": "E2E tests for slot-based reservation and operator validation flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Customer Reservation Flow",
+      "item": [
+        {
+          "name": "1.1 Get Available Slots (Month)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success=true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns slots array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.data.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test(\"Each slot has required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var slot = jsonData.data[0];",
+                  "    pm.expect(slot).to.have.property('id');",
+                  "    pm.expect(slot).to.have.property('date');",
+                  "    pm.expect(slot).to.have.property('start_time');",
+                  "    pm.expect(slot).to.have.property('end_time');",
+                  "    pm.expect(slot).to.have.property('total_capacity');",
+                  "    pm.expect(slot).to.have.property('booked_count');",
+                  "    pm.expect(slot).to.have.property('available_count');",
+                  "    pm.expect(slot).to.have.property('capacity_status');",
+                  "});",
+                  "",
+                  "pm.test(\"Capacity status is valid\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var slot = jsonData.data[0];",
+                  "    pm.expect(['AVAILABLE', 'LIMITED', 'FULL']).to.include(slot.capacity_status);",
+                  "});",
+                  "",
+                  "// Save first slot ID for later tests",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"slot_id\", jsonData.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/reservation-slots/available?month=2025-11&orq=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservation-slots", "available"],
+              "query": [
+                {"key": "month", "value": "2025-11"},
+                {"key": "orq", "value": "1"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.2 Get Slots for Specific Date",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns slots for specific date\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.data.length).to.equal(4);",
+                  "});",
+                  "",
+                  "pm.test(\"All slots are for the requested date\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    jsonData.data.forEach(slot => {",
+                  "        pm.expect(slot.date).to.equal('2025-11-14');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/reservation-slots/available?date=2025-11-14&orq=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservation-slots", "available"],
+              "query": [
+                {"key": "date", "value": "2025-11-14"},
+                {"key": "orq", "value": "1"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.3 Validate Ticket (Valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Ticket is valid\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.valid).to.eql(true);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns ticket details\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ticket).to.have.property('ticket_number');",
+                  "    pm.expect(jsonData.ticket).to.have.property('product_name');",
+                  "    pm.expect(jsonData.ticket).to.have.property('status');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"TKT-001-20251114-001\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/validate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "validate"]
+            }
+          }
+        },
+        {
+          "name": "1.4 Validate Ticket (Invalid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Ticket is invalid\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData.valid).to.eql(false);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns error message\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"INVALID-TICKET\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/validate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "validate"]
+            }
+          }
+        },
+        {
+          "name": "1.5 Verify Contact Information",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Contact verified\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.message).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"TKT-001-20251114-001\",\n  \"visitor_name\": \"Alice Wang\",\n  \"visitor_phone\": \"+86-13800138000\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/verify-contact",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "verify-contact"]
+            }
+          }
+        },
+        {
+          "name": "1.6 Create Reservation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Reservation created successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.have.property('reservation_id');",
+                  "});",
+                  "",
+                  "pm.test(\"Returns reservation details\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.ticket_number).to.equal('TKT-001-20251114-001');",
+                  "    pm.expect(jsonData.data.visitor_name).to.equal('Alice Wang');",
+                  "    pm.expect(jsonData.data.status).to.equal('RESERVED');",
+                  "});",
+                  "",
+                  "// Save reservation for operator tests",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"reservation_ticket\", jsonData.data.ticket_number);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"TKT-001-20251114-001\",\n  \"slot_id\": {{slot_id}},\n  \"visitor_name\": \"Alice Wang\",\n  \"visitor_phone\": \"+86-13800138000\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/create",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservations", "create"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Operator Validation Flow",
+      "item": [
+        {
+          "name": "2.1 Operator Login (Valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Login successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.have.property('session_token');",
+                  "});",
+                  "",
+                  "pm.test(\"Returns operator details\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.operator_id).to.equal('OP-001');",
+                  "    pm.expect(jsonData.data.operator_name).to.be.a('string');",
+                  "    pm.expect(jsonData.data.terminal_id).to.equal('GATE-A1');",
+                  "});",
+                  "",
+                  "// Save session token",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"session_token\", jsonData.data.session_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operator_id\": \"OP-001\",\n  \"password\": \"password123\",\n  \"terminal_id\": \"GATE-A1\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/operator/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "operator", "login"]
+            }
+          }
+        },
+        {
+          "name": "2.2 Operator Login (Invalid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"Login failed\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operator_id\": \"OP-999\",\n  \"password\": \"wrong\",\n  \"terminal_id\": \"GATE-A1\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/operator/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "operator", "login"]
+            }
+          }
+        },
+        {
+          "name": "2.3 Validate Ticket - GREEN (Valid Reservation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Validation returns result\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.validation_result).to.have.property('color_code');",
+                  "});",
+                  "",
+                  "pm.test(\"Color code is valid\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(['GREEN', 'YELLOW', 'RED']).to.include(jsonData.validation_result.color_code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"TKT-001-20251114-003\",\n  \"operator_id\": \"OP-001\",\n  \"terminal_id\": \"GATE-A1\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/operator/validate-ticket",
+              "host": ["{{base_url}}"],
+              "path": ["api", "operator", "validate-ticket"]
+            }
+          }
+        },
+        {
+          "name": "2.4 Validate Ticket - RED (Invalid Ticket)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Color code is RED\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.validation_result.color_code).to.equal('RED');",
+                  "});",
+                  "",
+                  "pm.test(\"Entry not allowed\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.validation_result.allow_entry).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"INVALID-TICKET\",\n  \"operator_id\": \"OP-001\",\n  \"terminal_id\": \"GATE-A1\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/operator/validate-ticket",
+              "host": ["{{base_url}}"],
+              "path": ["api", "operator", "validate-ticket"]
+            }
+          }
+        },
+        {
+          "name": "2.5 Verify Ticket Entry - ALLOW",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Verification successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns verification details\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.verification_status).to.be.a('string');",
+                  "    pm.expect(jsonData.data.verified_at).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"TKT-001-20251114-003\",\n  \"operator_id\": \"OP-001\",\n  \"terminal_id\": \"GATE-A1\",\n  \"validation_decision\": \"ALLOW\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/operator/verify-ticket",
+              "host": ["{{base_url}}"],
+              "path": ["api", "operator", "verify-ticket"]
+            }
+          }
+        },
+        {
+          "name": "2.6 Verify Ticket Entry - DENY",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Denial successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.verification_status).to.equal('DENIED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"TKT-001-20251114-005\",\n  \"operator_id\": \"OP-001\",\n  \"terminal_id\": \"GATE-A1\",\n  \"validation_decision\": \"DENY\",\n  \"orq\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/operator/verify-ticket",
+              "host": ["{{base_url}}"],
+              "path": ["api", "operator", "verify-ticket"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}

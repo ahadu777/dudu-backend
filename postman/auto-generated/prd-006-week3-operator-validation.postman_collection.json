@@ -1,0 +1,507 @@
+{
+  "info": {
+    "name": "PRD-006 Week 3: Operator Validation & Scanning",
+    "description": "Comprehensive test suite for operator validation endpoints with Week 2 integration.\n\nCovers all 7 test scenarios from TEST_SCENARIOS_US-015.md:\n- OV-G01: GREEN - Valid reservation for today\n- OV-Y01: YELLOW - No reservation\n- OV-Y02: YELLOW - Already verified\n- OV-R01: RED - Wrong date\n- OV-R02: RED - Ticket not found\n- OV-R03: RED - Ticket not activated\n- OV-R04: RED - Ticket expired",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:9000",
+      "type": "string"
+    },
+    {
+      "key": "operator_id",
+      "value": "OP-001",
+      "type": "string"
+    },
+    {
+      "key": "terminal_id",
+      "value": "TERM-A",
+      "type": "string"
+    },
+    {
+      "key": "orq",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "session_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reservation_id_for_today",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "slot_id_today",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "slot_id_tomorrow",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Operator Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Login successful\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.data).to.have.property('session_token');",
+              "    pm.expect(json.data).to.have.property('operator_id', 'OP-001');",
+              "    pm.expect(json.data).to.have.property('operator_name', 'Zhang Wei');",
+              "    ",
+              "    // Save session token for subsequent requests",
+              "    pm.collectionVariables.set('session_token', json.data.session_token);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operator_id\": \"{{operator_id}}\",\n  \"password\": \"password123\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "login"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. OV-R02: RED - Ticket Not Found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"RED: Ticket not found\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.validation_result.color_code).to.equal('RED');",
+              "    pm.expect(json.validation_result.status).to.equal('INVALID');",
+              "    pm.expect(json.validation_result.allow_entry).to.be.false;",
+              "    pm.expect(json.validation_result.message).to.include('not found');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-NONEXISTENT\",\n  \"operator_id\": \"{{operator_id}}\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/validate-ticket",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "validate-ticket"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. OV-R03: RED - Ticket Not Activated",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"RED: Ticket not activated\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.validation_result.color_code).to.equal('RED');",
+              "    pm.expect(json.validation_result.status).to.equal('INVALID');",
+              "    pm.expect(json.validation_result.allow_entry).to.be.false;",
+              "    pm.expect(json.validation_result.message).to.include('not activated');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-INACTIVE-001\",\n  \"operator_id\": \"{{operator_id}}\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/validate-ticket",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "validate-ticket"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. OV-Y01: YELLOW - No Reservation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"YELLOW: No reservation found\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.validation_result.color_code).to.equal('YELLOW');",
+              "    pm.expect(json.validation_result.status).to.equal('RESERVED');",
+              "    pm.expect(json.validation_result.allow_entry).to.be.false;",
+              "    pm.expect(json.validation_result.message).to.include('No reservation');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-ACTIVE-002\",\n  \"operator_id\": \"{{operator_id}}\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/validate-ticket",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "validate-ticket"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Setup: Create Reservation for Today (GREEN test)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Get today's date in YYYY-MM-DD format",
+              "const today = new Date();",
+              "const todayStr = today.toISOString().split('T')[0];",
+              "pm.collectionVariables.set('today_date', todayStr);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Reservation created\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.data).to.have.property('reservation_id');",
+              "    pm.expect(json.data).to.have.property('slot_id');",
+              "    ",
+              "    pm.collectionVariables.set('reservation_id_for_today', json.data.reservation_id);",
+              "    pm.collectionVariables.set('slot_id_today', json.data.slot_id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-ACTIVE-001\",\n  \"slot_id\": \"f7206524-5751-4a43-9670-15b52e0de4b4\",\n  \"visitor_name\": \"test@example.com\",\n  \"visitor_phone\": \"+12025551234\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/reservations/create",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "reservations", "create"]
+        },
+        "description": "Create reservation using Week 2 API (port 8080) to set up GREEN test scenario"
+      },
+      "response": []
+    },
+    {
+      "name": "6. OV-G01: GREEN - Valid Reservation for Today",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"GREEN: Valid reservation for today\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.validation_result.color_code).to.equal('GREEN');",
+              "    pm.expect(json.validation_result.status).to.equal('RESERVED');",
+              "    pm.expect(json.validation_result.allow_entry).to.be.true;",
+              "    pm.expect(json.validation_result.message).to.include('Allow entry');",
+              "    pm.expect(json.validation_result.details).to.have.property('visitor_name');",
+              "    pm.expect(json.validation_result.details).to.have.property('slot_date');",
+              "    pm.expect(json.validation_result.details).to.have.property('slot_time');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-ACTIVE-001\",\n  \"operator_id\": \"{{operator_id}}\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/validate-ticket",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "validate-ticket"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7. Verify Ticket - ALLOW Entry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Ticket verified successfully\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.data).to.have.property('verification_status', 'VERIFIED');",
+              "    pm.expect(json.data).to.have.property('ticket_number', 'TKT-ACTIVE-001');",
+              "    pm.expect(json.data).to.have.property('verified_at');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-ACTIVE-001\",\n  \"operator_id\": \"{{operator_id}}\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"validation_decision\": \"ALLOW\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/verify-ticket",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "verify-ticket"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8. OV-Y02: YELLOW - Already Verified (Idempotent)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"YELLOW: Already verified\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.validation_result.color_code).to.equal('YELLOW');",
+              "    pm.expect(json.validation_result.status).to.equal('VERIFIED');",
+              "    pm.expect(json.validation_result.allow_entry).to.be.false;",
+              "    pm.expect(json.validation_result.message).to.include('already verified');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-ACTIVE-001\",\n  \"operator_id\": \"{{operator_id}}\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/validate-ticket",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "validate-ticket"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "9. Verify Ticket - Idempotent Behavior",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Idempotent: Returns existing verification\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.data).to.have.property('verification_status', 'VERIFIED');",
+              "    pm.expect(json.data).to.have.property('verified_at');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-ACTIVE-001\",\n  \"operator_id\": \"{{operator_id}}\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"validation_decision\": \"ALLOW\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/verify-ticket",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "verify-ticket"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10. Verify Ticket - DENY Entry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Ticket denied successfully\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.data).to.have.property('verification_status', 'DENIED');",
+              "    pm.expect(json.data).to.have.property('ticket_number', 'TKT-ACTIVE-002');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_number\": \"TKT-ACTIVE-002\",\n  \"operator_id\": \"{{operator_id}}\",\n  \"terminal_id\": \"{{terminal_id}}\",\n  \"validation_decision\": \"DENY\",\n  \"orq\": {{orq}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/operator/verify-ticket",
+          "host": ["{{base_url}}"],
+          "path": ["api", "operator", "verify-ticket"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

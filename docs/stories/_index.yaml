@@ -298,4 +298,52 @@ stories:
       runbook: docs/integration/US-014-runbook.md
       newman:
         - reports/collections/us-014-wechat-auth.json
+  - id: US-015
+    title: Ticket Reservation & Validation System
+    status: Draft
+    cards:
+      - reservation-slot-management
+      - customer-reservation-portal
+      - operator-validation-scanner
+    # Sequence dependencies
+    sequence:
+      - tickets-issuance → reservation-slot-management
+      - reservation-slot-management → customer-reservation-portal
+      - [operators-login, customer-reservation-portal] → operator-validation-scanner
+    # Cross-story relationships
+    enhances: [US-001, US-002]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-007"
+    deadline: "2025-12-31"
+    implicit_dependencies: [tickets-issuance, order-create, operators-login]
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-015-runbook.md
+      newman:
+        - reports/collections/us-015-reservation-validation.json
+  - id: US-016
+    title: Ticket Activation and Time-Slot Reservation System
+    status: Draft
+    cards:
+      - ticket-activation
+      - time-slot-reservation
+      - reservation-validation-scanning
+    # Sequence dependencies
+    sequence:
+      - tickets-issuance → ticket-activation
+      - ticket-activation → time-slot-reservation
+      - [operators-login, time-slot-reservation] → reservation-validation-scanning
+    # Cross-story relationships
+    enhances: [US-001, US-002, US-003]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-006"
+    deadline: "2025-12-31"
+    implicit_dependencies: [tickets-issuance, order-create, operators-login]
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-016-runbook.md
+      newman:
+        - reports/collections/us-016-activation-reservation.json
 
