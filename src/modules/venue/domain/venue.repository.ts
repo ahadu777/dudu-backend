@@ -168,6 +168,13 @@ export class VenueRepository {
     return this.venueRepo.findOne({ where: { venue_code: venueCode, is_active: true } });
   }
 
+  async getAllActiveVenues(): Promise<Venue[]> {
+    return this.venueRepo.find({
+      where: { is_active: true },
+      order: { venue_code: 'ASC' }
+    });
+  }
+
   async createVenue(venueData: Partial<Venue>): Promise<Venue> {
     const venue = this.venueRepo.create(venueData);
     return this.venueRepo.save(venue);

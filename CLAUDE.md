@@ -12,6 +12,7 @@
 - **Creating new story?** → [Duplicate Prevention](#duplicate-story-prevention-mandatory-before-creating-stories) ([📖 Details](docs/reference/DUPLICATE-PREVENTION.md))
 - **PRD vs Story vs Card?** → [Document Layer Decision](#document-layer-decision-tree-prd-vs-story-vs-card) ([📖 Details](docs/reference/DOCUMENT-LAYER-DECISION.md))
 - **API changing?** → [API Change Management](#api-change-management-when-existing-apis-evolve) ([📖 Details](docs/reference/API-CHANGE-MANAGEMENT.md))
+- **Implementing new API?** → [RESTful API Design](#restful-api-design-standards-mandatory-for-all-apis) ([📖 Details](docs/reference/RESTFUL-API-DESIGN.md))
 
 **Problem Solving:**
 - **Troubleshooting?** → [When Things Go Wrong](#-when-things-go-wrong)
@@ -296,24 +297,6 @@ User: "ai driven workflow is fulfilled right?"
 AI Response: Used above template to show B2B2C billing workflow completion
 User Satisfaction: ✅ Confirmed this response style matched their validation goals
 
-### Experience-Based Learning (Validated Approach)
-
-**Before adding any pattern to CLAUDE.md:**
-```bash
-# Check what's been tested in case studies
-grep -A 5 -B 5 "pattern.*name" docs/cases/CASE-DISCOVER-AI-WORKFLOW.md
-```
-
-**Only add if:**
-- ✅ Pattern tested with real scenario
-- ✅ Results documented in case studies
-- ✅ Proven more effective than existing approach
-
-**Never add:**
-- ❌ Theoretical concepts that "sound good"
-- ❌ Abstract principles about improvement
-- ❌ Untested frameworks or meta-patterns
-
 ### Standards (DoR/DoD Checklists)
 **Definition of Ready:**
 - [ ] Complete API contract in card
@@ -336,103 +319,28 @@ grep -A 5 -B 5 "pattern.*name" docs/cases/CASE-DISCOVER-AI-WORKFLOW.md
   - [ ] Test analysis generated (if applicable)
   - [ ] Story validation coverage verified
 
+### RESTful API Design Standards (Mandatory for All APIs)
+
+**📖 Complete Guide**: See [`docs/reference/RESTFUL-API-DESIGN.md`](docs/reference/RESTFUL-API-DESIGN.md)
+
+**Quick Check (before implementing any API):**
+- [ ] Path uses plural nouns (`/venues` not `/venue`)
+- [ ] No path redundancy (not `/venue/venues`)
+- [ ] Custom actions: `/:id/action` ✅ not `/action/:id` ❌
+- [ ] Ask user if uncertain
+
 ### Testing Standards (Newman-First Approach)
 
-**Test Generation Hierarchy:**
-1. **PRD** → Business rule validation (pricing logic, discount calculations)
-2. **STORY (US-xxx)** → User workflow testing (end-to-end journeys)
-3. **CARDS** → Technical endpoint testing (API contracts, database operations)
+**Test Hierarchy:** PRD (business rules) → Story (workflows) → Card (endpoints)
 
-**What each layer tests:**
-
-| Layer | Test Focus | Example Tests |
-|-------|-----------|---------------|
-| **PRD** | Business rules & calculations | "Weekend pricing adds $30 premium", "Child discount = fixed $188" |
-| **Story** | User workflows & acceptance criteria | "User can complete purchase flow", "Operator can scan QR code" |
-| **Card** | Technical contracts & data | "POST /orders returns 201 with order_id", "Database stores correct status" |
-
-**PRD Testing Details:**
-
-**From PRD defines business rules:**
-```markdown
-# In PRD-001-cruise-ticketing-platform.md
-**Dynamic Package Pricing**
-- Pricing varies by weekday/weekend (+$30 premium for adults on weekends)
-- Customer type discounts (child/elderly: fixed $188 regardless of package/timing)
-- Package tier pricing (Entry: $188, Standard: $288/$318, Luxury: $788/$888)
-```
-
-**Becomes Newman business-rules test:**
-```javascript
-// PRD-001-business-rules.postman_collection.json
-pm.test("PRD-001: Weekend pricing premium applied correctly", () => {
-  // Adult Standard package on weekend should be $318 (base $288 + $30)
-  pm.expect(response.total_price).to.equal(318);
-});
-
-pm.test("PRD-001: Child discount applied correctly", () => {
-  // Child pays fixed $188 regardless of package tier or timing
-  pm.expect(response.total_price).to.equal(188);
-});
-
-pm.test("PRD-001: Package tier pricing correct", () => {
-  // Entry tier weekday should be $188
-  pm.expect(response.items[0].price).to.equal(188);
-});
-```
-
-**Newman Collection Standards:**
-- **Generate from STORIES**: `us-xxx-complete-coverage.postman_collection.json`
-- **Business Rules**: `[domain]-business-rules.postman_collection.json`
-- **Output Format**: XML reports in `reports/newman/` for CI/CD integration
-- **Replace Bash Scripts**: Newman handles all test scenarios
-
-**Testing Workflow:**
+**Newman Commands:**
 ```bash
-# 1. Start server
-npm start
-
-# 2. Health check
-curl http://localhost:8080/healthz
-
-# 3. Run Newman collections (primary standard)
-npx newman run postman/auto-generated/us-xxx-complete-coverage.postman_collection.json
-npx newman run postman/auto-generated/business-rules.postman_collection.json
-
-# 4. Review XML reports
-ls reports/newman/*.xml
+npm start                                                    # Start server
+curl http://localhost:8080/healthz                          # Health check
+npx newman run postman/auto-generated/us-xxx.postman_collection.json  # Run tests
 ```
 
-**Test Coverage Requirements:**
-- [ ] Multi-partner isolation (for OTA/B2B features)
-- [ ] Performance validation (<2s response times)
-- [ ] API contract verification (OpenAPI compliance)
-- [ ] Business logic validation (PRD requirements)
-- [ ] Complete user workflow (end-to-end story coverage)
-
-**PRD Coverage Tracking (Two-Layer Approach):**
-1. **Explicit Mapping** (Primary): `docs/test-coverage/_index.yaml` - Manually maintained as we code
-2. **Automatic Discovery** (Backup): `node scripts/prd-test-mapper.mjs` - For gap analysis when explicit mapping is incomplete
-
-**When to Update Explicit Mapping:**
-- [ ] When implementing new PRD requirements
-- [ ] When adding new Newman test collections
-- [ ] When discovering coverage gaps during testing
-- [ ] Weekly during sprint planning
-
-**Validation Assets Standards:**
-Stories must include `validation_assets` section in `docs/stories/_index.yaml`:
-```yaml
-validation_assets:
-  newman:
-    - reports/collections/us-xxx-story-coverage.json      # End-to-end workflow tests
-    - postman/auto-generated/component-specific.postman_collection.json  # Component tests
-  runbook: docs/integration/US-XXX-runbook.md            # Optional: Integration guide
-  test_analysis: docs/test-analysis/component-analysis.md # Optional: AI-generated analysis
-```
-- **Newman collections**: All test scenarios for the story (workflow + component tests)
-- **Runbooks**: Copy-paste integration instructions for stakeholders
-- **Test analysis**: AI-generated visual documentation for easy understanding
+**Coverage Tracking:** `docs/test-coverage/_index.yaml`
 
 ### Key Commands
 ```bash
@@ -923,8 +831,6 @@ npx newman run postman/xxx.postman_collection.json
 
 ---
 
----
-
 ## 🧠 EXPERIENCE-BASED LEARNING (Critical for AI Workflow Improvement)
 
 ### Core Principle: Learning Through Real Working Experience
@@ -1086,8 +992,3 @@ inventory.activateReservation('ota', quantity);
 3. **Test Each Change**: Verify functionality after each modification
 4. **Update Integration Tests**: Ensure cross-module compatibility
 5. **Validate Partner Isolation**: Test with different API keys
-
-**For detailed case studies**: See `docs/cases/CASE-*.md`
-**For complete knowledge graph analysis**: See `docs/KNOWLEDGE_GRAPH_PROOF.md`
-**For integration proof details**: See `docs/INTEGRATION_PROOF.md`
-

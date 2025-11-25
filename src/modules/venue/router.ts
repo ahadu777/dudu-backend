@@ -7,6 +7,66 @@ const router = Router();
 
 /**
  * @swagger
+ * /venue:
+ *   get:
+ *     summary: 获取所有可用场馆列表
+ *     description: 返回所有活跃场馆的列表，供操作员在核销时选择场馆
+ *     tags: [Venue Operations]
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved venue list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 venues:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       venue_id:
+ *                         type: integer
+ *                         example: 1
+ *                       venue_code:
+ *                         type: string
+ *                         example: "central-pier"
+ *                       venue_name:
+ *                         type: string
+ *                         example: "Central Pier Terminal"
+ *                       venue_type:
+ *                         type: string
+ *                         example: "ferry_terminal"
+ *                       supported_functions:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["ferry_boarding", "gift_redemption"]
+ *                       is_active:
+ *                         type: boolean
+ *                         example: true
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/', async (req, res) => {
+  try {
+    const result = await venueOperationsService.getAllVenues();
+    res.json(result);
+  } catch (error) {
+    logger.error('venues.list.error', {
+      error: (error as Error).message,
+      stack: (error as Error).stack
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve venues list'
+    });
+  }
+});
+
+/**
+ * @swagger
  * /venue/scan:
  *   post:
  *     summary: 核销票券权益（需要操作员JWT认证）
@@ -33,6 +93,10 @@ const router = Router();
  *                 description: 要核销的权益类型
  *                 enum: [ferry_boarding, gift_redemption, playground_token]
  *                 example: "ferry_boarding"
+ *               venue_code:
+ *                 type: string
+ *                 description: 场馆代码（可选，用于场馆选择和功能验证）
+ *                 example: "central-pier"
  *     responses:
  *       200:
  *         description: Scan processed successfully
@@ -109,7 +173,7 @@ const router = Router();
  *                   type: string
  */
 router.post('/scan', authenticateOperator, async (req, res) => {
-  const { qr_token, function_code } = req.body;
+  const { qr_token, function_code, venue_code } = req.body;
 
   // 验证必填参数
   if (!qr_token || !function_code) {
@@ -124,6 +188,7 @@ router.post('/scan', authenticateOperator, async (req, res) => {
     const result = await venueOperationsService.validateAndRedeem({
       qrToken: qr_token,
       functionCode: function_code,
+      venueCode: venue_code,  // 可选的场馆代码（新增）
       operator: req.operator!  // 操作员信息来自JWT token
     });
 

@@ -27,6 +27,7 @@ interface OperatorInfo {
 interface ValidationRequest {
   qrToken: string;
   functionCode: string;
+  venueCode?: string;  // 可选的场馆代码（新增 2025-11-25）
   operator: OperatorInfo;
 }
 
@@ -202,6 +203,67 @@ export class VenueOperationsService {
         });
 
         return this.createRejectResponse('TICKET_INVALID_STATUS', startTime, request.operator, true);
+      }
+
+      // ========================================
+      // Step 3.5: 验证场馆（如果提供了 venue_code）
+      // ========================================
+      if (request.venueCode) {
+        logger.info('venue.scan.venue_validation_started', {
+          venue_code: request.venueCode,
+          function_code: request.functionCode,
+          operator_id: request.operator.operator_id
+        });
+
+        const venue = await this.repository.findVenueByCode(request.venueCode);
+
+        if (!venue) {
+          logger.warn('venue.scan.venue_not_found', {
+            venue_code: request.venueCode,
+            operator_id: request.operator.operator_id
+          });
+
+          await this.recordRedemption({
+            ticketCode,
+            jti,
+            functionCode: request.functionCode,
+            operator: request.operator,
+            result: 'reject',
+            reason: 'VENUE_NOT_FOUND'
+          });
+
+          return this.createRejectResponse('VENUE_NOT_FOUND', startTime, request.operator, true);
+        }
+
+        // 验证场馆是否支持该功能
+        const supportedFunctions = venue.supported_functions || [];
+        if (!supportedFunctions.includes(request.functionCode)) {
+          logger.warn('venue.scan.wrong_venue_function', {
+            venue_code: request.venueCode,
+            venue_name: venue.venue_name,
+            function_code: request.functionCode,
+            supported_functions: supportedFunctions,
+            operator_id: request.operator.operator_id
+          });
+
+          await this.recordRedemption({
+            ticketCode,
+            jti,
+            functionCode: request.functionCode,
+            operator: request.operator,
+            result: 'reject',
+            reason: 'WRONG_VENUE_FUNCTION'
+          });
+
+          return this.createRejectResponse('WRONG_VENUE_FUNCTION', startTime, request.operator, true);
+        }
+
+        logger.info('venue.scan.venue_validation_passed', {
+          venue_code: request.venueCode,
+          venue_name: venue.venue_name,
+          function_code: request.functionCode,
+          operator_id: request.operator.operator_id
+        });
       }
 
       // ========================================
@@ -460,6 +522,25 @@ export class VenueOperationsService {
     const startDate = new Date(endDate.getTime() - hours * 60 * 60 * 1000);
 
     return this.repository.getVenueAnalytics(venue.venue_id, startDate, endDate);
+  }
+
+  /**
+   * Get all active venues for operator selection
+   * Returns list of available venues with supported functions
+   */
+  async getAllVenues() {
+    const venues = await this.repository.getAllActiveVenues();
+
+    return {
+      venues: venues.map(v => ({
+        venue_id: v.venue_id,
+        venue_code: v.venue_code,
+        venue_name: v.venue_name,
+        venue_type: v.venue_type,
+        supported_functions: v.supported_functions || [],
+        is_active: v.is_active
+      }))
+    };
   }
 }
 
