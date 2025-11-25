@@ -22,13 +22,9 @@ import customerReservationRouter from './customerReservation/router';
 import pricingRouter from './pricing/router';
 import miniprogramRouter from './miniprogram/router';
 
-export const registerModuleRouters = (app: Application, apiPrefix: string): void => {
-  const apiRouter = Router();
-
-  apiRouter.use('/users', usersRouter);
-  apiRouter.use('/auth', wechatAuthRouter); // WeChat authentication endpoints
-
-  app.use(apiPrefix, apiRouter);
+export const registerModuleRouters = (app: Application): void => {
+  app.use('/users', usersRouter);
+  app.use('/auth', wechatAuthRouter); 
 
   app.use('/miniprogram', miniprogramRouter); // WeChat Mini Program endpoints
   app.use('/catalog', catalogRouter);

@@ -113,14 +113,32 @@ router.post('/decrypt', async (req: Request, res: Response) => {
       name: 'Unknown Product'
     };
 
-    // Format entitlements with complete information
-    const formattedEntitlements = (ticket.entitlements || []).map((e: any) => ({
-      function_code: e.function_code,
-      function_name: e.label || e.function_code,
-      description: e.description || null,
-      remaining_uses: e.remaining_uses,
-      total_uses: e.total_uses || e.remaining_uses
-    }));
+    // Format entitlements with complete information (with fallback to product entitlements)
+    const productEntitlements = product?.entitlements || product?.functions || [];
+    const formattedEntitlements = (ticket.entitlements || []).map((e: any) => {
+      // Fallback: find description from product entitlements if ticket doesn't have it
+      let description = e.description || null;
+      let label = e.label || e.function_code;
+
+      if (!description || !e.label) {
+        // Try to find matching entitlement in product by function_code/type
+        const productEnt = productEntitlements.find((pe: any) =>
+          pe.function_code === e.function_code || pe.type === e.function_code
+        );
+        if (productEnt) {
+          if (!description) description = productEnt.description || null;
+          if (!e.label) label = productEnt.label || productEnt.type || e.function_code;
+        }
+      }
+
+      return {
+        function_code: e.function_code,
+        function_name: label,
+        description,
+        remaining_uses: e.remaining_uses,
+        total_uses: e.total_uses || e.remaining_uses
+      };
+    });
 
     // Return complete information: QR metadata + ticket details
     return res.status(200).json({
@@ -408,14 +426,32 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
         name: 'Unknown Product'
       };
 
-      // Format entitlements with complete information
-      const formattedEntitlements = (ticket.entitlements || []).map((e: any) => ({
-        function_code: e.function_code,
-        function_name: e.label || e.function_code,
-        description: e.description || null,
-        remaining_uses: e.remaining_uses,
-        total_uses: e.total_uses || e.remaining_uses
-      }));
+      // Format entitlements with complete information (with fallback to product entitlements)
+      const productEntitlements = product?.entitlements || product?.functions || [];
+      const formattedEntitlements = (ticket.entitlements || []).map((e: any) => {
+        // Fallback: find description from product entitlements if ticket doesn't have it
+        let description = e.description || null;
+        let label = e.label || e.function_code;
+
+        if (!description || !e.label) {
+          // Try to find matching entitlement in product by function_code/type
+          const productEnt = productEntitlements.find((pe: any) =>
+            pe.function_code === e.function_code || pe.type === e.function_code
+          );
+          if (productEnt) {
+            if (!description) description = productEnt.description || null;
+            if (!e.label) label = productEnt.label || productEnt.type || e.function_code;
+          }
+        }
+
+        return {
+          function_code: e.function_code,
+          function_name: label,
+          description,
+          remaining_uses: e.remaining_uses,
+          total_uses: e.total_uses || e.remaining_uses
+        };
+      });
 
       // Return ticket information with entitlements (aligned with US-012 requirements)
       return res.status(200).json({
