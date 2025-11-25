@@ -67,7 +67,7 @@ Add to your `.env` file:
 # Directus Integration
 USE_DIRECTUS=true
 DIRECTUS_URL=https://dudu-derp-cxk5g.ondigitalocean.app
-DIRECTUS_ACCESS_TOKEN=546owwY8TtkC5hPXi7j97grPbYURK7Eq
+DIRECTUS_ACCESS_TOKEN=HE9EiIEgdf-UD7quY4Ajoas19vgmkFvF
 ```
 
 ---
@@ -84,7 +84,7 @@ Visit: `https://dudu-derp-cxk5g.ondigitalocean.app/admin`
 
 Navigate to: **Settings → Roles & Permissions**
 
-Find the role/token: `546owwY8TtkC5hPXi7j97grPbYURK7Eq`
+Find the role/token: `HE9EiIEgdf-UD7quY4Ajoas19vgmkFvF`
 
 **Grant these permissions:**
 
@@ -137,7 +137,7 @@ curl http://localhost:8080/api/tickets/validate \
 # .env file
 USE_DIRECTUS=true
 DIRECTUS_URL=https://dudu-derp-cxk5g.ondigitalocean.app
-DIRECTUS_ACCESS_TOKEN=546owwY8TtkC5hPXi7j97grPbYURK7Eq
+DIRECTUS_ACCESS_TOKEN=HE9EiIEgdf-UD7quY4Ajoas19vgmkFvF
 
 # Start server
 npm start
