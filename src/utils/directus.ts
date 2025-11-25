@@ -272,11 +272,21 @@ export class DirectusService {
     }
 
     try {
-      // TODO: Implement atomic transaction with slot capacity check
-      // For now, simple insert
+      // First, get the ticket to obtain its ID (primary key)
+      const ticket = await this.getTicketByNumber(data.ticket_id);
+
+      if (!ticket || !ticket.id) {
+        return { success: false, error: 'Ticket not found in database' };
+      }
+
+      // Use the ticket's ID (primary key) for the foreign key relationship
       const url = `${this.baseURL}/items/ticket_reservations`;
       const response = await axios.post(url, {
-        ...data,
+        ticket_id: ticket.id,  // Use the numeric ID from tickets table
+        slot_id: data.slot_id,
+        customer_email: data.customer_email,
+        customer_phone: data.customer_phone,
+        orq: data.orq,
         status: 'RESERVED',
         reserved_at: new Date().toISOString()
       }, {
@@ -290,9 +300,12 @@ export class DirectusService {
       });
 
       return { success: true, reservation: response.data?.data };
-    } catch (error) {
+    } catch (error: any) {
+      const errorDetails = error?.response?.data || error?.message || 'Unknown error';
       logger.error('directus.reservation.create_failed', {
         ticket_id: data.ticket_id,
+        status: error?.response?.status,
+        errorDetails: JSON.stringify(errorDetails),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
       return { success: false, error: 'Failed to create reservation' };
