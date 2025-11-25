@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { OperatorValidationServiceMock } from './service.mock';
+import { OperatorValidationServiceEnhanced } from './service.enhanced';
 import {
   OperatorLoginRequest,
   ValidateTicketRequest,
@@ -8,10 +8,10 @@ import {
 import { logger } from '../../utils/logger';
 
 export class OperatorValidationController {
-  private service: OperatorValidationServiceMock;
+  private service: OperatorValidationServiceEnhanced;
 
   constructor() {
-    this.service = new OperatorValidationServiceMock();
+    this.service = new OperatorValidationServiceEnhanced();
   }
 
   /**

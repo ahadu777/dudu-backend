@@ -47,11 +47,13 @@ export const registerModuleRouters = (app: Application, apiPrefix: string): void
   app.use('/venue', venueRouter);
   app.use('/qr', qrGenerationRouter); // Unified QR generation and verification
 
-  // Ticket reservation & validation system (PRD-006/PRD-007)
+  // Ticket reservation & validation system (PRD-006/PRD-007) - MUST BE BEFORE catch-all routers!
+  // Week 3: Operator validation endpoints integrated into /operators router (see operators/router.ts)
   app.use('/', ticketReservationRouter);
   app.use('/api', reservationSlotsRouter); // Operator slot management + customer availability
   app.use('/api', customerReservationRouter); // Enhanced customer reservation with activation checks
 
+  // These have catch-all routes, so register them LAST
   app.use('/payments', refundsRouter);
   app.use('/', refundsRouter);
   app.use('/', policiesRouter);

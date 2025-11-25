@@ -29,19 +29,21 @@ router.get('/api/reservation-slots/available', (req, res) => controller.getAvail
 router.post('/api/reservations/create', (req, res) => controller.createReservation(req, res));
 
 // ========================================
-// Operator Validation Routes
+// Operator Validation Routes (DISABLED - Using operatorValidation module with Week 2 integration)
 // ========================================
 
 /**
  * POST /api/operator/validate-ticket
  * Validate ticket for venue entry
+ * NOTE: These routes are now handled by the operatorValidation module
+ * which integrates with Week 2 customerReservation and reservation-slots services
  */
-router.post('/api/operator/validate-ticket', (req, res) => controller.operatorValidateTicket(req, res));
+// router.post('/api/operator/validate-ticket', (req, res) => controller.operatorValidateTicket(req, res));
 
 /**
  * POST /api/operator/verify-ticket
  * Mark ticket as verified (allow entry)
  */
-router.post('/api/operator/verify-ticket', (req, res) => controller.operatorVerifyTicket(req, res));
+// router.post('/api/operator/verify-ticket', (req, res) => controller.operatorVerifyTicket(req, res));
 
 export default router;
