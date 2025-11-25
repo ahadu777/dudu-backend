@@ -52,19 +52,29 @@ router.post('/decrypt', async (req: Request, res: Response) => {
 
     // Step 2: Fetch complete ticket information
     // Note: No ownership validation here since encrypted_data itself is the security credential
-    const ticketType = ticketCode.match(/^(CRUISE-|BATCH-|FERRY-|OTA-)/i) ? 'OTA' : 'NORMAL';
+    // Try all sources without prefix-based restrictions
 
     let ticket;
-    if (ticketType === 'OTA') {
-      // Try database first for OTA tickets
-      if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
-        const venueRepo = new VenueRepository(AppDataSource);
-        ticket = await venueRepo.getTicketByCode(ticketCode);
-      } else {
-        // Fallback to mock store
-        ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+    let ticketType = 'NORMAL';
+
+    // Try database first (if available)
+    if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+      const venueRepo = new VenueRepository(AppDataSource);
+      ticket = await venueRepo.getTicketByCode(ticketCode);
+      if (ticket) {
+        ticketType = 'OTA';
       }
-    } else {
+    }
+
+    // Fallback to mock stores if not found in database
+    if (!ticket) {
+      ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+      if (ticket) {
+        ticketType = 'OTA';
+      }
+    }
+
+    if (!ticket) {
       ticket = mockDataStore.getTicketByCode(ticketCode);
     }
 
@@ -314,29 +324,36 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
         operatorId: req.operator?.operator_id
       };
 
-      // Try to fetch ticket info
-      const ticketType = ticketCode.match(/^(CRUISE-|BATCH-|FERRY-|OTA-)/i) ? 'OTA' : 'NORMAL';
-
+      // Try to fetch ticket info - try all sources without prefix-based restrictions
       let ticket;
-      if (ticketType === 'OTA') {
-        // Try database first for OTA tickets
-        if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
-          const venueRepo = new VenueRepository(AppDataSource);
-          ticket = await venueRepo.getTicketByCode(ticketCode);
-        } else {
-          // Fallback to mock store
-          ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
-        }
+      let ticketType = 'NORMAL';
 
-        // Validate ownership (operators can view any ticket)
-        if (ticket && authContext.authType !== 'OPERATOR' && ticket.partner_id !== authContext.partnerId) {
-          throw new Error('UNAUTHORIZED');
+      // Try database first (if available)
+      if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+        const venueRepo = new VenueRepository(AppDataSource);
+        ticket = await venueRepo.getTicketByCode(ticketCode);
+        if (ticket) {
+          ticketType = 'OTA';
         }
-      } else {
+      }
+
+      // Fallback to mock stores if not found in database
+      if (!ticket) {
+        ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+        if (ticket) {
+          ticketType = 'OTA';
+        }
+      }
+
+      if (!ticket) {
         ticket = mockDataStore.getTicketByCode(ticketCode);
+      }
 
-        // Validate ownership (operators can view any ticket)
-        if (ticket && authContext.authType !== 'OPERATOR' && ticket.user_id !== authContext.userId) {
+      // Validate ownership based on ticket type (operators can view any ticket)
+      if (ticket && authContext.authType !== 'OPERATOR') {
+        if (ticketType === 'OTA' && ticket.partner_id !== authContext.partnerId) {
+          throw new Error('UNAUTHORIZED');
+        } else if (ticketType === 'NORMAL' && ticket.user_id !== authContext.userId) {
           throw new Error('UNAUTHORIZED');
         }
       }

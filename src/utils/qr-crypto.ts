@@ -153,7 +153,7 @@ async function generateQRImage(
     margin: 2,
     width: QR_SIZE,
     color: {
-      dark: '#000000',
+      dark: '#CC0000',  // 红色
       light: '#FFFFFF'
     }
   };
