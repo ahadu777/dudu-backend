@@ -94,10 +94,11 @@ export class OperatorValidationServiceDirectus {
     }
 
     // 2. Check if ticket is activated
-    if (ticket.activation_status && ticket.activation_status !== 'active') {
+    // Directus uses 'status' field with value 'ACTIVATED' (not activation_status)
+    if (ticket.status !== 'ACTIVATED') {
       logger.warn('directus.operator.validate_ticket.not_activated', {
         ticket_code,
-        activation_status: ticket.activation_status
+        status: ticket.status
       });
       return {
         success: true,
