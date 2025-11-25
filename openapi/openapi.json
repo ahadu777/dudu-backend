@@ -641,16 +641,19 @@
         }
       }
     },
-    "/tickets/{code}/qr-token": {
+    "/qr/{code}": {
       "post": {
         "tags": [
-          "Tickets"
+          "QR Generation"
         ],
-        "summary": "Generate QR token for ticket",
-        "description": "Generate a time-limited QR token for ticket scanning",
+        "summary": "Generate secure QR code for ticket",
+        "description": "Generate encrypted QR code for ticket scanning. Supports both user JWT and OTA API Key authentication.",
         "security": [
           {
             "bearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
           }
         ],
         "parameters": [
@@ -661,24 +664,60 @@
             "schema": {
               "type": "string"
             },
-            "description": "Ticket code"
+            "description": "Ticket code (e.g., TKT-123-001 or OTA-XXX-001)"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expiry_minutes": {
+                    "type": "integer",
+                    "description": "Custom expiry time in minutes (1-1440)",
+                    "minimum": 1,
+                    "maximum": 1440
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "QR token generated successfully",
+            "description": "QR code generated successfully",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "token": {
-                      "type": "string",
-                      "description": "QR token for scanning"
+                    "success": {
+                      "type": "boolean",
+                      "example": true
                     },
-                    "expires_in": {
-                      "type": "integer",
-                      "description": "Token expiration in seconds"
+                    "qr_image": {
+                      "type": "string",
+                      "description": "Base64 encoded QR code image"
+                    },
+                    "encrypted_data": {
+                      "type": "string",
+                      "description": "Encrypted data for venue scanning API"
+                    },
+                    "ticket_code": {
+                      "type": "string"
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "valid_for_seconds": {
+                      "type": "integer"
+                    },
+                    "jti": {
+                      "type": "string",
+                      "description": "JWT ID for tracking"
                     }
                   }
                 }
@@ -704,6 +743,132 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/qr/{code}/info": {
+      "get": {
+        "tags": [
+          "QR Generation"
+        ],
+        "summary": "Get ticket information",
+        "description": "Get ticket details without generating QR code",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ticket code"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket information retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "ticket_code": {
+                      "type": "string"
+                    },
+                    "ticket_type": {
+                      "type": "string",
+                      "enum": ["NORMAL", "OTA"]
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "entitlements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "can_generate_qr": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/qr/decrypt": {
+      "post": {
+        "tags": [
+          "QR Generation"
+        ],
+        "summary": "Decrypt QR code",
+        "description": "Decrypt and verify QR code with complete ticket information (NO redemption)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["encrypted_data"],
+                "properties": {
+                  "encrypted_data": {
+                    "type": "string",
+                    "description": "Encrypted QR token string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "QR code decrypted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "jti": {
+                      "type": "string"
+                    },
+                    "ticket_code": {
+                      "type": "string"
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "is_expired": {
+                      "type": "boolean"
+                    },
+                    "ticket_info": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "QR code invalid or tampered"
           }
         }
       }
@@ -1308,78 +1473,7 @@
         }
       }
     },
-    "/api/v1/auth/demo-token": {
-      "post": {
-        "tags": [
-          "Authentication"
-        ],
-        "summary": "Generate demo JWT token",
-        "description": "Generate a demo JWT token for testing authenticated endpoints",
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "user_id": {
-                    "type": "integer",
-                    "default": 123
-                  },
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "default": "john.doe@example.com"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Demo token generated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string",
-                      "description": "JWT token for authentication"
-                    },
-                    "user_id": {
-                      "type": "integer"
-                    },
-                    "email": {
-                      "type": "string"
-                    },
-                    "expires_in": {
-                      "type": "string",
-                      "example": "7d"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Token generation failed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/wechat/login": {
+    "/auth/wechat/login": {
       "post": {
         "tags": [
           "Authentication"
@@ -1545,7 +1639,7 @@
         }
       }
     },
-    "/api/v1/auth/wechat/phone": {
+    "/auth/wechat/phone": {
       "post": {
         "tags": [
           "Authentication"

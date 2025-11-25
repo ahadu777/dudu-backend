@@ -2,14 +2,14 @@
 card: "QR token — short-lived token for ticket scanning"
 slug: qr-token
 team: "B - Tickets"
-oas_paths: ["/tickets/{code}/qr-token"]
+oas_paths: []
 migrations: []
 status: "Deprecated"
 readiness: "prototype"
 branch: ""
 pr: ""
 newman_report: "reports/newman/qr-token.json"
-last_update: "2025-11-13T19:15:00+08:00"
+last_update: "2025-11-25T16:00:00+08:00"
 related_stories: ["US-001","US-003"]
 deprecated: true
 deprecated_date: "2025-11-13"

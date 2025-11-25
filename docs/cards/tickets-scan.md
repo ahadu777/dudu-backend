@@ -2,14 +2,14 @@
 card: "Scan redeem — atomic validate & redeem"
 slug: tickets-scan
 team: "C - Gate"
-oas_paths: ["/tickets/scan"]
+oas_paths: []
 migrations: ["db/migrations/0004_redemption_events_jti.sql", "db/migrations/0007_redemptions_indexes.sql"]
 status: "Deprecated"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/tickets-scan-result.json"
-last_update: "2025-11-13T19:15:00+08:00"
+last_update: "2025-11-25T16:00:00+08:00"
 related_stories: ["US-001","US-002"]
 deprecated: true
 deprecated_date: "2025-11-13"

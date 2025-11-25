@@ -18,11 +18,52 @@
 
 **快速命令**：
 ```bash
-node scripts/progress-report.js      # 查看进度
+grep "status:" docs/cards/*.md       # 查看进度
 npm start                             # 启动服务
 npx newman run [集合].json           # 运行测试
-./scripts/coverage-summary.sh        # 测试覆盖率
+curl http://localhost:8080/endpoint  # 测试端点
 ```
+
+---
+
+## ⚡ 重要：无脚本原则
+
+**本项目采用简单命令优先策略，不创建不必要的脚本。**
+
+**为什么？**
+- ✅ 简单命令更直观、更快
+- ✅ 零维护成本
+- ✅ 易于理解和修改
+- ✅ Newman已处理所有测试需求
+
+**只保留必要的基础设施脚本**：
+```bash
+scripts/
+├── setup.sh                        # 项目初始化
+├── init-db.sql                     # 数据库初始化
+├── run-migration.js                # 迁移工具
+└── migrate-*.sql                   # 历史迁移
+```
+
+**其他所有功能用简单命令**：
+```bash
+# ✅ 查看进度
+grep "status:" docs/cards/*.md
+
+# ✅ 测试功能
+npx newman run postman/xxx.json
+
+# ✅ 检查端点
+curl http://localhost:8080/endpoint
+
+# ✅ 搜索文档
+grep -ri "关键词" docs/
+```
+
+**如果AI提议创建脚本，你可以说**：
+- "不要脚本，用简单命令"
+- "KISS原则"
+- "直接用grep/curl"
 
 ---
 
@@ -531,21 +572,26 @@ npx newman run postman/auto-generated/us-012-complete-coverage.json
 # 运行所有E2E测试
 npm run test:e2e
 
-# 测试覆盖率
-./scripts/coverage-summary.sh                # 快速概览
-node scripts/prd-test-mapper.mjs            # 完整分析
-node scripts/generate-coverage-report.mjs   # 生成报告
+# 查看测试文件
+ls postman/auto-generated/
+find postman/ -name "*.json" | grep -i "test"
 ```
 
 ### 项目状态命令
 ```bash
-# 查看实现进度
-node scripts/progress-report.js
-node scripts/story-coverage.mjs
+# 查看卡片状态
+grep "^status:" docs/cards/*.md                    # 所有卡片状态
+grep "status: Done" docs/cards/*.md | wc -l        # 已完成数量
+grep "status: In Progress" docs/cards/*.md         # 进行中的卡片
+grep "status: Ready" docs/cards/*.md               # 待开始的卡片
 
 # 查看Bug
 grep "status: Open" docs/bugs/_index.yaml
 grep "severity: Critical\|High" docs/bugs/_index.yaml
+
+# 查看Story
+cat docs/stories/_index.yaml
+grep "related_stories" docs/prd/*.md
 ```
 
 ---
@@ -716,18 +762,19 @@ AI会：
 
 ### Q: 如何知道项目当前状态？
 
-**A**: 使用查询命令：
+**A**: 使用简单查询命令：
 ```bash
-node scripts/progress-report.js      # 实现进度
-./scripts/coverage-summary.sh        # 测试覆盖率
-grep "status: Open" docs/bugs/*.yaml # 未解决Bug
+grep "^status:" docs/cards/*.md           # 查看所有卡片状态
+grep "status: Done" docs/cards/*.md | wc -l  # 已完成数量
+grep "status: Open" docs/bugs/*.yaml      # 未解决Bug
+ls postman/auto-generated/                # 测试文件列表
 ```
 
 或直接问AI：
 ```
 "当前项目进度如何？"
 "有哪些Story已经完成？"
-"测试覆盖率如何？"
+"显示所有卡片状态"
 ```
 
 ---
@@ -749,6 +796,7 @@ grep "status: Open" docs/bugs/*.yaml # 未解决Bug
 
 ---
 
-**最后更新**: 2025-11-19
+**最后更新**: 2025-11-20
 **维护者**: AI Development Team
+**重要变更**: 移除所有非必要脚本，采用简单命令优先策略
 **反馈**: 直接在对话中提出问题和建议

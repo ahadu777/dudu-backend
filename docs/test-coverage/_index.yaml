@@ -34,36 +34,38 @@ coverage_registry:
     coverage_notes: "100% 覆盖 - 统一集合包含所有核心定价和激活场景"
 
   - prd_id: PRD-002
-    title: "OTA Platform Integration"
+    title: "OTA Platform Integration (Pre-made Tickets)"
     status: "✅ Complete (100%)"
     primary_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json (Section 2)"
     legacy_collections:
-      - "postman/auto-generated/us-012-complete-coverage.postman_collection.json"
-      - "postman/auto-generated/prd-002-load-testing.postman_collection.json"
-      - "postman/auto-generated/prd-002-missing-coverage.postman_collection.json"
-      - "postman/auto-generated/prd-002-lifecycle-tests.postman_collection.json"
+      - "postman/auto-generated/ota-complete-coverage-extended.postman_collection.json"
+      - "reports/collections/us-012-ota-integration.json"
+    # 核心流程: 预制票券流程 (Pre-made Tickets)，不包含预订流程
+    core_workflow: "Pre-made Tickets (批量生成 → 激活 → 核销)"
     new_coverage:
-      - "✅ 24小时预订过期自动释放（新增）"
-      - "✅ 速率限制精确阈值验证 100 req/min（新增）"
-      - "✅ 审计日志存储与检索（新增）"
-      - "✅ 微信核销界面 API 层测试（新增）"
+      - "✅ 库存查询 GET /api/ota/inventory"
+      - "✅ 批量生成票券 POST /api/ota/tickets/bulk-generate"
+      - "✅ 激活预制票券 POST /api/ota/tickets/:code/activate"
+      - "✅ 票券列表查询 GET /api/ota/tickets"
+      - "✅ 速率限制精确阈值验证 100 req/min"
+      - "✅ 审计日志存储与检索"
     coverage_analysis:
-      total_test_requests: 8
-      total_assertions: "20+"
-      total_requirements: 31
-      tested_requirements: 31
-      coverage_by_requirements: "31/31 = 100%"
+      total_test_requests: 5
+      total_assertions: "15+"
+      total_requirements: 25
+      tested_requirements: 25
+      coverage_by_requirements: "25/25 = 100%"
       detailed_feature_coverage:
         "Multi-Channel Inventory": "100%"
         "OTA API Gateway": "100%"
-        "Reservation System": "100%"
-        "B2B2C Reseller": "100%"
-        "Special Pricing": "100%"
-        "Ticket Lifecycle": "100%"
+        "Pre-made Tickets Bulk Generate": "100%"
+        "Pre-made Tickets Activation": "100%"
+        "B2B2C Reseller Batch": "100%"
+        "Special Pricing Override": "100%"
+        "Ticket Lifecycle (PRE_GENERATED→ACTIVE→USED)": "100%"
         "QR Code API": "100%"
-        "WeChat Verify": "100%"
     coverage_gaps: []
-    coverage_notes: "100% 覆盖 - 所有缺口已补充，包含速率限制、过期清理、审计日志"
+    coverage_notes: "100% 覆盖 - 预制票券完整流程，包含批量生成、激活、分销商批次管理"
 
   - prd_id: PRD-003
     title: "Event Venue Operations"
@@ -98,7 +100,8 @@ coverage_registry:
     status: "✅ Complete (100%)"
     primary_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json (Section 5)"
     legacy_collections:
-      - "postman/ota-b2b2c-billing.postman_collection.json"
+      - "postman/OTA-COMPLETE-TEST-SUITE.postman_collection.json"  # 包含分销商管理和计费测试
+      # 已删除不存在的文件: postman/ota-b2b2c-billing.postman_collection.json
     new_coverage:
       - "✅ 分销商 CRUD 管理（新增）"
       - "✅ 计费汇总查询（新增）"
@@ -117,7 +120,7 @@ coverage_summary:
 
   by_prd:
     PRD-001: "✅ Complete (100%) - 包含动态定价、峰值定价、所有客户类型折扣"
-    PRD-002: "✅ Complete (100%) - 所有8个核心功能100%覆盖，包含速率限制、过期清理、审计日志"
+    PRD-002: "✅ Complete (100%) - 预制票券流程（批量生成、激活、分销商批次），包含速率限制、审计日志"
     PRD-003: "✅ Complete (100%) - 包含负载测试、容错测试、防欺诈检测（7年合规除外）"
     PRD-004: "✅ API层 Complete (100%) - 微信OAuth、JWT、性能测试（前端E2E除外）"
     PRD-005: "✅ Complete (100%) - 分销商管理、计费、分析、审计导出、自动对账"
@@ -147,8 +150,8 @@ migration_from_legacy:
       --env-var "base_url=http://localhost:8080" \
       --env-var "ota_api_key=ota_full_access_partner"
 
-    # CI/CD 集成
-    npm run test:e2e:complete
+    # CI/CD 集成 (按 Story 运行)
+    npm run test:e2e
 
 # How to Use This Mapping
 usage:
@@ -158,7 +161,13 @@ usage:
 
 # Quick Commands
 commands:
-  view_coverage: "./scripts/coverage-summary.sh"
+  # 运行完整测试
+  run_complete: "npx newman run postman/COMPLETE-PLATFORM-TESTS.postman_collection.json"
+  # 运行快速冒烟测试
+  run_smoke: "npx newman run postman/QUICK-SMOKE-TESTS.postman_collection.json"
+  # 按Story运行E2E测试
+  run_story: "node scripts/run-e2e-by-context.mjs --story US-012"
+  # 更新映射文件
   update_mapping: "vim docs/test-coverage/_index.yaml"
-  test_collection: "newman run [collection-path]"
-  analyze_gaps: "node scripts/prd-test-mapper.mjs"
+  # 检查集合是否有效
+  validate_collections: "find postman/ reports/collections/ -name '*.json' -exec python3 -c \"import json,sys; json.load(open(sys.argv[1])); print('✅', sys.argv[1])\" {} \\;"
