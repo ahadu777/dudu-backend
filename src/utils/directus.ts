@@ -279,6 +279,42 @@ export class DirectusService {
         return { success: false, error: 'Ticket not found in database' };
       }
 
+      // Try to check slot capacity (gracefully handle permission errors)
+      let slot: any = null;
+      const slotUrl = `${this.baseURL}/items/reservation_slots/${data.slot_id}`;
+
+      try {
+        const slotResponse = await axios.get(slotUrl, {
+          headers: { Authorization: `Bearer ${this.accessToken}` },
+          timeout: 5000
+        });
+
+        slot = slotResponse.data?.data;
+
+        if (slot && slot.booked_count >= slot.total_capacity) {
+          logger.warn('directus.reservation.slot_full', {
+            slot_id: data.slot_id,
+            booked_count: slot.booked_count,
+            total_capacity: slot.total_capacity
+          });
+          return { success: false, error: 'Slot is full' };
+        }
+      } catch (slotError: any) {
+        // If permission denied, log warning but continue (backward compatibility)
+        if (slotError?.response?.status === 403) {
+          logger.warn('directus.reservation.slot_check_skipped', {
+            reason: 'permission_denied',
+            slot_id: data.slot_id,
+            message: 'API token lacks permission to check reservation_slots - capacity validation skipped'
+          });
+        } else {
+          logger.warn('directus.reservation.slot_check_failed', {
+            slot_id: data.slot_id,
+            error: slotError?.message
+          });
+        }
+      }
+
       // Use the ticket's ID (primary key) for the foreign key relationship
       const url = `${this.baseURL}/items/ticket_reservations`;
       const response = await axios.post(url, {
@@ -293,6 +329,40 @@ export class DirectusService {
         headers: { Authorization: `Bearer ${this.accessToken}` },
         timeout: 5000
       });
+
+      // Try to increment booked_count and decrement available_count (gracefully handle permission errors)
+      if (slot) {
+        try {
+          await axios.patch(slotUrl, {
+            booked_count: slot.booked_count + 1,
+            available_count: slot.available_count - 1
+          }, {
+            headers: { Authorization: `Bearer ${this.accessToken}` },
+            timeout: 5000
+          });
+
+          logger.info('directus.reservation.slot_updated', {
+            ticket_id: data.ticket_id,
+            slot_id: data.slot_id,
+            new_booked_count: slot.booked_count + 1,
+            new_available_count: slot.available_count - 1
+          });
+        } catch (updateError: any) {
+          // If permission denied, log warning but don't fail the reservation
+          if (updateError?.response?.status === 403) {
+            logger.warn('directus.reservation.slot_update_skipped', {
+              reason: 'permission_denied',
+              slot_id: data.slot_id,
+              message: 'API token lacks permission to update reservation_slots - capacity tracking skipped'
+            });
+          } else {
+            logger.warn('directus.reservation.slot_update_failed', {
+              slot_id: data.slot_id,
+              error: updateError?.message
+            });
+          }
+        }
+      }
 
       logger.info('directus.reservation.created', {
         ticket_id: data.ticket_id,

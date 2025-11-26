@@ -3897,10 +3897,557 @@
           }
         }
       }
+    },
+    "/venue": {
+      "get": {
+        "tags": ["Venue Management"],
+        "summary": "获取场馆列表",
+        "description": "返回场馆列表，可选择是否包含已停用的场馆",
+        "parameters": [
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "是否包含已停用的场馆"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved venue list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "venues": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Venue"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Venue Management"],
+        "summary": "创建新场馆",
+        "description": "创建一个新的场馆",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["venue_code", "venue_name", "venue_type"],
+                "properties": {
+                  "venue_code": {
+                    "type": "string",
+                    "description": "场馆唯一代码",
+                    "example": "new-pier"
+                  },
+                  "venue_name": {
+                    "type": "string",
+                    "description": "场馆名称",
+                    "example": "New Pier Terminal"
+                  },
+                  "venue_type": {
+                    "type": "string",
+                    "description": "场馆类型",
+                    "enum": ["ferry_terminal", "gift_shop", "playground"],
+                    "example": "ferry_terminal"
+                  },
+                  "location_address": {
+                    "type": "string",
+                    "description": "场馆地址",
+                    "example": "123 Harbor Road"
+                  },
+                  "supported_functions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "支持的功能列表",
+                    "example": ["ferry_boarding", "gift_redemption"]
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "description": "是否启用",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Venue created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or duplicate venue_code"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/venue/{venue_id}": {
+      "get": {
+        "tags": ["Venue Management"],
+        "summary": "获取场馆详情",
+        "description": "根据ID获取场馆详细信息",
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "场馆ID",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Venue details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid venue_id"
+          },
+          "404": {
+            "description": "Venue not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Venue Management"],
+        "summary": "更新场馆信息",
+        "description": "更新指定场馆的信息",
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "场馆ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "venue_code": {
+                    "type": "string"
+                  },
+                  "venue_name": {
+                    "type": "string"
+                  },
+                  "venue_type": {
+                    "type": "string",
+                    "enum": ["ferry_terminal", "gift_shop", "playground"]
+                  },
+                  "location_address": {
+                    "type": "string"
+                  },
+                  "supported_functions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Venue updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or duplicate venue_code"
+          },
+          "404": {
+            "description": "Venue not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Venue Management"],
+        "summary": "删除场馆",
+        "description": "删除指定场馆（默认软删除，设置is_active=false）",
+        "parameters": [
+          {
+            "name": "venue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "场馆ID"
+          },
+          {
+            "name": "hard_delete",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "是否物理删除（慎用）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Venue deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Venue deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Venue not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/venue/scan": {
+      "post": {
+        "tags": ["Venue Operations"],
+        "summary": "核销票券权益（需要操作员JWT认证）",
+        "description": "扫码核销票券的指定权益，通过JTI+function_code防止重复核销，自动记录操作员信息",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["qr_token", "function_code"],
+                "properties": {
+                  "qr_token": {
+                    "type": "string",
+                    "description": "加密的QR码字符串（格式：iv:encrypted:authTag:signature）",
+                    "example": "a1b2c3d4:e5f6g7h8:i9j0k1l2:m3n4o5p6"
+                  },
+                  "function_code": {
+                    "type": "string",
+                    "description": "要核销的权益类型",
+                    "enum": ["ferry_boarding", "gift_redemption", "playground_token"],
+                    "example": "ferry_boarding"
+                  },
+                  "venue_code": {
+                    "type": "string",
+                    "description": "场馆代码（可选，用于场馆选择和功能验证）",
+                    "example": "central-pier"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scan processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenueScanResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证或操作员token无效"
+          },
+          "422": {
+            "description": "核销失败（重复核销、无权益、QR过期等）"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/venue/{venue_code}/analytics": {
+      "get": {
+        "tags": ["Venue Operations"],
+        "summary": "Get venue performance analytics (PRD-003 metrics)",
+        "description": "Returns real-time analytics for venue operations including fraud detection and success rates",
+        "parameters": [
+          {
+            "name": "venue_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Venue identifier",
+            "example": "central-pier"
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 24
+            },
+            "description": "Analytics time window in hours (1-168)",
+            "example": 24
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Venue analytics data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenueAnalytics"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid hours parameter"
+          },
+          "404": {
+            "description": "Venue not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "Venue": {
+        "type": "object",
+        "properties": {
+          "venue_id": {
+            "type": "integer",
+            "description": "场馆唯一ID"
+          },
+          "venue_code": {
+            "type": "string",
+            "description": "场馆唯一代码"
+          },
+          "venue_name": {
+            "type": "string",
+            "description": "场馆名称"
+          },
+          "venue_type": {
+            "type": "string",
+            "enum": ["ferry_terminal", "gift_shop", "playground"],
+            "description": "场馆类型"
+          },
+          "location_address": {
+            "type": "string",
+            "description": "场馆地址"
+          },
+          "supported_functions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "支持的功能列表"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "是否启用"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VenueScanResult": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": ["success", "reject"],
+            "example": "success"
+          },
+          "ticket_status": {
+            "type": "string",
+            "example": "active"
+          },
+          "entitlements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "function_code": {
+                  "type": "string"
+                },
+                "remaining_uses": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "remaining_uses": {
+            "type": "integer",
+            "example": 1
+          },
+          "operator_info": {
+            "type": "object",
+            "properties": {
+              "operator_id": {
+                "type": "number"
+              },
+              "username": {
+                "type": "string"
+              }
+            }
+          },
+          "performance_metrics": {
+            "type": "object",
+            "properties": {
+              "response_time_ms": {
+                "type": "integer"
+              },
+              "fraud_checks_passed": {
+                "type": "boolean"
+              }
+            }
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VenueAnalytics": {
+        "type": "object",
+        "properties": {
+          "venue_code": {
+            "type": "string",
+            "example": "central-pier"
+          },
+          "period": {
+            "type": "object",
+            "properties": {
+              "hours": {
+                "type": "integer",
+                "example": 24
+              }
+            }
+          },
+          "metrics": {
+            "type": "object",
+            "properties": {
+              "total_scans": {
+                "type": "integer",
+                "example": 1250
+              },
+              "successful_scans": {
+                "type": "integer",
+                "example": 1195
+              },
+              "fraud_attempts": {
+                "type": "integer",
+                "example": 3
+              },
+              "success_rate": {
+                "type": "number",
+                "example": 95.6
+              },
+              "fraud_rate": {
+                "type": "number",
+                "example": 0.24
+              },
+              "function_breakdown": {
+                "type": "object",
+                "properties": {
+                  "ferry_boarding": {
+                    "type": "integer"
+                  },
+                  "gift_redemption": {
+                    "type": "integer"
+                  },
+                  "playground_token": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "Product": {
         "type": "object",
         "properties": {
@@ -5184,6 +5731,14 @@
     {
       "name": "OTA Integration",
       "description": "Online Travel Agency platform integration for cruise package reservations"
+    },
+    {
+      "name": "Venue Management",
+      "description": "场馆CRUD管理：创建、查询、更新、删除场馆信息"
+    },
+    {
+      "name": "Venue Operations",
+      "description": "场馆运营：票券核销、分析报告、欺诈检测"
     }
   ]
 }
