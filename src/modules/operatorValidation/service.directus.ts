@@ -166,8 +166,14 @@ export class OperatorValidationServiceDirectus {
       }
     }
 
-    // 5. Check if reservation is for today
-    const today = new Date().toISOString().split('T')[0];
+    // 5. Check if reservation is for today (use Hong Kong timezone UTC+8)
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Hong_Kong',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const today = formatter.format(new Date()); // Returns YYYY-MM-DD format
     const reservationDate = slotDate || reservation.slot_date || '';
 
     if (reservationDate !== today) {
