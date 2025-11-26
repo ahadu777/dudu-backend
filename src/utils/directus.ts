@@ -183,17 +183,30 @@ export class DirectusService {
 
     try {
       const url = `${this.baseURL}/items/tickets/${ticketNumber}`;
-      await axios.patch(url, updates, {
+
+      logger.info('directus.ticket.update_attempt', {
+        ticket_number: ticketNumber,
+        url,
+        updates: JSON.stringify(updates)
+      });
+
+      const response = await axios.patch(url, updates, {
         headers: { Authorization: `Bearer ${this.accessToken}` },
         timeout: 5000
       });
 
-      logger.info('directus.ticket.updated', { ticket_number: ticketNumber, fields: Object.keys(updates) });
+      logger.info('directus.ticket.updated', {
+        ticket_number: ticketNumber,
+        fields: Object.keys(updates),
+        response_data: JSON.stringify(response.data)
+      });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       logger.error('directus.ticket.update_failed', {
         ticket_number: ticketNumber,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: error?.response?.status,
+        response_data: error?.response?.data ? JSON.stringify(error.response.data) : undefined
       });
       return false;
     }

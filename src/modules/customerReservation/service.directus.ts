@@ -209,16 +209,34 @@ export class CustomerReservationServiceDirectus {
     }
 
     // 4. Update ticket status to RESERVED and customer contact info
-    await directusService.updateTicket(ticket_code, {
+    logger.info('directus.customer.create_reservation.before_update', {
+      ticket_code,
+      customer_email_to_update: customer_email,
+      customer_phone_to_update: customer_phone
+    });
+
+    const updateSuccess = await directusService.updateTicket(ticket_code, {
       status: 'RESERVED',
       reserved_at: new Date().toISOString(),
       customer_email,
       customer_phone
     });
 
+    logger.info('directus.customer.create_reservation.after_update', {
+      ticket_code,
+      update_success: updateSuccess
+    });
+
     logger.info('directus.customer.create_reservation.success', {
       ticket_code,
       reservation_id: result.reservation.id
+    });
+
+    logger.info('directus.customer.create_reservation.response_data', {
+      customer_email_in_response: customer_email,
+      customer_phone_in_response: customer_phone,
+      reservation_email: result.reservation.customer_email,
+      reservation_phone: result.reservation.customer_phone
     });
 
     return {

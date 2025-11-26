@@ -113,7 +113,7 @@ export class CustomerReservationController {
    */
   async createReservation(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_code, slot_id, orq } =
+      const { ticket_code, slot_id, orq, customer_email, customer_phone } =
         req.body as CreateReservationRequest;
 
       if (!ticket_code || !slot_id || !orq) {
@@ -128,6 +128,8 @@ export class CustomerReservationController {
         ticket_code,
         slot_id,
         orq,
+        customer_email,
+        customer_phone,
       });
 
       if (!result.success) {
