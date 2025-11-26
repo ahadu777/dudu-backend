@@ -528,8 +528,8 @@ export class VenueOperationsService {
    * Get all active venues for operator selection
    * Returns list of available venues with supported functions
    */
-  async getAllVenues() {
-    const venues = await this.repository.getAllActiveVenues();
+  async getAllVenues(includeInactive: boolean = false) {
+    const venues = await this.repository.findAllVenues(includeInactive);
 
     return {
       venues: venues.map(v => ({
@@ -537,10 +537,156 @@ export class VenueOperationsService {
         venue_code: v.venue_code,
         venue_name: v.venue_name,
         venue_type: v.venue_type,
+        location_address: v.location_address,
         supported_functions: v.supported_functions || [],
-        is_active: v.is_active
+        is_active: v.is_active,
+        created_at: v.created_at,
+        updated_at: v.updated_at
       }))
     };
+  }
+
+  // ============================================================================
+  // Venue CRUD Operations
+  // ============================================================================
+
+  /**
+   * Create a new venue
+   */
+  async createVenue(venueData: {
+    venue_code: string;
+    venue_name: string;
+    venue_type: string;
+    location_address?: string;
+    supported_functions?: string[];
+    is_active?: boolean;
+  }) {
+    logger.info('venue.create.started', { venue_code: venueData.venue_code });
+
+    // Check venue_code uniqueness
+    const isUnique = await this.repository.isVenueCodeUnique(venueData.venue_code);
+    if (!isUnique) {
+      throw new Error(`Venue code '${venueData.venue_code}' already exists`);
+    }
+
+    const venue = await this.repository.createVenue({
+      venue_code: venueData.venue_code,
+      venue_name: venueData.venue_name,
+      venue_type: venueData.venue_type,
+      location_address: venueData.location_address,
+      supported_functions: venueData.supported_functions || [],
+      is_active: venueData.is_active !== false
+    });
+
+    logger.info('venue.create.success', { venue_id: venue.venue_id, venue_code: venue.venue_code });
+
+    return {
+      venue_id: venue.venue_id,
+      venue_code: venue.venue_code,
+      venue_name: venue.venue_name,
+      venue_type: venue.venue_type,
+      location_address: venue.location_address,
+      supported_functions: venue.supported_functions || [],
+      is_active: venue.is_active,
+      created_at: venue.created_at,
+      updated_at: venue.updated_at
+    };
+  }
+
+  /**
+   * Get venue by ID
+   */
+  async getVenueById(venueId: number) {
+    const venue = await this.repository.findVenueById(venueId);
+
+    if (!venue) {
+      return null;
+    }
+
+    return {
+      venue_id: venue.venue_id,
+      venue_code: venue.venue_code,
+      venue_name: venue.venue_name,
+      venue_type: venue.venue_type,
+      location_address: venue.location_address,
+      supported_functions: venue.supported_functions || [],
+      is_active: venue.is_active,
+      created_at: venue.created_at,
+      updated_at: venue.updated_at
+    };
+  }
+
+  /**
+   * Update venue
+   */
+  async updateVenue(venueId: number, updateData: {
+    venue_code?: string;
+    venue_name?: string;
+    venue_type?: string;
+    location_address?: string;
+    supported_functions?: string[];
+    is_active?: boolean;
+  }) {
+    logger.info('venue.update.started', { venue_id: venueId });
+
+    // Check if venue exists
+    const existing = await this.repository.findVenueById(venueId);
+    if (!existing) {
+      return null;
+    }
+
+    // If venue_code is being changed, check uniqueness
+    if (updateData.venue_code && updateData.venue_code !== existing.venue_code) {
+      const isUnique = await this.repository.isVenueCodeUnique(updateData.venue_code, venueId);
+      if (!isUnique) {
+        throw new Error(`Venue code '${updateData.venue_code}' already exists`);
+      }
+    }
+
+    // Filter out undefined values to only update provided fields
+    const filteredData: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updateData)) {
+      if (value !== undefined) {
+        filteredData[key] = value;
+      }
+    }
+
+    const venue = await this.repository.updateVenue(venueId, filteredData);
+
+    if (!venue) {
+      return null;
+    }
+
+    logger.info('venue.update.success', { venue_id: venue.venue_id, venue_code: venue.venue_code });
+
+    return {
+      venue_id: venue.venue_id,
+      venue_code: venue.venue_code,
+      venue_name: venue.venue_name,
+      venue_type: venue.venue_type,
+      location_address: venue.location_address,
+      supported_functions: venue.supported_functions || [],
+      is_active: venue.is_active,
+      created_at: venue.created_at,
+      updated_at: venue.updated_at
+    };
+  }
+
+  /**
+   * Delete venue (soft delete by default)
+   */
+  async deleteVenue(venueId: number, hardDelete: boolean = false) {
+    logger.info('venue.delete.started', { venue_id: venueId, hard_delete: hardDelete });
+
+    const success = await this.repository.deleteVenue(venueId, hardDelete);
+
+    if (success) {
+      logger.info('venue.delete.success', { venue_id: venueId, hard_delete: hardDelete });
+    } else {
+      logger.warn('venue.delete.not_found', { venue_id: venueId });
+    }
+
+    return success;
   }
 }
 

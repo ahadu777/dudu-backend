@@ -254,6 +254,7 @@ stories:
     title: Event Venue Operations Platform
     status: Done
     cards:
+      - venue-management-crud
       - venue-session-management
       - venue-enhanced-scanning
       - venue-analytics-reporting

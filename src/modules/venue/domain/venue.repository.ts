@@ -175,9 +175,59 @@ export class VenueRepository {
     });
   }
 
+  // ============================================================================
+  // Venue CRUD Operations
+  // ============================================================================
+
   async createVenue(venueData: Partial<Venue>): Promise<Venue> {
     const venue = this.venueRepo.create(venueData);
     return this.venueRepo.save(venue);
+  }
+
+  async findVenueById(venueId: number): Promise<Venue | null> {
+    return this.venueRepo.findOne({ where: { venue_id: venueId } });
+  }
+
+  async findAllVenues(includeInactive: boolean = false): Promise<Venue[]> {
+    const where = includeInactive ? {} : { is_active: true };
+    return this.venueRepo.find({
+      where,
+      order: { venue_code: 'ASC' }
+    });
+  }
+
+  async updateVenue(venueId: number, updateData: Partial<Venue>): Promise<Venue | null> {
+    const venue = await this.findVenueById(venueId);
+    if (!venue) return null;
+
+    Object.assign(venue, updateData);
+    return this.venueRepo.save(venue);
+  }
+
+  async deleteVenue(venueId: number, hardDelete: boolean = false): Promise<boolean> {
+    const venue = await this.findVenueById(venueId);
+    if (!venue) return false;
+
+    if (hardDelete) {
+      await this.venueRepo.remove(venue);
+    } else {
+      // Soft delete - set is_active to false
+      venue.is_active = false;
+      await this.venueRepo.save(venue);
+    }
+    return true;
+  }
+
+  async isVenueCodeUnique(venueCode: string, excludeVenueId?: number): Promise<boolean> {
+    const query = this.venueRepo.createQueryBuilder('venue')
+      .where('venue.venue_code = :venueCode', { venueCode });
+
+    if (excludeVenueId) {
+      query.andWhere('venue.venue_id != :venueId', { venueId: excludeVenueId });
+    }
+
+    const count = await query.getCount();
+    return count === 0;
   }
 
   // Session Management for Operators

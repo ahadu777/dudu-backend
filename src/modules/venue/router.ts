@@ -5,13 +5,24 @@ import { authenticateOperator } from '../../middlewares/auth';
 
 const router = Router();
 
+// ============================================================================
+// Venue CRUD Operations
+// ============================================================================
+
 /**
  * @swagger
  * /venue:
  *   get:
- *     summary: 获取所有可用场馆列表
- *     description: 返回所有活跃场馆的列表，供操作员在核销时选择场馆
- *     tags: [Venue Operations]
+ *     summary: 获取场馆列表
+ *     description: 返回场馆列表，可选择是否包含已停用的场馆
+ *     tags: [Venue Management]
+ *     parameters:
+ *       - in: query
+ *         name: include_inactive
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: 是否包含已停用的场馆
  *     responses:
  *       200:
  *         description: Successfully retrieved venue list
@@ -23,34 +34,14 @@ const router = Router();
  *                 venues:
  *                   type: array
  *                   items:
- *                     type: object
- *                     properties:
- *                       venue_id:
- *                         type: integer
- *                         example: 1
- *                       venue_code:
- *                         type: string
- *                         example: "central-pier"
- *                       venue_name:
- *                         type: string
- *                         example: "Central Pier Terminal"
- *                       venue_type:
- *                         type: string
- *                         example: "ferry_terminal"
- *                       supported_functions:
- *                         type: array
- *                         items:
- *                           type: string
- *                         example: ["ferry_boarding", "gift_redemption"]
- *                       is_active:
- *                         type: boolean
- *                         example: true
+ *                     $ref: '#/components/schemas/Venue'
  *       500:
  *         description: Internal server error
  */
 router.get('/', async (req, res) => {
   try {
-    const result = await venueOperationsService.getAllVenues();
+    const includeInactive = req.query.include_inactive === 'true';
+    const result = await venueOperationsService.getAllVenues(includeInactive);
     res.json(result);
   } catch (error) {
     logger.error('venues.list.error', {
@@ -61,6 +52,352 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Failed to retrieve venues list'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /venue:
+ *   post:
+ *     summary: 创建新场馆
+ *     description: 创建一个新的场馆
+ *     tags: [Venue Management]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - venue_code
+ *               - venue_name
+ *               - venue_type
+ *             properties:
+ *               venue_code:
+ *                 type: string
+ *                 description: 场馆唯一代码
+ *                 example: "new-pier"
+ *               venue_name:
+ *                 type: string
+ *                 description: 场馆名称
+ *                 example: "New Pier Terminal"
+ *               venue_type:
+ *                 type: string
+ *                 description: 场馆类型
+ *                 enum: [ferry_terminal, gift_shop, playground]
+ *                 example: "ferry_terminal"
+ *               location_address:
+ *                 type: string
+ *                 description: 场馆地址
+ *                 example: "123 Harbor Road"
+ *               supported_functions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: 支持的功能列表
+ *                 example: ["ferry_boarding", "gift_redemption"]
+ *               is_active:
+ *                 type: boolean
+ *                 description: 是否启用
+ *                 default: true
+ *     responses:
+ *       201:
+ *         description: Venue created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Venue'
+ *       400:
+ *         description: Invalid request or duplicate venue_code
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/', async (req, res) => {
+  const { venue_code, venue_name, venue_type, location_address, supported_functions, is_active } = req.body;
+
+  // Validate required fields
+  if (!venue_code || !venue_name || !venue_type) {
+    return res.status(400).json({
+      error: 'INVALID_REQUEST',
+      message: 'venue_code, venue_name and venue_type are required'
+    });
+  }
+
+  try {
+    const venue = await venueOperationsService.createVenue({
+      venue_code,
+      venue_name,
+      venue_type,
+      location_address,
+      supported_functions,
+      is_active
+    });
+
+    res.status(201).json(venue);
+  } catch (error) {
+    const errorMsg = (error as Error).message;
+
+    if (errorMsg.includes('already exists')) {
+      return res.status(400).json({
+        error: 'DUPLICATE_VENUE_CODE',
+        message: errorMsg
+      });
+    }
+
+    logger.error('venue.create.error', {
+      venue_code,
+      error: errorMsg,
+      stack: (error as Error).stack
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to create venue'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /venue/{venue_id}:
+ *   get:
+ *     summary: 获取场馆详情
+ *     description: 根据ID获取场馆详细信息
+ *     tags: [Venue Management]
+ *     parameters:
+ *       - in: path
+ *         name: venue_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 场馆ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Venue details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Venue'
+ *       404:
+ *         description: Venue not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:venue_id', async (req, res) => {
+  const venueId = parseInt(req.params.venue_id);
+
+  if (isNaN(venueId)) {
+    return res.status(400).json({
+      error: 'INVALID_VENUE_ID',
+      message: 'venue_id must be a number'
+    });
+  }
+
+  try {
+    const venue = await venueOperationsService.getVenueById(venueId);
+
+    if (!venue) {
+      return res.status(404).json({
+        error: 'VENUE_NOT_FOUND',
+        message: `Venue with ID ${venueId} not found`
+      });
+    }
+
+    res.json(venue);
+  } catch (error) {
+    logger.error('venue.get.error', {
+      venue_id: venueId,
+      error: (error as Error).message,
+      stack: (error as Error).stack
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve venue'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /venue/{venue_id}:
+ *   put:
+ *     summary: 更新场馆信息
+ *     description: 更新指定场馆的信息
+ *     tags: [Venue Management]
+ *     parameters:
+ *       - in: path
+ *         name: venue_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 场馆ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               venue_code:
+ *                 type: string
+ *               venue_name:
+ *                 type: string
+ *               venue_type:
+ *                 type: string
+ *               location_address:
+ *                 type: string
+ *               supported_functions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Venue updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Venue'
+ *       400:
+ *         description: Invalid request or duplicate venue_code
+ *       404:
+ *         description: Venue not found
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/:venue_id', async (req, res) => {
+  const venueId = parseInt(req.params.venue_id);
+
+  if (isNaN(venueId)) {
+    return res.status(400).json({
+      error: 'INVALID_VENUE_ID',
+      message: 'venue_id must be a number'
+    });
+  }
+
+  const { venue_code, venue_name, venue_type, location_address, supported_functions, is_active } = req.body;
+
+  try {
+    const venue = await venueOperationsService.updateVenue(venueId, {
+      venue_code,
+      venue_name,
+      venue_type,
+      location_address,
+      supported_functions,
+      is_active
+    });
+
+    if (!venue) {
+      return res.status(404).json({
+        error: 'VENUE_NOT_FOUND',
+        message: `Venue with ID ${venueId} not found`
+      });
+    }
+
+    res.json(venue);
+  } catch (error) {
+    const errorMsg = (error as Error).message;
+
+    if (errorMsg.includes('already exists')) {
+      return res.status(400).json({
+        error: 'DUPLICATE_VENUE_CODE',
+        message: errorMsg
+      });
+    }
+
+    logger.error('venue.update.error', {
+      venue_id: venueId,
+      error: errorMsg,
+      stack: (error as Error).stack
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to update venue'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /venue/{venue_id}:
+ *   delete:
+ *     summary: 删除场馆
+ *     description: 删除指定场馆（默认软删除，设置is_active=false）
+ *     tags: [Venue Management]
+ *     parameters:
+ *       - in: path
+ *         name: venue_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 场馆ID
+ *       - in: query
+ *         name: hard_delete
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: 是否物理删除（慎用）
+ *     responses:
+ *       200:
+ *         description: Venue deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Venue deleted successfully"
+ *       404:
+ *         description: Venue not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/:venue_id', async (req, res) => {
+  const venueId = parseInt(req.params.venue_id);
+
+  if (isNaN(venueId)) {
+    return res.status(400).json({
+      error: 'INVALID_VENUE_ID',
+      message: 'venue_id must be a number'
+    });
+  }
+
+  const hardDelete = req.query.hard_delete === 'true';
+
+  try {
+    const success = await venueOperationsService.deleteVenue(venueId, hardDelete);
+
+    if (!success) {
+      return res.status(404).json({
+        error: 'VENUE_NOT_FOUND',
+        message: `Venue with ID ${venueId} not found`
+      });
+    }
+
+    res.json({
+      success: true,
+      message: hardDelete ? 'Venue permanently deleted' : 'Venue deactivated successfully'
+    });
+  } catch (error) {
+    logger.error('venue.delete.error', {
+      venue_id: venueId,
+      hard_delete: hardDelete,
+      error: (error as Error).message,
+      stack: (error as Error).stack
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to delete venue'
     });
   }
 });
