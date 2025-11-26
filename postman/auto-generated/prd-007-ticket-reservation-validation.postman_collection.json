@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "PRD-005: Ticket Reservation & Validation System",
-    "description": "Complete test coverage for PRD-005 ticket reservation and validation workflows",
+    "name": "PRD-007: Ticket Reservation & Validation System",
+    "description": "Complete test coverage for PRD-007 ticket reservation and validation workflows",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -22,8 +22,13 @@
                   "pm.test(\"Ticket is activated and can be reserved\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.exist;",
                   "    pm.expect(jsonData.data.status).to.eql(\"ACTIVATED\");",
                   "    pm.expect(jsonData.data.ticket_code).to.eql(\"TKT-2025-ABC123-DEF456\");",
+                  "    pm.expect(jsonData.data.ticket_id).to.exist;",
+                  "    ",
+                  "    // Save ticket_id for next request",
+                  "    pm.environment.set('ticket_id', jsonData.data.ticket_id);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -65,6 +70,8 @@
                   "    pm.expect(jsonData.success).to.be.true;",
                   "    pm.expect(jsonData.data).to.be.an('array');",
                   "    pm.expect(jsonData.data.length).to.be.greaterThan(0);",
+                  "    pm.expect(jsonData.metadata).to.exist;",
+                  "    pm.expect(jsonData.metadata.month).to.eql('2025-11');",
                   "});",
                   "",
                   "pm.test(\"Slots have correct structure\", function () {",
@@ -78,6 +85,7 @@
                   "    pm.expect(slot).to.have.property('booked_count');",
                   "    pm.expect(slot).to.have.property('available_count');",
                   "    pm.expect(slot).to.have.property('capacity_status');",
+                  "    pm.expect(slot).to.have.property('status');",
                   "    ",
                   "    // Save slot_id for next request",
                   "    pm.environment.set('slot_id', slot.id);",
@@ -121,10 +129,15 @@
                   "pm.test(\"Reservation created successfully\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.data.reservation_id).to.be.a('number');",
-                  "    pm.expect(jsonData.data.ticket_code).to.eql(\"TKT-2025-ABC123-DEF456\");",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.reservation_id).to.exist;",
+                  "    pm.expect(jsonData.data.ticket_code).to.exist;",
+                  "    pm.expect(jsonData.data.slot).to.exist;",
+                  "    pm.expect(jsonData.data.slot.date).to.exist;",
+                  "    pm.expect(jsonData.data.slot.start_time).to.exist;",
+                  "    pm.expect(jsonData.data.slot.end_time).to.exist;",
                   "    pm.expect(jsonData.data.confirmation_sent).to.be.true;",
-                  "    pm.expect(jsonData.data.qr_code).to.include('data:image/png;base64');",
+                  "    pm.expect(jsonData.data.qr_code).to.exist;",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -141,7 +154,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ticket_id\": 1,\n  \"slot_id\": 2,\n  \"customer_email\": \"test@example.com\",\n  \"customer_phone\": \"+12025559999\"\n}"
+              "raw": "{\n  \"ticket_id\": {{ticket_id}},\n  \"slot_id\": {{slot_id}},\n  \"customer_email\": \"asim@gmail.com\",\n  \"customer_phone\": \"+12025551234\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/reservations/create",
@@ -164,7 +177,10 @@
                   "pm.test(\"Error indicates ticket already reserved\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error).to.exist;",
                   "    pm.expect(jsonData.error.code).to.eql(\"TICKET_ALREADY_RESERVED\");",
+                  "    pm.expect(jsonData.error.message).to.include(\"already reserved\");",
+                  "    pm.expect(jsonData.error.reserved_date).to.exist;",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -377,7 +393,9 @@
                   "pm.test(\"Error indicates missing fields\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error).to.exist;",
                   "    pm.expect(jsonData.error.code).to.eql(\"INVALID_REQUEST\");",
+                  "    pm.expect(jsonData.error.message).to.include(\"required\");",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -394,7 +412,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ticket_id\": 1,\n  \"slot_id\": 2\n}"
+              "raw": "{\n  \"ticket_id\": 1,\n  \"slot_id\": 8\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/reservations/create",

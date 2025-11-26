@@ -568,7 +568,8 @@ CREATE TABLE ticket_reservations (
 **Request:**
 ```json
 {
-  "ticket_code": "TKT-2025-ABC123-DEF456"
+  "ticket_code": "TKT-2025-ABC123-DEF456",
+  "orq": 12
 }
 ```
 
@@ -576,45 +577,46 @@ CREATE TABLE ticket_reservations (
 ```json
 {
   "success": true,
-  "data": {
-    "ticket_id": 123,
+  "valid": true,
+  "ticket": {
     "ticket_code": "TKT-2025-ABC123-DEF456",
-    "status": "ACTIVATED",
     "product_id": 5,
+    "product_name": "Museum Admission",
+    "status": "ACTIVATED",
+    "expires_at": "2025-12-31T23:59:59Z",
+    "reserved_at": null,
+    "customer_email": "john@example.com",
+    "customer_phone": "+1234567890",
     "order_id": 456
   }
 }
 ```
 
-**Response (Error - 400/409):**
+**Response (Error - 400):**
 ```json
 {
   "success": false,
-  "error": {
-    "code": "TICKET_ALREADY_RESERVED",
-    "message": "This ticket is already reserved for 2025-11-20",
-    "reserved_date": "2025-11-20"
-  }
+  "valid": false,
+  "error": "Ticket already has an active reservation"
 }
 ```
 
-**Error Codes:**
-- `TICKET_NOT_FOUND`: Ticket doesn't exist
-- `TICKET_NOT_ACTIVATED`: Status is PENDING_PAYMENT
-- `TICKET_ALREADY_RESERVED`: Status is RESERVED
-- `TICKET_EXPIRED`: Ticket expired
+**Error Messages:**
+- `"Ticket not found"`: Ticket doesn't exist
+- `"Ticket must be activated before making a reservation"`: Status is not ACTIVATED
+- `"Ticket already has an active reservation"`: Ticket is already reserved
+- `"Ticket has expired"`: Ticket past expiration date
 
 ---
 
 #### `POST /api/tickets/verify-contact`
-**Purpose:** Verify email/phone (Optional: send OTP)
+**Purpose:** Verify customer contact information exists on ticket
 
 **Request:**
 ```json
 {
-  "ticket_id": 123,
-  "email": "john@example.com",
-  "phone": "+12025551234"
+  "ticket_code": "TKT-2024-001",
+  "orq": 12
 }
 ```
 
@@ -622,14 +624,22 @@ CREATE TABLE ticket_reservations (
 ```json
 {
   "success": true,
-  "message": "Verification code sent to email and phone",
-  "otp_expires_at": "2025-11-14T10:35:00Z"
+  "message": "Contact information verified"
 }
 ```
 
-**Implementation Options:**
-- **MVP**: Skip OTP, return success immediately after format validation
-- **Phase 2**: Implement OTP with Twilio (SMS) + SendGrid (email)
+**Response (Error - 400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": "Invalid customer email in ticket"
+}
+```
+
+**Implementation:**
+- MVP: Simple validation of email and phone format on ticket record
+- No OTP verification in current version
+- Phase 2: Add OTP with Twilio (SMS) + SendGrid (email)
 
 ---
 
@@ -651,34 +661,51 @@ GET /api/reservation-slots/available?month=2025-11&orq=1
   "success": true,
   "data": [
     {
-      "id": 10,
-      "date": "2025-11-14",
-      "start_time": "12:00:00",
-      "end_time": "14:00:00",
-      "total_capacity": 200,
-      "booked_count": 150,
-      "available_count": 50,
-      "status": "ACTIVE",
-      "capacity_status": "LIMITED"
+      "date": "2025-11-25",
+      "slots": [
+        {
+          "id": 1,
+          "start_time": "09:00:00",
+          "end_time": "12:00:00",
+          "total_capacity": 200,
+          "available_count": 200,
+          "capacity_status": "AVAILABLE",
+          "status": "ACTIVE"
+        },
+        {
+          "id": 2,
+          "start_time": "14:00:00",
+          "end_time": "17:00:00",
+          "total_capacity": 200,
+          "available_count": null,
+          "capacity_status": "FULL",
+          "status": "ACTIVE"
+        }
+      ]
     },
     {
-      "id": 11,
-      "date": "2025-11-14",
-      "start_time": "14:00:00",
-      "end_time": "16:00:00",
-      "total_capacity": 200,
-      "booked_count": 20,
-      "available_count": 180,
-      "status": "ACTIVE",
-      "capacity_status": "AVAILABLE"
+      "date": "2025-11-26",
+      "slots": [
+        {
+          "id": 4,
+          "start_time": "09:00:00",
+          "end_time": "12:00:00",
+          "total_capacity": 200,
+          "available_count": 0,
+          "capacity_status": "FULL",
+          "status": "ACTIVE"
+        }
+      ]
     }
-  ],
-  "metadata": {
-    "month": "2025-11",
-    "total_slots": 2
-  }
+  ]
 }
 ```
+
+**Response Structure:**
+- Grouped by `date` (YYYY-MM-DD format)
+- Each date contains array of `slots`
+- `available_count` can be `null` when slot is marked FULL
+- `capacity_status`: "AVAILABLE" (>50% free), "LIMITED" (10-50% free), or "FULL" (0% free)
 
 **Capacity Status Logic:**
 - `AVAILABLE`: available_count > 50% of total_capacity
@@ -693,45 +720,43 @@ GET /api/reservation-slots/available?month=2025-11&orq=1
 **Request:**
 ```json
 {
-  "ticket_id": 123,
-  "slot_id": 10,
-  "customer_email": "john@example.com",
-  "customer_phone": "+12025551234"
+  "ticket_code": "TKT-2024-001",
+  "slot_id": "8",
+  "orq": 12,
+  "customer_email": "asim@gmail.com",
+  "customer_phone": "51532233"
 }
 ```
 
-**Response (Success - 200 OK):**
+**Response (Success - 201 Created):**
 ```json
 {
   "success": true,
   "data": {
-    "reservation_id": 789,
-    "ticket_code": "TKT-2025-ABC123-DEF456",
-    "slot": {
-      "date": "2025-11-14",
-      "start_time": "12:00:00",
-      "end_time": "14:00:00"
-    },
-    "confirmation_sent": true,
-    "qr_code": "data:image/png;base64,iVBORw0KGgoAAAANS..."
+    "reservation_id": "39",
+    "ticket_code": "TKT-2024-001",
+    "slot_id": 8,
+    "slot_date": "2025-12-01",
+    "slot_time": "09:00-12:00",
+    "customer_email": "asim@gmail.com",
+    "customer_phone": "51532233",
+    "status": "RESERVED",
+    "created_at": "2025-11-26T10:30:00Z"
   }
 }
 ```
 
-**Response (Error - 409 Conflict):**
+**Response (Error - 400 Bad Request):**
 ```json
 {
   "success": false,
-  "error": {
-    "code": "SLOT_FULL",
-    "message": "This time slot is full. Please select another time.",
-    "alternative_slots": [
-      {"slot_id": 11, "date": "2025-11-14", "start_time": "14:00:00"},
-      {"slot_id": 12, "date": "2025-11-15", "start_time": "12:00:00"}
-    ]
-  }
+  "error": "Ticket already has an active reservation"
 }
 ```
+
+**Notes:**
+- `customer_email` and `customer_phone` are optional; if not provided, they will be fetched from the ticket
+- If provided, these values will UPDATE the ticket's customer contact information
 
 **Transaction Logic:**
 ```sql

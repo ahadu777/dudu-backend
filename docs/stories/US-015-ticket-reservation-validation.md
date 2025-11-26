@@ -104,16 +104,15 @@ So that I can monitor venue capacity in real-time
 **Card**: `customer-reservation-portal`
 **Team**: B - Fulfillment
 **Endpoints**:
-- `POST /api/tickets/validate`
-- `POST /api/tickets/verify-contact`
-- `POST /api/reservations/create`
+- `POST /api/tickets/validate` - Validate ticket code before reservation
+- `GET /api/reservation-slots/available` - Get available slots (requires `orq` query param)
+- `POST /api/reservations/create` - Create reservation for ticket
 
 **Responsibilities**:
-- Validate ticket eligibility for reservation
-- Collect customer email/phone
-- Display calendar with available slots
+- Validate ticket eligibility for reservation (ticket must be ACTIVATED)
+- Display calendar with available slots grouped by date
 - Create reservation with capacity enforcement
-- Send confirmation email with QR code
+- Generate QR code and send confirmation
 - Handle concurrent booking conflicts
 
 **Data Requirements**:
@@ -121,6 +120,8 @@ So that I can monitor venue capacity in real-time
 - Create `ticket_reservations` table
 - Link ticket → slot (one-to-one)
 - Transaction safety for capacity checks
+
+**Note**: Contact verification endpoint (`POST /api/tickets/verify-contact`) was planned but not implemented in MVP. Contact info is collected and validated during reservation creation.
 
 ---
 

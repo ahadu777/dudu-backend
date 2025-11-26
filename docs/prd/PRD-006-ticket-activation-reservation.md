@@ -337,21 +337,32 @@ CREATE TABLE ticket_reservations (
 
 ### API Endpoints
 
-**Ticket Activation**:
-- `POST /api/tickets/:ticket_id/activate` - Activate inactive ticket
-- `GET /api/tickets/:ticket_id/status` - Check activation status
+**Ticket Validation**:
+- `POST /api/tickets/validate` - Validate ticket eligibility for reservation
+  - Request: `{ticket_code: string, orq: number}`
+  - Response: `{success: boolean, valid: boolean, ticket?: {...}, error?: string}`
+
+**Contact Verification**:
+- `POST /api/tickets/verify-contact` - Verify customer contact information
+  - Request: `{ticket_code: string, orq: number}`
+  - Response: `{success: boolean, message?: string, error?: string}`
+
+**Reservation Slots**:
+- `GET /api/reservation-slots/available` - Get available time slots for month
+  - Query: `?month=2025-11&orq=12&venueId=1`
+  - Response: Array of slots grouped by date with capacity status
 
 **Reservation Management**:
-- `GET /api/tickets/:ticket_id/availability` - Check available dates
-- `POST /api/reservations` - Create reservation for ticket(s)
-- `GET /api/reservations/:reservation_id` - Get reservation details
-- `PUT /api/reservations/:reservation_id` - Modify reservation
+- `POST /api/reservations/create` - Create reservation for ticket and slot
+  - Request: `{ticket_code: string, slot_id: string, orq: number, customer_email?: string, customer_phone?: string}`
+  - Response: `{success: boolean, data?: {...}, error?: string}`
+- `PUT /api/reservations/:reservation_id` - Modify reservation (change slot)
+  - Request: `{new_slot_id: string}`
 - `DELETE /api/reservations/:reservation_id` - Cancel reservation
 
-**Operator Scanning**:
-- `POST /api/operators/login` - Operator authentication (existing)
-- `POST /api/tickets/scan` - Enhanced scan with reservation validation (existing, extended)
-- `GET /api/operators/scan-history` - View scan logs
+**Operator Validation** (Future Phase):
+- `POST /api/operator/validate-ticket` - Validate ticket for venue entry
+- `POST /api/operator/verify-ticket` - Mark ticket as verified
 
 ### Frontend Components
 

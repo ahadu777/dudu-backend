@@ -2,14 +2,14 @@
 card: "Customer Reservation Portal - Ticket Validation & Booking"
 slug: customer-reservation-portal
 team: "B - Fulfillment"
-oas_paths: ["/api/tickets/validate", "/api/tickets/verify-contact", "/api/reservations/create"]
+oas_paths: ["/api/tickets/validate", "/api/reservation-slots/available", "/api/reservations/create"]
 migrations: ["db/migrations/0021_ticket_reservations.sql"]
 status: "Done"
 readiness: "mvp"
-branch: "init-ai"
+branch: "feat/ticket-activation-and-reservation"
 pr: ""
 newman_report: "reports/newman/customer-reservation-portal.xml"
-last_update: "2025-11-14T19:30:00+08:00"
+last_update: "2025-11-26T10:00:00+08:00"
 related_stories: ["US-015", "US-016"]
 relationships:
   depends_on: ["reservation-slot-management", "tickets-issuance"]
@@ -23,12 +23,13 @@ relationships:
 # Customer Reservation Portal — Dev Notes
 
 ## Status & Telemetry
-- Status: Ready
+- Status: Done
 - Readiness: mvp
-- Spec Paths: /api/tickets/validate, /api/tickets/verify-contact, /api/reservations/create
-- Migrations: db/migrations/0021_ticket_reservations.sql
+- Spec Paths: /api/tickets/validate, /api/reservation-slots/available, /api/reservations/create
+- Migrations: db/migrations/0021_ticket_reservations.sql (planned, not yet implemented)
 - Newman: 0/0 • reports/newman/customer-reservation-portal.xml
-- Last Update: 2025-11-14T12:00:00+08:00
+- Last Update: 2025-11-26T10:00:00+08:00
+- Implementation: Mock mode (USE_DATABASE=false) - Database mode pending
 
 ## 0) Prerequisites
 - reservation-slot-management card implemented (slots available via API)
@@ -48,49 +49,46 @@ sequenceDiagram
 
   CUSTOMER->>+UI: Visit /reserve?ticket=TKT-2025-ABC123
   UI->>+API: POST /api/tickets/validate { ticket_code }
-  API->>+DB: SELECT * FROM tickets WHERE ticket_code=? AND orq=?
+  API->>+DB: Query mock tickets or database
   DB-->>-API: Ticket data
 
   alt Ticket Invalid
     API-->>UI: 400 Error: TICKET_NOT_FOUND / ALREADY_RESERVED
     UI-->>CUSTOMER: Show error message
   else Ticket Valid (ACTIVATED)
-    API-->>-UI: 200 {ticket_id, status: ACTIVATED}
-    UI-->>CUSTOMER: Show contact form
+    API-->>-UI: 200 {success: true, data: {ticket_id, status: ACTIVATED, ...}}
+    UI-->>CUSTOMER: Show calendar and contact form
 
-    CUSTOMER->>+UI: Enter email & phone
-    UI->>+API: POST /api/tickets/verify-contact
-    API-->>-UI: 200 Verified (MVP: format validation only)
+    UI->>+API: GET /api/reservation-slots/available?orq=1&month=2025-11
+    API-->>-UI: {success: true, data: [{date, start_time, end_time, available_count, ...}]}
+    UI-->>CUSTOMER: Display calendar with available slots
 
-    UI->>+API: GET /api/reservation-slots/available?month=2025-11
-    API-->>-UI: {slots: [...]}
-    UI-->>CUSTOMER: Display calendar with color-coded dates
-
-    CUSTOMER->>+UI: Select date (Nov 14)
-    UI-->>-CUSTOMER: Show time slots (12:00 PM - 150/200)
+    CUSTOMER->>+UI: Select date (Nov 14) and enter email/phone
+    UI-->>-CUSTOMER: Show time slots (12:00 PM - 150/200 available)
 
     CUSTOMER->>+UI: Select slot (12:00 PM) & confirm
-    UI->>+API: POST /api/reservations/create
+    UI->>+API: POST /api/reservations/create {ticket_id, slot_id, customer_email, customer_phone}
 
-    API->>+DB: BEGIN TRANSACTION
-    API->>DB: SELECT * FROM reservation_slots WHERE id=? FOR UPDATE
-    DB-->>API: Slot data {booked_count: 150, total_capacity: 200}
+    API->>+DB: Check mock/database availability
+    API->>DB: Validate ticket status and slot capacity
 
     alt Slot Full
-      API->>DB: ROLLBACK
-      API-->>UI: 409 Error: SLOT_FULL {alternative_slots}
+      API-->>UI: 409 Error: {success: false, error: {code: SLOT_FULL, alternative_slots}}
       UI-->>CUSTOMER: "Slot full, try another time"
+    else Ticket Not Activated
+      API-->>UI: 400 Error: {success: false, error: {code: TICKET_NOT_ACTIVATED}}
+      UI-->>CUSTOMER: "Complete payment first"
     else Slot Available
-      API->>DB: INSERT INTO ticket_reservations (ticket_id, slot_id, ...)
-      API->>DB: UPDATE tickets SET status='RESERVED', customer_email=?, customer_phone=?
-      API->>DB: UPDATE reservation_slots SET booked_count = booked_count + 1
-      API->>DB: COMMIT
+      API->>DB: Create reservation (mock mode or database transaction)
+      API->>DB: UPDATE ticket status='RESERVED', customer_email, customer_phone
+      API->>DB: INCREMENT slot booked_count
+      API->>DB: Generate QR code
 
-      API->>EMAIL: Send confirmation with QR code
-      EMAIL-->>CUSTOMER: Confirmation email
+      Note over API,EMAIL: Email service integration pending in MVP
+      API-->>EMAIL: (Future) Send confirmation with QR code
 
-      API-->>-UI: 200 {reservation_id, qr_code, confirmation_sent}
-      UI-->>-CUSTOMER: Success page with QR code & calendar download
+      API-->>-UI: 200 {success: true, data: {reservation_id, ticket_code, slot, qr_code, confirmation_sent: true}}
+      UI-->>-CUSTOMER: Success page with QR code
     end
   end
 ```
@@ -173,35 +171,31 @@ paths:
                         nullable: true
                         example: "2025-11-20"
 
-  /api/tickets/verify-contact:
-    post:
+  /api/reservation-slots/available:
+    get:
       tags: ["Customer Reservation"]
-      summary: Verify customer email and phone (Optional OTP)
+      summary: Get available reservation slots
       description: |
-        MVP: Simple format validation.
-        Future: Send OTP via email/SMS for verification.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ticket_id, email, phone]
-              properties:
-                ticket_id:
-                  type: integer
-                  example: 123
-                email:
-                  type: string
-                  format: email
-                  example: "john@example.com"
-                phone:
-                  type: string
-                  format: E.164
-                  example: "+12025551234"
+        Returns list of available reservation slots grouped by date.
+        Requires organization ID (orq) query parameter.
+      parameters:
+        - name: orq
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 1
+          description: "Organization ID"
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2025-11"
+          description: "Month filter in YYYY-MM format. Defaults to current month."
       responses:
         200:
-          description: Contact information verified
+          description: Available slots returned
           content:
             application/json:
               schema:
@@ -210,15 +204,54 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  message:
-                    type: string
-                    example: "Contact information verified"
-                  otp_sent:
-                    type: boolean
-                    example: false
-                    description: "MVP: false (no OTP). Future: true if OTP sent"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        date:
+                          type: string
+                          format: date
+                          example: "2025-11-14"
+                        start_time:
+                          type: string
+                          format: time
+                          example: "12:00:00"
+                        end_time:
+                          type: string
+                          format: time
+                          example: "14:00:00"
+                        total_capacity:
+                          type: integer
+                          example: 200
+                        booked_count:
+                          type: integer
+                          example: 150
+                        available_count:
+                          type: integer
+                          example: 50
+                        status:
+                          type: string
+                          enum: [ACTIVE, FULL, CLOSED]
+                          example: "ACTIVE"
+                        capacity_status:
+                          type: string
+                          enum: [AVAILABLE, LIMITED, FULL]
+                          example: "LIMITED"
+                  metadata:
+                    type: object
+                    properties:
+                      month:
+                        type: string
+                        example: "2025-11"
+                      total_slots:
+                        type: integer
+                        example: 30
         400:
-          description: Validation error
+          description: Missing or invalid organization ID
           content:
             application/json:
               schema:
@@ -232,21 +265,10 @@ paths:
                     properties:
                       code:
                         type: string
-                        example: "INVALID_CONTACT"
+                        example: "INVALID_REQUEST"
                       message:
                         type: string
-                        example: "Please enter a valid email and phone number"
-                      validation_errors:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            field:
-                              type: string
-                              example: "email"
-                            message:
-                              type: string
-                              example: "Invalid email format"
+                        example: "orq (organization ID) is required"
 
   /api/reservations/create:
     post:
@@ -319,12 +341,10 @@ paths:
                         description: "Email confirmation sent"
                       qr_code:
                         type: string
-                        example: "data:image/png;base64,iVBORw0KGgo..."
-                        description: "Base64-encoded QR code image"
+                        example: "data:image/png;base64,QR_CODE_FOR_TKT-2025-ABC123-DEF456"
+                        description: "Base64-encoded QR code image (mock data in MVP)"
         400:
-          description: Validation error
-        404:
-          description: Ticket or slot not found
+          description: Validation error (missing fields, ticket not activated)
         409:
           description: Conflict - slot full or ticket already reserved
           content:
@@ -456,28 +476,6 @@ COMMIT;
    - IF status = 'RESERVED' → Return 409 {code: TICKET_ALREADY_RESERVED, reserved_date: ...}
    - IF status = 'ACTIVATED' → Proceed to step 7
 7) Return success: {success: true, data: {ticket_id, ticket_code, status, product_id, order_id}}
-```
-
-**POST /api/tickets/verify-contact (MVP: Format validation only)**:
-```
-1) Parse request body: {ticket_id, email, phone}
-2) Validate email format:
-   - Use validator library: validator.isEmail(email)
-   - IF invalid → Add to validation_errors[]
-3) Validate phone format:
-   - Regex: ^\+[1-9]\d{1,14}$ (E.164 format)
-   - IF invalid → Add to validation_errors[]
-4) IF validation_errors.length > 0:
-   - Return 400 {code: INVALID_CONTACT, validation_errors: [...]}
-5) ELSE:
-   - Return 200 {success: true, message: "Contact information verified", otp_sent: false}
-
-// Future Phase 2: OTP Verification
-6) Generate 6-digit OTP
-7) Store OTP in cache/database with 5-minute expiry
-8) Send email via SendGrid with OTP
-9) Send SMS via Twilio with OTP
-10) Return 200 {success: true, otp_sent: true, otp_expires_at: ...}
 ```
 
 **POST /api/reservations/create**:
@@ -668,28 +666,28 @@ CREATE TABLE ticket_reservations (
 ## 8) Acceptance — Given / When / Then
 
 **Given** a customer has ticket code TKT-2025-ABC123 with status ACTIVATED
-**When** they POST /api/tickets/validate with ticket_code
-**Then** API returns 200 with ticket_id and status=ACTIVATED
+**When** they POST /api/tickets/validate with {ticket_code: "TKT-2025-ABC123"}
+**Then** API returns 200 with {success: true, data: {ticket_id, ticket_code, status: "ACTIVATED", product_id, order_id}}
 
 **Given** a ticket with status RESERVED
 **When** customer tries to validate it
-**Then** API returns 409 TICKET_ALREADY_RESERVED with reserved_date
+**Then** API returns 400 with {success: false, error: {code: "TICKET_ALREADY_RESERVED", message, reserved_date}}
 
-**Given** a customer enters valid email and phone
-**When** they POST /api/tickets/verify-contact
-**Then** API returns 200 with success message (MVP: no OTP sent)
+**Given** a customer requests available slots
+**When** they GET /api/reservation-slots/available?orq=1&month=2025-11
+**Then** API returns 200 with {success: true, data: [{id, date, start_time, end_time, total_capacity, booked_count, available_count, status, capacity_status}], metadata: {month, total_slots}}
 
 **Given** a customer selects slot with 150/200 bookings
-**When** they POST /api/reservations/create
-**Then** reservation is created, slot booked_count becomes 151, ticket status becomes RESERVED
+**When** they POST /api/reservations/create with {ticket_id, slot_id, customer_email, customer_phone}
+**Then** reservation is created, slot booked_count becomes 151, ticket status becomes RESERVED, response returns 200 with reservation details and QR code
 
-**Given** 2 customers try to reserve the last slot simultaneously
+**Given** 2 customers try to reserve the last slot simultaneously (mock mode simulation)
 **When** both POST /api/reservations/create at the same time
-**Then** first request succeeds (200), second request fails (409 SLOT_FULL)
+**Then** first request succeeds (200), second request fails (409 SLOT_FULL) with alternative_slots
 
 **Given** a reservation is created successfully
 **When** response is returned
-**Then** response includes base64 QR code and confirmation_sent=true
+**Then** response includes {success: true, data: {reservation_id, ticket_code, slot: {date, start_time, end_time}, confirmation_sent: true, qr_code: "data:image/png;base64,..."}}
 
 **Given** a slot reaches 200/200 capacity
 **When** reservation increments booked_count to 200
@@ -697,25 +695,24 @@ CREATE TABLE ticket_reservations (
 
 **Given** a customer tries to reserve already-reserved ticket
 **When** they POST /api/reservations/create
-**Then** API returns 409 TICKET_ALREADY_RESERVED
+**Then** API returns 400 with {success: false, error: {code: "TICKET_NOT_ACTIVATED"}}
 
 ## 9) Postman Coverage
 
 **Happy Path Tests:**
 - Validate ACTIVATED ticket → 200 with ticket details
-- Verify valid email/phone → 200 success
+- Get available slots with valid orq → 200 with slots grouped by date
 - Create reservation with available slot → 200 with reservation_id and QR code
 - Check slot booked_count incremented after reservation
 - Check ticket status changed to RESERVED
-- Verify email confirmation queued/sent
+- Verify QR code generated
 
 **Validation Error Tests:**
-- Validate invalid ticket code format → 400 Bad Request
-- Validate non-existent ticket → 400 TICKET_NOT_FOUND
+- Validate invalid ticket code → 400 TICKET_NOT_FOUND
 - Validate PENDING_PAYMENT ticket → 400 TICKET_NOT_ACTIVATED
-- Validate RESERVED ticket → 409 TICKET_ALREADY_RESERVED
-- Verify invalid email format → 400 INVALID_CONTACT
-- Verify invalid phone format → 400 INVALID_CONTACT
+- Validate RESERVED ticket → 400 TICKET_ALREADY_RESERVED (with reserved_date)
+- Get available slots without orq → 400 INVALID_REQUEST
+- Create reservation without required fields → 400 INVALID_REQUEST
 
 **Conflict Tests:**
 - Reserve ticket for FULL slot → 409 SLOT_FULL with alternative_slots
@@ -732,12 +729,11 @@ CREATE TABLE ticket_reservations (
 - Load test: 100 concurrent reservations for different slots
 
 **Integration Tests:**
-- Full flow: Validate → Verify contact → Get slots → Create reservation → Check email sent
-- Verify QR code is valid and decodable
+- Full flow: Validate ticket → Get available slots → Create reservation → Verify QR code generated
 - Verify alternative_slots returned when slot full
-- Verify transaction rollback on capacity check failure
+- Verify mock transaction logic on capacity check failure
 
 **Edge Cases:**
-- Create reservation at exact moment slot becomes full
+- Create reservation at exact moment slot becomes full (simulated in mock mode)
 - Validate ticket immediately after reservation created elsewhere
-- Create reservation with organization mismatch (ticket.orq != slot.orq)
+- Get available slots with different orq values (organization isolation)
