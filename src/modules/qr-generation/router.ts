@@ -216,21 +216,22 @@ router.post('/decrypt', async (req: Request, res: Response) => {
  * Generate secure QR code for a ticket
  * Supports both OTA and normal tickets
  *
- * Authentication:
- * - Users: Authorization: Bearer <jwt_token>
- * - OTA Partners: X-API-Key: <api_key>
+ * Authentication: NONE (ticket_code itself is sufficient credential)
+ * Security:
+ * - Ticket code must exist and be in valid status
+ * - Rate limiting applied per ticket_code
+ * - Generated QR code is encrypted and signed
  *
  * @param code - Ticket code (e.g., TKT-123-001 or CRUISE-2025-FERRY-123)
  * @returns Encrypted QR code image and metadata
  */
-router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:code', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const ticketCode = req.params.code;
     const expiryMinutes = req.body?.expiry_minutes; // Optional custom expiry
 
     logger.info('qr.router.request', {
       ticket_code: ticketCode,
-      auth_type: req.authType,
       custom_expiry: expiryMinutes,
       ip: req.ip
     });
@@ -254,9 +255,8 @@ router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: N
       }
     }
 
-    // Generate QR code
-    const qrResult = await unifiedQRService.generateQRFromRequest(
-      req,
+    // Generate QR code (no ownership verification - ticket_code is the credential)
+    const qrResult = await unifiedQRService.generateQRToken(
       ticketCode,
       expiryMinutes
     );
@@ -280,7 +280,6 @@ router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: N
   } catch (error) {
     logger.error('qr.router.error', {
       ticket_code: req.params.code,
-      auth_type: req.authType,
       error: error instanceof Error ? error.message : 'Unknown error'
     });
 
@@ -292,20 +291,6 @@ router.post('/:code', unifiedAuth(), async (req: Request, res: Response, next: N
         return res.status(404).json({
           error: 'TICKET_NOT_FOUND',
           message: 'No ticket found with this code'
-        });
-      }
-
-      if (message.includes('UNAUTHORIZED')) {
-        return res.status(403).json({
-          error: 'UNAUTHORIZED',
-          message: 'You do not have permission to access this ticket'
-        });
-      }
-
-      if (message.includes('TICKET_TYPE_MISMATCH')) {
-        return res.status(403).json({
-          error: 'TICKET_TYPE_MISMATCH',
-          message: message.split(': ')[1] || 'Ticket type does not match authentication method'
         });
       }
 

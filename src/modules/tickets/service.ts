@@ -2,6 +2,7 @@ import { mockDataStore } from '../../core/mock/data';
 import { mockStore } from '../../core/mock/store';
 import { ERR } from '../../core/errors/codes';
 import { TicketStatus, TicketEntitlement } from '../../types/domain';
+import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
 
 interface Entitlement {
   function_code: string;
@@ -87,7 +88,8 @@ class TicketService {
 
       // Create tickets based on quantity
       for (let ticketIndex = 0; ticketIndex < item.qty; ticketIndex++) {
-        const ticketCode = `TKT-${orderId}-${itemIndex}-${ticketIndex}`;
+        // Generate secure random ticket code (replaces predictable orderId-itemIndex-ticketIndex format)
+        const ticketCode = ticketCodeGenerator.generate('TKT');
 
         // Build entitlements from product functions
         const entitlements: Entitlement[] = product.functions.map(func => ({

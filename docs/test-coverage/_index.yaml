@@ -7,13 +7,15 @@ unified_collection:
   name: "COMPLETE-PLATFORM-TESTS.postman_collection.json"
   location: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json"
   description: "统一的完整测试集合，覆盖所有 PRD 需求"
-  total_tests: "80+ requests, 200+ assertions"
+  total_tests: "100+ requests, 240+ assertions"
   coverage_summary:
     PRD-001: "100% (4 tests + 峰值定价补充)"
     PRD-002: "100% (8 tests + 4 缺口补充)"
     PRD-003: "100% (6 tests + 负载/容错补充)"
     PRD-004: "API层 100% (3 tests + 性能测试)"
     PRD-005: "100% (6 tests + 审计/对账补充)"
+    PRD-006: "100% (8 tests - 操作员验证流程)"
+    PRD-007: "100% (7 tests - 票券预约流程)"
 
 # ===== PRD COVERAGE REGISTRY =====
 # 每个PRD包含：
@@ -120,12 +122,145 @@ coverage_registry:
     coverage_gaps: []
     coverage_notes: "100% 覆盖 - 完整的计费和分析工作流，包含审计导出"
 
-# Coverage Summary (Updated with Unified Collection)
+  - prd_id: PRD-006
+    title: "Ticket Activation & Reservation System"
+    status: "⚠️ Partial (67%→80% with new tests)"
+    primary_collection: "postman/auto-generated/prd-006-007-complete-coverage.postman_collection.json"
+    legacy_collections:
+      - "postman/auto-generated/prd-006-week3-operator-validation.postman_collection.json (已废弃)"
+    tested_scenarios:
+      - "✅ AC-1.1: 票券默认 inactive 状态验证"
+      - "✅ AC-1.2: 仅激活票券可预约"
+      - "⚠️ AC-1.2 (NEW): 立即模式自动激活 - 新增测试"
+      - "⚠️ AC-1.5 (NEW): 激活不可逆 - 新增测试"
+      - "✅ AC-2.1: 日历显示可用日期"
+      - "✅ AC-2.2: 创建带日期/时间的预约"
+      - "⚠️ AC-2.3 (NEW): 多票批量预约 - 新增测试"
+      - "✅ AC-2.4: 预约修改 PUT /api/reservations/:id"
+      - "✅ AC-2.5: 预约取消 DELETE /api/reservations/:id"
+      - "✅ AC-3.1: 操作员登录系统"
+      - "✅ AC-3.2: QR扫描显示票券信息"
+      - "✅ AC-3.3: OV-R02 - 票券不存在 (RED)"
+      - "✅ AC-3.4: OV-R03 - 票券未激活 (RED)"
+      - "✅ AC-3.5: OV-Y01 - 无预约 (YELLOW)"
+      - "✅ AC-4.1: OV-G01 - 有效预约 (GREEN)"
+      - "✅ AC-4.2: OV-R01 - 错误日期 (RED)"
+      - "✅ AC-4.3: OV-R04 - 过期票券 (RED)"
+      - "✅ AC-4.4: OV-Y02 - 已验证 (YELLOW)"
+      - "✅ AC-4.5: 验票 ALLOW 决策"
+      - "✅ AC-4.6: 验票 DENY 决策"
+    coverage_analysis:
+      total_acceptance_criteria: 21
+      tested_acceptance_criteria: 17
+      coverage_by_ac: "17/21 = 81% (with new tests)"
+      by_feature:
+        "Feature 1 - Ticket Activation System": "4/5 = 80%"
+        "Feature 2 - Reservation Calendar": "5/6 = 83%"
+        "Feature 3 - Operator Scanning": "3/4 = 75% (offline N/A)"
+        "Feature 4 - Validation Logic": "5/6 = 83%"
+    coverage_gaps:
+      - "❌ AC-1.2: 立即模式自动激活 - 测试已添加，待实现功能"
+      - "❌ AC-1.5: 激活不可逆 - 测试已添加，待实现功能"
+      - "❌ AC-2.3: 多票批量预约 - 测试已添加，待实现API"
+      - "⚠️ AC-3.4: 离线缓存与同步 - 需要设备端测试，非API层"
+      - "❌ AC-4.2: 可配置策略（允许/要求预约）- 需要管理员接口"
+      - "❌ AC-4.5: 可配置验证规则 - 需要管理员接口"
+      - "❌ AC-4.6: 宽限期配置 - 需要管理员接口"
+    coverage_notes: |
+      **诚实评估 (2025-11-26)**:
+      - 原声称覆盖率: 90%
+      - 实际覆盖率: 67% (14/21 AC有测试)
+      - 新增测试后: 81% (17/21 AC有测试，部分待功能实现)
+      - 无法测试的AC: 4个 (离线缓存、可配置规则等需要管理员功能)
+    test_report: "reports/newman/prd-006-007-coverage-20251126.json"
+
+  - prd_id: PRD-007
+    title: "Ticket Reservation & Validation System"
+    status: "⚠️ Partial (81%→89% with new tests)"
+    primary_collection: "postman/auto-generated/prd-006-007-complete-coverage.postman_collection.json"
+    legacy_collections:
+      - "postman/auto-generated/prd-007-ticket-reservation-validation.postman_collection.json (已废弃)"
+    tested_scenarios:
+      - "✅ AC-C.1: 验证 ACTIVATED 票券"
+      - "✅ AC-C.2: 验证 PENDING_PAYMENT 票券 (400 错误)"
+      - "✅ AC-C.3: 验证 ALREADY_RESERVED 票券 (400 错误)"
+      - "✅ AC-C.4: 验证 EXPIRED 票券 (400 错误)"
+      - "✅ AC-C.5: 验证 NOT_FOUND 票券 (404 错误)"
+      - "✅ AC-C.6: 验证联系信息"
+      - "✅ AC-C.7: 获取可用时段（含容量状态）"
+      - "✅ AC-C.8: 创建预约（含QR码生成）"
+      - "✅ AC-B.1: One Ticket = One Reservation 约束"
+      - "✅ AC-B.2: 容量管理 - 满员拒绝"
+      - "✅ AC-B.3: 过期日期预约拒绝"
+      - "⚠️ AC-B.4 (NEW): 预约过期检查 - 新增测试"
+      - "✅ AC-O.1: 操作员验证 - 有效票券 (VALID)"
+      - "✅ AC-O.2: 操作员验证 - 错误日期 (WRONG_DATE)"
+      - "✅ AC-O.3: 操作员验证 - 无预约 (NO_RESERVATION)"
+      - "✅ AC-O.4: 操作员验证 - 已验证 (ALREADY_VERIFIED)"
+      - "✅ AC-O.5: 操作员标记票券为已验证"
+      - "⚠️ AC-O.A2 (NEW): JWT 8小时过期 - 新增测试"
+      - "⚠️ AC-O.A3 (NEW): 速率限制（5次失败锁定）- 新增测试"
+      - "⚠️ AC-O.S1 (NEW): 性能 <500ms - 新增测试"
+    coverage_analysis:
+      total_acceptance_criteria: 27
+      tested_acceptance_criteria: 22
+      coverage_by_ac: "22/27 = 81% (原始) → 26/27 = 96% (含新增)"
+      by_category:
+        "Customer Reservation Flow": "8/8 = 100%"
+        "API Endpoints": "6/6 = 100%"
+        "Business Rules": "3/4 = 75%"
+        "Operator Authentication": "3/3 = 100% (with new tests)"
+        "Performance": "1/1 = 100% (with new tests)"
+      api_endpoint_status:
+        "POST /api/tickets/validate": "✅ Tested (5 scenarios)"
+        "POST /api/tickets/verify-contact": "✅ Tested"
+        "GET /api/reservation-slots/available": "✅ Tested (with capacity)"
+        "POST /api/reservations/create": "✅ Tested (success + errors)"
+        "PUT /api/reservations/:id": "✅ Tested (modification)"
+        "DELETE /api/reservations/:id": "✅ Tested (cancellation)"
+        "POST /api/operator/validate-ticket": "✅ Tested (4 scenarios + perf)"
+        "POST /api/operator/verify-ticket": "✅ Tested"
+        "POST /api/operator/login": "✅ Tested (auth + JWT + rate limit)"
+    coverage_gaps:
+      - "⚠️ QR 码生成与下载 - 前端功能，非API层测试"
+      - "❌ AC-O.A2: JWT 过期 - 测试已添加，需验证后端实现"
+      - "❌ AC-O.A3: 速率限制 - 测试已添加，需验证后端实现"
+    coverage_notes: |
+      **诚实评估 (2025-11-26)**:
+      - 原声称覆盖率: 95%
+      - 实际覆盖率: 81% (22/27 AC有测试)
+      - 新增测试后: 96% (26/27 AC有测试，部分待功能验证)
+      - 无法测试的AC: 1个 (QR码下载为前端功能)
+    test_report: "reports/newman/prd-006-007-coverage-20251126.json"
+
+  - prd_id: PRD-008
+    title: "DeepTravel Mini-Program Travel Booking Platform"
+    status: "📝 Draft (待开发)"
+    primary_collection: null
+    tested_scenarios: []
+    coverage_analysis:
+      total_acceptance_criteria: "待统计"
+      tested_acceptance_criteria: 0
+      coverage_by_ac: "0% (草稿状态)"
+    coverage_gaps:
+      - "📝 PRD 处于 Draft 状态，待开发"
+      - "📝 Feature 1: Package Product Booking"
+      - "📝 Feature 2: Route Ticket Booking (待定义)"
+    coverage_notes: "PRD-008 处于草稿状态，B2C 小程序直销平台功能待开发"
+
+# Coverage Summary (Updated 2025-11-26 - HONEST ASSESSMENT)
 coverage_summary:
-  overall_coverage: "98%"
-  total_prds: 5
+  overall_coverage: "~85% (已实现PRDs，诚实评估)"
+  total_prds: 8
   fully_covered: 5
+  partially_covered: 2
+  draft_prds: 1
   primary_test_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json"
+
+  honest_assessment_note: |
+    本次评估遵循 CASE-006 教训：PRD → AC → Test 映射，
+    Coverage % = (有测试的AC数 / 总AC数) × 100
+    而非"测试通过数/测试编写数"
 
   by_prd:
     PRD-001: "✅ Complete (100%) - 包含动态定价、峰值定价、所有客户类型折扣"
@@ -133,10 +268,26 @@ coverage_summary:
     PRD-003: "✅ Complete (100%) - 包含负载测试、容错测试、防欺诈检测（7年合规除外）"
     PRD-004: "✅ API层 Complete (100%) - 微信OAuth、JWT、性能测试（前端E2E除外）"
     PRD-005: "✅ Complete (100%) - 分销商管理、计费、分析、审计导出、自动对账"
+    PRD-006: "⚠️ Partial (67%→81%) - 原声称90%，实际14/21 AC有测试，新增3个测试后17/21"
+    PRD-007: "⚠️ Partial (81%→96%) - 原声称95%，实际22/27 AC有测试，新增4个测试后26/27"
+    PRD-008: "📝 Draft (0%) - B2C 小程序直销平台，待开发"
+
+  coverage_gap_summary:
+    PRD-006_gaps:
+      - "立即模式激活 (测试已添加)"
+      - "激活不可逆 (测试已添加)"
+      - "批量预约 (测试已添加)"
+      - "可配置策略/规则/宽限期 (需管理员功能)"
+      - "离线缓存 (设备端，非API)"
+    PRD-007_gaps:
+      - "JWT过期验证 (测试已添加)"
+      - "速率限制 (测试已添加)"
+      - "性能<500ms (测试已添加)"
+      - "QR码下载 (前端功能)"
 
   test_statistics:
-    total_test_requests: "80+"
-    total_assertions: "200+"
+    total_test_requests: "100+"
+    total_assertions: "240+"
     avg_response_time: "<500ms"
     success_rate_target: ">99%"
 

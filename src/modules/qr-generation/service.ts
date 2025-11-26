@@ -186,19 +186,18 @@ export class UnifiedQRService {
 
   /**
    * Generate QR token for a ticket (unified for both OTA and normal tickets)
+   * No authentication required - ticket_code itself is the credential
+   *
    * @param ticketCode - Ticket code
-   * @param authContext - Authentication context from request
    * @param expiryMinutes - Optional custom expiry time
    * @returns Encrypted QR result with image
    */
   async generateQRToken(
     ticketCode: string,
-    authContext: AuthContext,
     expiryMinutes?: number
   ): Promise<EncryptedQRResult> {
     logger.info('qr.service.generate_started', {
-      ticket_code: ticketCode,
-      auth_type: authContext.authType
+      ticket_code: ticketCode
     });
 
     // Step 1: Detect ticket type
@@ -214,13 +213,10 @@ export class UnifiedQRService {
       throw new Error('TICKET_NOT_FOUND: No ticket found with this code');
     }
 
-    // Step 3: Verify ownership
-    this.verifyOwnership(ticket, authContext);
-
-    // Step 4: Validate status
+    // Step 3: Validate status (ownership verification removed - ticket_code is sufficient credential)
     this.validateStatus(ticket);
 
-    // Step 5: Generate encrypted QR code with appropriate expiry time
+    // Step 4: Generate encrypted QR code with appropriate expiry time
     // OTA tickets: Permanent QR codes (100 years = 52,560,000 minutes)
     //   - QR validity is determined by ticket status, not expiry time
     //   - Ticket status (PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED) controls usability
@@ -243,7 +239,8 @@ export class UnifiedQRService {
 
   /**
    * Generate QR token from Express request (convenience method)
-   * @param req - Express request with auth context
+   * @deprecated No longer uses authentication - use generateQRToken directly
+   * @param req - Express request (for logging only)
    * @param ticketCode - Ticket code
    * @param expiryMinutes - Optional custom expiry time
    * @returns Encrypted QR result
@@ -253,21 +250,14 @@ export class UnifiedQRService {
     ticketCode: string,
     expiryMinutes?: number
   ): Promise<EncryptedQRResult> {
-    // Extract auth context from request
-    const authContext: AuthContext = {
-      authType: req.authType!,
-      userId: req.user?.id,
-      partnerId: req.ota_partner?.id
-    };
-
     logger.info('qr.service.request_received', {
-      ...getAuthContext(req),
       ticket_code: ticketCode,
       ip: req.ip,
       user_agent: req.headers['user-agent']
     });
 
-    return this.generateQRToken(ticketCode, authContext, expiryMinutes);
+    // No authentication required - just pass through to generateQRToken
+    return this.generateQRToken(ticketCode, expiryMinutes);
   }
 }
 

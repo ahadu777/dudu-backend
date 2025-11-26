@@ -14,6 +14,11 @@
 - **API changing?** → [API Change Management](#api-change-management-when-existing-apis-evolve) ([📖 Details](docs/reference/API-CHANGE-MANAGEMENT.md))
 - **Implementing new API?** → [RESTful API Design](#restful-api-design-standards-mandatory-for-all-apis) ([📖 Details](docs/reference/RESTFUL-API-DESIGN.md))
 
+**Testing & Quality:**
+- **Generate tests?** → [AI Automated Test Generation](#ai-automated-test-generation-workflow-new)
+- **Run tests?** → [Testing Standards](#testing-standards-newman-first-approach)
+- **Check coverage?** → `docs/test-coverage/_index.yaml`
+
 **Problem Solving:**
 - **Troubleshooting?** → [When Things Go Wrong](#-when-things-go-wrong)
 - **Complex scenario?** → [Knowledge Graph Patterns](#-knowledge-graph-patterns)
@@ -342,6 +347,103 @@ npx newman run postman/auto-generated/us-xxx.postman_collection.json  # Run test
 
 **Coverage Tracking:** `docs/test-coverage/_index.yaml`
 
+### AI Automated Test Generation Workflow (NEW)
+
+**Core Principle:** PRD Acceptance Criteria → Test Suite → Coverage Tracking
+
+**Step 1: Extract Test Scenarios from PRD**
+```bash
+# Find Acceptance Criteria in PRD
+grep -B 3 -A 8 "Acceptance Criteria" docs/prd/PRD-XXX-*.md
+
+# Example output:
+# **OTA API Gateway**
+# - **Acceptance Criteria**:
+#   - API key authentication prevents unauthorized access  → Test Case 1
+#   - Rate limiting (100-1000 req/min per partner)         → Test Case 2
+#   - Real-time inventory queries return availability      → Test Case 3
+```
+
+**Step 2: Generate Postman Collection**
+```bash
+# AI generates collection based on Acceptance Criteria
+# Output: postman/auto-generated/prd-xxx-validation.postman_collection.json
+
+# Collection structure:
+# {
+#   "name": "PRD-XXX Validation",
+#   "item": [
+#     { "name": "Test Case 1: API Key Auth", "request": {...}, "event": [tests] },
+#     { "name": "Test Case 2: Rate Limiting", "request": {...}, "event": [tests] }
+#   ]
+# }
+```
+
+**Step 3: Update Coverage Registry**
+```bash
+# After generating tests, update coverage tracking
+# File: docs/test-coverage/_index.yaml
+
+# Add entry:
+coverage_registry:
+  - prd_id: PRD-XXX
+    status: "✅ Complete (100%)"
+    primary_collection: "postman/auto-generated/prd-xxx-validation.postman_collection.json"
+    coverage_analysis:
+      total_requirements: 10
+      tested_requirements: 10
+      coverage_by_requirements: "10/10 = 100%"
+```
+
+**Step 4: Run and Validate**
+```bash
+# Run generated tests
+npx newman run postman/auto-generated/prd-xxx-validation.postman_collection.json
+
+# Save report
+npx newman run postman/auto-generated/prd-xxx-validation.postman_collection.json \
+  --reporters cli,json \
+  --reporter-json-export reports/newman/prd-xxx-results.json
+```
+
+**Coverage Calculation Method:**
+```
+Coverage % = (Tested Requirements / Total PRD Acceptance Criteria) × 100
+
+Example PRD-002:
+- Total Acceptance Criteria items: 25
+- Test cases covering them: 25
+- Coverage: 25/25 = 100%
+```
+
+**Test Generation Triggers:**
+| Trigger | Action |
+|---------|--------|
+| New PRD created | Generate full test suite from Acceptance Criteria |
+| New Story (US-XXX) | Generate E2E workflow tests |
+| New Card | Generate endpoint-level tests |
+| API change | Update existing tests + add regression tests |
+
+**Directory Structure:**
+```
+postman/
+├── COMPLETE-PLATFORM-TESTS.postman_collection.json  # Unified suite
+├── QUICK-SMOKE-TESTS.postman_collection.json        # Fast validation
+├── auto-generated/                                   # AI-generated tests
+│   ├── prd-xxx-validation.postman_collection.json
+│   └── us-xxx-complete-coverage.postman_collection.json
+└── reports/                                          # Test reports
+
+docs/test-coverage/
+└── _index.yaml                                       # Coverage registry
+```
+
+**AI Self-Check Before Marking Coverage Complete:**
+1. ❓ Does every Acceptance Criteria have a test?
+2. ❓ Are assertions checking the right conditions?
+3. ❓ Is the coverage registry updated?
+4. ❓ Did Newman run pass?
+
 ### Key Commands
 ```bash
 # Development
@@ -582,6 +684,7 @@ grep "integration_points" docs/cards/card-name.md
 8. **Two-Step Query Strategy**: Aggregation + Detail queries for complex data relationships
 9. **User Choice Over Assumptions**: Provide multiple implementation options, let user decide
 10. **AI Auto-Translation for Duplicate Prevention**: AI automatically translates Chinese↔English for similarity detection, zero maintenance (CASE-005)
+11. **AI Automated Test Generation**: PRD Acceptance Criteria → Postman Collection → Coverage Registry (See "AI Automated Test Generation Workflow" section)
 
 ### Architectural Patterns Discovered
 **Dual-Mode Service Pattern:**
@@ -917,6 +1020,74 @@ echo "**Learning**: [What should change in CLAUDE.md]" >> docs/cases/CASE-DISCOV
 - Solutions to hypothetical problems
 - Patterns that worked once but aren't repeatable
 
+### CASE-006: Test Coverage Workflow Failure (2025-11-26)
+
+**Pattern Tested**: AI automated test coverage analysis for PRD-006/007
+
+**What Went Wrong**:
+1. **AI skipped workflow**: Jumped straight to "fix tests" instead of following PRD → AC → Test mapping
+2. **Goal displacement**: Focused on "making tests pass" instead of "covering requirements"
+3. **False confidence**: Claimed 100% coverage when actual coverage was ~50%
+4. **Endpoint mismatch ignored**: Tests used `/validators/*` but PRD specified `/api/operator/*`
+
+**Root Cause Analysis**:
+- AI prioritized technical execution over workflow compliance
+- "Tests passing" ≠ "Requirements covered"
+- Missing systematic AC extraction step before test evaluation
+
+**Correct Workflow** (AI Automated Test Generation):
+```
+Step 1: Extract ALL Acceptance Criteria from PRD
+        ↓
+Step 2: Create AC → Test mapping table
+        ↓
+Step 3: Calculate Coverage = Tested ACs / Total ACs
+        ↓
+Step 4: Identify gaps HONESTLY
+        ↓
+Step 5: Generate tests for gaps (if needed)
+```
+
+**Coverage Calculation Formula**:
+```
+Coverage % = (ACs with corresponding tests / Total PRD Acceptance Criteria) × 100
+
+NOT: Tests passing / Tests written
+NOT: Endpoints tested / Endpoints defined
+```
+
+**Honest Assessment Results**:
+| PRD | Claimed | Actual | Gap |
+|-----|---------|--------|-----|
+| PRD-006 | 100% | 43% | -57% |
+| PRD-007 | 100% | 57% | -43% |
+
+**Key Learnings**:
+1. **Read PRD first, always** - Extract ACs before evaluating any tests
+2. **Map AC → Test explicitly** - Create table showing coverage
+3. **Report gaps honestly** - "Not tested" is better than "100% coverage" lie
+4. **Check endpoint specifications** - Test paths must match PRD definitions
+5. **Passing tests ≠ Complete coverage** - A test can pass but cover wrong thing
+
+**Prevention Pattern**:
+When asked about test coverage, AI MUST:
+```bash
+# 1. Read PRD and extract ALL Acceptance Criteria
+grep -A 5 "Acceptance Criteria" docs/prd/PRD-XXX.md
+
+# 2. Read test collection
+cat postman/auto-generated/prd-xxx.postman_collection.json
+
+# 3. Create explicit mapping: AC_ID → Test_ID or "❌ NO TEST"
+
+# 4. Calculate: Tested_ACs / Total_ACs × 100 = Real Coverage %
+```
+
+**This failure led to**:
+- Updated `docs/test-coverage/_index.yaml` with honest coverage numbers
+- PRD-006: 43% (was claimed 100%)
+- PRD-007: 57% (was claimed 100%)
+- Overall project coverage: ~85% (was claimed 98%)
 
 ---
 

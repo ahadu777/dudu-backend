@@ -1,8 +1,8 @@
-# PRD-006: DeepTravel Mini-Program Travel Booking Platform
+# PRD-008: DeepTravel Mini-Program Travel Booking Platform
 
 ## Document Metadata
 ```yaml
-prd_id: "PRD-006"
+prd_id: "PRD-008"
 product_area: "B2C Direct Sales"
 owner: "Product Manager"
 status: "Draft"

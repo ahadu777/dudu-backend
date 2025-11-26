@@ -8,6 +8,7 @@ import { API_KEYS } from '../../middlewares/otaAuth';
 import { generateSecureQR } from '../../utils/qr-crypto';
 import { TicketRawMetadata } from '../../types/domain';
 import { directusService } from '../../utils/directus';
+import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -927,20 +928,10 @@ export class OTAService {
       // Generate tickets for database
       const tickets = [];
 
-      // Generate batch hash for ticket code uniqueness
-      const crypto = require('crypto');
-      const batchHash = crypto
-        .createHash('md5')
-        .update(request.batch_id)
-        .digest('hex')
-        .substring(0, 7)  // 7-digit hash for higher uniqueness
-        .toUpperCase();
-
       for (let i = 0; i < request.quantity; i++) {
-        // New format: DT + BatchHash(7) + Sequence(4)
-        // Example: DT3E5F2A10001 (13 characters total, closer to standard airline ticket)
-        const sequence = (i + 1).toString().padStart(4, '0');
-        const ticketCode = `DT-${batchHash}${sequence}`;
+        // Generate secure random ticket code (unified with regular ticket generation)
+        // Replaces hash+sequence format for better security
+        const ticketCode = ticketCodeGenerator.generate('DT');
 
         // Use entitlements from product or default cruise functions
         const entitlements = product.entitlements?.map((entitlement: any) => ({
@@ -1048,19 +1039,9 @@ export class OTAService {
     // Generate pre-made tickets
     const tickets = [];
 
-    // Generate batch hash for ticket code uniqueness (same logic as DB mode)
-    const crypto = require('crypto');
-    const batchHash = crypto
-      .createHash('md5')
-      .update(request.batch_id)
-      .digest('hex')
-      .substring(0, 7)  // 7-digit hash
-      .toUpperCase();
-
     for (let i = 0; i < request.quantity; i++) {
-      // New format: DT + BatchHash(7) + Sequence(4)
-      const sequence = (i + 1).toString().padStart(4, '0');
-      const ticketCode = `DT-${batchHash}${sequence}`;
+      // Generate secure random ticket code (unified with DB mode)
+      const ticketCode = ticketCodeGenerator.generate('DT');
 
       // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
       // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
