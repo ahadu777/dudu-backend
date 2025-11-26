@@ -58,25 +58,59 @@ router.post('/decrypt', async (req: Request, res: Response) => {
     let ticket;
     let ticketType = 'NORMAL';
 
-    // Try database first (if available)
-    if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+    // Try Directus first (primary source for customer-created tickets)
+    try {
+      const { DirectusService } = await import('../../utils/directus');
+      const directusService = new DirectusService();
+      ticket = await directusService.getTicketByNumber(ticketCode);
+      if (ticket) {
+        ticketType = 'DIRECTUS';
+        logger.info('qr.decrypt.ticket_source', {
+          ticket_code: ticketCode,
+          source: 'directus',
+          status: ticket.status
+        });
+      }
+    } catch (error) {
+      logger.warn('qr.decrypt.directus_lookup_failed', {
+        ticket_code: ticketCode,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
+    // Try database second (if available - OTA tickets)
+    if (!ticket && dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
       const venueRepo = new VenueRepository(AppDataSource);
       ticket = await venueRepo.getTicketByCode(ticketCode);
       if (ticket) {
         ticketType = 'OTA';
+        logger.info('qr.decrypt.ticket_source', {
+          ticket_code: ticketCode,
+          source: 'database'
+        });
       }
     }
 
-    // Fallback to mock stores if not found in database
+    // Fallback to mock stores if not found in Directus or database
     if (!ticket) {
       ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
       if (ticket) {
         ticketType = 'OTA';
+        logger.info('qr.decrypt.ticket_source', {
+          ticket_code: ticketCode,
+          source: 'mock_pregenerated'
+        });
       }
     }
 
     if (!ticket) {
       ticket = mockDataStore.getTicketByCode(ticketCode);
+      if (ticket) {
+        logger.info('qr.decrypt.ticket_source', {
+          ticket_code: ticketCode,
+          source: 'mock_store'
+        });
+      }
     }
 
     if (!ticket) {
