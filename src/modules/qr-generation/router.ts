@@ -211,6 +211,189 @@ router.post('/decrypt', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /qr/public/:code
+ *
+ * Generate secure QR code for a ticket (PUBLIC ENDPOINT - NO AUTH REQUIRED)
+ * For web customers who access ticket pages without logging in
+ *
+ * SLOT-AWARE EXPIRY (NEW):
+ * - If ticket has a reservation slot: QR expires at slot end_time
+ * - Allows customer to generate QR days in advance and use it at venue
+ * - No 24-hour limit for public QR codes (unlike authenticated endpoint)
+ * - Fallback: 30-minute expiry for tickets without reservation slots
+ *
+ * Security measures:
+ * - Validates ticket exists and has correct status (RESERVED, ACTIVATED, etc.)
+ * - Only generates QR for valid tickets
+ * - Encrypted JWT with unique JTI for fraud prevention
+ *
+ * @param code - Ticket code (e.g., TKT-2024-001)
+ * @returns Encrypted QR code image, expiry time, and slot information
+ */
+router.post('/public/:code', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ticketCode = req.params.code;
+    let expiryMinutes = req.body?.expiry_minutes || 30; // Default 30 minutes
+
+    logger.info('qr.public.request', {
+      ticket_code: ticketCode,
+      requested_expiry: expiryMinutes,
+      ip: req.ip
+    });
+
+    // Validate ticket code format
+    if (!ticketCode || ticketCode.length < 3) {
+      return res.status(400).json({
+        error: 'INVALID_TICKET_CODE',
+        message: 'Ticket code must be at least 3 characters'
+      });
+    }
+
+    // Try to fetch ticket from all sources to validate it exists
+    let ticket;
+    let ticketType = 'NORMAL';
+
+    // Try database first (if available)
+    if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+      const venueRepo = new VenueRepository(AppDataSource);
+      ticket = await venueRepo.getTicketByCode(ticketCode);
+      if (ticket) {
+        ticketType = 'OTA';
+      }
+    }
+
+    // Fallback to mock stores if not found in database
+    if (!ticket) {
+      ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
+      if (ticket) {
+        ticketType = 'OTA';
+      }
+    }
+
+    if (!ticket) {
+      ticket = mockDataStore.getTicketByCode(ticketCode);
+    }
+
+    // Validate ticket exists
+    if (!ticket) {
+      logger.warn('qr.public.ticket_not_found', { ticket_code: ticketCode });
+      return res.status(404).json({
+        error: 'TICKET_NOT_FOUND',
+        message: 'No ticket found with this code'
+      });
+    }
+
+    // Validate ticket status - only allow QR generation for valid statuses
+    const validStatuses = ['RESERVED', 'ACTIVATED', 'PRE_GENERATED', 'ACTIVE', 'active', 'partially_redeemed'];
+    if (!validStatuses.includes(ticket.status)) {
+      logger.warn('qr.public.invalid_status', {
+        ticket_code: ticketCode,
+        status: ticket.status
+      });
+      return res.status(409).json({
+        error: 'INVALID_STATUS',
+        message: `Ticket status "${ticket.status}" cannot generate QR code. Ticket must be RESERVED or ACTIVATED.`
+      });
+    }
+
+    // SLOT-AWARE EXPIRY: Calculate expiry based on reservation slot end_time
+    let slotEndTime: Date | null = null;
+    try {
+      // Import DirectusService to fetch reservation
+      const { DirectusService } = await import('../../utils/directus');
+      const directusService = new DirectusService();
+
+      const reservation = await directusService.getReservationByTicket(ticketCode);
+
+      if (reservation && reservation.slot) {
+        // Reservation has slot information
+        const slotDate = reservation.slot.date; // YYYY-MM-DD
+        const slotEndTimeStr = reservation.slot.end_time; // HH:MM:SS
+
+        // Combine date and end_time to get full datetime
+        slotEndTime = new Date(`${slotDate}T${slotEndTimeStr}`);
+
+        const now = new Date();
+        const minutesUntilSlotEnd = Math.floor((slotEndTime.getTime() - now.getTime()) / (1000 * 60));
+
+        if (minutesUntilSlotEnd > 0) {
+          // Set expiry to slot end_time (no 24-hour limit for public QR)
+          expiryMinutes = minutesUntilSlotEnd;
+
+          logger.info('qr.public.slot_aware_expiry', {
+            ticket_code: ticketCode,
+            slot_date: slotDate,
+            slot_end_time: slotEndTimeStr,
+            minutes_until_slot_end: minutesUntilSlotEnd,
+            calculated_expiry: expiryMinutes
+          });
+        } else {
+          // Slot has already ended, use short expiry
+          expiryMinutes = 30;
+          logger.warn('qr.public.slot_ended', {
+            ticket_code: ticketCode,
+            slot_end_time: slotEndTime.toISOString(),
+            using_default_expiry: expiryMinutes
+          });
+        }
+      } else {
+        logger.info('qr.public.no_reservation_slot', {
+          ticket_code: ticketCode,
+          using_default_expiry: expiryMinutes
+        });
+      }
+    } catch (error) {
+      // If reservation lookup fails, continue with default expiry
+      logger.warn('qr.public.reservation_lookup_failed', {
+        ticket_code: ticketCode,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        using_default_expiry: expiryMinutes
+      });
+    }
+
+    // Import QR generation utility
+    const { generateSecureQR } = await import('../../utils/qr-crypto');
+
+    // Generate QR code with calculated expiry
+    const qrResult = await generateSecureQR(ticketCode, expiryMinutes);
+
+    // Calculate remaining time
+    const expiresAt = new Date(qrResult.expires_at);
+    const now = new Date();
+    const validForSeconds = Math.floor((expiresAt.getTime() - now.getTime()) / 1000);
+
+    logger.info('qr.public.success', {
+      ticket_code: ticketCode,
+      ticket_type: ticketType,
+      expiry_minutes: expiryMinutes,
+      expires_at: qrResult.expires_at,
+      slot_end_time: slotEndTime ? slotEndTime.toISOString() : null
+    });
+
+    // Return encrypted QR code
+    return res.status(200).json({
+      success: true,
+      qr_image: qrResult.qr_image,        // For display to user
+      encrypted_data: qrResult.encrypted_data,  // For venue scanning API
+      ticket_code: qrResult.ticket_code,
+      expires_at: qrResult.expires_at,
+      valid_for_seconds: validForSeconds,
+      issued_at: new Date().toISOString(),
+      jti: qrResult.jti,  // JWT ID for tracking
+      slot_end_time: slotEndTime ? slotEndTime.toISOString() : undefined // Return slot info
+    });
+  } catch (error) {
+    logger.error('qr.public.error', {
+      ticket_code: req.params.code,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    // Generic error
+    next(error);
+  }
+});
+
+/**
  * POST /qr/:code
  *
  * Generate secure QR code for a ticket
