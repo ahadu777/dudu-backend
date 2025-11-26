@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="US-013 Venue Operations Platform" tests="15" time="18.733">
+  <testsuite name="Venue CRUD Management / Get Venue List" id="604161fa-d479-4bd0-b5e7-216eb78a3017" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="0.343">
+    <testcase name="Venue list retrieved successfully" time="0.343" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue CRUD Management / Create New Venue - Central Pier" id="f5c0e1f3-f798-4f10-82af-3d143a1de532" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="1.636">
+    <testcase name="Venue created successfully" time="1.636" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue CRUD Management / Create New Venue - Cheung Chau" id="afca7c0d-6321-49a4-8537-50bb2351caf1" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="1.617">
+    <testcase name="Multi-function venue created" time="1.617" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue CRUD Management / Get Venue by ID" id="cd4a378d-bd53-43fb-ba32-8335eefb0b33" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="0.351">
+    <testcase name="Venue details retrieved" time="0.351" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue CRUD Management / Update Venue" id="892b36bc-691f-4911-af94-9fead3e3cc73" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="2.299">
+    <testcase name="Venue updated successfully" time="2.299" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue CRUD Management / Get Venue List with Inactive" id="69da4af9-f051-4b7a-b8a0-1114e9f65cf9" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="0.330">
+    <testcase name="Venue list with inactive filter" time="0.330" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue Analytics / Central Pier Analytics - 24 Hours" id="64ba775d-6694-41c0-8746-7c6585f21adb" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="1" errors="0" time="5.332">
+    <testcase name="Analytics data retrieved" time="5.332" classname="Us013VenueOperationsPlatform">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 500">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: d58a96c5-aa97-470e-8240-cc11bba5bb96.]]>
+        <![CDATA[Collection name: US-013 Venue Operations Platform.]]>
+        <![CDATA[Request name: Venue Analytics / Central Pier Analytics - 24 Hours.]]>
+        <![CDATA[Test description: Analytics data retrieved.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 500.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 500
+   at Object.eval sandbox-script.js:1:7).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Venue Analytics / Cheung Chau Analytics - 1 Hour" id="b96a1116-833a-45ee-b3d9-cdf23c0e1d27" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="1.813">
+    <testcase name="Multi-function venue analytics" time="1.813" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue Analytics / Analytics - Invalid Hours" id="e97f89f3-f81a-4e38-b094-27ae1094cfc4" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="0.004">
+    <testcase name="Invalid hours rejected" time="0.004" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue Scan Operations / Scan - Requires Authentication" id="473e4c16-5872-4687-8e73-35f49d2f309f" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="Scan requires operator JWT" time="0.003" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Venue Scan Operations / Scan - Missing Required Fields" id="9f739ea2-7aae-47fa-9cbe-5f9ef00f2d88" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="Missing fields rejected" time="0.002" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Performance Validation / Response Time - Venue List" id="3ec8a740-7dbf-4d4a-9bed-0304690b1878" timestamp="2025-11-26T05:55:03.550Z" tests="2" failures="0" errors="0" time="0.324">
+    <testcase name="Response time under 2 seconds" time="0.324" classname="Us013VenueOperationsPlatform"/>
+    <testcase name="Response is valid JSON" time="0.324" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Performance Validation / Response Time - Analytics" id="ff7003d7-fbf7-41b6-8df1-f421a6ce14ec" timestamp="2025-11-26T05:55:03.550Z" tests="2" failures="0" errors="0" time="0.662">
+    <testcase name="Analytics response under 2 seconds" time="0.662" classname="Us013VenueOperationsPlatform"/>
+    <testcase name="Analytics contains metrics" time="0.662" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Cleanup / Delete Cheung Chau Venue" id="97086815-22af-4004-a342-17c60e71945d" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="2.370">
+    <testcase name="Venue soft deleted" time="2.370" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+  <testsuite name="Cleanup / Hard Delete Central Pier Venue" id="74568a57-6a69-43a8-87d8-74cd75fa2678" timestamp="2025-11-26T05:55:03.550Z" tests="1" failures="0" errors="0" time="1.647">
+    <testcase name="Venue permanently deleted" time="1.647" classname="Us013VenueOperationsPlatform"/>
+  </testsuite>
+</testsuites>

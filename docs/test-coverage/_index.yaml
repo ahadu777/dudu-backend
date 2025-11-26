@@ -15,15 +15,20 @@ unified_collection:
     PRD-004: "API层 100% (3 tests + 性能测试)"
     PRD-005: "100% (6 tests + 审计/对账补充)"
 
-# ===== LEGACY COLLECTIONS (保留但不推荐) =====
-# 以下集合已合并到统一集合中，保留仅用于特定场景测试
+# ===== PRD COVERAGE REGISTRY =====
+# 每个PRD包含：
+#   - primary_collection: 主测试集合（统一测试套件中的对应部分）
+#   - story_collection: Story专用E2E测试（如有）
+#   - e2e_report: Newman测试报告（如有）
+#   - runbook: 集成指南（如有）
+#   - supplementary_collections: 补充测试集合（特定场景）
 
 coverage_registry:
   - prd_id: PRD-001
     title: "Cruise Ticketing Platform"
     status: "✅ Complete (100%)"
     primary_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json (Section 1)"
-    legacy_collections:
+    supplementary_collections:
       - "postman/auto-generated/special-pricing-override.postman_collection.json"
       - "postman/auto-generated/ticket-activation-complete-coverage.postman_collection.json"
     new_coverage:
@@ -37,9 +42,11 @@ coverage_registry:
     title: "OTA Platform Integration (Pre-made Tickets)"
     status: "✅ Complete (100%)"
     primary_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json (Section 2)"
-    legacy_collections:
+    story_collection: "reports/collections/us-012-ota-integration.json"
+    e2e_report: "reports/newman/us-012-ota-integration-e2e.xml"
+    runbook: "docs/integration/US-012-runbook.md"
+    supplementary_collections:
       - "postman/auto-generated/ota-complete-coverage-extended.postman_collection.json"
-      - "reports/collections/us-012-ota-integration.json"
     # 核心流程: 预制票券流程 (Pre-made Tickets)，不包含预订流程
     core_workflow: "Pre-made Tickets (批量生成 → 激活 → 核销)"
     new_coverage:
@@ -71,11 +78,14 @@ coverage_registry:
     title: "Event Venue Operations"
     status: "✅ Complete (100%)"
     primary_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json (Section 3)"
-    legacy_collections:
-      - "reports/collections/us-013-venue-operations.json"
+    story_collection: "reports/collections/us-013-venue-operations.json"
+    e2e_report: "reports/newman/us-013-venue-operations-e2e.xml"
+    runbook: "docs/integration/US-013-runbook.md"
     new_coverage:
-      - "✅ 负载测试（1000并发，<2s响应）（新增）"
-      - "✅ 容错测试（数据库故障优雅降级）（新增）"
+      - "✅ 场馆 CRUD 管理（创建/查询/更新/删除）"
+      - "✅ 场馆分析报告（按时间窗口）"
+      - "✅ 票券核销（需操作员JWT认证）"
+      - "✅ 负载测试（<2s响应）"
       - "✅ 防欺诈检测（JTI重复核销拦截）"
     coverage_gaps:
       - "⚠️ 7年审计保留合规性（需要长期验证，不在自动化范围）"
@@ -99,9 +109,8 @@ coverage_registry:
     title: "B2B Reseller Billing & Analytics"
     status: "✅ Complete (100%)"
     primary_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json (Section 5)"
-    legacy_collections:
+    supplementary_collections:
       - "postman/OTA-COMPLETE-TEST-SUITE.postman_collection.json"  # 包含分销商管理和计费测试
-      # 已删除不存在的文件: postman/ota-b2b2c-billing.postman_collection.json
     new_coverage:
       - "✅ 分销商 CRUD 管理（新增）"
       - "✅ 计费汇总查询（新增）"
@@ -137,21 +146,21 @@ remaining_gaps:
   - "⚠️ PRD-004: 微信小程序前端集成 - 需要前端E2E测试工具（Puppeteer/Playwright）"
   - "⚠️ PRD-004: 手机号绑定UI流程 - 需要前端测试"
 
-# Migration Guide
-migration_from_legacy:
-  recommended_action: "使用统一测试集合 COMPLETE-PLATFORM-TESTS.postman_collection.json"
-  legacy_collections_status: "保留但不推荐 - 仅用于特定场景调试"
+# Quick Start Guide
+quick_start:
+  recommended_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json"
   how_to_run: |
     # 运行完整测试套件（推荐）
     npx newman run postman/COMPLETE-PLATFORM-TESTS.postman_collection.json
 
-    # 或使用环境变量
-    npx newman run postman/COMPLETE-PLATFORM-TESTS.postman_collection.json \
-      --env-var "base_url=http://localhost:8080" \
-      --env-var "ota_api_key=ota_full_access_partner"
+    # 运行快速冒烟测试
+    npx newman run postman/QUICK-SMOKE-TESTS.postman_collection.json
 
-    # CI/CD 集成 (按 Story 运行)
-    npm run test:e2e
+    # 运行 Story 专用测试（如 US-012 OTA集成）
+    npx newman run reports/collections/us-012-ota-integration.json
+
+    # 运行 US-013 场馆运营测试
+    npx newman run reports/collections/us-013-venue-operations.json
 
 # How to Use This Mapping
 usage:

@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="OTA完整覆盖扩展测试 - PRD-002/003功能点" tests="32" time="59.295">
+  <testsuite name="0. 前置检查 - 库存验证 / 0.1 查询OTA渠道库存" id="531f3ee6-95c0-4306-9fea-2f1cd8d752cd" timestamp="2025-11-25T07:15:17.423Z" tests="5" failures="0" errors="0" time="0.393">
+    <testcase name="Status code is 200" time="0.393" classname="OtaPrd002003"/>
+    <testcase name="Response contains available_quantities" time="0.393" classname="OtaPrd002003"/>
+    <testcase name="Response contains pricing_context" time="0.393" classname="OtaPrd002003"/>
+    <testcase name="Response contains product_info" time="0.393" classname="OtaPrd002003"/>
+    <testcase name="Check inventory availability for tests" time="0.393" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="0. 前置检查 - 库存验证 / 0.2 按产品ID筛选库存" id="e293611f-014c-40ac-add2-92d9399409dd" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="0.347">
+    <testcase name="Status code is 200" time="0.347" classname="OtaPrd002003"/>
+    <testcase name="Only requested products returned" time="0.347" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="0. 前置检查 - 库存验证 / 0.3 无效product_ids参数 (应422)" id="dbb5e434-a49e-41f6-b879-e380d6b22a06" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 422" time="0.002" classname="OtaPrd002003"/>
+    <testcase name="Error message about invalid product ID" time="0.002" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="0. 前置检查 - 库存验证 / 0.4 验证定价上下文完整性" id="d671111b-2810-48a7-9800-bae8217f7aff" timestamp="2025-11-25T07:15:17.423Z" tests="4" failures="0" errors="0" time="0.360">
+    <testcase name="Status code is 200" time="0.360" classname="OtaPrd002003"/>
+    <testcase name="Base prices have weekday/weekend" time="0.360" classname="OtaPrd002003"/>
+    <testcase name="Customer discounts exist for products" time="0.360" classname="OtaPrd002003"/>
+    <testcase name="Special dates for holiday pricing" time="0.360" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="1. 分销模式测试 (reseller_batch) / 1.1 创建分销批次 - 含reseller_metadata" id="df040df8-cb4a-4ede-9c2c-bf62c79c11dd" timestamp="2025-11-25T07:15:17.423Z" tests="5" failures="0" errors="0" time="6.218">
+    <testcase name="Status code is 201" time="6.218" classname="OtaPrd002003"/>
+    <testcase name="Response contains reseller_batch distribution_mode" time="6.218" classname="OtaPrd002003"/>
+    <testcase name="Response contains reseller_metadata" time="6.218" classname="OtaPrd002003"/>
+    <testcase name="Expires_at is 30 days from now (reseller mode)" time="6.218" classname="OtaPrd002003"/>
+    <testcase name="Save batch and ticket info" time="6.218" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="1. 分销模式测试 (reseller_batch) / 1.2 分销模式缺少intended_reseller (应400)" id="98da7535-9070-404e-a396-b9be3ea3ff00" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 400" time="0.002" classname="OtaPrd002003"/>
+    <testcase name="Error message mentions intended_reseller" time="0.002" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="1. 分销模式测试 (reseller_batch) / 1.3 查询分销商列表" id="a3e9d4cd-25e2-4dc7-bdef-daeeb55468c7" timestamp="2025-11-25T07:15:17.423Z" tests="3" failures="0" errors="0" time="0.341">
+    <testcase name="Status code is 200" time="0.341" classname="OtaPrd002003"/>
+    <testcase name="Response contains resellers array" time="0.341" classname="OtaPrd002003"/>
+    <testcase name="Each reseller has required fields" time="0.341" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="1. 分销模式测试 (reseller_batch) / 1.4 查询分销商详细汇总 (含批次信息)" id="1a7fafc6-e36c-4aea-9abb-707e11eb2de8" timestamp="2025-11-25T07:15:17.423Z" tests="5" failures="0" errors="0" time="1.040">
+    <testcase name="Status code is 200" time="1.040" classname="OtaPrd002003"/>
+    <testcase name="Response contains total count" time="1.040" classname="OtaPrd002003"/>
+    <testcase name="Response contains resellers with statistics" time="1.040" classname="OtaPrd002003"/>
+    <testcase name="Resellers have revenue_metrics" time="1.040" classname="OtaPrd002003"/>
+    <testcase name="Resellers have batches array" time="1.040" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="1. 分销模式测试 (reseller_batch) / 1.5 分页查询分销商汇总" id="84759a2b-6093-4595-8057-df57fa9ce5c6" timestamp="2025-11-25T07:15:17.423Z" tests="3" failures="0" errors="0" time="1.016">
+    <testcase name="Status code is 200" time="1.016" classname="OtaPrd002003"/>
+    <testcase name="Pagination works correctly" time="1.016" classname="OtaPrd002003"/>
+    <testcase name="Resellers limited by page_size" time="1.016" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="1. 分销模式测试 (reseller_batch) / 1.6 按分销商名称筛选" id="96703491-cd98-4135-8fec-9586b1a21ca5" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="1.020">
+    <testcase name="Status code is 200" time="1.020" classname="OtaPrd002003"/>
+    <testcase name="Reseller filter query accepted" time="1.020" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="1. 分销模式测试 (reseller_batch) / 1.7 直销模式对比 - 7天过期" id="03e8b876-e395-4633-8985-6024fffddb7e" timestamp="2025-11-25T07:15:17.423Z" tests="3" failures="0" errors="0" time="5.474">
+    <testcase name="Status code is 201" time="5.474" classname="OtaPrd002003"/>
+    <testcase name="Distribution mode is direct_sale" time="5.474" classname="OtaPrd002003"/>
+    <testcase name="Expires_at is 7 days from now (direct mode)" time="5.474" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="2. 批次元数据测试 (campaign_type) / 2.1 早鸟票批次 - early_bird campaign" id="1f8e5886-56cf-4020-884e-e7576f9b1ff0" timestamp="2025-11-25T07:15:17.423Z" tests="5" failures="0" errors="0" time="6.190">
+    <testcase name="Status code is 201" time="6.190" classname="OtaPrd002003"/>
+    <testcase name="Batch metadata contains campaign_type" time="6.190" classname="OtaPrd002003"/>
+    <testcase name="Batch metadata contains campaign_name" time="6.190" classname="OtaPrd002003"/>
+    <testcase name="Batch metadata contains marketing_tags" time="6.190" classname="OtaPrd002003"/>
+    <testcase name="Save early bird batch info" time="6.190" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="2. 批次元数据测试 (campaign_type) / 2.2 闪购批次 - flash_sale campaign" id="aa354d39-5bb4-4e08-a9c2-838d95a5beaa" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="5.442">
+    <testcase name="Status code is 201" time="5.442" classname="OtaPrd002003"/>
+    <testcase name="Campaign type is flash_sale" time="5.442" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="2. 批次元数据测试 (campaign_type) / 2.3 查询营销活动分析 - campaign_type过滤" id="1558c586-b8f1-4d4a-a3a2-8870e160e108" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="1" errors="0" time="0.905">
+    <testcase name="Status code is 200" time="0.905" classname="OtaPrd002003"/>
+    <testcase name="Response contains campaign analytics" time="0.905" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected { campaign_summaries: [ { …(6) } ] } to have property 'campaigns'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 2. 批次元数据测试 (campaign_type) / 2.3 查询营销活动分析 - campaign_type过滤.]]>
+        <![CDATA[Test description: Response contains campaign analytics.]]>
+        <![CDATA[Error message: expected { campaign_summaries: [ { …(6) } ] } to have property 'campaigns'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { campaign_summaries: [ { …(6) } ] } to have property 'campaigns'
+   at Object.eval sandbox-script.js:2:14).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="3. visit_date周末定价测试 / 3.1 生成测试票券" id="724c2ad6-0f02-4740-9399-ea03d398ca4c" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="6.171">
+    <testcase name="Status code is 201" time="6.171" classname="OtaPrd002003"/>
+    <testcase name="Save ticket code for weekend test" time="6.171" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="3. visit_date周末定价测试 / 3.2 激活票券 - 周末日期 (应用周末溢价)" id="5ca4ea5f-6651-43dc-a493-ea026c9b1d20" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="2" errors="0" time="0.695">
+    <testcase name="Status code is 200" time="0.695" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 500">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 3. visit_date周末定价测试 / 3.2 激活票券 - 周末日期 (应用周末溢价).]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 500.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 500
+   at Object.eval sandbox-script.js:1:16).]]>
+      </failure>
+    </testcase>
+    <testcase name="Weekend premium applied" time="0.695" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected undefined to equal 'ACTIVE'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 3. visit_date周末定价测试 / 3.2 激活票券 - 周末日期 (应用周末溢价).]]>
+        <![CDATA[Test description: Weekend premium applied.]]>
+        <![CDATA[Error message: expected undefined to equal 'ACTIVE'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to equal 'ACTIVE'
+   at Object.eval sandbox-script.js:2:16).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="3. visit_date周末定价测试 / 3.3 激活票券 - 无效日期格式 (应400)" id="9ed9177b-4430-46a6-8bba-996fc7d2cca2" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 400" time="0.002" classname="OtaPrd002003"/>
+    <testcase name="Error mentions date format" time="0.002" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="4. 票券状态自动转换测试 (ACTIVE→USED) / 4.1 生成单权益票券 (便于测试状态转换)" id="b58c7268-ff4e-469a-9a49-0d03395162b2" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="5.434">
+    <testcase name="Status code is 201" time="5.434" classname="OtaPrd002003"/>
+    <testcase name="Save ticket for status test" time="5.434" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="4. 票券状态自动转换测试 (ACTIVE→USED) / 4.2 激活票券" id="65801aec-5d27-466d-a43f-f3553d76449d" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="5.501">
+    <testcase name="Status code is 200" time="5.501" classname="OtaPrd002003"/>
+    <testcase name="Ticket status is ACTIVE" time="5.501" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="4. 票券状态自动转换测试 (ACTIVE→USED) / 4.3 生成QR码" id="9fbf9a67-169e-4210-8801-a922339382cf" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="1" errors="0" time="0.003">
+    <testcase name="Status code is 200" time="0.003" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 4. 票券状态自动转换测试 (ACTIVE→USED) / 4.3 生成QR码.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
+   at Object.eval sandbox-script.js:1:20).]]>
+      </failure>
+    </testcase>
+    <testcase name="Save encrypted data" time="0.003" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="4. 票券状态自动转换测试 (ACTIVE→USED) / 4.4 核销第一个权益 (ferry)" id="92a7d971-ba14-44d5-8afe-d67f0962b29d" timestamp="2025-11-25T07:15:17.423Z" tests="3" failures="2" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 4. 票券状态自动转换测试 (ACTIVE→USED) / 4.4 核销第一个权益 (ferry).]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:21).]]>
+      </failure>
+    </testcase>
+    <testcase name="Redemption successful" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected undefined to equal 'success'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 4. 票券状态自动转换测试 (ACTIVE→USED) / 4.4 核销第一个权益 (ferry).]]>
+        <![CDATA[Test description: Redemption successful.]]>
+        <![CDATA[Error message: expected undefined to equal 'success'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to equal 'success'
+   at Object.eval sandbox-script.js:2:21).]]>
+      </failure>
+    </testcase>
+    <testcase name="Check remaining entitlements" time="0.001" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="4. 票券状态自动转换测试 (ACTIVE→USED) / 4.5 核销第二个权益 (gift)" id="3d30f28c-63df-4fd6-abaf-5d7d9891f77b" timestamp="2025-11-25T07:15:17.423Z" tests="3" failures="2" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 4. 票券状态自动转换测试 (ACTIVE→USED) / 4.5 核销第二个权益 (gift).]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:22).]]>
+      </failure>
+    </testcase>
+    <testcase name="Redemption successful" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected undefined to equal 'success'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 4. 票券状态自动转换测试 (ACTIVE→USED) / 4.5 核销第二个权益 (gift).]]>
+        <![CDATA[Test description: Redemption successful.]]>
+        <![CDATA[Error message: expected undefined to equal 'success'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to equal 'success'
+   at Object.eval sandbox-script.js:2:22).]]>
+      </failure>
+    </testcase>
+    <testcase name="Check remaining entitlements" time="0.001" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="4. 票券状态自动转换测试 (ACTIVE→USED) / 4.6 查询票券状态 - 验证自动转换" id="e635179b-fd4b-4da5-a157-03b2183fad93" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="0.356">
+    <testcase name="Status code is 200" time="0.356" classname="OtaPrd002003"/>
+    <testcase name="Check ticket status (should check entitlements)" time="0.356" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="5. Tokens计数核销测试 (递减) / 5.1 生成含tokens权益的票券" id="243b6e7d-a0f9-4159-8fcf-ee4149f976b9" timestamp="2025-11-25T07:15:17.423Z" tests="3" failures="1" errors="0" time="5.566">
+    <testcase name="Status code is 201" time="5.566" classname="OtaPrd002003"/>
+    <testcase name="Ticket has tokens entitlement" time="5.566" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected 1 to be above 1">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.1 生成含tokens权益的票券.]]>
+        <![CDATA[Test description: Ticket has tokens entitlement.]]>
+        <![CDATA[Error message: expected 1 to be above 1.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 1 to be above 1
+   at Object.eval sandbox-script.js:2:24).]]>
+      </failure>
+    </testcase>
+    <testcase name="Save tokens ticket info" time="5.566" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="5. Tokens计数核销测试 (递减) / 5.2 激活tokens票券" id="80105e43-faba-446d-8164-d7172abe4864" timestamp="2025-11-25T07:15:17.423Z" tests="1" failures="0" errors="0" time="5.443">
+    <testcase name="Status code is 200" time="5.443" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="5. Tokens计数核销测试 (递减) / 5.3 生成QR码 (tokens票)" id="5c372b33-d5d3-42e5-bf7c-4097d6ae1916" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="1" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.3 生成QR码 (tokens票).]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
+   at Object.eval sandbox-script.js:1:26).]]>
+      </failure>
+    </testcase>
+    <testcase name="Save encrypted data" time="0.001" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="5. Tokens计数核销测试 (递减) / 5.4 核销tokens - 第1次" id="8a49cdfc-1d30-41f0-b9bc-aee5b1cc8bd2" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.4 核销tokens - 第1次.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:27).]]>
+      </failure>
+    </testcase>
+    <testcase name="Tokens decremented" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected undefined to equal 'success'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.4 核销tokens - 第1次.]]>
+        <![CDATA[Test description: Tokens decremented.]]>
+        <![CDATA[Error message: expected undefined to equal 'success'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to equal 'success'
+   at Object.eval sandbox-script.js:2:27).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="5. Tokens计数核销测试 (递减) / 5.5 核销tokens - 第2次" id="9ec755b3-f016-47e6-b8e1-1157ec2ba3e9" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.5 核销tokens - 第2次.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:28).]]>
+      </failure>
+    </testcase>
+    <testcase name="Tokens decremented again" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected undefined to equal 'success'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.5 核销tokens - 第2次.]]>
+        <![CDATA[Test description: Tokens decremented again.]]>
+        <![CDATA[Error message: expected undefined to equal 'success'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to equal 'success'
+   at Object.eval sandbox-script.js:2:28).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="5. Tokens计数核销测试 (递减) / 5.6 核销tokens - 第3次" id="a76eefd9-b707-4da7-ba84-5cda9b4072db" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.6 核销tokens - 第3次.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:29).]]>
+      </failure>
+    </testcase>
+    <testcase name="Tokens decremented" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected undefined to equal 'success'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.6 核销tokens - 第3次.]]>
+        <![CDATA[Test description: Tokens decremented.]]>
+        <![CDATA[Error message: expected undefined to equal 'success'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to equal 'success'
+   at Object.eval sandbox-script.js:2:29).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="5. Tokens计数核销测试 (递减) / 5.7 查看当前tokens状态" id="971ab1f5-407a-4257-8c8d-0d97b6743f7c" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 400">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.7 查看当前tokens状态.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 400.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 400
+   at Object.eval sandbox-script.js:1:30).]]>
+      </failure>
+    </testcase>
+    <testcase name="Check tokens remaining" time="0.001" classname="OtaPrd002003">
+      <failure type="AssertionFailure" message="Cannot read properties of undefined (reading 'entitlements')">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 69e6e7b4-8306-4360-9886-e8a7168331ae.]]>
+        <![CDATA[Collection name: OTA完整覆盖扩展测试 - PRD-002/003功能点.]]>
+        <![CDATA[Request name: 5. Tokens计数核销测试 (递减) / 5.7 查看当前tokens状态.]]>
+        <![CDATA[Test description: Check tokens remaining.]]>
+        <![CDATA[Error message: Cannot read properties of undefined (reading 'entitlements').]]>
+        <![CDATA[Stacktrace: TypeError: Cannot read properties of undefined (reading 'entitlements')
+   at Object.eval sandbox-script.js:2:30).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="6. 综合验证 / 6.1 分销商汇总 - 包含新创建的分销批次" id="ead3e0c9-4929-4574-a16e-7a17e0ad1232" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="1.027">
+    <testcase name="Status code is 200" time="1.027" classname="OtaPrd002003"/>
+    <testcase name="Response contains reseller data" time="1.027" classname="OtaPrd002003"/>
+  </testsuite>
+  <testsuite name="6. 综合验证 / 6.2 批次分析 - early_bird批次" id="7d971298-eb77-4541-a30e-788ce5b5423c" timestamp="2025-11-25T07:15:17.423Z" tests="2" failures="0" errors="0" time="0.340">
+    <testcase name="Status code is 200" time="0.340" classname="OtaPrd002003"/>
+    <testcase name="Response contains batch analytics" time="0.340" classname="OtaPrd002003"/>
+  </testsuite>
+</testsuites>

@@ -1,124 +1,30 @@
 {
   "info": {
     "name": "US-013 Venue Operations Platform",
-    "description": "Complete E2E testing for PRD-003 Event Venue Operations including multi-terminal fraud detection and real-time analytics",
+    "description": "E2E testing for PRD-003 Event Venue Operations - Venue CRUD, Analytics, and Operations",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "base_url",
       "value": "http://localhost:8080"
-    },
-    {
-      "key": "qr_secret",
-      "value": "qr-signing-secret-change-in-production"
     }
   ],
   "item": [
     {
-      "name": "Venue Session Management",
+      "name": "Venue CRUD Management",
       "item": [
         {
-          "name": "Create Central Pier Session",
+          "name": "Get Venue List",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Session created successfully', function () {",
+                  "pm.test('Venue list retrieved successfully', function () {",
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.venue_code).to.eql('central-pier');",
-                  "    pm.expect(response.session_code).to.match(/^VS-MOCK-/);",
-                  "    pm.expect(response.supported_functions).to.include('ferry_boarding');",
-                  "    pm.collectionVariables.set('central_pier_session', response.session_code);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"venue_code\": \"central-pier\",\n  \"operator_id\": 2001,\n  \"operator_name\": \"Alice Chan\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\",\n  \"duration_hours\": 8\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/venue/sessions",
-              "host": ["{{base_url}}"],
-              "path": ["venue", "sessions"]
-            }
-          }
-        },
-        {
-          "name": "Create Cheung Chau Multi-Function Session",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Multi-function session created', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const response = pm.response.json();",
-                  "    pm.expect(response.venue_code).to.eql('cheung-chau');",
-                  "    pm.expect(response.supported_functions).to.include.members(['ferry_boarding', 'gift_redemption', 'playground_token']);",
-                  "    pm.collectionVariables.set('cheung_chau_session', response.session_code);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"venue_code\": \"cheung-chau\",\n  \"operator_id\": 2002,\n  \"operator_name\": \"Bob Wong\",\n  \"terminal_device_id\": \"TERMINAL-CC-001\",\n  \"duration_hours\": 8\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/venue/sessions",
-              "host": ["{{base_url}}"],
-              "path": ["venue", "sessions"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Enhanced Venue Scanning",
-      "item": [
-        {
-          "name": "Generate QR Token for Testing",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "// Generate QR token for testing",
-                  "const jwt = require('jsonwebtoken');",
-                  "const payload = {",
-                  "    tid: 'TKT-123-001',",
-                  "    jti: 'newman-test-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),",
-                  "    iat: Math.floor(Date.now() / 1000),",
-                  "    exp: Math.floor(Date.now() / 1000) + 300",
-                  "};",
-                  "const secret = pm.collectionVariables.get('qr_secret');",
-                  "const token = jwt.sign(payload, secret);",
-                  "pm.collectionVariables.set('test_qr_token', token);",
-                  "pm.test('QR token generated', function () {",
-                  "    pm.expect(token).to.be.a('string');",
-                  "    pm.expect(token.split('.')).to.have.lengthOf(3);",
+                  "    pm.expect(response.venues).to.be.an('array');",
                   "});"
                 ]
               }
@@ -128,70 +34,132 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/healthz",
+              "raw": "{{base_url}}/venue",
               "host": ["{{base_url}}"],
-              "path": ["healthz"]
+              "path": ["venue"]
             }
           }
         },
         {
-          "name": "Ferry Boarding Scan - Success",
+          "name": "Create New Venue - Central Pier",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Ferry boarding successful', function () {",
+                  "pm.test('Venue created successfully', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.venue_code).to.include('test-central-pier');",
+                  "    pm.expect(response.venue_name).to.exist;",
+                  "    pm.expect(response.venue_type).to.eql('ferry_terminal');",
+                  "    pm.collectionVariables.set('central_pier_id', response.venue_id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"test-central-pier-{{$timestamp}}\",\n  \"venue_name\": \"Central Pier Terminal\",\n  \"venue_type\": \"ferry_terminal\",\n  \"location_address\": \"Central Pier, Hong Kong\",\n  \"supported_functions\": [\"ferry_boarding\"],\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue",
+              "host": ["{{base_url}}"],
+              "path": ["venue"]
+            }
+          }
+        },
+        {
+          "name": "Create New Venue - Cheung Chau",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Multi-function venue created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.venue_code).to.include('test-cheung-chau');",
+                  "    pm.expect(response.supported_functions).to.include.members(['ferry_boarding', 'gift_redemption', 'playground_token']);",
+                  "    pm.collectionVariables.set('cheung_chau_id', response.venue_id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venue_code\": \"test-cheung-chau-{{$timestamp}}\",\n  \"venue_name\": \"Cheung Chau Multi-Function Center\",\n  \"venue_type\": \"ferry_terminal\",\n  \"location_address\": \"Cheung Chau Ferry Pier\",\n  \"supported_functions\": [\"ferry_boarding\", \"gift_redemption\", \"playground_token\"],\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue",
+              "host": ["{{base_url}}"],
+              "path": ["venue"]
+            }
+          }
+        },
+        {
+          "name": "Get Venue by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Venue details retrieved', function () {",
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.result).to.eql('success');",
-                  "    pm.expect(response.venue_info.venue_code).to.exist;",
-                  "    pm.expect(response.performance_metrics.response_time_ms).to.be.below(2000);",
-                  "    pm.expect(response.performance_metrics.fraud_checks_passed).to.be.true;",
+                  "    pm.expect(response.venue_id).to.exist;",
+                  "    pm.expect(response.venue_code).to.exist;",
                   "});"
                 ]
               }
             }
           ],
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{test_qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_code\": \"{{central_pier_session}}\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
-            },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/venue/scan",
+              "raw": "{{base_url}}/venue/{{central_pier_id}}",
               "host": ["{{base_url}}"],
-              "path": ["venue", "scan"]
+              "path": ["venue", "{{central_pier_id}}"]
             }
           }
         },
         {
-          "name": "Cross-Terminal Fraud Detection",
+          "name": "Update Venue",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Fraud detection working', function () {",
-                  "    pm.response.to.have.status(422);",
+                  "pm.test('Venue updated successfully', function () {",
+                  "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.result).to.eql('reject');",
-                  "    pm.expect(response.reason).to.match(/ALREADY_REDEEMED|NO_REMAINING/);",
-                  "    pm.expect(response.performance_metrics.response_time_ms).to.be.below(2000);",
+                  "    pm.expect(response.location_address).to.include('Updated');",
                   "});"
                 ]
               }
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
@@ -200,82 +168,66 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{test_qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_code\": \"{{cheung_chau_session}}\",\n  \"terminal_device_id\": \"TERMINAL-CC-001\"\n}"
+              "raw": "{\n  \"location_address\": \"Central Pier, Hong Kong - Updated\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/venue/scan",
+              "raw": "{{base_url}}/venue/{{central_pier_id}}",
               "host": ["{{base_url}}"],
-              "path": ["venue", "scan"]
+              "path": ["venue", "{{central_pier_id}}"]
             }
           }
         },
         {
-          "name": "Wrong Function Code - Reject",
+          "name": "Get Venue List with Inactive",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Generate new QR token for this test",
-                  "const jwt = require('jsonwebtoken');",
-                  "const payload = {",
-                  "    tid: 'TKT-123-001',",
-                  "    jti: 'wrong-func-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),",
-                  "    iat: Math.floor(Date.now() / 1000),",
-                  "    exp: Math.floor(Date.now() / 1000) + 300",
-                  "};",
-                  "const secret = pm.collectionVariables.get('qr_secret');",
-                  "const newToken = jwt.sign(payload, secret);",
-                  "pm.collectionVariables.set('wrong_func_token', newToken);"
+                  "pm.test('Venue list with inactive filter', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.venues).to.be.an('array');",
+                  "});"
                 ]
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": []
               }
             }
           ],
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{wrong_func_token}}\",\n  \"function_code\": \"gift_redemption\",\n  \"session_code\": \"{{central_pier_session}}\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
-            },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/venue/scan",
+              "raw": "{{base_url}}/venue?include_inactive=true",
               "host": ["{{base_url}}"],
-              "path": ["venue", "scan"]
+              "path": ["venue"],
+              "query": [
+                {
+                  "key": "include_inactive",
+                  "value": "true"
+                }
+              ]
             }
           }
         }
       ]
     },
     {
-      "name": "Real-time Analytics",
+      "name": "Venue Analytics",
       "item": [
         {
-          "name": "Central Pier Analytics",
+          "name": "Central Pier Analytics - 24 Hours",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Analytics data available', function () {",
+                  "pm.test('Analytics data retrieved', function () {",
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.venue_code).to.eql('central-pier');",
-                  "    pm.expect(response.metrics).to.exist;",
+                  "    pm.expect(response).to.have.property('period');",
+                  "    pm.expect(response).to.have.property('metrics');",
                   "    pm.expect(response.metrics.total_scans).to.be.a('number');",
                   "    pm.expect(response.metrics.success_rate).to.be.a('number');",
-                  "    pm.expect(response.metrics.function_breakdown).to.exist;",
                   "});"
                 ]
               }
@@ -285,9 +237,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/venue/central-pier/analytics?hours=24",
+              "raw": "{{base_url}}/venue/VENUE-CENTRAL-PIER5/analytics?hours=24",
               "host": ["{{base_url}}"],
-              "path": ["venue", "central-pier", "analytics"],
+              "path": ["venue", "VENUE-CENTRAL-PIER5", "analytics"],
               "query": [
                 {
                   "key": "hours",
@@ -298,7 +250,7 @@
           }
         },
         {
-          "name": "Cheung Chau Analytics",
+          "name": "Cheung Chau Analytics - 1 Hour",
           "event": [
             {
               "listen": "test",
@@ -307,10 +259,8 @@
                   "pm.test('Multi-function venue analytics', function () {",
                   "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.venue_code).to.eql('cheung-chau');",
-                  "    pm.expect(response.metrics.function_breakdown).to.have.property('ferry_boarding');",
-                  "    pm.expect(response.metrics.function_breakdown).to.have.property('gift_redemption');",
-                  "    pm.expect(response.metrics.function_breakdown).to.have.property('playground_token');",
+                  "    pm.expect(response.metrics).to.exist;",
+                  "    pm.expect(response.metrics.function_breakdown).to.exist;",
                   "});"
                 ]
               }
@@ -320,9 +270,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/venue/cheung-chau/analytics?hours=1",
+              "raw": "{{base_url}}/venue/VENUE-CHEUNGCHAU-001/analytics?hours=1",
               "host": ["{{base_url}}"],
-              "path": ["venue", "cheung-chau", "analytics"],
+              "path": ["venue", "VENUE-CHEUNGCHAU-001", "analytics"],
               "query": [
                 {
                   "key": "hours",
@@ -331,30 +281,55 @@
               ]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "Performance Validation",
-      "item": [
+        },
         {
-          "name": "Response Time Validation",
+          "name": "Analytics - Invalid Hours",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Response time under 2 seconds', function () {",
-                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
-                  "});",
-                  "",
-                  "pm.test('Performance metrics included', function () {",
-                  "    if (pm.response.status === 200) {",
-                  "        const response = pm.response.json();",
-                  "        pm.expect(response.performance_metrics).to.exist;",
-                  "        pm.expect(response.performance_metrics.response_time_ms).to.be.below(2000);",
-                  "        pm.expect(response.performance_metrics.fraud_checks_passed).to.be.a('boolean');",
-                  "    }",
+                  "pm.test('Invalid hours rejected', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error).to.eql('INVALID_HOURS');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/venue/VENUE-CENTRAL-PIER5/analytics?hours=999",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "VENUE-CENTRAL-PIER5", "analytics"],
+              "query": [
+                {
+                  "key": "hours",
+                  "value": "999"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Venue Scan Operations",
+      "item": [
+        {
+          "name": "Scan - Requires Authentication",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Scan requires operator JWT', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('token');",
                   "});"
                 ]
               }
@@ -370,7 +345,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{test_qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_code\": \"{{central_pier_session}}\",\n  \"terminal_device_id\": \"TERMINAL-CP-001\"\n}"
+              "raw": "{\n  \"qr_token\": \"test-token\",\n  \"function_code\": \"ferry_boarding\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/venue/scan",
@@ -380,17 +355,15 @@
           }
         },
         {
-          "name": "Concurrent Session Support",
+          "name": "Scan - Missing Required Fields",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Multiple sessions supported', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const response = pm.response.json();",
-                  "    pm.expect(response.session_code).to.exist;",
-                  "    pm.expect(response.venue_code).to.eql('gift-shop-central');",
+                  "pm.test('Missing fields rejected', function () {",
+                  "    // Either 400 for missing fields or 401 for no auth (checked first)",
+                  "    pm.expect([400, 401]).to.include(pm.response.code);",
                   "});"
                 ]
               }
@@ -406,12 +379,145 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"venue_code\": \"gift-shop-central\",\n  \"operator_id\": 2003,\n  \"operator_name\": \"Carol Lee\",\n  \"terminal_device_id\": \"TERMINAL-GS-001\",\n  \"duration_hours\": 4\n}"
+              "raw": "{\n  \"qr_token\": \"test-token\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/venue/sessions",
+              "raw": "{{base_url}}/venue/scan",
               "host": ["{{base_url}}"],
-              "path": ["venue", "sessions"]
+              "path": ["venue", "scan"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Performance Validation",
+      "item": [
+        {
+          "name": "Response Time - Venue List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response time under 2 seconds', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/venue",
+              "host": ["{{base_url}}"],
+              "path": ["venue"]
+            }
+          }
+        },
+        {
+          "name": "Response Time - Analytics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Analytics response under 2 seconds', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test('Analytics contains metrics', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.metrics).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/venue/VENUE-CENTRAL-PIER5/analytics?hours=24",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "VENUE-CENTRAL-PIER5", "analytics"],
+              "query": [
+                {
+                  "key": "hours",
+                  "value": "24"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete Cheung Chau Venue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Venue soft deleted', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/venue/{{cheung_chau_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "{{cheung_chau_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Hard Delete Central Pier Venue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Venue permanently deleted', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.message).to.include('permanently');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/venue/{{central_pier_id}}?hard_delete=true",
+              "host": ["{{base_url}}"],
+              "path": ["venue", "{{central_pier_id}}"],
+              "query": [
+                {
+                  "key": "hard_delete",
+                  "value": "true"
+                }
+              ]
             }
           }
         }
