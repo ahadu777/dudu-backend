@@ -182,10 +182,23 @@ export class DirectusService {
     if (!this.baseURL) return false;
 
     try {
-      const url = `${this.baseURL}/items/tickets/${ticketNumber}`;
+      // First, get the ticket to obtain its numeric ID
+      const ticket = await this.getTicketByNumber(ticketNumber);
+
+      if (!ticket || !ticket.id) {
+        logger.error('directus.ticket.update_failed', {
+          ticket_number: ticketNumber,
+          error: 'Ticket not found - cannot update'
+        });
+        return false;
+      }
+
+      // Use the numeric ID for the PATCH operation
+      const url = `${this.baseURL}/items/tickets/${ticket.id}`;
 
       logger.info('directus.ticket.update_attempt', {
         ticket_number: ticketNumber,
+        ticket_id: ticket.id,
         url,
         updates: JSON.stringify(updates)
       });
@@ -197,6 +210,7 @@ export class DirectusService {
 
       logger.info('directus.ticket.updated', {
         ticket_number: ticketNumber,
+        ticket_id: ticket.id,
         fields: Object.keys(updates),
         response_data: JSON.stringify(response.data)
       });
@@ -250,11 +264,23 @@ export class DirectusService {
     if (!this.baseURL) return null;
 
     try {
+      // First, get the ticket to obtain its numeric ID
+      const ticket = await this.getTicketByNumber(ticketNumber);
+
+      if (!ticket || !ticket.id) {
+        logger.warn('directus.reservation.get_skipped', {
+          ticket_number: ticketNumber,
+          reason: 'ticket_not_found'
+        });
+        return null;
+      }
+
+      // Query ticket_reservations using the numeric ticket_id
       const url = `${this.baseURL}/items/ticket_reservations`;
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${this.accessToken}` },
         params: {
-          filter: { ticket_id: { _eq: ticketNumber } },
+          filter: { ticket_id: { _eq: ticket.id } },
           limit: 1
         },
         timeout: 5000
