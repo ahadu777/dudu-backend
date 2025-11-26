@@ -189,7 +189,7 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'RED',
             message: this.getErrorMessage(errorCode),
             details: {
-              visitor_name: 'N/A',
+              customer_email: 'N/A',
               slot_date: 'N/A',
               slot_time: 'N/A',
               product_name: 'N/A',
@@ -216,7 +216,7 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'YELLOW',
             message: 'Warning: No reservation found for this ticket',
             details: {
-              visitor_name: 'N/A',
+              customer_email: 'N/A',
               slot_date: 'N/A',
               slot_time: 'N/A',
               product_name: ticket.product_name,
@@ -240,7 +240,7 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'RED',
             message: 'Error: Reservation slot not found',
             details: {
-              visitor_name: reservation.visitor_name,
+              customer_email: reservation.visitor_name,
               slot_date: 'N/A',
               slot_time: 'N/A',
               product_name: ticket.product_name,
@@ -262,7 +262,7 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'YELLOW',
             message: `Warning: Ticket already verified at ${reservation.verified_at}`,
             details: {
-              visitor_name: reservation.visitor_name,
+              customer_email: reservation.visitor_name,
               slot_date: slot.date,
               slot_time: `${slot.start_time} - ${slot.end_time}`,
               product_name: ticket.product_name,
@@ -286,7 +286,7 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'RED',
             message: `Wrong date: Reserved for ${slot.date}, today is ${today}`,
             details: {
-              visitor_name: reservation.visitor_name,
+              customer_email: reservation.visitor_name,
               slot_date: slot.date,
               slot_time: `${slot.start_time} - ${slot.end_time}`,
               product_name: ticket.product_name,
@@ -307,7 +307,7 @@ export class OperatorValidationServiceEnhanced {
           color_code: 'GREEN',
           message: 'Valid reservation - Allow entry',
           details: {
-            visitor_name: reservation.visitor_name,
+            customer_email: reservation.visitor_name,
             slot_date: slot.date,
             slot_time: `${slot.start_time} - ${slot.end_time}`,
             product_name: ticket.product_name,

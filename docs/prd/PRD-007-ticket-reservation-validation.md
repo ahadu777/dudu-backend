@@ -577,35 +577,35 @@ CREATE TABLE ticket_reservations (
 ```json
 {
   "success": true,
-  "valid": true,
-  "ticket": {
+  "data": {
+    "ticket_id": 123,
     "ticket_code": "TKT-2025-ABC123-DEF456",
-    "product_id": 5,
-    "product_name": "Museum Admission",
     "status": "ACTIVATED",
-    "expires_at": "2025-12-31T23:59:59Z",
-    "reserved_at": null,
-    "customer_email": "john@example.com",
-    "customer_phone": "+1234567890",
+    "product_id": 5,
     "order_id": 456
   }
 }
 ```
 
+**Note:** Current implementation returns minimal ticket data. Future enhancement may include `product_name`, `expires_at`, `customer_email`, `customer_phone`.
+
 **Response (Error - 400):**
 ```json
 {
   "success": false,
-  "valid": false,
-  "error": "Ticket already has an active reservation"
+  "error": {
+    "code": "TICKET_ALREADY_RESERVED",
+    "message": "This ticket is already reserved for 2025-12-01.",
+    "reserved_date": "2025-12-01"
+  }
 }
 ```
 
-**Error Messages:**
-- `"Ticket not found"`: Ticket doesn't exist
-- `"Ticket must be activated before making a reservation"`: Status is not ACTIVATED
-- `"Ticket already has an active reservation"`: Ticket is already reserved
-- `"Ticket has expired"`: Ticket past expiration date
+**Error Codes:**
+- `TICKET_NOT_FOUND`: Ticket doesn't exist
+- `TICKET_NOT_ACTIVATED`: Status is not ACTIVATED (must complete payment)
+- `TICKET_ALREADY_RESERVED`: Ticket is already reserved (includes `reserved_date` field)
+- `TICKET_EXPIRED`: Ticket past expiration date
 
 ---
 
@@ -750,9 +750,25 @@ GET /api/reservation-slots/available?month=2025-11&orq=1
 ```json
 {
   "success": false,
-  "error": "Ticket already has an active reservation"
+  "error": {
+    "code": "SLOT_FULL",
+    "message": "This slot is full. Please select an alternative slot.",
+    "alternative_slots": [
+      {
+        "slot_id": 9,
+        "date": "2025-12-01",
+        "start_time": "14:00:00"
+      }
+    ]
+  }
 }
 ```
+
+**Additional Error Codes:**
+- `TICKET_NOT_FOUND`: Ticket doesn't exist
+- `TICKET_NOT_ACTIVATED`: Only activated tickets can make reservations
+- `SLOT_NOT_FOUND`: Slot doesn't exist
+- `TICKET_ALREADY_RESERVED`: Ticket already has an active reservation
 
 **Notes:**
 - `customer_email` and `customer_phone` are optional; if not provided, they will be fetched from the ticket
@@ -786,117 +802,202 @@ COMMIT;
 
 ### 6.2 Operator Validation API
 
-#### `POST /api/operator/validate-ticket`
-**Purpose:** Validate ticket for venue entry
+#### `POST /operators/validate-ticket`
+**Purpose:** Validate ticket for venue entry (color-coded result)
 
 **Request:**
 ```json
 {
-  "ticket_code": "TKT-2025-ABC123-DEF456"
+  "ticket_code": "TKT-2025-ABC123-DEF456",
+  "operator_id": "OP-101",
+  "terminal_id": "TERM-01",
+  "orq": 12
 }
 ```
 
-**Response (Valid - 200 OK):**
+**Response (GREEN - Valid for Today - 200 OK):**
 ```json
 {
   "success": true,
-  "data": {
-    "ticket_id": 123,
+  "validation_result": {
     "ticket_code": "TKT-2025-ABC123-DEF456",
     "status": "RESERVED",
-    "customer_email": "john@example.com",
-    "customer_phone": "+12025551234",
-    "reservation": {
-      "date": "2025-11-14",
-      "start_time": "12:00:00",
-      "end_time": "14:00:00",
-      "is_today": true
+    "color_code": "GREEN",
+    "message": "Valid reservation - Allow entry",
+    "details": {
+      "customer_email": "john@example.com",
+      "slot_date": "2025-11-14",
+      "slot_time": "09:00-12:00",
+      "product_name": "General Admission"
     },
-    "validation_status": "VALID"
+    "allow_entry": true
   }
 }
 ```
 
-**Response (Wrong Date - 400 Bad Request):**
+
+**Response (YELLOW - Wrong Date - 200 OK):**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "WRONG_DATE",
-    "message": "Ticket reserved for 2025-11-20, not today",
-    "reservation_date": "2025-11-20",
-    "today": "2025-11-14"
+  "success": true,
+  "validation_result": {
+    "ticket_code": "TKT-2025-ABC123-DEF456",
+    "status": "RESERVED",
+    "color_code": "YELLOW",
+    "message": "Warning: Reservation is for 2025-11-20, not today",
+    "details": {
+      "customer_email": "john@example.com",
+      "slot_date": "2025-11-20",
+      "slot_time": "09:00-12:00",
+      "product_name": "General Admission"
+    },
+    "allow_entry": false
   }
 }
 ```
 
-**Response (No Reservation - 400 Bad Request):**
+**Response (YELLOW - No Reservation - 200 OK):**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "NO_RESERVATION",
-    "message": "Ticket is activated but has no reservation",
-    "ticket_status": "ACTIVATED"
+  "success": true,
+  "validation_result": {
+    "ticket_code": "TKT-2025-ABC123-DEF456",
+    "status": "ACTIVATED",
+    "color_code": "YELLOW",
+    "message": "Warning: No reservation found for this ticket",
+    "details": {
+      "customer_email": "N/A",
+      "slot_date": "N/A",
+      "slot_time": "N/A",
+      "product_name": "General Admission"
+    },
+    "allow_entry": false
   }
 }
 ```
 
-**Response (Already Verified - 400 Bad Request):**
+**Note:** Status reflects actual ticket status (ACTIVATED), not "RESERVED" when no reservation exists.
+
+**Response (RED - Invalid Ticket - 200 OK):**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "ALREADY_VERIFIED",
-    "message": "This ticket was already verified",
-    "verified_at": "2025-11-14T09:30:00Z",
-    "verified_by": 5,
-    "operator_name": "Jane Smith"
+  "success": true,
+  "validation_result": {
+    "ticket_code": "INVALID-CODE",
+    "status": "INVALID",
+    "color_code": "RED",
+    "message": "Invalid ticket - Deny entry",
+    "details": {
+      "customer_email": "N/A",
+      "slot_date": "N/A",
+      "slot_time": "N/A",
+      "product_name": "N/A"
+    },
+    "allow_entry": false
   }
 }
 ```
 
-**Validation Logic:**
+**Response (RED - Not Reserved - 200 OK):**
+```json
+{
+  "success": true,
+  "validation_result": {
+    "ticket_code": "TKT-2025-ABC123-DEF456",
+    "status": "ACTIVATED",
+    "color_code": "RED",
+    "message": "Ticket not reserved - Deny entry",
+    "details": {
+      "customer_email": "N/A",
+      "slot_date": "N/A",
+      "slot_time": "N/A",
+      "product_name": "General Admission"
+    },
+    "allow_entry": false
+  }
+}
+```
+
+**Validation Logic (Correct Implementation):**
 ```
 1. Query ticket by ticket_code
-2. Check ticket exists → Error: TICKET_NOT_FOUND
-3. Check status:
-   - PENDING_PAYMENT → Error: TICKET_NOT_ACTIVATED
-   - EXPIRED → Error: TICKET_EXPIRED
-   - VERIFIED → Error: ALREADY_VERIFIED
-   - ACTIVATED → Error: NO_RESERVATION
-   - RESERVED → Proceed to step 4
-4. Query reservation:
-   - JOIN ticket_reservations ON ticket_id
-   - JOIN reservation_slots ON slot_id
-5. Check reservation.date == CURRENT_DATE
-   - If NO → Error: WRONG_DATE
-   - If YES → Return VALID
+2. Check ticket exists → Error: TICKET_NOT_FOUND (RED)
+3. Check if ticket status is RESERVED:
+   - If status !== 'RESERVED' → Error: TICKET_NOT_RESERVED (RED)
+   - This means PENDING_PAYMENT, ACTIVATED, VERIFIED, EXPIRED all get RED
+4. Query reservation by ticket_code
+5. Check if reservation exists:
+   - If NO reservation → Error: NO_RESERVATION (RED, should not happen)
+6. Check if reservation.date == CURRENT_DATE:
+   - If NO → Warning: WRONG_DATE (YELLOW)
+   - If YES → Return VALID (GREEN)
 ```
+
+**Business Rule:** Only tickets with status=RESERVED are allowed for venue entry validation. This ensures:
+- Customers must complete the reservation process before visiting
+- Operators can rely on reservation system for capacity management
+- Walk-ins without reservations are denied (ACTIVATED status = no reservation yet)
+- VERIFIED tickets have already entered (prevent re-entry)
+
+**Operator Flow:**
+1. Customer arrives with QR code (ticket status: RESERVED)
+2. Operator scans QR → calls `POST /operators/validate-ticket`
+3. System returns GREEN/YELLOW/RED based on reservation date
+4. If valid, operator clicks "Allow Entry" → calls `POST /operators/verify-ticket`
+5. System updates ticket status to VERIFIED and records entry time
+6. Customer enters venue
+
+**Implementation Notes (2025-11-26):**
+- ✅ **slot_date**: Fetched from `reservation_slots` table via `slot_id`
+- ✅ **slot_time**: Fetched from `reservation_slots` table (format: `start_time-end_time`)
+- ⚠️  **product_name**: Currently shows "Unknown Product" due to Directus permissions on `products` collection
+  - Code implementation ready: `getProduct(productId)` method exists in `src/utils/directus.ts:299-325`
+  - Requires: Read permissions on `products` collection for API token
+- ⚠️  **verified_by**: Field is sent to Directus but not persisted
+  - Code correctly sends `verified_by: operator_id` in PATCH request
+  - Issue: Field may not exist in Directus `tickets` table schema or lacks write permissions
+  - `verified_at` field works correctly (timestamp is updated)
 
 ---
 
-#### `POST /api/operator/verify-ticket`
-**Purpose:** Mark ticket as verified (allow entry)
+#### `POST /operators/verify-ticket`
+**Purpose:** Mark ticket as verified (operator decision: ALLOW/DENY)
 
 **Request:**
 ```json
 {
-  "ticket_id": 123,
-  "operator_id": 5
+  "ticket_code": "TKT-2025-ABC123-DEF456",
+  "operator_id": "OP-101",
+  "terminal_id": "TERM-01",
+  "validation_decision": "ALLOW",
+  "orq": 12
 }
 ```
 
-**Response (Success - 200 OK):**
+**Response (ALLOW - Success - 200 OK):**
 ```json
 {
   "success": true,
   "data": {
-    "ticket_id": 123,
     "ticket_code": "TKT-2025-ABC123-DEF456",
-    "status": "VERIFIED",
-    "verified_at": "2025-11-14T09:30:00Z",
-    "verified_by": 5
+    "verification_status": "VERIFIED",
+    "verified_at": "2025-11-14T09:30:00.000Z",
+    "operator_id": "OP-101",
+    "terminal_id": "TERM-01"
+  }
+}
+```
+
+**Response (DENY - Success - 200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "ticket_code": "TKT-2025-ABC123-DEF456",
+    "verification_status": "DENIED",
+    "verified_at": "2025-11-14T09:30:00.000Z",
+    "operator_id": "OP-101",
+    "terminal_id": "TERM-01"
   }
 }
 ```
@@ -1088,8 +1189,8 @@ COMMIT;
   - [ ] `POST /api/tickets/verify-contact`
   - [ ] `GET /api/reservation-slots/available`
   - [ ] `POST /api/reservations/create`
-  - [ ] `POST /api/operator/validate-ticket`
-  - [ ] `POST /api/operator/verify-ticket`
+  - [ ] `POST /operators/validate-ticket`
+  - [ ] `POST /operators/verify-ticket`
 - [ ] Database seeding: Create initial slots for 90 days
 - [ ] Unit tests for all endpoints
 

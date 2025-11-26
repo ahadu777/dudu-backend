@@ -247,9 +247,9 @@
               "raw": "{\n  \"ticket_code\": \"TKT-2025-XYZ789-GHI012\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/operator/validate-ticket",
+              "raw": "{{base_url}}/operators/validate-ticket",
               "host": ["{{base_url}}"],
-              "path": ["api", "operator", "validate-ticket"]
+              "path": ["operators", "validate-ticket"]
             }
           }
         },
@@ -288,9 +288,9 @@
               "raw": "{\n  \"ticket_id\": 2,\n  \"operator_id\": 101\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/operator/verify-ticket",
+              "raw": "{{base_url}}/operators/verify-ticket",
               "host": ["{{base_url}}"],
-              "path": ["api", "operator", "verify-ticket"]
+              "path": ["operators", "verify-ticket"]
             }
           }
         },
@@ -328,9 +328,9 @@
               "raw": "{\n  \"ticket_code\": \"TKT-2025-CCC333-DDD444\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/operator/validate-ticket",
+              "raw": "{{base_url}}/operators/validate-ticket",
               "host": ["{{base_url}}"],
-              "path": ["api", "operator", "validate-ticket"]
+              "path": ["operators", "validate-ticket"]
             }
           }
         }

@@ -83,7 +83,7 @@ export class OperatorValidationServiceDirectus {
           color_code: 'RED',
           message: 'Invalid ticket - Deny entry',
           details: {
-            visitor_name: 'N/A',
+            customer_email: 'N/A',
             slot_date: 'N/A',
             slot_time: 'N/A',
             product_name: 'N/A'
@@ -93,10 +93,19 @@ export class OperatorValidationServiceDirectus {
       };
     }
 
-    // 2. Check if ticket is activated
-    // Directus uses 'status' field with value 'ACTIVATED' (not activation_status)
-    if (ticket.status !== 'ACTIVATED') {
-      logger.warn('directus.operator.validate_ticket.not_activated', {
+    // 2. Fetch product details early (needed for all responses)
+    let productName = 'Unknown Product';
+    if (ticket.product_id) {
+      const product = await directusService.getProduct(ticket.product_id);
+      if (product && product.name) {
+        productName = product.name;
+      }
+    }
+
+    // 3. Check if ticket is reserved
+    // Only RESERVED tickets can be validated for entry
+    if (ticket.status !== 'RESERVED') {
+      logger.warn('directus.operator.validate_ticket.not_reserved', {
         ticket_code,
         status: ticket.status
       });
@@ -104,47 +113,62 @@ export class OperatorValidationServiceDirectus {
         success: true,
         validation_result: {
           ticket_code,
-          status: 'INVALID',
+          status: ticket.status,
           color_code: 'RED',
-          message: 'Ticket not activated - Deny entry',
+          message: 'Ticket not reserved - Deny entry',
           details: {
-            visitor_name: 'N/A',
+            customer_email: 'N/A',
             slot_date: 'N/A',
             slot_time: 'N/A',
-            product_name: ticket.product_name || 'Unknown Product'
+            product_name: productName
           },
           allow_entry: false
         }
       };
     }
 
-    // 3. Check if ticket has a reservation
+    // 4. Check if ticket has a reservation
     const reservation = await directusService.getReservationByTicket(ticket_code);
 
     if (!reservation) {
-      // YELLOW: Activated but no reservation
+      // RED: Reserved but no reservation record (should not happen)
       logger.warn('directus.operator.validate_ticket.no_reservation', { ticket_code });
       return {
         success: true,
         validation_result: {
           ticket_code,
-          status: 'RESERVED', // Status from ticket
-          color_code: 'YELLOW',
-          message: 'Warning: No reservation found for this ticket',
+          status: ticket.status,
+          color_code: 'RED',
+          message: 'Error: No reservation found for this ticket',
           details: {
-            visitor_name: 'N/A',
+            customer_email: ticket.customer_email || 'N/A',
             slot_date: 'N/A',
             slot_time: 'N/A',
-            product_name: ticket.product_name || 'Unknown Product'
+            product_name: productName
           },
-          allow_entry: false // Operator must decide
+          allow_entry: false
         }
       };
     }
 
-    // 4. Check if reservation is for today
+    // Fetch slot details if reservation has slot_id
+    let slotDate = '';
+    let slotTime = 'N/A';
+    if (reservation.slot_id) {
+      const slot = await directusService.getReservationSlot(reservation.slot_id);
+      if (slot) {
+        slotDate = slot.date || '';
+        if (slot.start_time && slot.end_time) {
+          slotTime = `${slot.start_time}-${slot.end_time}`;
+        } else if (slot.start_time) {
+          slotTime = slot.start_time;
+        }
+      }
+    }
+
+    // 5. Check if reservation is for today
     const today = new Date().toISOString().split('T')[0];
-    const reservationDate = reservation.slot_date || ''; // TODO: fetch from slot
+    const reservationDate = slotDate || reservation.slot_date || '';
 
     if (reservationDate !== today) {
       // YELLOW: Reservation not for today
@@ -157,34 +181,34 @@ export class OperatorValidationServiceDirectus {
         success: true,
         validation_result: {
           ticket_code,
-          status: 'RESERVED',
+          status: ticket.status,
           color_code: 'YELLOW',
           message: `Warning: Reservation is for ${reservationDate}, not today`,
           details: {
-            visitor_name: reservation.customer_email || 'N/A',
+            customer_email: reservation.customer_email || 'N/A',
             slot_date: reservationDate,
-            slot_time: '09:00-12:00', // TODO: fetch from slot
-            product_name: ticket.product_name || 'Unknown Product'
+            slot_time: slotTime,
+            product_name: productName
           },
           allow_entry: false // Operator must decide
         }
       };
     }
 
-    // 5. GREEN: Valid reservation for today
+    // 6. GREEN: Valid reservation for today
     logger.info('directus.operator.validate_ticket.valid', { ticket_code });
     return {
       success: true,
       validation_result: {
         ticket_code,
-        status: 'RESERVED',
+        status: ticket.status,
         color_code: 'GREEN',
         message: 'Valid reservation - Allow entry',
         details: {
-          visitor_name: reservation.customer_email || 'N/A',
+          customer_email: reservation.customer_email || 'N/A',
           slot_date: reservationDate,
-          slot_time: '09:00-12:00', // TODO: fetch from slot
-          product_name: ticket.product_name || 'Unknown Product'
+          slot_time: slotTime,
+          product_name: productName
         },
         allow_entry: true
       }

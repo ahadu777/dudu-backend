@@ -297,6 +297,63 @@ export class DirectusService {
   }
 
   /**
+   * Get product by product_id
+   */
+  async getProduct(productId: number): Promise<any | null> {
+    if (!this.baseURL) return null;
+
+    try {
+      const url = `${this.baseURL}/items/products/${productId}`;
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        timeout: 5000
+      });
+
+      logger.info('directus.product.fetched', {
+        product_id: productId,
+        product_name: response.data?.data?.name
+      });
+
+      return response.data?.data || null;
+    } catch (error) {
+      logger.error('directus.product.fetch_failed', {
+        product_id: productId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Get reservation slot by slot_id
+   */
+  async getReservationSlot(slotId: number): Promise<any | null> {
+    if (!this.baseURL) return null;
+
+    try {
+      const url = `${this.baseURL}/items/reservation_slots/${slotId}`;
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        timeout: 5000
+      });
+
+      logger.info('directus.slot.fetched', {
+        slot_id: slotId,
+        slot_date: response.data?.data?.date,
+        slot_time: `${response.data?.data?.start_time}-${response.data?.data?.end_time}`
+      });
+
+      return response.data?.data || null;
+    } catch (error) {
+      logger.error('directus.slot.fetch_failed', {
+        slot_id: slotId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return null;
+    }
+  }
+
+  /**
    * Create ticket reservation (atomic transaction)
    */
   async createReservation(data: {

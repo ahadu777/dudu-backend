@@ -28,11 +28,11 @@ export interface ValidateTicketResponse {
   success: boolean;
   validation_result?: {
     ticket_code: string;
-    status: 'RESERVED' | 'VERIFIED' | 'EXPIRED' | 'INVALID';
+    status: 'PENDING_PAYMENT' | 'ACTIVATED' | 'RESERVED' | 'VERIFIED' | 'EXPIRED' | 'INVALID';
     color_code: 'GREEN' | 'YELLOW' | 'RED';
     message: string;
     details: {
-      visitor_name: string;
+      customer_email: string;
       slot_date: string;
       slot_time: string;
       product_name: string;
