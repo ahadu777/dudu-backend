@@ -279,6 +279,28 @@ export class DirectusService {
         return { success: false, error: 'Ticket not found in database' };
       }
 
+      // Check slot capacity before creating reservation
+      const slotUrl = `${this.baseURL}/items/reservation_slots/${data.slot_id}`;
+      const slotResponse = await axios.get(slotUrl, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        timeout: 5000
+      });
+
+      const slot = slotResponse.data?.data;
+      if (!slot) {
+        return { success: false, error: 'Slot not found' };
+      }
+
+      // Check if slot is full
+      if (slot.booked_count >= slot.total_capacity) {
+        logger.warn('directus.reservation.slot_full', {
+          slot_id: data.slot_id,
+          booked_count: slot.booked_count,
+          total_capacity: slot.total_capacity
+        });
+        return { success: false, error: 'Slot is full' };
+      }
+
       // Use the ticket's ID (primary key) for the foreign key relationship
       const url = `${this.baseURL}/items/ticket_reservations`;
       const response = await axios.post(url, {
@@ -294,9 +316,18 @@ export class DirectusService {
         timeout: 5000
       });
 
+      // Increment booked_count for the slot
+      await axios.patch(slotUrl, {
+        booked_count: slot.booked_count + 1
+      }, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        timeout: 5000
+      });
+
       logger.info('directus.reservation.created', {
         ticket_id: data.ticket_id,
-        slot_id: data.slot_id
+        slot_id: data.slot_id,
+        new_booked_count: slot.booked_count + 1
       });
 
       return { success: true, reservation: response.data?.data };
