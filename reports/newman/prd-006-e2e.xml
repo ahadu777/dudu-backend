@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="PRD-006: Ticket Activation &amp; Reservation System Tests" tests="12" time="0.029">
+  <testsuite name="PRD-006: Ticket Activation System / AC-1.1: Validate inactive ticket returns error" id="6912f115-c542-4459-a35f-cfb379d16d17" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.013">
+    <testcase name="Status code is 200 or 400" time="0.013" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-1.1: Inactive ticket validation fails" time="0.013" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Ticket Activation System / AC-1.2: Validate activated ticket succeeds" id="96c44f5e-3f15-44ca-8fb8-dd37694b6c94" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-1.2: Activated ticket validation succeeds" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Reservation Calendar / AC-2.1: Get available slots" id="ca536b11-92f3-41fc-b296-882e509a6a45" timestamp="2025-11-27T08:41:06.127Z" tests="3" failures="0" errors="0" time="0.003">
+    <testcase name="Status code is 200" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-2.1: Returns slot data grouped by date" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-2.1: Slots have capacity info" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Operator Scanning / AC-3.1: Operator login" id="cdc85f55-ced1-4fab-ade8-8558d4668908" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-3.1: Login returns session token" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Operator Scanning / AC-3.2: Validate ticket - returns color code" id="03330909-0661-4ab0-bb02-c8c91c007cc0" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-3.2: Returns validation result with color code" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Operator Scanning / AC-3.3: Ticket not found returns RED" id="336f3d08-ac1e-40c7-a882-7a924def2b52" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.000">
+    <testcase name="Status code is 200" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-3.3: Non-existent ticket returns RED" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Operator Scanning / AC-3.4: Inactive ticket returns RED" id="c7f75ddb-c39a-4b68-8feb-93367bb41195" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-3.4: Inactive ticket returns RED" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Operator Scanning / AC-3.5: Active ticket without reservation returns YELLOW" id="a4e40251-268e-436f-aaf3-c02bb4a7d74c" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-3.5: No reservation returns YELLOW" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Validation Logic / AC-4.1: Reserved ticket for today returns GREEN" id="1f9ec11f-5f7b-4ad9-b399-ffd7a84fed53" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-4.1: Reserved ticket returns validation result" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="PRD-006: Validation Logic / AC-4.2: Verified ticket returns RED (already used)" id="960ad3bf-d1b2-4535-8b32-ca8820781e0d" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-4.2: Already verified ticket returns RED" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="Error Handling / Missing required fields" id="a4c30cb2-96ab-40ab-b83a-5f1c5a00574d" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Error response returned" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="Error Handling / Invalid operator credentials" id="fc9a71e0-7969-49b8-a9ca-f57322a4b85f" timestamp="2025-11-27T08:41:06.127Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 401 or 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Auth error returned" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+</testsuites>

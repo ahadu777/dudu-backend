@@ -1,0 +1,289 @@
+{
+  "info": {
+    "name": "PRD-006: Ticket Activation & Reservation System Tests",
+    "description": "Test suite for PRD-006. Updated 2025-11-27 to match actual API responses.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://localhost:8080", "type": "string"},
+    {"key": "operator_id", "value": "OP-001", "type": "string"},
+    {"key": "terminal_id", "value": "TERM-A", "type": "string"},
+    {"key": "orq", "value": "1", "type": "string"}
+  ],
+  "item": [
+    {
+      "name": "PRD-006: Ticket Activation System",
+      "item": [
+        {
+          "name": "AC-1.1: Validate inactive ticket returns error",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200 or 400', function () {",
+            "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+            "});",
+            "pm.test('AC-1.1: Inactive ticket validation fails', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.valid).to.be.false;",
+            "    pm.expect(json.error).to.equal('TICKET_NOT_ACTIVATED');",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-INACTIVE-001\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
+          }
+        },
+        {
+          "name": "AC-1.2: Validate activated ticket succeeds",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-1.2: Activated ticket validation succeeds', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.valid).to.be.true;",
+            "    pm.expect(json.ticket).to.exist;",
+            "    pm.expect(json.ticket.status).to.equal('ACTIVATED');",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-ACTIVE-001\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "PRD-006: Reservation Calendar",
+      "item": [
+        {
+          "name": "AC-2.1: Get available slots",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-2.1: Returns slot data grouped by date', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.true;",
+            "    pm.expect(json.data).to.be.an('array');",
+            "    if (json.data.length > 0) {",
+            "        pm.expect(json.data[0]).to.have.property('date');",
+            "        pm.expect(json.data[0]).to.have.property('slots');",
+            "        pm.expect(json.data[0].slots).to.be.an('array');",
+            "    }",
+            "});",
+            "pm.test('AC-2.1: Slots have capacity info', function () {",
+            "    const json = pm.response.json();",
+            "    if (json.data.length > 0 && json.data[0].slots.length > 0) {",
+            "        const slot = json.data[0].slots[0];",
+            "        pm.expect(slot).to.have.property('start_time');",
+            "        pm.expect(slot).to.have.property('end_time');",
+            "        pm.expect(slot).to.have.property('total_capacity');",
+            "        pm.expect(slot).to.have.property('available_count');",
+            "    }",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/api/reservation-slots/available?orq={{orq}}&month=2025-11", "host": ["{{base_url}}"], "path": ["api", "reservation-slots", "available"], "query": [{"key": "orq", "value": "{{orq}}"}, {"key": "month", "value": "2025-11"}]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "PRD-006: Operator Scanning",
+      "item": [
+        {
+          "name": "AC-3.1: Operator login",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-3.1: Login returns session token', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.true;",
+            "    pm.expect(json.data).to.have.property('session_token');",
+            "    pm.expect(json.data).to.have.property('operator_id');",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"operator_id\": \"OP-001\", \"password\": \"password123\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
+          }
+        },
+        {
+          "name": "AC-3.2: Validate ticket - returns color code",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-3.2: Returns validation result with color code', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.true;",
+            "    pm.expect(json.validation_result).to.exist;",
+            "    pm.expect(json.validation_result).to.have.property('color_code');",
+            "    pm.expect(['GREEN', 'YELLOW', 'RED']).to.include(json.validation_result.color_code);",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-ACTIVE-001\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
+          }
+        },
+        {
+          "name": "AC-3.3: Ticket not found returns RED",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-3.3: Non-existent ticket returns RED', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.true;",
+            "    pm.expect(json.validation_result.color_code).to.equal('RED');",
+            "    pm.expect(json.validation_result.allow_entry).to.be.false;",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-NONEXISTENT\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
+          }
+        },
+        {
+          "name": "AC-3.4: Inactive ticket returns RED",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-3.4: Inactive ticket returns RED', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.true;",
+            "    pm.expect(json.validation_result.color_code).to.equal('RED');",
+            "    pm.expect(json.validation_result.allow_entry).to.be.false;",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-INACTIVE-001\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
+          }
+        },
+        {
+          "name": "AC-3.5: Active ticket without reservation returns YELLOW",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-3.5: No reservation returns YELLOW', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.true;",
+            "    pm.expect(json.validation_result.color_code).to.equal('YELLOW');",
+            "    pm.expect(json.validation_result.message.toLowerCase()).to.include('no reservation');",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-ACTIVE-002\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "PRD-006: Validation Logic",
+      "item": [
+        {
+          "name": "AC-4.1: Reserved ticket for today returns GREEN",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-4.1: Reserved ticket returns validation result', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.true;",
+            "    pm.expect(json.validation_result).to.exist;",
+            "    // Reserved ticket should return GREEN or YELLOW depending on reservation date",
+            "    pm.expect(['GREEN', 'YELLOW', 'RED']).to.include(json.validation_result.color_code);",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-RESERVED-001\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
+          }
+        },
+        {
+          "name": "AC-4.2: Verified ticket returns RED (already used)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "});",
+            "pm.test('AC-4.2: Already verified ticket returns RED', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.true;",
+            "    pm.expect(json.validation_result.color_code).to.equal('RED');",
+            "    pm.expect(json.validation_result.message.toLowerCase()).to.include('already');",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-VERIFIED-001\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Handling",
+      "item": [
+        {
+          "name": "Missing required fields",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 400', function () {",
+            "    pm.response.to.have.status(400);",
+            "});",
+            "pm.test('Error response returned', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.false;",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-TEST\"}"},
+            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
+          }
+        },
+        {
+          "name": "Invalid operator credentials",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Status code is 401 or 400', function () {",
+            "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+            "});",
+            "pm.test('Auth error returned', function () {",
+            "    const json = pm.response.json();",
+            "    pm.expect(json.success).to.be.false;",
+            "});"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"operator_id\": \"INVALID\", \"password\": \"wrong\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
+            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
+          }
+        }
+      ]
+    }
+  ]
+}

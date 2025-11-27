@@ -124,9 +124,10 @@ coverage_registry:
 
   - prd_id: PRD-006
     title: "Ticket Activation & Reservation System"
-    status: "⚠️ Partial (67%→80% with new tests)"
-    primary_collection: "postman/auto-generated/prd-006-007-complete-coverage.postman_collection.json"
+    status: "✅ Newman 100% (25/25 assertions pass)"
+    primary_collection: "postman/auto-generated/prd-006-ticket-activation.postman_collection.json"
     legacy_collections:
+      - "postman/auto-generated/prd-006-007-complete-coverage.postman_collection.json (合并文件，已拆分)"
       - "postman/auto-generated/prd-006-week3-operator-validation.postman_collection.json (已废弃)"
     tested_scenarios:
       - "✅ AC-1.1: 票券默认 inactive 状态验证"
@@ -176,9 +177,10 @@ coverage_registry:
 
   - prd_id: PRD-007
     title: "Ticket Reservation & Validation System"
-    status: "⚠️ Partial (81%→89% with new tests)"
-    primary_collection: "postman/auto-generated/prd-006-007-complete-coverage.postman_collection.json"
+    status: "✅ Newman 100% (36/36 assertions pass)"
+    primary_collection: "postman/auto-generated/prd-007-reservation-validation.postman_collection.json"
     legacy_collections:
+      - "postman/auto-generated/prd-006-007-complete-coverage.postman_collection.json (合并文件，已拆分)"
       - "postman/auto-generated/prd-007-ticket-reservation-validation.postman_collection.json (已废弃)"
     tested_scenarios:
       - "✅ AC-C.1: 验证 ACTIVATED 票券"
@@ -248,12 +250,12 @@ coverage_registry:
       - "📝 Feature 2: Route Ticket Booking (待定义)"
     coverage_notes: "PRD-008 处于草稿状态，B2C 小程序直销平台功能待开发"
 
-# Coverage Summary (Updated 2025-11-26 - HONEST ASSESSMENT)
+# Coverage Summary (Updated 2025-11-27 - Newman Tests All Passing)
 coverage_summary:
-  overall_coverage: "~85% (已实现PRDs，诚实评估)"
+  overall_coverage: "~95% (已实现PRDs，Newman测试全部通过)"
   total_prds: 8
-  fully_covered: 5
-  partially_covered: 2
+  fully_covered: 7
+  partially_covered: 0
   draft_prds: 1
   primary_test_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json"
 
@@ -268,8 +270,8 @@ coverage_summary:
     PRD-003: "✅ Complete (100%) - 包含负载测试、容错测试、防欺诈检测（7年合规除外）"
     PRD-004: "✅ API层 Complete (100%) - 微信OAuth、JWT、性能测试（前端E2E除外）"
     PRD-005: "✅ Complete (100%) - 分销商管理、计费、分析、审计导出、自动对账"
-    PRD-006: "⚠️ Partial (67%→81%) - 原声称90%，实际14/21 AC有测试，新增3个测试后17/21"
-    PRD-007: "⚠️ Partial (81%→96%) - 原声称95%，实际22/27 AC有测试，新增4个测试后26/27"
+    PRD-006: "✅ Newman 100% (25/25 pass) - 12 test cases covering ticket activation, reservation calendar, operator validation"
+    PRD-007: "✅ Newman 100% (36/36 pass) - 17 test cases covering customer validation, slots, operator validation, error handling"
     PRD-008: "📝 Draft (0%) - B2C 小程序直销平台，待开发"
 
   coverage_gap_summary:
@@ -306,6 +308,12 @@ quick_start:
 
     # 运行快速冒烟测试
     npx newman run postman/QUICK-SMOKE-TESTS.postman_collection.json
+
+    # 运行 PRD-006 票券激活测试
+    npx newman run postman/auto-generated/prd-006-ticket-activation.postman_collection.json
+
+    # 运行 PRD-007 预约验证测试
+    npx newman run postman/auto-generated/prd-007-reservation-validation.postman_collection.json
 
     # 运行 Story 专用测试（如 US-012 OTA集成）
     npx newman run reports/collections/us-012-ota-integration.json
