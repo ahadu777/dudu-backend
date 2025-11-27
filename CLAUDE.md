@@ -11,6 +11,7 @@
 | **API changing?** | [API Changes](#api-change-management) → [📖 Details](docs/reference/API-CHANGE-MANAGEMENT.md) |
 | **New API?** | [RESTful Design](#restful-api-design) → [📖 Details](docs/reference/RESTFUL-API-DESIGN.md) |
 | **Generate tests?** | [Test Generation](#testing) → [📖 Details](docs/reference/AI-TEST-GENERATION.md) |
+| **Newman reports?** | [Newman Reports](#newman-reports) → [📖 Details](docs/reference/NEWMAN-REPORT-STANDARD.md) |
 | **Troubleshooting?** | [📖 Troubleshooting Guide](docs/reference/TROUBLESHOOTING.md) |
 | **Complex scenario?** | [📖 Knowledge Graph](docs/reference/KNOWLEDGE-GRAPH.md) |
 | **Case studies** | [📖 docs/cases/](docs/cases/) |
@@ -29,6 +30,7 @@
 | Modifying existing API | `docs/reference/API-CHANGE-MANAGEMENT.md` |
 | Implementing new API | `docs/reference/RESTFUL-API-DESIGN.md` |
 | Generating/analyzing tests | `docs/reference/AI-TEST-GENERATION.md` |
+| Running Newman tests | `docs/reference/NEWMAN-REPORT-STANDARD.md` |
 | Debugging issues | `docs/reference/TROUBLESHOOTING.md` |
 | Cross-story dependencies | `docs/reference/KNOWLEDGE-GRAPH.md` |
 | Refactoring code | `docs/reference/REFACTORING-IMPACT.md` |
@@ -181,8 +183,10 @@ curl http://localhost:8080/healthz
 grep "status:" docs/cards/*.md
 grep "status: In Progress" docs/cards/*.md
 
-# Testing
-npx newman run postman/xxx.postman_collection.json
+# Testing (AI should run automatically after code changes)
+npm test                      # Runs PRD-006 + PRD-007 tests
+npm run test:prd006           # PRD-006 only
+npm run test:prd007           # PRD-007 only
 
 # Search
 grep -ri "keywords" docs/
@@ -227,9 +231,26 @@ docs/integration/US-XXX-runbook.md     # E2E 可执行流程
 postman/auto-generated/                 # AI 生成的测试
 postman/COMPLETE-PLATFORM-TESTS.json   # 全平台测试
 docs/test-coverage/_index.yaml         # 覆盖率追踪
+reports/newman/                         # Newman 测试报告输出
 ```
 
 **📖 AI test generation**: [docs/reference/AI-TEST-GENERATION.md](docs/reference/AI-TEST-GENERATION.md)
+
+---
+
+## Newman Reports
+
+**Standard format** (AI MUST follow):
+```bash
+npx newman run {collection}.json --reporters cli,junit --reporter-junit-export reports/newman/{id}-e2e.xml
+```
+
+| 报告类型 | 命名格式 | 示例 |
+|---------|---------|------|
+| PRD 测试 | `prd-{id}-e2e.xml` | `prd-006-e2e.xml` |
+| Story 测试 | `us-{id}-e2e.xml` | `us-012-e2e.xml` |
+
+**📖 Full standard**: [docs/reference/NEWMAN-REPORT-STANDARD.md](docs/reference/NEWMAN-REPORT-STANDARD.md)
 
 ---
 
@@ -245,10 +266,10 @@ docs/test-coverage/_index.yaml         # 覆盖率追踪
 - [ ] TypeScript compiles
 - [ ] Endpoints respond (curl test)
 - [ ] Card status = "Done"
-- [ ] **Testing Complete**:
+- [ ] **Testing Complete** (AI MUST run automatically, no user confirmation needed):
+  - [ ] Run `npm test` (executes PRD-006/007 Newman tests)
   - [ ] Runbook created/updated (`docs/integration/US-XXX-runbook.md`)
   - [ ] Newman collection updated (`postman/auto-generated/`)
-  - [ ] Newman tests pass
   - [ ] Coverage updated (`docs/test-coverage/_index.yaml`)
 
 ---
