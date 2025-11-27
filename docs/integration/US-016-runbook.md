@@ -3,8 +3,26 @@
 **Story:** US-016 Ticket Activation and Time-Slot Reservation System
 **Related PRD:** PRD-006
 **Cards:** ticket-activation, time-slot-reservation, reservation-validation-scanning
-**Status:** 📋 Draft
-**Last Updated:** 2025-11-25
+**Status:** 📋 Draft (Not Yet Implemented)
+**Last Updated:** 2025-11-27
+
+---
+
+## ⚠️ Implementation Status
+
+**This runbook is based on PRD-006 specifications for ticket activation features that are NOT YET IMPLEMENTED.**
+
+Currently implemented features from PRD-007 (US-015):
+- ✅ Ticket reservation system
+- ✅ Operator validation with color codes
+- ✅ Slot management
+
+Features pending implementation from PRD-006:
+- ❌ Ticket activation (inactive → active transition)
+- ❌ Dual purchase modes (immediate vs deferred activation)
+- ❌ Activation-based reservation eligibility
+
+For working operator validation endpoints, see [US-015-runbook.md](US-015-runbook.md).
 
 ---
 
@@ -66,7 +84,7 @@ TICKET_ID="<ticket_id_from_step1>"
 curl -X POST http://localhost:8080/api/tickets/${TICKET_ID}/activate \
   -H "Content-Type: application/json"
 
-# Expected: {"status":"active","activated_at":"2025-11-25T..."}
+# Expected: {"status":"active","activated_at":"2025-11-27T..."}
 ```
 
 #### Step 3: Check Activation Status
@@ -94,29 +112,32 @@ curl -X POST http://localhost:8080/api/reservations \
 #### Step 5: Operator Validation (Enhanced Scan)
 ```bash
 # Operator scans ticket on reserved date
-curl -X POST http://localhost:8080/api/tickets/scan \
+curl -X POST http://localhost:8080/operators/validate-ticket \
   -H "Content-Type: application/json" \
   -d '{
     "ticket_code": "<ticket_code>",
-    "scan_date": "2025-12-01"
+    "operator_id": "OP-001",
+    "terminal_id": "GATE-A1",
+    "orq": 1
   }'
 
 # Expected (on correct date):
 # {
-#   "validation_status": "VALID",
-#   "activation_status": "active",
-#   "reservation_status": "reserved",
-#   "reserved_date": "2025-12-01",
-#   "reserved_time_slot": "morning",
-#   "is_valid_for_today": true
+#   "success": true,
+#   "validation_result": {
+#     "color_code": "GREEN",
+#     "status": "RESERVED",
+#     "message": "Valid reservation - Allow entry"
+#   }
 # }
 
 # Expected (on wrong date):
 # {
-#   "validation_status": "WRONG_DATE",
-#   "reserved_date": "2025-12-01",
-#   "current_date": "2025-11-25",
-#   "error": "Ticket reserved for different date"
+#   "success": true,
+#   "validation_result": {
+#     "color_code": "YELLOW",
+#     "message": "Warning: Reservation is for 2025-12-01, not today"
+#   }
 # }
 ```
 
@@ -146,7 +167,7 @@ TICKET_ID="<ticket_id_from_step1>"
 
 curl http://localhost:8080/api/tickets/${TICKET_ID}/status
 
-# Expected: {"status":"active","activation_mode":"immediate","activated_at":"2025-11-25T..."}
+# Expected: {"status":"active","activation_mode":"immediate","activated_at":"2025-11-27T..."}
 ```
 
 #### Step 3: Create Reservation (Same as Scenario 1 Step 4)
@@ -168,37 +189,44 @@ curl -X POST http://localhost:8080/api/reservations \
 #### Case 1: Inactive Ticket Scan
 ```bash
 # Try to scan inactive ticket (not yet activated)
-curl -X POST http://localhost:8080/api/tickets/scan \
+curl -X POST http://localhost:8080/operators/validate-ticket \
   -H "Content-Type: application/json" \
   -d '{
     "ticket_code": "<inactive_ticket_code>",
-    "scan_date": "2025-11-25"
+    "operator_id": "OP-001",
+    "terminal_id": "GATE-A1",
+    "orq": 1
   }'
 
 # Expected:
 # {
-#   "validation_status": "INACTIVE",
-#   "error": "Ticket must be activated before use",
-#   "activation_status": "inactive"
+#   "success": true,
+#   "validation_result": {
+#     "color_code": "RED",
+#     "message": "Ticket not activated - Deny entry"
+#   }
 # }
 ```
 
 #### Case 2: Active Ticket Without Reservation
 ```bash
 # Scan active ticket that has no reservation
-curl -X POST http://localhost:8080/api/tickets/scan \
+curl -X POST http://localhost:8080/operators/validate-ticket \
   -H "Content-Type: application/json" \
   -d '{
     "ticket_code": "<active_ticket_no_reservation>",
-    "scan_date": "2025-11-25"
+    "operator_id": "OP-001",
+    "terminal_id": "GATE-A1",
+    "orq": 1
   }'
 
 # Expected (based on business rules):
 # {
-#   "validation_status": "NO_RESERVATION",
-#   "activation_status": "active",
-#   "reservation_status": "none",
-#   "policy": "allow_entry" or "require_reservation"
+#   "success": true,
+#   "validation_result": {
+#     "color_code": "YELLOW",
+#     "message": "Warning: No reservation found for this ticket"
+#   }
 # }
 ```
 
@@ -247,15 +275,15 @@ npx newman run postman/auto-generated/us-016-activation-reservation.postman_coll
 
 ## 📊 Expected Outcomes
 
-### ✅ Success Criteria
-- [x] Pre-made tickets default to `inactive` status
-- [x] Activation endpoint transitions `inactive` → `active`
-- [x] Immediate mode tickets auto-activate on purchase
-- [x] Only active tickets can create reservations
-- [x] Operator scanning shows activation + reservation status
-- [x] Date validation prevents wrong-day entry
-- [x] Reservation modification updates date/time slot
-- [x] Cancellation returns ticket to active (no reservation)
+### ✅ Success Criteria (When Implemented)
+- [ ] Pre-made tickets default to `inactive` status
+- [ ] Activation endpoint transitions `inactive` → `active`
+- [ ] Immediate mode tickets auto-activate on purchase
+- [ ] Only active tickets can create reservations
+- [ ] Operator scanning shows activation + reservation status
+- [ ] Date validation prevents wrong-day entry
+- [ ] Reservation modification updates date/time slot
+- [ ] Cancellation returns ticket to active (no reservation)
 
 ### 📈 Performance Targets
 - Activation endpoint: < 1s response time
@@ -283,16 +311,17 @@ npx newman run postman/auto-generated/us-016-activation-reservation.postman_coll
 ## 📚 Related Documentation
 
 - **PRD-006:** Ticket Activation and Time-Slot Reservation System
+- **PRD-007:** Ticket Reservation & Validation (Implemented - see US-015)
 - **Story:** US-016 (Ticket Activation and Time-Slot Reservation)
+- **Implemented Story:** US-015 (Reservation & Validation)
 - **Cards:**
-  - ticket-activation
-  - time-slot-reservation
-  - reservation-validation-scanning
+  - ticket-activation (pending)
+  - time-slot-reservation (pending)
+  - reservation-validation-scanning (implemented)
 - **Related Stories:**
   - US-001 (Base ticketing system)
-  - US-002 (Operator scanning)
-  - US-003 (Ticket QR viewing)
+  - US-015 (Implemented reservation & operator validation)
 
 ---
 
-**Note:** This runbook is based on PRD-006 specifications. Implementation status: Draft (not yet implemented).
+**Note:** This runbook documents the planned PRD-006 ticket activation features. For currently working operator validation endpoints, refer to [US-015-runbook.md](US-015-runbook.md).
