@@ -388,4 +388,64 @@ export class VenueRepository {
 
     return totalResponseTime / events.length / 1000; // Return in seconds
   }
+
+  /**
+   * Query redemption events for reporting
+   * Supports filtering by time range, function code, and venue
+   */
+  async queryRedemptionEvents(filters: {
+    from?: Date;
+    to?: Date;
+    functionCode?: string;
+    venueId?: number;
+    result?: 'success' | 'reject';
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    events: RedemptionEvent[];
+    total: number;
+  }> {
+    const query = this.redemptionRepo.createQueryBuilder('re')
+      .leftJoinAndSelect('re.venue', 'v');
+
+    // Apply filters
+    if (filters.from) {
+      query.andWhere('re.redeemed_at >= :from', { from: filters.from });
+    }
+
+    if (filters.to) {
+      query.andWhere('re.redeemed_at <= :to', { to: filters.to });
+    }
+
+    if (filters.functionCode) {
+      query.andWhere('re.function_code = :functionCode', { functionCode: filters.functionCode });
+    }
+
+    if (filters.venueId) {
+      query.andWhere('re.venue_id = :venueId', { venueId: filters.venueId });
+    }
+
+    if (filters.result) {
+      query.andWhere('re.result = :result', { result: filters.result });
+    }
+
+    // Order by redeemed_at DESC (newest first)
+    query.orderBy('re.redeemed_at', 'DESC');
+
+    // Get total count before pagination
+    const total = await query.getCount();
+
+    // Apply pagination
+    if (filters.limit) {
+      query.take(filters.limit);
+    }
+
+    if (filters.offset) {
+      query.skip(filters.offset);
+    }
+
+    const events = await query.getMany();
+
+    return { events, total };
+  }
 }

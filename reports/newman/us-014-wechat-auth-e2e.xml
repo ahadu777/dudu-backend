@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="US-014 WeChat Mini-Program Authentication" tests="11" time="0.176">
+  <testsuite name="1. WeChat Login Flow / 1.1 New User Login" id="9b212da5-51b8-4c83-af47-147524a193b5" timestamp="2025-11-28T07:56:06.994Z" tests="5" failures="0" errors="0" time="0.042">
+    <testcase name="Status code is 200" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Response has token" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Response has user object" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Response has needs_phone flag" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="needs_phone reflects phone status" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="1. WeChat Login Flow / 1.2 Returning User Login" id="cd71fc94-a708-4347-a73f-1c393cbb679c" timestamp="2025-11-28T07:56:06.994Z" tests="3" failures="0" errors="0" time="0.026">
+    <testcase name="Status code is 200" time="0.026" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Returns same user (deterministic mock)" time="0.026" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="New token issued" time="0.026" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="2. Phone Binding Flow / 2.1 Bind Phone Number" id="ca938b4e-7635-4a34-84eb-2444251581d4" timestamp="2025-11-28T07:56:06.994Z" tests="3" failures="0" errors="0" time="0.018">
+    <testcase name="Status code is 200" time="0.018" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Response has phone number" time="0.018" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Response has updated user" time="0.018" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="2. Phone Binding Flow / 2.2 Phone Binding - Missing Auth" id="9399dd80-a3ac-4c66-a492-12ee8ccf5449" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="Status code is 401" time="0.004" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Returns auth error" time="0.004" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="2. Phone Binding Flow / 2.3 Phone Binding - Invalid Token" id="617f68df-fad4-4be3-af1f-f423861c9980" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 401" time="0.002" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Returns authentication error" time="0.002" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="3. Validation Tests / 3.1 Login - Missing Code" id="b8bfab14-0e0b-41ae-b243-51374a6342df" timestamp="2025-11-28T07:56:06.994Z" tests="3" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Error code is VALIDATION_ERROR" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Error message indicates missing code" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="3. Validation Tests / 3.2 Login - Empty Code" id="e0cf1de8-3c6c-46f8-b2fc-505652cd1082" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Returns validation error" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="3. Validation Tests / 3.3 Phone Binding - Missing Code" id="3190ecd1-c39e-40ad-b641-b2896d04073f" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Error code is VALIDATION_ERROR" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="4. Complete E2E Flow / 4.1 E2E: Login -> Bind Phone -> Verify" id="0aa4a0c9-b2df-4685-946c-bad54a5e45ce" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.051">
+    <testcase name="Status code is 200" time="0.051" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Complete login response" time="0.051" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="4. Complete E2E Flow / 4.2 E2E: Bind Phone After Login" id="bdce0087-7870-4806-b3dd-d259dabc2c24" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.029">
+    <testcase name="Status code is 200" time="0.029" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Phone bound successfully" time="0.029" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+  <testsuite name="5. Health Check / 5.1 Server Health Check" id="edb43cee-1524-44a6-96ef-d2c767a11b97" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Server is healthy" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+  </testsuite>
+</testsuites>

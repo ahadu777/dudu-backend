@@ -4,7 +4,7 @@ slug: reports-redemptions
 team: "B - Tickets"
 oas_paths: ["/reports/redemptions"]
 migrations: ["db/migrations/0007_redemptions_indexes.sql"]
-status: "Ready"
+status: "Done"
 readiness: "prototype"
 branch: ""
 pr: ""

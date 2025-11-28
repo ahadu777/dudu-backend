@@ -4,7 +4,7 @@ slug: wechat-auth-login
 team: "C - Identity & Access"
 oas_paths: ["/auth/wechat/login"]
 migrations: ["db/migrations/0014_add_wechat_auth.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""

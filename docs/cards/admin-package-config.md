@@ -11,7 +11,7 @@ oas_paths: [
   "/admin/routes/fares/{routeCode}/restore"
 ]
 migrations: ["db/migrations/0015_admin_package_tables.sql"]
-status: "In Progress"
+status: "Done"
 readiness: "prototype"
 branch: ""
 pr: ""

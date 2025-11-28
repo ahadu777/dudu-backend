@@ -183,10 +183,14 @@ curl http://localhost:8080/healthz
 grep "status:" docs/cards/*.md
 grep "status: In Progress" docs/cards/*.md
 
-# Testing (AI should run automatically after code changes)
-npm test                      # Runs PRD-006 + PRD-007 tests
-npm run test:prd006           # PRD-006 only
-npm run test:prd007           # PRD-007 only
+# Testing (Auto-discovery - no need to update package.json)
+npm test                      # Smoke + All PRD + US-014
+npm run test:smoke            # Quick health check
+npm run test:prd              # All PRD tests (auto-discovered)
+npm run test:prd 006          # Specific PRD test
+npm run test:story            # All Story tests (auto-discovered)
+npm run test:story 014        # Specific Story test
+npm run test:all              # Everything
 
 # Search
 grep -ri "keywords" docs/
@@ -205,33 +209,50 @@ Story Tests (E2E流程) → Runbook + Newman Collection
 Card Tests (端点级) → curl + Newman
 ```
 
+### Auto-Discovery Test System
+
+测试系统会**自动发现**新增的测试集合，无需修改 `package.json`。
+
+**命名规范** (必须遵守):
+```
+postman/auto-generated/
+├── prd-{NNN}-{description}.postman_collection.json   # PRD 测试
+├── us-{NNN}-{description}.postman_collection.json    # Story 测试
+└── _archived/                                         # 过时测试存档
+```
+
+**测试命令**:
+| 命令 | 作用 | 示例 |
+|------|------|------|
+| `npm test` | 主测试套件 | Smoke + PRD + Story |
+| `npm run test:prd` | 所有 PRD 测试 | 自动发现 prd-*.json |
+| `npm run test:prd {N}` | 指定 PRD | `npm run test:prd 008` |
+| `npm run test:story` | 所有 Story 测试 | 自动发现 us-*.json |
+| `npm run test:story {N}` | 指定 Story | `npm run test:story 015` |
+| `npm run test:all` | 全部测试 | Smoke + PRD + Story |
+
+**新增 PRD/Story 测试流程**:
+1. 创建 Postman 集合: `postman/auto-generated/prd-008-xxx.postman_collection.json`
+2. 运行测试: `npm run test:prd 008`
+3. 无需修改任何配置文件
+
 **Testing Workflow**:
 | Step | Tool | Command |
 |------|------|---------|
 | 1. 快速验证 | curl | `curl http://localhost:8080/[endpoint]` |
 | 2. E2E 流程 | Runbook | Execute `docs/integration/US-XXX-runbook.md` |
-| 3. 自动化 | Newman | `npx newman run postman/xxx.json` |
+| 3. 自动化 | Newman | `npm run test:prd 006` 或 `npm run test:story 014` |
 | 4. 覆盖率 | Registry | Update `docs/test-coverage/_index.yaml` |
-
-**Key Commands**:
-```bash
-# Quick smoke test
-npx newman run postman/QUICK-SMOKE-TESTS.postman_collection.json
-
-# Full platform test
-npx newman run postman/COMPLETE-PLATFORM-TESTS.postman_collection.json
-
-# Story-specific test
-npx newman run postman/auto-generated/us-012-complete-coverage.postman_collection.json
-```
 
 **Test Assets**:
 ```
-docs/integration/US-XXX-runbook.md     # E2E 可执行流程
-postman/auto-generated/                 # AI 生成的测试
-postman/COMPLETE-PLATFORM-TESTS.json   # 全平台测试
-docs/test-coverage/_index.yaml         # 覆盖率追踪
+postman/auto-generated/                 # AI 生成的测试 (自动发现)
+postman/auto-generated/_archived/       # 过时测试存档
+postman/QUICK-SMOKE-TESTS.json         # 冒烟测试
 reports/newman/                         # Newman 测试报告输出
+docs/integration/US-XXX-runbook.md     # E2E 可执行流程
+docs/test-coverage/_index.yaml         # 覆盖率追踪
+scripts/run-newman-tests.js            # 测试自动发现脚本
 ```
 
 **📖 AI test generation**: [docs/reference/AI-TEST-GENERATION.md](docs/reference/AI-TEST-GENERATION.md)
@@ -267,9 +288,10 @@ npx newman run {collection}.json --reporters cli,junit --reporter-junit-export r
 - [ ] Endpoints respond (curl test)
 - [ ] Card status = "Done"
 - [ ] **Testing Complete** (AI MUST run automatically, no user confirmation needed):
-  - [ ] Run `npm test` (executes PRD-006/007 Newman tests)
+  - [ ] Newman collection created: `postman/auto-generated/{prd|us}-{NNN}-xxx.postman_collection.json`
+  - [ ] Run `npm run test:prd {N}` or `npm run test:story {N}` to verify
+  - [ ] Run `npm test` to ensure no regression
   - [ ] Runbook created/updated (`docs/integration/US-XXX-runbook.md`)
-  - [ ] Newman collection updated (`postman/auto-generated/`)
   - [ ] Coverage updated (`docs/test-coverage/_index.yaml`)
 
 ---
@@ -281,7 +303,7 @@ npx newman run {collection}.json --reporters cli,junit --reporter-junit-export r
 # ✅ Use
 curl http://localhost:8080/endpoint
 grep "status:" docs/cards/*.md
-npx newman run postman/xxx.json
+npm run test:prd 006
 
 # ❌ Don't create scripts for
 # - One-time checks
@@ -289,7 +311,9 @@ npx newman run postman/xxx.json
 # - Progress queries
 ```
 
-**Exception**: Database migrations only.
+**Exceptions**:
+- Database migrations
+- `scripts/run-newman-tests.js` (测试自动发现)
 
 ---
 
@@ -341,6 +365,9 @@ npx newman run postman/xxx.json
 - **US-011**: Complex cruise pricing
 - **US-012**: OTA platform integration
 - **US-013**: Venue operations + fraud detection
+- **US-014**: WeChat mini-program authentication
+- **PRD-006**: Ticket activation system (46 assertions)
+- **PRD-007**: Reservation validation (62 assertions)
 - **Mock store**: Products 101-108
 
 ---

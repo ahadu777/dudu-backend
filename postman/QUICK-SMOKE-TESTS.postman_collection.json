@@ -1,17 +1,13 @@
 {
   "info": {
-    "name": "⚡ 快速冒烟测试 - Core APIs Validation",
-    "description": "快速验证核心API端点是否正常工作",
+    "name": "Quick Smoke Tests - Core Endpoints",
+    "description": "Quick validation of core API endpoints",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "base_url",
       "value": "http://localhost:8080"
-    },
-    {
-      "key": "ota_api_key",
-      "value": "ota_full_access_partner"
     }
   ],
   "item": [
@@ -32,8 +28,13 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('服务健康', function() {",
+              "pm.test('Server is healthy', function() {",
               "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response indicates healthy status', function() {",
+              "    var data = pm.response.json();",
+              "    pm.expect(data.status).to.equal('ok');",
               "});"
             ]
           }
@@ -41,19 +42,14 @@
       ]
     },
     {
-      "name": "2. OTA - 查询库存",
+      "name": "2. API Documentation",
       "request": {
         "method": "GET",
-        "header": [
-          {
-            "key": "X-API-Key",
-            "value": "{{ota_api_key}}"
-          }
-        ],
+        "header": [],
         "url": {
-          "raw": "{{base_url}}/api/ota/inventory",
+          "raw": "{{base_url}}/docs/",
           "host": ["{{base_url}}"],
-          "path": ["api", "ota", "inventory"]
+          "path": ["docs", ""]
         }
       },
       "event": [
@@ -62,10 +58,9 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('查询库存成功', function() {",
+              "pm.test('Swagger UI is accessible', function() {",
               "    pm.response.to.have.status(200);",
-              "    var data = pm.response.json();",
-              "    pm.expect(data.inventory).to.be.an('array');",
+              "    pm.expect(pm.response.text()).to.include('swagger');",
               "});"
             ]
           }
@@ -73,14 +68,10 @@
       ]
     },
     {
-      "name": "3. OTA - 创建预订",
+      "name": "3. WeChat Login (Mock Mode)",
       "request": {
         "method": "POST",
         "header": [
-          {
-            "key": "X-API-Key",
-            "value": "{{ota_api_key}}"
-          },
           {
             "key": "Content-Type",
             "value": "application/json"
@@ -88,12 +79,12 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 2\n}"
+          "raw": "{\"code\": \"test_smoke_code\"}"
         },
         "url": {
-          "raw": "{{base_url}}/api/ota/reserve",
+          "raw": "{{base_url}}/auth/wechat/login",
           "host": ["{{base_url}}"],
-          "path": ["api", "ota", "reserve"]
+          "path": ["auth", "wechat", "login"]
         }
       },
       "event": [
@@ -102,11 +93,14 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('预订创建成功', function() {",
-              "    pm.response.to.have.status(201);",
+              "pm.test('WeChat login endpoint works', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns token and user', function() {",
               "    var data = pm.response.json();",
-              "    pm.expect(data.reservation_id).to.exist;",
-              "    pm.collectionVariables.set('reservation_id', data.reservation_id);",
+              "    pm.expect(data.token).to.exist;",
+              "    pm.expect(data.user).to.exist;",
               "});"
             ]
           }
@@ -114,19 +108,14 @@
       ]
     },
     {
-      "name": "4. OTA - 查询预订列表",
+      "name": "4. Reports - Redemptions",
       "request": {
         "method": "GET",
-        "header": [
-          {
-            "key": "X-API-Key",
-            "value": "{{ota_api_key}}"
-          }
-        ],
+        "header": [],
         "url": {
-          "raw": "{{base_url}}/api/ota/reservations",
+          "raw": "{{base_url}}/reports/redemptions",
           "host": ["{{base_url}}"],
-          "path": ["api", "ota", "reservations"]
+          "path": ["reports", "redemptions"]
         }
       },
       "event": [
@@ -135,119 +124,15 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('查询预订列表成功', function() {",
+              "pm.test('Reports endpoint accessible', function() {",
               "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns events array with pagination', function() {",
               "    var data = pm.response.json();",
-              "    pm.expect(data.reservations).to.be.an('array');",
-              "});"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "5. OTA - 查询分销商列表",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "X-API-Key",
-            "value": "{{ota_api_key}}"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/ota/resellers",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ota", "resellers"]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('查询分销商成功', function() {",
-              "    pm.response.to.have.status(200);",
-              "    var data = pm.response.json();",
-              "    pm.expect(data.resellers).to.be.an('array');",
-              "});"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "6. OTA - 批量生成票券",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "X-API-Key",
-            "value": "{{ota_api_key}}"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 10,\n  \"batch_id\": \"TEST_BATCH_001\",\n  \"distribution_mode\": \"direct_sale\"\n}"
-        },
-        "url": {
-          "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ota", "tickets", "bulk-generate"]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('批量生成成功', function() {",
-              "    pm.response.to.have.status(201);",
-              "    var data = pm.response.json();",
-              "    pm.expect(data.tickets).to.be.an('array');",
-              "    pm.expect(data.tickets.length).to.equal(10);",
-              "});"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "7. OTA - 查询票券列表",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "X-API-Key",
-            "value": "{{ota_api_key}}"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/ota/tickets?status=PRE_GENERATED&limit=10",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ota", "tickets"],
-          "query": [
-            {"key": "status", "value": "PRE_GENERATED"},
-            {"key": "limit", "value": "10"}
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('查询票券成功', function() {",
-              "    pm.response.to.have.status(200);",
-              "    var data = pm.response.json();",
-              "    pm.expect(data.tickets).to.be.an('array');",
+              "    pm.expect(data.events).to.be.an('array');",
+              "    pm.expect(data).to.have.property('total');",
+              "    pm.expect(data).to.have.property('limit');",
               "});"
             ]
           }

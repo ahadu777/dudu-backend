@@ -1,233 +1,210 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="US-012: OTA平台完整集成测试2" tests="30" time="27.595">
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦" id="40d7f5a9-6eac-43f3-aa0e-0fc08c8860e4" timestamp="2025-11-25T07:43:06.815Z" tests="3" failures="3" errors="1" time="0.012">
-    <system-err><![CDATA[Iteration: 0
-
----
-testScriptError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
----
-]]></system-err>
-    <testcase name="状态码是200" time="0.012" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
+<testsuites name="US-012 Complete Coverage - OTA Platform Integration" tests="13" time="9.391">
+  <testsuite name="1. Channel Allocation Verification / Partner A: Get Inventory - Initial State" id="224353b3-6247-46a0-8a24-f6cd94201364" timestamp="2025-11-28T07:39:07.466Z" tests="6" failures="3" errors="0" time="0.010">
+    <testcase name="Response time under 2 seconds (Performance Requirement)" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Status code is 200" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Channel Allocation: Product 106 ~2000 units" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected undefined to be a number">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
-        <![CDATA[Test description: 状态码是200.]]>
-        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
-   at Object.eval sandbox-script.js:1:1).]]>
-      </failure>
-    </testcase>
-    <testcase name="返回产品列表" time="0.012" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
-        <![CDATA[Test description: 返回产品列表.]]>
-        <![CDATA[Error message: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^.]]>
-        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
-   at Object.eval sandbox-script.js:2:1).]]>
-      </failure>
-    </testcase>
-    <testcase name="产品包含完整信息" time="0.012" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.0 查询产品目录 📦.]]>
-        <![CDATA[Test description: 产品包含完整信息.]]>
-        <![CDATA[Error message: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^.]]>
-        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Channel Allocation Verification / Partner A: Get Inventory - Initial State.]]>
+        <![CDATA[Test description: Channel Allocation: Product 106 ~2000 units.]]>
+        <![CDATA[Error message: expected undefined to be a number.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be a number
    at Object.eval sandbox-script.js:3:1).]]>
       </failure>
     </testcase>
+    <testcase name="Channel Allocation: Product 107 ~1500 units" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected undefined to be a number">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Channel Allocation Verification / Partner A: Get Inventory - Initial State.]]>
+        <![CDATA[Test description: Channel Allocation: Product 107 ~1500 units.]]>
+        <![CDATA[Error message: expected undefined to be a number.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be a number
+   at Object.eval sandbox-script.js:4:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Channel Allocation: Product 108 ~1500 units" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected undefined to be a number">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Channel Allocation Verification / Partner A: Get Inventory - Initial State.]]>
+        <![CDATA[Test description: Channel Allocation: Product 108 ~1500 units.]]>
+        <![CDATA[Error message: expected undefined to be a number.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be a number
+   at Object.eval sandbox-script.js:5:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Pricing context includes customer discounts" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.1 查询OTA库存" id="9123da4c-a434-4190-b71d-7df7f64f1015" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="0.406">
-    <testcase name="状态码是200" time="0.406" classname="Us012OtA2"/>
-    <testcase name="返回库存数据" time="0.406" classname="Us012OtA2"/>
+  <testsuite name="1. Channel Allocation Verification / Partner B: Get Same Inventory View" id="9ebdfa5a-fb4f-4cc3-aa12-605a431b9529" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="1" errors="0" time="0.001">
+    <testcase name="Partner B sees identical inventory (Shared Pool)" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected 400 to equal NaN">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Channel Allocation Verification / Partner B: Get Same Inventory View.]]>
+        <![CDATA[Test description: Partner B sees identical inventory (Shared Pool).]]>
+        <![CDATA[Error message: expected 400 to equal NaN.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 400 to equal NaN
+   at Object.eval sandbox-script.js:1:2).]]>
+      </failure>
+    </testcase>
+    <testcase name="Response time under 2 seconds" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.2 创建预订" id="225f576b-51b0-4af4-bd22-ab71433acb36" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="2" errors="0" time="1.716">
-    <testcase name="状态码是201" time="1.716" classname="Us012OtA2">
+  <testsuite name="2. Reservation Management Flow / Partner A: Create Reservation" id="75b622b3-e4b4-48d4-bcaf-8bc39e79a0f1" timestamp="2025-11-28T07:39:07.466Z" tests="4" failures="4" errors="0" time="0.003">
+    <testcase name="Reservation created successfully" time="0.003" classname="Us012CompleteCoverageOtaPlatformIntegration">
       <failure type="AssertionFailure" message="expected response to have status code 201 but got 500">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.2 创建预订.]]>
-        <![CDATA[Test description: 状态码是201.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Partner A: Create Reservation.]]>
+        <![CDATA[Test description: Reservation created successfully.]]>
         <![CDATA[Error message: expected response to have status code 201 but got 500.]]>
         <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 500
    at Object.eval sandbox-script.js:1:3).]]>
       </failure>
     </testcase>
-    <testcase name="返回预订ID" time="1.716" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected { code: 'RESERVATION_FAILED', …(1) } to have property 'reservation_id'">
+    <testcase name="Reservation ID provided" time="0.003" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reservation_id'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.2 创建预订.]]>
-        <![CDATA[Test description: 返回预订ID.]]>
-        <![CDATA[Error message: expected { code: 'RESERVATION_FAILED', …(1) } to have property 'reservation_id'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected { code: 'RESERVATION_FAILED', …(1) } to have property 'reservation_id'
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Partner A: Create Reservation.]]>
+        <![CDATA[Test description: Reservation ID provided.]]>
+        <![CDATA[Error message: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reservation_id'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reservation_id'
    at Object.eval sandbox-script.js:2:3).]]>
       </failure>
     </testcase>
-  </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.3 查询预订详情" id="4564a82c-73c0-405c-9874-723b15bdcf12" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="1" errors="0" time="0.339">
-    <testcase name="状态码是200" time="0.339" classname="Us012OtA2"/>
-    <testcase name="预订状态为active" time="0.339" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected undefined to deeply equal 'active'">
+    <testcase name="Expiry time is 24 hours from now" time="0.003" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reserved_until'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.3 查询预订详情.]]>
-        <![CDATA[Test description: 预订状态为active.]]>
-        <![CDATA[Error message: expected undefined to deeply equal 'active'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected undefined to deeply equal 'active'
-   at Object.eval sandbox-script.js:2:4).]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Partner A: Create Reservation.]]>
+        <![CDATA[Test description: Expiry time is 24 hours from now.]]>
+        <![CDATA[Error message: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reserved_until'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reserved_until'
+   at Object.eval sandbox-script.js:3:3).]]>
+      </failure>
+    </testcase>
+    <testcase name="Pricing snapshot captured" time="0.003" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'pricing_snapshot'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Partner A: Create Reservation.]]>
+        <![CDATA[Test description: Pricing snapshot captured.]]>
+        <![CDATA[Error message: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'pricing_snapshot'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'pricing_snapshot'
+   at Object.eval sandbox-script.js:4:3).]]>
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐" id="9c7030b1-4e6c-4afe-8abc-0abd08e63cbe" timestamp="2025-11-25T07:43:06.815Z" tests="4" failures="4" errors="1" time="0.001">
-    <system-err><![CDATA[Iteration: 0
-
----
-testScriptError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
----
-]]></system-err>
-    <testcase name="状态码是201" time="0.001" classname="Us012OtA2">
+  <testsuite name="2. Reservation Management Flow / Verify Inventory Decreased After Reservation" id="4870e915-8d55-47a8-8974-86a20f160fbd" timestamp="2025-11-28T07:39:07.466Z" tests="1" failures="1" errors="0" time="0.002">
+    <testcase name="Inventory decreased by reserved amount" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected NaN to equal 10">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Verify Inventory Decreased After Reservation.]]>
+        <![CDATA[Test description: Inventory decreased by reserved amount.]]>
+        <![CDATA[Error message: expected NaN to equal 10.]]>
+        <![CDATA[Stacktrace: AssertionError: expected NaN to equal 10
+   at Object.eval sandbox-script.js:1:4).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="3. Multi-Partner Isolation Tests / Partner B: Cannot Access Partner A's Reservations" id="2783e0a9-46e1-43b1-81a4-34fb684fb19b" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Partner B cannot see Partner A's reservations" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Partner B has own reservations list" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="3. Multi-Partner Isolation Tests / Partner B: Sees Same Reduced Inventory" id="f3431c19-6407-4590-b32e-fd21b32728af" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="1" errors="0" time="0.001">
+    <testcase name="Partner B sees same inventory reduction" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected 400 to equal NaN">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 3. Multi-Partner Isolation Tests / Partner B: Sees Same Reduced Inventory.]]>
+        <![CDATA[Test description: Partner B sees same inventory reduction.]]>
+        <![CDATA[Error message: expected 400 to equal NaN.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 400 to equal NaN
+   at Object.eval sandbox-script.js:1:6).]]>
+      </failure>
+    </testcase>
+    <testcase name="Shared inventory pool working correctly" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="4. Complete OTA Workflow Validation / Create Order from Reservation" id="e46fa629-5d7c-4002-91ea-bfe8c70ce508" timestamp="2025-11-28T07:39:07.466Z" tests="3" failures="3" errors="0" time="0.002">
+    <testcase name="Order created from reservation" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration">
       <failure type="AssertionFailure" message="expected response to have status code 201 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
-        <![CDATA[Test description: 状态码是201.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Create Order from Reservation.]]>
+        <![CDATA[Test description: Order created from reservation.]]>
         <![CDATA[Error message: expected response to have status code 201 but got 404.]]>
         <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 404
-   at Object.eval sandbox-script.js:1:5).]]>
+   at Object.eval sandbox-script.js:1:7).]]>
       </failure>
     </testcase>
-    <testcase name="订单创建成功" time="0.001" classname="Us012OtA2">
+    <testcase name="Order ID provided" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration">
       <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
-        <![CDATA[Test description: 订单创建成功.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Create Order from Reservation.]]>
+        <![CDATA[Test description: Order ID provided.]]>
         <![CDATA[Error message: Unexpected token '<' at 1:1
 <!DOCTYPE html>
 ^.]]>
         <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
 <!DOCTYPE html>
 ^
-   at Object.eval sandbox-script.js:2:5).]]>
-      </failure>
-    </testcase>
-    <testcase name="生成了25张票券" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
-        <![CDATA[Test description: 生成了25张票券.]]>
-        <![CDATA[Error message: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^.]]>
-        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
-   at Object.eval sandbox-script.js:3:5).]]>
-      </failure>
-    </testcase>
-    <testcase name="票券包含entitlements" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.4 激活预订 → 生成订单和票券 ⭐.]]>
-        <![CDATA[Test description: 票券包含entitlements.]]>
-        <![CDATA[Error message: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^.]]>
-        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
-   at Object.eval sandbox-script.js:4:5).]]>
-      </failure>
-    </testcase>
-  </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.5 查询订单列表" id="f9a3a54c-af3c-4978-9632-662349b91b11" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="0.523">
-    <testcase name="状态码是200" time="0.523" classname="Us012OtA2"/>
-    <testcase name="返回订单列表" time="0.523" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋" id="348027b2-23fe-4985-8240-e98243748596" timestamp="2025-11-25T07:43:06.815Z" tests="3" failures="2" errors="0" time="0.494">
-    <testcase name="状态码是200" time="0.494" classname="Us012OtA2"/>
-    <testcase name="返回订单详情" time="0.494" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected { orders: [ { …(8) }, …(177) ], …(1) } to have property 'order_id'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋.]]>
-        <![CDATA[Test description: 返回订单详情.]]>
-        <![CDATA[Error message: expected { orders: [ { …(8) }, …(177) ], …(1) } to have property 'order_id'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected { orders: [ { …(8) }, …(177) ], …(1) } to have property 'order_id'
    at Object.eval sandbox-script.js:2:7).]]>
       </failure>
     </testcase>
-    <testcase name="订单包含预订关联" time="0.494" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected { orders: [ { …(8) }, …(177) ], …(1) } to have property 'reservation_id'">
+    <testcase name="Payment required amount specified" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.5.1 查询订单详情 📋.]]>
-        <![CDATA[Test description: 订单包含预订关联.]]>
-        <![CDATA[Error message: expected { orders: [ { …(8) }, …(177) ], …(1) } to have property 'reservation_id'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected { orders: [ { …(8) }, …(177) ], …(1) } to have property 'reservation_id'
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Create Order from Reservation.]]>
+        <![CDATA[Test description: Payment required amount specified.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
    at Object.eval sandbox-script.js:3:7).]]>
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码" id="d2f0d48c-e227-4334-86db-d473effe39e3" timestamp="2025-11-25T07:43:06.815Z" tests="3" failures="3" errors="1" time="0.001">
-    <system-err><![CDATA[Iteration: 0
-
----
-testScriptError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
----
-]]></system-err>
-    <testcase name="状态码是200" time="0.001" classname="Us012OtA2">
+  <testsuite name="4. Complete OTA Workflow Validation / Activate Order After Payment" id="47737249-c7c7-4194-be94-c2fba7574192" timestamp="2025-11-28T07:39:07.466Z" tests="3" failures="3" errors="0" time="0.001">
+    <testcase name="Order activated successfully" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
       <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
-        <![CDATA[Test description: 状态码是200.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Activate Order After Payment.]]>
+        <![CDATA[Test description: Order activated successfully.]]>
         <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
         <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
    at Object.eval sandbox-script.js:1:8).]]>
       </failure>
     </testcase>
-    <testcase name="返回票券列表" time="0.001" classname="Us012OtA2">
+    <testcase name="Tickets issued with QR codes" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
       <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
-        <![CDATA[Test description: 返回票券列表.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Activate Order After Payment.]]>
+        <![CDATA[Test description: Tickets issued with QR codes.]]>
         <![CDATA[Error message: Unexpected token '<' at 1:1
 <!DOCTYPE html>
 ^.]]>
@@ -237,13 +214,13 @@ testScriptError: Unexpected token '<' at 1:1
    at Object.eval sandbox-script.js:2:8).]]>
       </failure>
     </testcase>
-    <testcase name="票券包含QR码" time="0.001" classname="Us012OtA2">
+    <testcase name="Activation status is success" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
       <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程一: 预订激活 → 生成订单 / 1.6 获取订单票券和QR码.]]>
-        <![CDATA[Test description: 票券包含QR码.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Activate Order After Payment.]]>
+        <![CDATA[Test description: Activation status is success.]]>
         <![CDATA[Error message: Unexpected token '<' at 1:1
 <!DOCTYPE html>
 ^.]]>
@@ -254,339 +231,71 @@ testScriptError: Unexpected token '<' at 1:1
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.1 批量生成预制票据" id="3b5fcd64-8f24-429f-8131-6b4fb426fea3" timestamp="2025-11-25T07:43:06.815Z" tests="4" failures="4" errors="1" time="0.674">
-    <system-err><![CDATA[Iteration: 0
-
----
-testScriptError: Cannot read properties of undefined (reading '0')
----
-]]></system-err>
-    <testcase name="状态码是201" time="0.674" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 201 but got 409">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.1 批量生成预制票据.]]>
-        <![CDATA[Test description: 状态码是201.]]>
-        <![CDATA[Error message: expected response to have status code 201 but got 409.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 409
-   at Object.eval sandbox-script.js:1:9).]]>
-      </failure>
-    </testcase>
-    <testcase name="批量生成成功" time="0.674" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected { code: 'SOLD_OUT', …(1) } to have property 'batch_id'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.1 批量生成预制票据.]]>
-        <![CDATA[Test description: 批量生成成功.]]>
-        <![CDATA[Error message: expected { code: 'SOLD_OUT', …(1) } to have property 'batch_id'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected { code: 'SOLD_OUT', …(1) } to have property 'batch_id'
-   at Object.eval sandbox-script.js:2:9).]]>
-      </failure>
-    </testcase>
-    <testcase name="票据状态为PRE_GENERATED" time="0.674" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Cannot read properties of undefined (reading '0')">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.1 批量生成预制票据.]]>
-        <![CDATA[Test description: 票据状态为PRE_GENERATED.]]>
-        <![CDATA[Error message: Cannot read properties of undefined (reading '0').]]>
-        <![CDATA[Stacktrace: TypeError: Cannot read properties of undefined (reading '0')
-   at Object.eval sandbox-script.js:3:9).]]>
-      </failure>
-    </testcase>
-    <testcase name="票据包含QR码和entitlements" time="0.674" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Cannot read properties of undefined (reading '0')">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.1 批量生成预制票据.]]>
-        <![CDATA[Test description: 票据包含QR码和entitlements.]]>
-        <![CDATA[Error message: Cannot read properties of undefined (reading '0').]]>
-        <![CDATA[Stacktrace: TypeError: Cannot read properties of undefined (reading '0')
-   at Object.eval sandbox-script.js:4:9).]]>
-      </failure>
-    </testcase>
+  <testsuite name="5. B2B2C Bulk Generation Tests / Generate Reseller Batch" id="ef51d12b-8d19-4255-b7a9-5acfd3c0dfc4" timestamp="2025-11-28T07:39:07.466Z" tests="4" failures="0" errors="0" time="9.361">
+    <testcase name="Bulk generation successful" time="9.361" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Batch ID and tickets provided" time="9.361" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Reseller metadata preserved" time="9.361" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Extended expiry for reseller batches" time="9.361" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
   </testsuite>
-  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.2 激活预制票据 → 生成订单 ⭐" id="faa63b14-30ab-49b7-ba9d-c03726672b5f" timestamp="2025-11-25T07:43:06.815Z" tests="4" failures="4" errors="1" time="0.001">
-    <system-err><![CDATA[Iteration: 0
-
----
-testScriptError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
----
-]]></system-err>
-    <testcase name="状态码是200" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.2 激活预制票据 → 生成订单 ⭐.]]>
-        <![CDATA[Test description: 状态码是200.]]>
-        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
-   at Object.eval sandbox-script.js:1:10).]]>
-      </failure>
-    </testcase>
-    <testcase name="票据激活成功" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.2 激活预制票据 → 生成订单 ⭐.]]>
-        <![CDATA[Test description: 票据激活成功.]]>
-        <![CDATA[Error message: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^.]]>
-        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
-   at Object.eval sandbox-script.js:2:10).]]>
-      </failure>
-    </testcase>
-    <testcase name="状态转换为ACTIVE" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.2 激活预制票据 → 生成订单 ⭐.]]>
-        <![CDATA[Test description: 状态转换为ACTIVE.]]>
-        <![CDATA[Error message: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^.]]>
-        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
-   at Object.eval sandbox-script.js:3:10).]]>
-      </failure>
-    </testcase>
-    <testcase name="客户信息已绑定" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.2 激活预制票据 → 生成订单 ⭐.]]>
-        <![CDATA[Test description: 客户信息已绑定.]]>
-        <![CDATA[Error message: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^.]]>
-        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
-   at Object.eval sandbox-script.js:4:10).]]>
-      </failure>
-    </testcase>
+  <testsuite name="5. B2B2C Bulk Generation Tests / Query Generated Tickets" id="199f6866-81aa-44f9-b8f1-32f63668a62a" timestamp="2025-11-28T07:39:07.466Z" tests="3" failures="0" errors="0" time="0.005">
+    <testcase name="Ticket query successful" time="0.005" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Batch tickets filtered correctly" time="0.005" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Pagination working" time="0.005" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
   </testsuite>
-  <testsuite name="流程二: 预制票据激活 → 生成订单 / 2.3 验证订单已创建" id="f1322ae0-4ef4-4761-8e83-34d7e282231b" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="2" errors="0" time="0.001">
-    <testcase name="状态码是200" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.3 验证订单已创建.]]>
-        <![CDATA[Test description: 状态码是200.]]>
-        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
-   at Object.eval sandbox-script.js:1:11).]]>
-      </failure>
-    </testcase>
-    <testcase name="订单票据查询成功" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程二: 预制票据激活 → 生成订单 / 2.3 验证订单已创建.]]>
-        <![CDATA[Test description: 订单票据查询成功.]]>
-        <![CDATA[Error message: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^.]]>
-        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
-<!DOCTYPE html>
-^
-   at Object.eval sandbox-script.js:2:11).]]>
-      </failure>
-    </testcase>
+  <testsuite name="6. Security &amp; Error Handling / Invalid API Key - Unauthorized" id="1bb2b488-b442-4446-85a9-bfd0e6a1f1ff" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Invalid API key rejected" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Proper error message" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次A" id="8a2167f9-f4af-4ecd-99f9-f62cf881e023" timestamp="2025-11-25T07:43:06.815Z" tests="1" failures="1" errors="0" time="0.669">
-    <testcase name="票券生成成功" time="0.669" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 201 but got 409">
+  <testsuite name="6. Security &amp; Error Handling / Overselling Prevention" id="ac3c273f-2337-4214-a6be-271fda7b686e" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Overselling attempt prevented" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected response to have status code 409 but got 422">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次A.]]>
-        <![CDATA[Test description: 票券生成成功.]]>
-        <![CDATA[Error message: expected response to have status code 201 but got 409.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 409
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 6. Security & Error Handling / Overselling Prevention.]]>
+        <![CDATA[Test description: Overselling attempt prevented.]]>
+        <![CDATA[Error message: expected response to have status code 409 but got 422.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 409 but got 422
    at Object.eval sandbox-script.js:1:12).]]>
       </failure>
     </testcase>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 生成测试票券批次B" id="bb1ff506-9e86-477c-b982-64e460a3b177" timestamp="2025-11-25T07:43:06.815Z" tests="1" failures="0" errors="0" time="6.895">
-    <testcase name="票券生成成功" time="6.895" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.1 查询所有票券 ✅" id="6619c122-220d-4376-a4f2-bb81ff579a6a" timestamp="2025-11-25T07:43:06.815Z" tests="3" failures="0" errors="0" time="2.110">
-    <testcase name="状态码是200" time="2.110" classname="Us012OtA2"/>
-    <testcase name="返回票券列表" time="2.110" classname="Us012OtA2"/>
-    <testcase name="票券包含完整字段" time="2.110" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.2 按状态过滤 - PRE_GENERATED ✅" id="6f285a73-e2cd-4698-ba2e-1c607d18a677" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="2.195">
-    <testcase name="状态码是200" time="2.195" classname="Us012OtA2"/>
-    <testcase name="只返回PRE_GENERATED状态的票券" time="2.195" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 准备: 激活一张票券" id="f1e80c8d-32f7-46a3-a0c1-e8c516abcd84" timestamp="2025-11-25T07:43:06.815Z" tests="1" failures="1" errors="0" time="0.002">
-    <testcase name="激活成功" time="0.002" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 200 but got 400">
+    <testcase name="Insufficient inventory error" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected undefined to equal 'INSUFFICIENT_INVENTORY'">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程三: 票券列表查询测试 🔍 / 准备: 激活一张票券.]]>
-        <![CDATA[Test description: 激活成功.]]>
-        <![CDATA[Error message: expected response to have status code 200 but got 400.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 400
-   at Object.eval sandbox-script.js:1:16).]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 6. Security & Error Handling / Overselling Prevention.]]>
+        <![CDATA[Test description: Insufficient inventory error.]]>
+        <![CDATA[Error message: expected undefined to equal 'INSUFFICIENT_INVENTORY'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to equal 'INSUFFICIENT_INVENTORY'
+   at Object.eval sandbox-script.js:2:12).]]>
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.3 按状态过滤 - ACTIVE ✅" id="9875019e-53ca-4cb5-bf71-19e28cefa0c3" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="1.150">
-    <testcase name="状态码是200" time="1.150" classname="Us012OtA2"/>
-    <testcase name="只返回ACTIVE状态的票券" time="1.150" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.4 分页测试 - 第1页 ✅" id="33746b76-fbfb-4375-bafd-58e203bc1ed1" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="0.665">
-    <testcase name="状态码是200" time="0.665" classname="Us012OtA2"/>
-    <testcase name="返回正确的分页信息" time="0.665" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.5 分页测试 - 第2页 ✅" id="9397eca1-6e59-4c84-a3f9-fa808dffbcec" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="0.734">
-    <testcase name="状态码是200" time="0.734" classname="Us012OtA2"/>
-    <testcase name="返回正确的分页信息" time="0.734" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.6 按时间范围过滤 ✅" id="9939ba1f-d209-483a-af87-1446900e512c" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="1.181">
-    <testcase name="状态码是200" time="1.181" classname="Us012OtA2"/>
-    <testcase name="返回的票券都在时间范围内" time="1.181" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.7 组合过滤 - 状态+分页 ✅" id="14b93b8d-9e70-454a-848e-0aa0b5ac1ae3" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="0.678">
-    <testcase name="状态码是200" time="0.678" classname="Us012OtA2"/>
-    <testcase name="组合过滤生效" time="0.678" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程三: 票券列表查询测试 🔍 / 3.8 错误测试 - 无效分页参数 ❌" id="95988871-73e1-42ee-aa59-440426d043f1" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="返回422验证错误" time="0.001" classname="Us012OtA2"/>
-    <testcase name="错误信息正确" time="0.001" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 准备: 生成测试票据" id="5a6c8fc1-f5ad-4c52-a801-6ef61241f11c" timestamp="2025-11-25T07:43:06.815Z" tests="1" failures="0" errors="0" time="5.471">
-    <testcase name="票据生成成功" time="5.471" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 准备: 激活测试票据" id="55e0d32c-744e-4d10-97ea-a4c20a82ff24" timestamp="2025-11-25T07:43:06.815Z" tests="1" failures="1" errors="0" time="0.001">
-    <testcase name="激活成功" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 200 but got 400">
+  <testsuite name="7. Performance &amp; Scale Validation / 5000 Unit Allocation Verification" id="3af60844-ab95-46f4-8299-244c2fd0a7e8" timestamp="2025-11-28T07:39:07.466Z" tests="3" failures="2" errors="0" time="0.001">
+    <testcase name="Total OTA allocation meets 5000 unit requirement" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected NaN to be at least 4500">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 准备: 激活测试票据.]]>
-        <![CDATA[Test description: 激活成功.]]>
-        <![CDATA[Error message: expected response to have status code 200 but got 400.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 400
-   at Object.eval sandbox-script.js:1:24).]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 7. Performance & Scale Validation / 5000 Unit Allocation Verification.]]>
+        <![CDATA[Test description: Total OTA allocation meets 5000 unit requirement.]]>
+        <![CDATA[Error message: expected NaN to be at least 4500.]]>
+        <![CDATA[Stacktrace: AssertionError: expected NaN to be at least 4500
+   at Object.eval sandbox-script.js:1:13).]]>
       </failure>
     </testcase>
-  </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌" id="23eb435e-61f1-4688-8bf3-d4cdcb121e65" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="2" errors="0" time="0.001">
-    <testcase name="返回409冲突错误" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 409 but got 400">
+    <testcase name="Performance: Response under 2 seconds" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Business requirement: Nov 15 deadline readiness" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected 2025-11-28T07:39:17.012Z to be below 2025-11-15T00:00:00.000Z">
         <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌.]]>
-        <![CDATA[Test description: 返回409冲突错误.]]>
-        <![CDATA[Error message: expected response to have status code 409 but got 400.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 409 but got 400
-   at Object.eval sandbox-script.js:1:25).]]>
-      </failure>
-    </testcase>
-    <testcase name="错误信息正确" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected 'INVALID_REQUEST' to deeply equal 'TICKET_ALREADY_ACTIVATED'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.1 测试重复激活保护 ❌.]]>
-        <![CDATA[Test description: 错误信息正确.]]>
-        <![CDATA[Error message: expected 'INVALID_REQUEST' to deeply equal 'TICKET_ALREADY_ACTIVATED'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected 'INVALID_REQUEST' to deeply equal 'TICKET_ALREADY_ACTIVATED'
-   at Object.eval sandbox-script.js:2:25).]]>
-      </failure>
-    </testcase>
-  </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.2 测试无效票据码 ❌" id="52b25a34-2a8b-4b3e-b5fa-e5eeab93d8ee" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="2" errors="0" time="0.001">
-    <testcase name="返回404错误" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 404 but got 400">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.2 测试无效票据码 ❌.]]>
-        <![CDATA[Test description: 返回404错误.]]>
-        <![CDATA[Error message: expected response to have status code 404 but got 400.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 404 but got 400
-   at Object.eval sandbox-script.js:1:26).]]>
-      </failure>
-    </testcase>
-    <testcase name="错误信息正确" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected 'INVALID_REQUEST' to deeply equal 'TICKET_NOT_FOUND'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.2 测试无效票据码 ❌.]]>
-        <![CDATA[Test description: 错误信息正确.]]>
-        <![CDATA[Error message: expected 'INVALID_REQUEST' to deeply equal 'TICKET_NOT_FOUND'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected 'INVALID_REQUEST' to deeply equal 'TICKET_NOT_FOUND'
-   at Object.eval sandbox-script.js:2:26).]]>
-      </failure>
-    </testcase>
-  </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.3 创建预订用于取消测试" id="a7aa87a8-f502-49ab-b635-f1c003ac25ef" timestamp="2025-11-25T07:43:06.815Z" tests="1" failures="1" errors="0" time="1.669">
-    <testcase name="预订创建成功" time="1.669" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 201 but got 500">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.3 创建预订用于取消测试.]]>
-        <![CDATA[Test description: 预订创建成功.]]>
-        <![CDATA[Error message: expected response to have status code 201 but got 500.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 500
-   at Object.eval sandbox-script.js:1:27).]]>
-      </failure>
-    </testcase>
-  </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.4 取消预订" id="00803caa-28e0-431c-84df-6a3376128331" timestamp="2025-11-25T07:43:06.815Z" tests="1" failures="1" errors="0" time="0.002">
-    <testcase name="返回204 No Content" time="0.002" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected response to have status code 204 but got 404">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.4 取消预订.]]>
-        <![CDATA[Test description: 返回204 No Content.]]>
-        <![CDATA[Error message: expected response to have status code 204 but got 404.]]>
-        <![CDATA[Stacktrace: AssertionError: expected response to have status code 204 but got 404
-   at Object.eval sandbox-script.js:1:28).]]>
-      </failure>
-    </testcase>
-  </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.5 测试无效API Key ❌" id="d23b13d8-e3d9-4eaa-ad1d-23e40c651efb" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="返回401未授权" time="0.001" classname="Us012OtA2"/>
-    <testcase name="错误信息正确" time="0.001" classname="Us012OtA2"/>
-  </testsuite>
-  <testsuite name="流程四: 状态转换和错误处理验证 / 3.6 测试超量预订 ❌" id="39c96651-591a-45a0-baba-47f5619c2f04" timestamp="2025-11-25T07:43:06.815Z" tests="2" failures="1" errors="0" time="0.001">
-    <testcase name="返回422验证错误" time="0.001" classname="Us012OtA2"/>
-    <testcase name="错误信息正确" time="0.001" classname="Us012OtA2">
-      <failure type="AssertionFailure" message="expected { code: 'VALIDATION_ERROR', …(1) } to have property 'error'">
-        <![CDATA[Failed 1 times.]]>
-        <![CDATA[Collection JSON ID: b3395114-20f0-42dd-9739-64df842b83ec.]]>
-        <![CDATA[Collection name: US-012: OTA平台完整集成测试2.]]>
-        <![CDATA[Request name: 流程四: 状态转换和错误处理验证 / 3.6 测试超量预订 ❌.]]>
-        <![CDATA[Test description: 错误信息正确.]]>
-        <![CDATA[Error message: expected { code: 'VALIDATION_ERROR', …(1) } to have property 'error'.]]>
-        <![CDATA[Stacktrace: AssertionError: expected { code: 'VALIDATION_ERROR', …(1) } to have property 'error'
-   at Object.eval sandbox-script.js:2:30).]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 7. Performance & Scale Validation / 5000 Unit Allocation Verification.]]>
+        <![CDATA[Test description: Business requirement: Nov 15 deadline readiness.]]>
+        <![CDATA[Error message: expected 2025-11-28T07:39:17.012Z to be below 2025-11-15T00:00:00.000Z.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 2025-11-28T07:39:17.012Z to be below 2025-11-15T00:00:00.000Z
+   at Object.eval sandbox-script.js:3:13).]]>
       </failure>
     </testcase>
   </testsuite>

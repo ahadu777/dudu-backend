@@ -4,7 +4,7 @@ slug: venue-analytics-reporting
 team: "C - Gate"
 oas_paths: ["/venue/{venue_code}/analytics"]
 migrations: []
-status: "Pending"
+status: "Done"
 readiness: "production"
 branch: "init-ai"
 pr: ""
