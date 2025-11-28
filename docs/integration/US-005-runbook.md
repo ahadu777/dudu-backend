@@ -139,7 +139,6 @@ curl -s -X GET "http://localhost:8080/reports/redemptions?from=${FROM}&to=${TO}"
       "location_id": 52,
       "location_name": "Marina Bay Terminal",
       "operator_id": "alice",
-      "session_id": "sess_789",
       "device_id": "gate-01",
       "user_id": "user123",
       "remaining_uses": 7

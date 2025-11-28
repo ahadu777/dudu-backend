@@ -18,10 +18,6 @@
       "value": ""
     },
     {
-      "key": "session_id",
-      "value": ""
-    },
-    {
       "key": "order_id",
       "value": ""
     },
@@ -315,21 +311,18 @@
           }
         },
         {
-          "name": "2. Create Validator Session",
+          "name": "2. Scan and Redeem Ticket",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Validator session created', function () {",
-                  "    pm.response.to.have.status(201);",
+                  "pm.test('Ticket scanned and redeemed successfully', function () {",
+                  "    pm.response.to.have.status(200);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.session_id).to.be.a('string');",
-                  "    pm.expect(response.device_id).to.eql('gate-01');",
-                  "    pm.expect(response.location_id).to.eql(52);",
-                  "    ",
-                  "    // Store session ID",
-                  "    pm.collectionVariables.set('session_id', response.session_id);",
+                  "    pm.expect(response.result).to.eql('success');",
+                  "    pm.expect(response.remaining_uses).to.be.a('number');",
+                  "    pm.expect(response.remaining_uses).to.be.at.least(0);",
                   "});"
                 ]
               }
@@ -349,66 +342,27 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"location_id\": {{location_id}}\n}"
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"venue_code\": \"central-pier\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/validators/sessions",
+              "raw": "{{baseUrl}}/venue/scan",
               "host": ["{{baseUrl}}"],
-              "path": ["validators", "sessions"]
+              "path": ["venue", "scan"]
             }
           }
         },
         {
-          "name": "3. Scan and Redeem Ticket",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Ticket scanned and redeemed successfully', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    const response = pm.response.json();",
-                  "    pm.expect(response.result).to.eql('success');",
-                  "    pm.expect(response.entitlements).to.be.an('array');",
-                  "    // Check remaining uses in entitlements array",
-                  "    const ferryEnt = response.entitlements.find(e => e.function_code === 'ferry');",
-                  "    pm.expect(ferryEnt.remaining_uses).to.be.a('number');",
-                  "    pm.expect(ferryEnt.remaining_uses).to.be.at.least(0);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_id\": \"{{session_id}}\",\n  \"location_id\": {{location_id}}\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/tickets/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["tickets", "scan"]
-            }
-          }
-        },
-        {
-          "name": "4. Replay Protection Test",
+          "name": "3. Replay Protection Test",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Replay protection works', function () {",
-                  "    pm.response.to.have.status(409);",
+                  "    pm.response.to.have.status(422);",
                   "    const response = pm.response.json();",
-                  "    pm.expect(response.error_code).to.exist;",
+                  "    pm.expect(response.result).to.eql('reject');",
+                  "    pm.expect(response.reason).to.eql('ALREADY_REDEEMED');",
                   "});"
                 ]
               }
@@ -418,18 +372,22 @@
             "method": "POST",
             "header": [
               {
+                "key": "Authorization",
+                "value": "Bearer {{operator_token}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"session_id\": \"{{session_id}}\",\n  \"location_id\": {{location_id}}\n}"
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\",\n  \"venue_code\": \"central-pier\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/tickets/scan",
+              "raw": "{{baseUrl}}/venue/scan",
               "host": ["{{baseUrl}}"],
-              "path": ["tickets", "scan"]
+              "path": ["venue", "scan"]
             }
           }
         }

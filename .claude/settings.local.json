@@ -25,7 +25,8 @@
       "Bash(taskkill:*)",
       "Bash(git pull:*)",
       "Bash(git fetch:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(npm run test:prd006:*)"
     ],
     "deny": [],
     "ask": []

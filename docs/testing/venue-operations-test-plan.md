@@ -58,51 +58,44 @@ curl -X POST http://localhost:8080/tickets/TIK-USR1001-106/qr-token \
 # Expected: JWT QR token for multi-function validation
 ```
 
-### Step 4: Create Multi-Terminal Sessions (Enhanced US-002)
+### Step 4: Operator Authentication (Enhanced US-002)
 
-**Terminal 1: Central Pier Ferry Boarding**
+**Terminal 1: Alice at Central Pier**
 ```bash
-curl -X POST http://localhost:8080/venue/sessions \
+# Login as Alice
+ALICE_RESP=$(curl -s -X POST http://localhost:8080/operators/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "venue_code": "central-pier",
-    "operator_id": 2001,
-    "operator_name": "Alice Chan",
-    "terminal_device_id": "TERMINAL-CP-001",
-    "duration_hours": 8
-  }'
+  -d '{"username": "alice", "password": "secret123"}')
+export ALICE_TOKEN=$(echo $ALICE_RESP | jq -r '.operator_token')
+echo "Alice Token: ${ALICE_TOKEN:0:50}..."
 
-# Expected: Active session for Central Pier ferry operations
-# Response: session_code for subsequent scans
+# Expected: JWT operator token for Central Pier operations
 ```
 
-**Terminal 2: Cheung Chau All Functions**
+**Terminal 2: Bob at Cheung Chau**
 ```bash
-curl -X POST http://localhost:8080/venue/sessions \
+# Login as Bob
+BOB_RESP=$(curl -s -X POST http://localhost:8080/operators/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "venue_code": "cheung-chau",
-    "operator_id": 2002,
-    "operator_name": "Bob Wong",
-    "terminal_device_id": "TERMINAL-CC-001",
-    "duration_hours": 8
-  }'
+  -d '{"username": "bob", "password": "secret456"}')
+export BOB_TOKEN=$(echo $BOB_RESP | jq -r '.operator_token')
+echo "Bob Token: ${BOB_TOKEN:0:50}..."
 
-# Expected: Active session for Cheung Chau multi-function operations
+# Expected: JWT operator token for Cheung Chau operations
 ```
 
 ### Step 5: Multi-Function Scanning Tests
 
 **Test 5.1: Ferry Boarding (Unlimited)**
 ```bash
-# Scan at Central Pier for ferry boarding
-curl -X POST http://localhost:8080/venue/scan \
+# Scan at Central Pier for ferry boarding (Alice)
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $ALICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "qr_token": "<jwt_qr_token>",
-    "function_code": "ferry_boarding",
-    "session_code": "<central_pier_session>",
-    "terminal_device_id": "TERMINAL-CP-001"
+    "function_code": "ferry",
+    "venue_code": "central-pier"
   }'
 
 # Expected: SUCCESS
@@ -114,14 +107,14 @@ curl -X POST http://localhost:8080/venue/scan \
 
 **Test 5.2: Gift Redemption (Single Use)**
 ```bash
-# First gift redemption attempt
-curl -X POST http://localhost:8080/venue/scan \
+# First gift redemption attempt (Bob at Cheung Chau)
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $BOB_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "qr_token": "<jwt_qr_token>",
-    "function_code": "gift_redemption",
-    "session_code": "<cheung_chau_session>",
-    "terminal_device_id": "TERMINAL-CC-001"
+    "function_code": "gift",
+    "venue_code": "cheung-chau"
   }'
 
 # Expected: SUCCESS
@@ -129,30 +122,30 @@ curl -X POST http://localhost:8080/venue/scan \
 # - Remaining uses decremented to 0
 
 # Second gift redemption attempt (should fail)
-curl -X POST http://localhost:8080/venue/scan \
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $BOB_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "qr_token": "<jwt_qr_token>",
-    "function_code": "gift_redemption",
-    "session_code": "<cheung_chau_session>",
-    "terminal_device_id": "TERMINAL-CC-001"
+    "qr_token": "<new_jwt_qr_token>",
+    "function_code": "gift",
+    "venue_code": "cheung-chau"
   }'
 
 # Expected: REJECT
-# - Reason: "NO_REMAINING_USES"
+# - Reason: "NO_REMAINING" or "NO_REMAINING_USES"
 # - Fraud detection flags attempt
 ```
 
 **Test 5.3: Playground Tokens (Counted)**
 ```bash
-# Use playground token (first of 10)
-curl -X POST http://localhost:8080/venue/scan \
+# Use playground token (first of 10) - Bob at Cheung Chau
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $BOB_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "qr_token": "<jwt_qr_token>",
     "function_code": "playground_token",
-    "session_code": "<cheung_chau_session>",
-    "terminal_device_id": "TERMINAL-CC-001"
+    "venue_code": "cheung-chau"
   }'
 
 # Expected: SUCCESS
@@ -164,26 +157,26 @@ curl -X POST http://localhost:8080/venue/scan \
 
 ### Test 2.1: JTI Duplication Detection
 ```bash
-# Terminal 1: First scan (should succeed)
-curl -X POST http://localhost:8080/venue/scan \
+# Terminal 1 (Alice): First scan (should succeed)
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $ALICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "qr_token": "<jwt_qr_token>",
-    "function_code": "ferry_boarding",
-    "session_code": "<central_pier_session>",
-    "terminal_device_id": "TERMINAL-CP-001"
+    "function_code": "ferry",
+    "venue_code": "central-pier"
   }'
 
 # Expected: SUCCESS
 
-# Terminal 2: Same QR token, different function (should fail)
-curl -X POST http://localhost:8080/venue/scan \
+# Terminal 2 (Bob): Same QR token, different venue (should fail)
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $BOB_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "qr_token": "<jwt_qr_token>",
-    "function_code": "gift_redemption",
-    "session_code": "<cheung_chau_session>",
-    "terminal_device_id": "TERMINAL-CC-001"
+    "function_code": "gift",
+    "venue_code": "cheung-chau"
   }'
 
 # Expected: REJECT if same JTI already used
@@ -195,15 +188,17 @@ curl -X POST http://localhost:8080/venue/scan \
 ### Test 2.2: Concurrent Scanning
 ```bash
 # Run these simultaneously from different terminals
-# Terminal 1:
-curl -X POST http://localhost:8080/venue/scan \
+# Terminal 1 (Alice):
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $ALICE_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"qr_token": "<jwt_qr_token>", "function_code": "ferry_boarding", "session_code": "<session1>"}' &
+  -d '{"qr_token": "<jwt_qr_token>", "function_code": "ferry", "venue_code": "central-pier"}' &
 
-# Terminal 2 (immediately):
-curl -X POST http://localhost:8080/venue/scan \
+# Terminal 2 (Bob - immediately):
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $BOB_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"qr_token": "<jwt_qr_token>", "function_code": "ferry_boarding", "session_code": "<session2>"}' &
+  -d '{"qr_token": "<jwt_qr_token>", "function_code": "ferry", "venue_code": "cheung-chau"}' &
 
 # Expected: Only one should succeed
 # - First response: SUCCESS
@@ -216,12 +211,13 @@ curl -X POST http://localhost:8080/venue/scan \
 ```bash
 # Measure response times for 100 scans
 for i in {1..100}; do
-  time curl -X POST http://localhost:8080/venue/scan \
+  time curl -s -X POST http://localhost:8080/venue/scan \
+    -H "Authorization: Bearer $ALICE_TOKEN" \
     -H "Content-Type: application/json" \
     -d '{
       "qr_token": "<jwt_qr_token>",
-      "function_code": "ferry_boarding",
-      "session_code": "<session_code>"
+      "function_code": "ferry",
+      "venue_code": "central-pier"
     }' >/dev/null 2>&1
 done
 
@@ -233,12 +229,13 @@ done
 ### Test 3.2: Load Testing (1000+ scans/hour)
 ```bash
 # Run concurrent scans to simulate peak load
-seq 1 1000 | xargs -n1 -P50 -I {} curl -X POST http://localhost:8080/venue/scan \
+seq 1 1000 | xargs -n1 -P50 -I {} curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $ALICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "qr_token": "<jwt_qr_token>",
-    "function_code": "ferry_boarding",
-    "session_code": "<session_code>"
+    "function_code": "ferry",
+    "venue_code": "central-pier"
   }' >/dev/null 2>&1
 
 # Expected: System handles 1000+ scans/hour
@@ -303,13 +300,16 @@ curl -X GET "http://localhost:8080/venue/gift-shop-central/analytics?hours=1"
 ## Troubleshooting Guide
 
 **Issue: "VENUE_NOT_FOUND" error**
-- Check venue_code spelling in session creation
+- Check venue_code spelling in scan request
 - Verify venue exists in mock configuration
 
-**Issue: "INVALID_SESSION" error**
-- Ensure session was created successfully
-- Check session hasn't expired (8 hour default)
-- Verify session_code matches exactly
+**Issue: "No operator token provided" error**
+- Ensure Authorization header is included: `Authorization: Bearer <token>`
+- Verify operator login was successful and token is saved
+
+**Issue: 401 Unauthorized**
+- Operator token may have expired (8 hour default)
+- Re-login to get a fresh operator_token
 
 **Issue: Response time > 2 seconds**
 - Check server load and available memory
@@ -318,7 +318,7 @@ curl -X GET "http://localhost:8080/venue/gift-shop-central/analytics?hours=1"
 
 **Issue: Fraud detection not working**
 - Ensure using same JTI in duplicate attempts
-- Check that sessions are from different venues
+- Check that operators are scanning at different venues
 - Verify mock store JTI tracking is enabled
 
 ## Database Mode Testing
