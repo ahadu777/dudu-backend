@@ -198,7 +198,63 @@ Everything is **dynamically discovered at runtime**:
 
 ---
 
-### 9. Test Coverage - `/coverage`
+### 9. Compliance Dashboard - `/compliance` ⭐ NEW
+
+**Real-time documentation compliance audit** with self-healing suggestions.
+
+**What it shows:**
+- Overall compliance score (0-100%)
+- Critical issues (errors) vs warnings
+- Total files audited (PRDs, Stories, Cards)
+- **Quick Wins** - Prioritized fixes for maximum impact
+- Detailed violations table with:
+  - File path
+  - Issue description
+  - Exact fix needed
+  - Impact explanation
+
+**Data source:**
+- **100% Dynamic** - Scans all documentation files in real-time
+- No hardcoded data - runs `complianceAuditor.ts` on every request
+- Validates against rules in this document
+
+**Use case:** Self-service documentation quality control for developers
+
+**Features:**
+- ✅ Auto-detects violations (status values, missing fields, broken relationships)
+- ✅ Provides actionable fix suggestions
+- ✅ Explains impact of each violation
+- ✅ Prioritizes "quick wins" for bulk fixes
+- ✅ Updates instantly when documentation changes
+
+**Example violations detected:**
+```
+❌ ERROR | Story Status | docs/stories/_index.yaml (US-001)
+  Issue: Invalid status: "Approved"
+  Fix: Change status to one of: Draft, In Progress, Done
+  Impact: Status filters will not work correctly
+
+❌ ERROR | Missing Field | docs/cards/catalog-endpoint.md
+  Issue: Missing related_stories field
+  Fix: Add related_stories: ["US-001"] to frontmatter
+  Impact: Card appears orphaned, bidirectional navigation broken
+
+⚠️ WARNING | PRD Status | docs/prd/PRD-001-cruise-ticketing.md
+  Issue: Invalid status: "Implemented"
+  Fix: Change status to one of: Draft, In Progress, Done
+  Impact: Status filters and dashboards may not recognize this PRD
+```
+
+**Self-Healing Workflow:**
+1. Developer makes documentation changes
+2. Visits `/compliance` to check impact
+3. Sees specific violations with exact fixes
+4. Applies suggested fixes
+5. Refreshes dashboard to verify (score improves instantly)
+
+---
+
+### 10. Test Coverage - `/coverage`
 
 **Test coverage metrics** from Newman test reports.
 
@@ -220,6 +276,25 @@ PRD-006 | Ticket Activation System | ✅ Complete (100%)
   Requests: 23 | Assertions: 46 | Pass Rate: 100%
   Collection: prd-006-ticket-activation.json
 ```
+
+---
+
+### 11. Relationship Graph - `/graph`
+
+**Interactive visual graph** showing PRD → Story → Card connections.
+
+**What it shows:**
+- All PRDs, Stories, Cards as clickable nodes
+- Visual connections showing relationships
+- Color-coded by type (PRD=blue, Story=green, Card=red)
+- Interactive click to highlight connected nodes
+- Filter by PRD dropdown
+
+**Data source:**
+- Built dynamically using `sitemapBuilder.ts`
+- Relationships from YAML frontmatter across all files
+
+**Use case:** Visual exploration of project structure and dependencies
 
 ---
 
