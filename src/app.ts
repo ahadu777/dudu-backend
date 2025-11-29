@@ -12,7 +12,7 @@ import { loggingMiddleware } from './middlewares/logging';
 import { reqIdMiddleware } from './middlewares/reqId';
 import { logger } from './utils/logger';
 import { registerModuleRouters } from './modules';
-import { loadPRDDocuments, loadStoriesIndex, getRelatedStories, getStoryById } from './utils/prdParser';
+import { loadPRDDocuments, loadStoriesIndex, getRelatedStories } from './utils/prdParser';
 import { loadCardDocuments, getCardBySlug, getCardStats } from './utils/cardParser';
 import { loadTestCoverageData, getCoverageStats } from './utils/coverageParser';
 import { buildSitemap, findStoriesUsingCard, findPRDForStory } from './utils/sitemapBuilder';
@@ -722,178 +722,9 @@ class App {
     });
 
     // Individual story view
+    // Redirect /prd/story/:storyId to /stories/:storyId
     this.app.get('/prd/story/:storyId', (req, res) => {
-      try {
-        const { storyId } = req.params;
-        const story = getStoryById(storyId);
-        
-        if (!story) {
-          return res.status(404).json({ error: 'Story not found' });
-        }
-        
-        const storyIdDisplay = story.metadata?.story_id || story.metadata?.id || storyId;
-        const storyTitle = story.metadata?.title || storyIdDisplay;
-        
-        let html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${storyTitle} - User Story</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      overflow-x: hidden;
-      word-wrap: break-word;
-    }
-    .back-link {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: #3498db;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .back-link:hover {
-      text-decoration: underline;
-    }
-    h1 {
-      color: #2c3e50;
-      margin-bottom: 10px;
-      border-bottom: 3px solid #27ae60;
-      padding-bottom: 10px;
-    }
-    .story-id {
-      display: inline-block;
-      background: #27ae60;
-      color: white;
-      padding: 6px 14px;
-      border-radius: 4px;
-      font-size: 0.9em;
-      font-weight: 600;
-      margin-bottom: 20px;
-    }
-    .metadata {
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: 6px;
-      margin-bottom: 20px;
-      border-left: 4px solid #27ae60;
-    }
-    .metadata-item {
-      margin: 8px 0;
-      font-size: 0.95em;
-    }
-    .metadata-item strong {
-      color: #555;
-      margin-right: 8px;
-    }
-    .content {
-      margin-top: 20px;
-      padding: 20px;
-      background: #f9f9f9;
-      border-radius: 4px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      font-size: 0.95em;
-      line-height: 1.8;
-      color: #2c3e50;
-    }
-    .content h1, .content h2, .content h3 {
-      margin-top: 1.5em;
-      margin-bottom: 0.5em;
-      color: #2c3e50;
-    }
-    .content h1 { font-size: 1.8em; border-bottom: 2px solid #27ae60; padding-bottom: 0.3em; }
-    .content h2 { font-size: 1.5em; border-bottom: 1px solid #e0e0e0; padding-bottom: 0.3em; }
-    .content h3 { font-size: 1.2em; }
-    .content p { margin: 1em 0; }
-    .content ul, .content ol { margin: 1em 0; padding-left: 2em; }
-    .content li { margin: 0.5em 0; }
-    .content code {
-      background: #f4f4f4;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 0.9em;
-    }
-    .content pre {
-      background: #2c3e50;
-      color: #ecf0f1;
-      padding: 15px;
-      border-radius: 5px;
-      overflow-x: auto;
-      margin: 1em 0;
-    }
-    .content pre code {
-      background: transparent;
-      padding: 0;
-      color: inherit;
-    }
-    .content a {
-      color: #27ae60;
-      text-decoration: none;
-    }
-    .content a:hover {
-      text-decoration: underline;
-    }
-    .content strong {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <a href="/prd" class="back-link">← Back to PRD List</a>
-    <h1>${storyTitle}</h1>
-    <div class="story-id">${storyIdDisplay}</div>
-    
-    <div class="metadata">`;
-        
-        if (story.metadata?.status) {
-          html += `<div class="metadata-item"><strong>Status:</strong> ${story.metadata.status}</div>`;
-        }
-        if (story.metadata?.business_requirement) {
-          const prdId = story.metadata.business_requirement;
-          html += `<div class="metadata-item"><strong>Business Requirement:</strong> <a href="/prd/${prdId}">${prdId}</a></div>`;
-        }
-        if (story.metadata?.created_date) {
-          html += `<div class="metadata-item"><strong>Created:</strong> ${story.metadata.created_date}</div>`;
-        }
-        if (story.metadata?.completed_date) {
-          html += `<div class="metadata-item"><strong>Completed:</strong> ${story.metadata.completed_date}</div>`;
-        }
-        if (story.metadata?.deadline) {
-          html += `<div class="metadata-item"><strong>Deadline:</strong> ${story.metadata.deadline}</div>`;
-        }
-        
-        // Convert markdown to HTML
-        const htmlContent = markdownToHtml(story.content);
-        
-        html += `</div>
-    <div class="content">${htmlContent}</div>
-  </div>
-</body>
-</html>`;
-
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
-      } catch (error) {
-        logger.error('Error loading story:', error);
-        res.status(500).json({ error: 'Failed to load story' });
-      }
+      res.redirect(`/stories/${req.params.storyId}`);
     });
 
     // Documentation Hub - Landing Page (PRDs, Stories, Cards)
@@ -2657,20 +2488,25 @@ class App {
 
       if (type === 'prd') {
         // Highlight PRD itself
-        document.querySelector(\`.prd-node[data-id="\${id}"]\`).classList.remove('dimmed');
-        document.querySelector(\`.prd-node[data-id="\${id}"]\`).classList.add('highlighted');
+        const prdNode = document.querySelector('.prd-node[data-id="' + id + '"]');
+        if (prdNode) {
+          prdNode.classList.remove('dimmed');
+          prdNode.classList.add('highlighted');
+        }
 
         // Highlight related stories and cards
-        document.querySelectorAll(\`.story-node[data-prd="\${id}"]\`).forEach(node => {
+        document.querySelectorAll('.story-node[data-prd="' + id + '"]').forEach(node => {
           node.classList.remove('dimmed');
           node.classList.add('highlighted');
         });
-        document.querySelectorAll(\`.card-node[data-prd="\${id}"]\`).forEach(node => {
+        document.querySelectorAll('.card-node[data-prd="' + id + '"]').forEach(node => {
           node.classList.remove('dimmed');
           node.classList.add('highlighted');
         });
       } else if (type === 'story') {
-        const storyNode = document.querySelector(\`.story-node[data-id="\${id}"]\`);
+        const storyNode = document.querySelector('.story-node[data-id="' + id + '"]');
+        if (!storyNode) return;
+
         const prdId = storyNode.dataset.prd;
 
         // Highlight story itself
@@ -2678,16 +2514,21 @@ class App {
         storyNode.classList.add('highlighted');
 
         // Highlight parent PRD
-        document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.remove('dimmed');
-        document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.add('highlighted');
+        const prdNode = document.querySelector('.prd-node[data-id="' + prdId + '"]');
+        if (prdNode) {
+          prdNode.classList.remove('dimmed');
+          prdNode.classList.add('highlighted');
+        }
 
         // Highlight related cards
-        document.querySelectorAll(\`.card-node[data-story="\${id}"]\`).forEach(node => {
+        document.querySelectorAll('.card-node[data-story="' + id + '"]').forEach(node => {
           node.classList.remove('dimmed');
           node.classList.add('highlighted');
         });
       } else if (type === 'card') {
-        const cardNode = document.querySelector(\`.card-node[data-id="\${id}"]\`);
+        const cardNode = document.querySelector('.card-node[data-id="' + id + '"]');
+        if (!cardNode) return;
+
         const storyId = cardNode.dataset.story;
         const prdId = cardNode.dataset.prd;
 
@@ -2696,12 +2537,18 @@ class App {
         cardNode.classList.add('highlighted');
 
         // Highlight parent story
-        document.querySelector(\`.story-node[data-id="\${storyId}"]\`).classList.remove('dimmed');
-        document.querySelector(\`.story-node[data-id="\${storyId}"]\`).classList.add('highlighted');
+        const storyNodeEl = document.querySelector('.story-node[data-id="' + storyId + '"]');
+        if (storyNodeEl) {
+          storyNodeEl.classList.remove('dimmed');
+          storyNodeEl.classList.add('highlighted');
+        }
 
         // Highlight parent PRD
-        document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.remove('dimmed');
-        document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.add('highlighted');
+        const prdNodeEl = document.querySelector('.prd-node[data-id="' + prdId + '"]');
+        if (prdNodeEl) {
+          prdNodeEl.classList.remove('dimmed');
+          prdNodeEl.classList.add('highlighted');
+        }
       }
     }
 
@@ -2721,13 +2568,16 @@ class App {
       });
 
       // Highlight selected PRD
-      document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.remove('dimmed');
+      const prdNode = document.querySelector('.prd-node[data-id="' + prdId + '"]');
+      if (prdNode) {
+        prdNode.classList.remove('dimmed');
+      }
 
       // Highlight related stories and cards
-      document.querySelectorAll(\`.story-node[data-prd="\${prdId}"]\`).forEach(node => {
+      document.querySelectorAll('.story-node[data-prd="' + prdId + '"]').forEach(node => {
         node.classList.remove('dimmed');
       });
-      document.querySelectorAll(\`.card-node[data-prd="\${prdId}"]\`).forEach(node => {
+      document.querySelectorAll('.card-node[data-prd="' + prdId + '"]').forEach(node => {
         node.classList.remove('dimmed');
       });
     }
