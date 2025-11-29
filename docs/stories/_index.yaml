@@ -18,7 +18,7 @@ stories:
       - payment-webhook → tickets-issuance
       - tickets-issuance → my-tickets
       - tickets-issuance → qr-token
-      - [operators-login, qr-token] → tickets-scan
+      - "[operators-login, qr-token] → tickets-scan"
     # Cross-story relationships
     enhances: []
     enhanced_by: [US-011]
@@ -33,7 +33,7 @@ stories:
       - tickets-scan
     sequence:
       - operators-login → validators-sessions
-      - [validators-sessions, qr-token] → tickets-scan
+      - "[validators-sessions, qr-token] → tickets-scan"
     enhances: [US-001]
     # Business requirements
     business_requirement: "PRD-001"
@@ -196,7 +196,7 @@ stories:
       - tickets-issuance → ticket-lifecycle-daemon
       - ticket-lifecycle-daemon → notification-orchestrator
       - refund-processing → notification-orchestrator
-      - [operators-login, validators-sessions] → merchant-redemption-console
+      - "[operators-login, validators-sessions] → merchant-redemption-console"
     enhances: [US-002, US-005, US-006, US-007]
     # Business requirements
     business_requirement: "PRD-008"
@@ -310,7 +310,7 @@ stories:
     sequence:
       - tickets-issuance → reservation-slot-management
       - reservation-slot-management → customer-reservation-portal
-      - [operators-login, customer-reservation-portal] → operator-validation-scanner
+      - "[operators-login, customer-reservation-portal] → operator-validation-scanner"
     # Cross-story relationships
     enhances: [US-001, US-002]
     enhanced_by: []
@@ -334,7 +334,7 @@ stories:
     sequence:
       - tickets-issuance → ticket-activation
       - ticket-activation → time-slot-reservation
-      - [operators-login, time-slot-reservation] → reservation-validation-scanning
+      - "[operators-login, time-slot-reservation] → reservation-validation-scanning"
     # Cross-story relationships
     enhances: [US-001, US-002, US-003]
     enhanced_by: []

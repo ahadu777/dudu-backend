@@ -15,7 +15,7 @@ import { registerModuleRouters } from './modules';
 import { loadPRDDocuments, loadStoriesIndex, getRelatedStories, getStoryById } from './utils/prdParser';
 import { loadCardDocuments, getCardBySlug, getCardStats } from './utils/cardParser';
 import { loadTestCoverageData, getCoverageStats } from './utils/coverageParser';
-import { buildSitemap, findStoriesUsingCard } from './utils/sitemapBuilder';
+import { buildSitemap, findStoriesUsingCard, findPRDForStory } from './utils/sitemapBuilder';
 
 /**
  * Simple markdown to HTML converter for basic formatting
@@ -993,6 +993,93 @@ class App {
       font-weight: 700;
       color: #2c3e50;
     }
+    .rules-section {
+      margin-top: 40px;
+      border: 3px solid #e74c3c;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .rules-header {
+      background: #e74c3c;
+      color: white;
+      padding: 15px 20px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 1.1em;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rules-header:hover {
+      background: #c0392b;
+    }
+    .rules-content {
+      padding: 25px;
+      background: #fff5f5;
+    }
+    .rules-content h3 {
+      color: #e74c3c;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+    .rules-content h3:first-child {
+      margin-top: 0;
+    }
+    .rules-content ul {
+      margin-left: 20px;
+      margin-bottom: 15px;
+    }
+    .rules-content li {
+      margin: 8px 0;
+      color: #555;
+    }
+    .rules-content code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9em;
+      color: #c7254e;
+    }
+    .rules-content strong {
+      color: #2c3e50;
+    }
+    .warning-box {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .warning-box strong {
+      color: #856404;
+    }
+    details {
+      margin-top: 15px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #3498db;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      user-select: none;
+    }
+    summary:hover {
+      background: #e9ecef;
+    }
+    .example-box {
+      background: #f8f9fa;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9em;
+    }
   </style>
 </head>
 <body>
@@ -1023,6 +1110,12 @@ class App {
         <h2>🗺️ Documentation Sitemap</h2>
         <p>Hierarchical view of PRD → Story → Card relationships</p>
         <div class="stats">Complete project structure</div>
+      </a>
+
+      <a href="/graph" class="nav-card">
+        <h2>📊 Relationship Graph</h2>
+        <p>Interactive visual graph showing connections between PRDs, Stories, and Cards</p>
+        <div class="stats">Click nodes to explore relationships</div>
       </a>
 
       <a href="/coverage" class="nav-card">
@@ -1056,6 +1149,108 @@ class App {
         <h3>Test Coverage</h3>
         <div class="number">${Math.round((coverageStats.complete / coverageStats.total_prds) * 100)}%</div>
       </div>
+    </div>
+
+    <div class="rules-section">
+      <details open>
+        <summary class="rules-header">
+          <span>⚠️ Developer Maintenance Rules (MUST READ)</span>
+          <span style="font-size: 0.9em; font-weight: normal;">Click to expand/collapse</span>
+        </summary>
+        <div class="rules-content">
+          <div class="warning-box">
+            <strong>⚠️ Critical:</strong> These rules are REQUIRED for the documentation site to work correctly. Breaking these rules causes broken relationships, missing content, and navigation errors.
+          </div>
+
+          <h3>1. Always Include YAML Frontmatter</h3>
+          <p><strong>PRD Files (docs/prd/*.md):</strong></p>
+          <div class="example-box">---<br>prd_id: "PRD-009"<br>status: "Draft"<br>related_stories: []<br>---</div>
+          <p><strong>Story Entries (docs/stories/_index.yaml):</strong></p>
+          <div class="example-box">- id: US-020<br>&nbsp;&nbsp;title: "Story title"<br>&nbsp;&nbsp;status: "Draft"<br>&nbsp;&nbsp;business_requirement: "PRD-009"<br>&nbsp;&nbsp;cards: []</div>
+          <p><strong>Card Files (docs/cards/*.md):</strong></p>
+          <div class="example-box">---<br>slug: new-endpoint<br>status: "Ready"<br>team: "A - Commerce"<br>related_stories: ["US-020"]<br>---</div>
+
+          <h3>2. Use Consistent ID Formats</h3>
+          <ul>
+            <li><strong>PRD:</strong> <code>PRD-###</code> (e.g., PRD-001, PRD-009) ❌ NOT: prd-1, PRD1</li>
+            <li><strong>Story:</strong> <code>US-###</code> (e.g., US-001, US-020) ❌ NOT: us-1, US1</li>
+            <li><strong>Card slug:</strong> <code>kebab-case</code> (e.g., catalog-endpoint) ❌ NOT: catalog_endpoint</li>
+          </ul>
+
+          <h3>3. Maintain Bidirectional Relationships</h3>
+          <p><strong>When you link A → B, you MUST also link B → A</strong></p>
+          <ul>
+            <li>✅ Card links to story (<code>related_stories: ["US-020"]</code>)</li>
+            <li>✅ Story links back to card (<code>cards: ["card-slug"]</code>)</li>
+            <li>✅ Story links to PRD (<code>business_requirement: "PRD-009"</code>)</li>
+            <li>✅ PRD links back to story (<code>related_stories: ["US-020"]</code>)</li>
+          </ul>
+
+          <h3>4. File Naming Conventions</h3>
+          <ul>
+            <li><strong>PRD:</strong> <code>PRD-###-description.md</code></li>
+            <li><strong>Card:</strong> <code>slug-name.md</code> (must match slug in frontmatter)</li>
+            <li><strong>Story:</strong> Use <code>_index.yaml</code> (all stories in one file)</li>
+          </ul>
+
+          <h3>5. Valid Status Values</h3>
+          <ul>
+            <li><strong>PRD:</strong> Draft | In Progress | Done</li>
+            <li><strong>Story:</strong> Draft | In Progress | Done</li>
+            <li><strong>Card:</strong> Ready | In Progress | Done</li>
+          </ul>
+
+          <details>
+            <summary>🚨 Common Mistakes That Break the Site</summary>
+            <div style="margin-top: 15px;">
+              <p><strong>Mistake 1:</strong> Missing <code>business_requirement</code> in story → Story appears orphaned</p>
+              <p><strong>Mistake 2:</strong> Inconsistent ID casing (prd-009 vs PRD-009) → Links break</p>
+              <p><strong>Mistake 3:</strong> One-way relationships → Content missing from hierarchy</p>
+              <p><strong>Mistake 4:</strong> Missing <code>slug</code> in card frontmatter → Card invisible on site</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>📋 Pre-Commit Checklist</summary>
+            <div style="margin-top: 15px;">
+              <p><strong>For new PRDs:</strong></p>
+              <ul>
+                <li>Filename follows <code>PRD-###-description.md</code></li>
+                <li><code>prd_id</code> matches filename</li>
+                <li><code>status</code> and <code>related_stories</code> fields present</li>
+                <li>PRD added to at least one story's <code>business_requirement</code></li>
+              </ul>
+              <p><strong>For new Stories:</strong></p>
+              <ul>
+                <li>Entry added to <code>docs/stories/_index.yaml</code></li>
+                <li><code>id</code> follows <code>US-###</code> format</li>
+                <li><code>business_requirement</code> links to existing PRD</li>
+                <li>PRD's <code>related_stories</code> includes this story ID</li>
+              </ul>
+              <p><strong>For new Cards:</strong></p>
+              <ul>
+                <li>Filename matches slug</li>
+                <li>All required fields present: <code>slug</code>, <code>status</code>, <code>team</code>, <code>related_stories</code></li>
+                <li>At least one story's <code>cards</code> array includes this slug</li>
+                <li>Slug uses kebab-case</li>
+              </ul>
+            </div>
+          </details>
+
+          <details>
+            <summary>📖 Full Documentation</summary>
+            <div style="margin-top: 15px;">
+              <p>For complete guide with step-by-step examples, troubleshooting, and detailed explanations, see:</p>
+              <p style="margin-top: 10px;"><strong>📄 <a href="https://github.com/Synque/express/blob/init-ai/docs/reference/DOCUMENTATION-SITE.md" target="_blank" style="color: #3498db;">docs/reference/DOCUMENTATION-SITE.md</a></strong></p>
+            </div>
+          </details>
+
+          <p style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #e0e0e0; color: #7f8c8d; font-size: 0.95em;">
+            <strong>Remember:</strong> The documentation site is zero-maintenance ONLY if developers follow these rules.
+            Always verify your changes at <a href="http://localhost:8080/sitemap" style="color: #3498db;">http://localhost:8080/sitemap</a> before committing.
+          </p>
+        </div>
+      </details>
     </div>
   </div>
 </body>
@@ -1663,9 +1858,202 @@ class App {
     });
 
     // Individual Story View (redirect to existing route or create new one)
+    // Individual Story View
     this.app.get('/stories/:storyId', (req, res) => {
-      // Redirect to existing /prd/story/:storyId route
-      res.redirect(`/prd/story/${req.params.storyId}`);
+      try {
+        const { storyId } = req.params;
+        const stories = loadStoriesIndex();
+        const story = stories.find(s => s.id === storyId || s.id.toLowerCase() === storyId.toLowerCase());
+
+        if (!story) {
+          return res.status(404).json({ error: 'Story not found' });
+        }
+
+        const prd = findPRDForStory(storyId);
+        const cards = loadCardDocuments();
+        const storyCards = (story as any).cards || [];
+
+        let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${story.id}: ${story.title}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .back-link {
+      display: inline-block;
+      color: #3498db;
+      text-decoration: none;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    .story-id {
+      background: #3498db;
+      color: white;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+    .metadata {
+      background: #f8f9fa;
+      border-left: 4px solid #3498db;
+      padding: 15px;
+      margin-bottom: 25px;
+      border-radius: 4px;
+    }
+    .metadata-item {
+      margin: 8px 0;
+    }
+    .metadata-item strong {
+      color: #2c3e50;
+      margin-right: 10px;
+    }
+    .section {
+      margin-top: 30px;
+    }
+    .section h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+    .card-grid {
+      display: grid;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .card-item {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 15px;
+      background: #fafafa;
+      transition: all 0.2s;
+    }
+    .card-item:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border-color: #3498db;
+    }
+    .card-item a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .card-item a:hover {
+      text-decoration: underline;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .status-Done, .status-Complete {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-In.Progress {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .status-Draft, .status-Ready, .status-Approved {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/stories" class="back-link">← Back to Stories</a>
+    <h1>${story.title}</h1>
+    <div class="story-id">${story.id}</div>
+
+    <div class="metadata">`;
+
+        if (story.status) {
+          html += `<div class="metadata-item"><strong>Status:</strong> <span class="status-badge status-${story.status.replace(/ /g, '.')}">${story.status}</span></div>`;
+        }
+
+        if (prd) {
+          html += `<div class="metadata-item"><strong>Business Requirement:</strong> <a href="/prd/${prd.metadata.prd_id}">${prd.metadata.prd_id}: ${prd.title}</a></div>`;
+        } else if (story.business_requirement) {
+          html += `<div class="metadata-item"><strong>Business Requirement:</strong> ${story.business_requirement}</div>`;
+        }
+
+        html += `</div>`;
+
+        // Cards section
+        if (storyCards.length > 0) {
+          html += `
+    <div class="section">
+      <h2>🎯 Implementation Cards (${storyCards.length})</h2>
+      <div class="card-grid">`;
+
+          storyCards.forEach((cardSlug: string) => {
+            const card = cards.find(c => c.metadata.slug === cardSlug);
+            if (card) {
+              html += `
+        <div class="card-item">
+          <a href="/cards/${card.metadata.slug}">${card.metadata.slug}</a>
+          <span class="status-badge status-${card.metadata.status?.replace(/ /g, '.')}">${card.metadata.status}</span>
+          <div style="color: #7f8c8d; font-size: 0.9em; margin-top: 5px;">${card.title}</div>
+        </div>`;
+            } else {
+              html += `
+        <div class="card-item">
+          <span style="color: #e74c3c;">${cardSlug} (not found)</span>
+        </div>`;
+            }
+          });
+
+          html += `
+      </div>
+    </div>`;
+        } else {
+          html += `
+    <div class="section">
+      <h2>🎯 Implementation Cards</h2>
+      <p style="color: #7f8c8d; font-style: italic;">No cards defined for this story yet.</p>
+    </div>`;
+        }
+
+        html += `
+  </div>
+</body>
+</html>`;
+
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      } catch (error) {
+        logger.error('Error loading story:', error);
+        res.status(500).json({ error: 'Failed to load story' });
+      }
     });
 
     // Sitemap - Hierarchical tree view
@@ -1885,6 +2273,482 @@ class App {
       } catch (error) {
         logger.error('Error building sitemap:', error);
         res.status(500).json({ error: 'Failed to build sitemap' });
+      }
+    });
+
+    // Visual Relationship Graph
+    this.app.get('/graph', (_req, res) => {
+      try {
+        const sitemap = buildSitemap();
+
+        let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relationship Graph</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+    }
+    .nav-links {
+      display: flex;
+      gap: 15px;
+      font-size: 0.9em;
+    }
+    .nav-links a {
+      color: #3498db;
+      text-decoration: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: #e8f4f8;
+    }
+    .subtitle {
+      color: #7f8c8d;
+      margin-bottom: 30px;
+    }
+    .controls {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    .controls label {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .controls select {
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .graph-container {
+      display: flex;
+      gap: 40px;
+      overflow-x: auto;
+      padding: 30px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 8px;
+      min-height: 600px;
+    }
+    .column {
+      flex: 0 0 auto;
+      min-width: 280px;
+    }
+    .column-header {
+      text-align: center;
+      font-size: 1.2em;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .node {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+    }
+    .node:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    }
+    .node.highlighted {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
+    }
+    .node.dimmed {
+      opacity: 0.3;
+    }
+    .prd-node {
+      border-left: 5px solid #3498db;
+      background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+    }
+    .story-node {
+      border-left: 5px solid #2ecc71;
+      background: linear-gradient(135deg, #ffffff 0%, #e8f5e9 100%);
+    }
+    .card-node {
+      border-left: 5px solid #e74c3c;
+      background: linear-gradient(135deg, #ffffff 0%, #ffebee 100%);
+    }
+    .node-title {
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 5px;
+      font-size: 1em;
+    }
+    .node-subtitle {
+      font-size: 0.85em;
+      color: #7f8c8d;
+      margin-bottom: 8px;
+    }
+    .node-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.75em;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+    .status-Done, .status-Complete {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-In.Progress {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .status-Draft, .status-Ready {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+    .node-connections {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 0.8em;
+      color: #7f8c8d;
+    }
+    .stats-box {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+    .stat-item {
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 2em;
+      font-weight: 700;
+      color: #3498db;
+    }
+    .stat-label {
+      font-size: 0.9em;
+      color: #7f8c8d;
+    }
+    .legend {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    .legend-title {
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+    .legend-items {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+    .prd-color { background: #3498db; }
+    .story-color { background: #2ecc71; }
+    .card-color { background: #e74c3c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📊 Relationship Graph</h1>
+      <div class="nav-links">
+        <a href="/project-docs">← Hub</a>
+        <a href="/prd">PRDs</a>
+        <a href="/stories">Stories</a>
+        <a href="/cards">Cards</a>
+        <a href="/sitemap">Sitemap</a>
+      </div>
+    </div>
+    <p class="subtitle">Visual representation of PRD → Story → Card relationships</p>
+
+    <div class="controls">
+      <label>Filter by PRD:</label>
+      <select id="prdFilter" onchange="filterByPRD(this.value)">
+        <option value="">All PRDs</option>`;
+
+        sitemap.forEach(prd => {
+          html += `<option value="${prd.prd_id}">${prd.prd_id}: ${prd.title}</option>`;
+        });
+
+        html += `
+      </select>
+      <button onclick="resetFilter()" style="padding: 5px 15px; border: 1px solid #3498db; background: white; color: #3498db; border-radius: 4px; cursor: pointer; font-weight: 600;">Reset</button>
+      <span style="margin-left: auto; color: #7f8c8d; font-size: 0.9em;">Click any node to highlight its connections</span>
+    </div>
+
+    <div class="graph-container">
+      <div class="column">
+        <div class="column-header">📋 PRDs</div>
+        <div id="prd-column">`;
+
+        sitemap.forEach(prd => {
+          const storyCount = prd.stories.length;
+          const cardCount = prd.stories.reduce((sum, story) => sum + story.cards.length, 0);
+
+          html += `
+          <div class="node prd-node" data-type="prd" data-id="${prd.prd_id}" onclick="highlightConnections('prd', '${prd.prd_id}')">
+            <div class="node-title">${prd.prd_id}</div>
+            <div class="node-subtitle">${prd.title}</div>
+            <span class="node-status status-${prd.status.replace(/ /g, '.')}">${prd.status}</span>
+            <div class="node-connections">
+              ${storyCount} ${storyCount === 1 ? 'story' : 'stories'}, ${cardCount} ${cardCount === 1 ? 'card' : 'cards'}
+            </div>
+          </div>`;
+        });
+
+        html += `
+        </div>
+      </div>
+
+      <div class="column">
+        <div class="column-header">📖 User Stories</div>
+        <div id="story-column">`;
+
+        sitemap.forEach(prd => {
+          prd.stories.forEach(story => {
+            const cardCount = story.cards.length;
+            html += `
+          <div class="node story-node" data-type="story" data-id="${story.id}" data-prd="${prd.prd_id}" onclick="highlightConnections('story', '${story.id}')">
+            <div class="node-title">${story.id}</div>
+            <div class="node-subtitle">${story.title}</div>
+            <span class="node-status status-${story.status.replace(/ /g, '.')}">${story.status}</span>
+            <div class="node-connections">
+              PRD: ${prd.prd_id} → ${cardCount} ${cardCount === 1 ? 'card' : 'cards'}
+            </div>
+          </div>`;
+          });
+        });
+
+        html += `
+        </div>
+      </div>
+
+      <div class="column">
+        <div class="column-header">🎯 Implementation Cards</div>
+        <div id="card-column">`;
+
+        sitemap.forEach(prd => {
+          prd.stories.forEach(story => {
+            story.cards.forEach(card => {
+              html += `
+          <div class="node card-node" data-type="card" data-id="${card.slug}" data-story="${story.id}" data-prd="${prd.prd_id}" onclick="highlightConnections('card', '${card.slug}')">
+            <div class="node-title">${card.slug}</div>
+            <div class="node-subtitle">${card.title}</div>
+            <span class="node-status status-${card.status.replace(/ /g, '.')}">${card.status}</span>
+            <div class="node-connections">
+              Story: ${story.id}
+            </div>
+          </div>`;
+            });
+          });
+        });
+
+        html += `
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-title">Legend</div>
+      <div class="legend-items">
+        <div class="legend-item">
+          <div class="legend-color prd-color"></div>
+          <span>PRD (Product Requirements Document)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color story-color"></div>
+          <span>User Story</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color card-color"></div>
+          <span>Implementation Card</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-box">
+      <div class="stat-item">
+        <div class="stat-number">${sitemap.length}</div>
+        <div class="stat-label">PRDs</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">${sitemap.reduce((sum, prd) => sum + prd.stories.length, 0)}</div>
+        <div class="stat-label">Stories</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">${sitemap.reduce((sum, prd) => sum + prd.stories.reduce((s, story) => s + story.cards.length, 0), 0)}</div>
+        <div class="stat-label">Cards</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentHighlight = null;
+
+    function highlightConnections(type, id) {
+      const allNodes = document.querySelectorAll('.node');
+
+      // If clicking the same node, reset
+      if (currentHighlight && currentHighlight.type === type && currentHighlight.id === id) {
+        resetFilter();
+        return;
+      }
+
+      currentHighlight = { type, id };
+
+      allNodes.forEach(node => {
+        node.classList.remove('highlighted', 'dimmed');
+        node.classList.add('dimmed');
+      });
+
+      if (type === 'prd') {
+        // Highlight PRD itself
+        document.querySelector(\`.prd-node[data-id="\${id}"]\`).classList.remove('dimmed');
+        document.querySelector(\`.prd-node[data-id="\${id}"]\`).classList.add('highlighted');
+
+        // Highlight related stories and cards
+        document.querySelectorAll(\`.story-node[data-prd="\${id}"]\`).forEach(node => {
+          node.classList.remove('dimmed');
+          node.classList.add('highlighted');
+        });
+        document.querySelectorAll(\`.card-node[data-prd="\${id}"]\`).forEach(node => {
+          node.classList.remove('dimmed');
+          node.classList.add('highlighted');
+        });
+      } else if (type === 'story') {
+        const storyNode = document.querySelector(\`.story-node[data-id="\${id}"]\`);
+        const prdId = storyNode.dataset.prd;
+
+        // Highlight story itself
+        storyNode.classList.remove('dimmed');
+        storyNode.classList.add('highlighted');
+
+        // Highlight parent PRD
+        document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.remove('dimmed');
+        document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.add('highlighted');
+
+        // Highlight related cards
+        document.querySelectorAll(\`.card-node[data-story="\${id}"]\`).forEach(node => {
+          node.classList.remove('dimmed');
+          node.classList.add('highlighted');
+        });
+      } else if (type === 'card') {
+        const cardNode = document.querySelector(\`.card-node[data-id="\${id}"]\`);
+        const storyId = cardNode.dataset.story;
+        const prdId = cardNode.dataset.prd;
+
+        // Highlight card itself
+        cardNode.classList.remove('dimmed');
+        cardNode.classList.add('highlighted');
+
+        // Highlight parent story
+        document.querySelector(\`.story-node[data-id="\${storyId}"]\`).classList.remove('dimmed');
+        document.querySelector(\`.story-node[data-id="\${storyId}"]\`).classList.add('highlighted');
+
+        // Highlight parent PRD
+        document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.remove('dimmed');
+        document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.add('highlighted');
+      }
+    }
+
+    function filterByPRD(prdId) {
+      const allNodes = document.querySelectorAll('.node');
+
+      if (!prdId) {
+        resetFilter();
+        return;
+      }
+
+      currentHighlight = null;
+
+      allNodes.forEach(node => {
+        node.classList.remove('highlighted', 'dimmed');
+        node.classList.add('dimmed');
+      });
+
+      // Highlight selected PRD
+      document.querySelector(\`.prd-node[data-id="\${prdId}"]\`).classList.remove('dimmed');
+
+      // Highlight related stories and cards
+      document.querySelectorAll(\`.story-node[data-prd="\${prdId}"]\`).forEach(node => {
+        node.classList.remove('dimmed');
+      });
+      document.querySelectorAll(\`.card-node[data-prd="\${prdId}"]\`).forEach(node => {
+        node.classList.remove('dimmed');
+      });
+    }
+
+    function resetFilter() {
+      currentHighlight = null;
+      document.getElementById('prdFilter').value = '';
+      const allNodes = document.querySelectorAll('.node');
+      allNodes.forEach(node => {
+        node.classList.remove('highlighted', 'dimmed');
+      });
+    }
+  </script>
+</body>
+</html>`;
+
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      } catch (error) {
+        logger.error('Error building relationship graph:', error);
+        res.status(500).json({ error: 'Failed to build relationship graph' });
       }
     });
 

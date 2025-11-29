@@ -692,6 +692,459 @@ related_stories: ["US-020"]
 
 ---
 
+## Developer Maintenance Requirements
+
+### ✅ MUST-DO Rules (Non-Negotiable)
+
+**These rules are CRITICAL for the documentation site to work correctly. Breaking these rules will cause:**
+- Broken relationships between PRDs/Stories/Cards
+- Missing content on the site
+- Navigation errors
+- Incorrect test coverage reports
+
+#### 1. **Always Include YAML Frontmatter**
+
+Every PRD, Story entry, and Card MUST have proper YAML frontmatter.
+
+**PRD Files (docs/prd/*.md):**
+```yaml
+---
+prd_id: "PRD-009"              # ✅ REQUIRED - Must match filename
+status: "Draft"                 # ✅ REQUIRED - Draft | In Progress | Done
+related_stories: []             # ✅ REQUIRED - Array of story IDs (can be empty)
+---
+```
+
+**Story Entries (docs/stories/_index.yaml):**
+```yaml
+- id: US-020                    # ✅ REQUIRED - Must be unique
+  title: "User story title"     # ✅ REQUIRED
+  status: "Draft"               # ✅ REQUIRED
+  business_requirement: "PRD-009" # ✅ REQUIRED - Which PRD this story belongs to
+  cards: []                     # ✅ REQUIRED - Array of card slugs (can be empty)
+```
+
+**Card Files (docs/cards/*.md):**
+```yaml
+---
+slug: new-endpoint              # ✅ REQUIRED - Must match filename
+status: "Ready"                 # ✅ REQUIRED - Ready | In Progress | Done
+team: "A - Commerce"            # ✅ REQUIRED
+related_stories: ["US-020"]     # ✅ REQUIRED - Array of story IDs (can be empty)
+---
+```
+
+#### 2. **Use Consistent ID Formats**
+
+| Document Type | ID Format | Examples | ❌ WRONG |
+|--------------|-----------|----------|---------|
+| PRD | `PRD-###` | PRD-001, PRD-009 | prd-1, PRD1, prd_001 |
+| Story | `US-###` | US-001, US-020 | us-1, US1, story-001 |
+| Card slug | `kebab-case` | catalog-endpoint, ticket-activation | catalog_endpoint, CatalogEndpoint |
+
+**Why this matters:** The system uses string matching to link documents. Inconsistent IDs break relationships.
+
+#### 3. **Maintain Bidirectional Relationships**
+
+**When you link A → B, you MUST also link B → A.**
+
+**Example: Adding a new Card to an existing Story**
+
+Step 1: Create card file
+```yaml
+# docs/cards/new-payment-method.md
+---
+slug: new-payment-method
+status: "Ready"
+team: "A - Commerce"
+related_stories: ["US-012"]  # ✅ Link to story
+---
+```
+
+Step 2: Update story to link back
+```yaml
+# docs/stories/_index.yaml
+- id: US-012
+  title: "OTA Platform Integration"
+  business_requirement: "PRD-003"
+  cards:
+    - ota-search-endpoint
+    - ota-booking-endpoint
+    - new-payment-method      # ✅ Add new card here
+```
+
+**Common mistake:**
+```yaml
+# ❌ WRONG - Only linking one direction
+# Card links to story, but story doesn't link to card
+# Result: Card won't appear in story's card list on /sitemap
+```
+
+#### 4. **File Naming Conventions**
+
+| File Type | Naming Rule | Example |
+|-----------|-------------|---------|
+| PRD | `PRD-###-description.md` | `PRD-009-loyalty-program.md` |
+| Card | `slug-name.md` | `loyalty-points-endpoint.md` |
+| Story | Use `_index.yaml` | All stories in one file |
+
+**Slug must match filename:**
+```yaml
+# ✅ CORRECT
+# File: docs/cards/loyalty-points-endpoint.md
+slug: loyalty-points-endpoint
+
+# ❌ WRONG
+# File: docs/cards/loyalty-points-endpoint.md
+slug: loyaltyPoints  # Doesn't match filename
+```
+
+#### 5. **Status Updates**
+
+**Valid status values:**
+
+| Document | Allowed Values |
+|----------|---------------|
+| PRD | `Draft`, `In Progress`, `Done` |
+| Story | `Draft`, `In Progress`, `Done` |
+| Card | `Ready`, `In Progress`, `Done` |
+
+**When to update status:**
+- Card created → `Ready`
+- Work started → `In Progress`
+- PR merged → `Done`
+
+**Update multiple places:**
+```yaml
+# 1. Update card status
+# docs/cards/loyalty-points-endpoint.md
+status: "Done"
+
+# 2. If all cards in story are done, update story status
+# docs/stories/_index.yaml
+- id: US-020
+  status: "Done"
+
+# 3. If all stories in PRD are done, update PRD status
+# docs/prd/PRD-009-loyalty-program.md
+status: "Done"
+```
+
+#### 6. **Test Coverage Updates**
+
+**After running Newman tests, update coverage registry:**
+
+```yaml
+# docs/test-coverage/_index.yaml
+coverage_registry:
+  - prd_id: "PRD-009"
+    title: "Loyalty Program"
+    status: "100% Coverage"
+    primary_collection: "postman/auto-generated/prd-009-loyalty-program.postman_collection.json"
+    test_statistics:
+      total_requests: 15
+      total_assertions: 42
+      passed_assertions: 42
+      failed_assertions: 0
+    last_updated: "2025-11-30T10:00:00+0800"
+```
+
+---
+
+### 🚨 Common Mistakes That Break the Site
+
+#### Mistake 1: Forgetting to Add PRD to Story Link
+```yaml
+# ❌ WRONG
+# docs/stories/_index.yaml
+- id: US-020
+  title: "New feature"
+  status: "Draft"
+  # Missing business_requirement field!
+  cards: []
+
+# ✅ CORRECT
+- id: US-020
+  title: "New feature"
+  status: "Draft"
+  business_requirement: "PRD-009"  # Added
+  cards: []
+```
+
+**Result if wrong:** Story appears orphaned on /stories, doesn't appear in PRD's story list on /sitemap
+
+#### Mistake 2: Inconsistent ID Casing
+```yaml
+# ❌ WRONG
+# PRD uses: "prd-009"
+# Story uses: "PRD-009"
+# Result: Story won't link to PRD (case mismatch)
+
+# ✅ CORRECT - Always use uppercase
+prd_id: "PRD-009"
+business_requirement: "PRD-009"
+```
+
+#### Mistake 3: One-Way Relationships
+```yaml
+# ❌ WRONG - Only PRD links to story
+# docs/prd/PRD-009-loyalty-program.md
+related_stories: ["US-020"]
+
+# docs/stories/_index.yaml
+- id: US-020
+  business_requirement: ""  # ❌ Missing link back!
+
+# ✅ CORRECT - Both directions
+# PRD: related_stories: ["US-020"]
+# Story: business_requirement: "PRD-009"
+```
+
+#### Mistake 4: Missing Slug in Frontmatter
+```yaml
+# ❌ WRONG
+# docs/cards/loyalty-points-endpoint.md
+---
+status: "Ready"
+team: "A - Commerce"
+# Missing slug field!
+---
+
+# ✅ CORRECT
+---
+slug: loyalty-points-endpoint
+status: "Ready"
+team: "A - Commerce"
+---
+```
+
+**Result if wrong:** Card won't appear on /cards, navigation breaks
+
+---
+
+### 📋 Pre-Commit Validation Checklist
+
+Before committing changes that add/modify documentation:
+
+**For new PRDs:**
+- [ ] Filename follows `PRD-###-description.md` format
+- [ ] `prd_id` in frontmatter matches filename
+- [ ] `status` field present and valid
+- [ ] `related_stories` array present (even if empty)
+- [ ] PRD added to at least one story's `business_requirement` field
+
+**For new Stories:**
+- [ ] Entry added to `docs/stories/_index.yaml`
+- [ ] `id` follows `US-###` format and is unique
+- [ ] `business_requirement` links to existing PRD
+- [ ] PRD's `related_stories` includes this story ID
+- [ ] `cards` array present (even if empty)
+
+**For new Cards:**
+- [ ] Filename matches slug (with `.md` extension)
+- [ ] All required fields present: `slug`, `status`, `team`, `related_stories`
+- [ ] At least one story's `cards` array includes this slug
+- [ ] Slug uses kebab-case format
+
+**For status updates:**
+- [ ] Status value is valid for document type
+- [ ] Related documents updated if needed (e.g., PRD done if all stories done)
+
+**For test coverage:**
+- [ ] Newman report generated
+- [ ] Coverage registry updated with test statistics
+- [ ] `last_updated` timestamp current
+
+---
+
+### 📖 Step-by-Step Example: Adding a New Feature
+
+**Scenario:** Adding a "Loyalty Program" feature with points earning and redemption.
+
+#### Step 1: Create PRD
+```yaml
+# docs/prd/PRD-009-loyalty-program.md
+---
+prd_id: "PRD-009"
+status: "Draft"
+related_stories: []  # Will add stories next
+last_updated: "2025-11-30T10:00:00+0800"
+---
+
+# PRD-009: Loyalty Program
+
+## Overview
+Enable customers to earn and redeem loyalty points...
+```
+
+#### Step 2: Create Stories
+```yaml
+# docs/stories/_index.yaml
+
+# Add two stories for this PRD
+- id: US-021
+  title: "Points Earning"
+  status: "Draft"
+  business_requirement: "PRD-009"  # ✅ Link to PRD
+  cards: []  # Will add cards next
+
+- id: US-022
+  title: "Points Redemption"
+  status: "Draft"
+  business_requirement: "PRD-009"  # ✅ Link to PRD
+  cards: []
+```
+
+#### Step 3: Update PRD with Story Links
+```yaml
+# docs/prd/PRD-009-loyalty-program.md
+---
+prd_id: "PRD-009"
+status: "In Progress"  # Changed from Draft
+related_stories:       # ✅ Added story links
+  - "US-021"
+  - "US-022"
+last_updated: "2025-11-30T11:00:00+0800"
+---
+```
+
+#### Step 4: Create Cards
+```yaml
+# docs/cards/loyalty-points-earn.md
+---
+slug: loyalty-points-earn
+status: "Ready"
+team: "A - Commerce"
+related_stories: ["US-021"]  # ✅ Link to story
+last_update: "2025-11-30T11:30:00+0800"
+---
+
+# Loyalty Points Earning Endpoint
+...
+```
+
+```yaml
+# docs/cards/loyalty-points-redeem.md
+---
+slug: loyalty-points-redeem
+status: "Ready"
+team: "A - Commerce"
+related_stories: ["US-022"]  # ✅ Link to story
+last_update: "2025-11-30T11:30:00+0800"
+---
+
+# Loyalty Points Redemption Endpoint
+...
+```
+
+#### Step 5: Update Stories with Card Links
+```yaml
+# docs/stories/_index.yaml
+
+- id: US-021
+  title: "Points Earning"
+  status: "Ready"  # Updated
+  business_requirement: "PRD-009"
+  cards:
+    - loyalty-points-earn  # ✅ Added card link
+
+- id: US-022
+  title: "Points Redemption"
+  status: "Ready"  # Updated
+  business_requirement: "PRD-009"
+  cards:
+    - loyalty-points-redeem  # ✅ Added card link
+```
+
+#### Step 6: Verify on Site
+
+Visit these URLs to confirm everything works:
+
+1. **http://localhost:8080/prd/PRD-009** - Should show PRD with 2 related stories
+2. **http://localhost:8080/sitemap** - Should show hierarchy: PRD-009 → US-021/US-022 → Cards
+3. **http://localhost:8080/cards/loyalty-points-earn** - Should show card with link to US-021
+4. **http://localhost:8080/stories** - Should show US-021 and US-022 under PRD-009
+
+---
+
+### 🔍 Quick Reference: Required Fields
+
+**PRD Frontmatter (docs/prd/*.md):**
+```yaml
+prd_id: "PRD-###"           # REQUIRED
+status: "Draft|In Progress|Done"  # REQUIRED
+related_stories: []          # REQUIRED (array)
+last_updated: "ISO-8601"     # Optional but recommended
+```
+
+**Story Entry (docs/stories/_index.yaml):**
+```yaml
+id: "US-###"                       # REQUIRED
+title: "Story title"               # REQUIRED
+status: "Draft|In Progress|Done"   # REQUIRED
+business_requirement: "PRD-###"    # REQUIRED
+cards: []                          # REQUIRED (array)
+```
+
+**Card Frontmatter (docs/cards/*.md):**
+```yaml
+slug: "kebab-case-slug"            # REQUIRED
+status: "Ready|In Progress|Done"   # REQUIRED
+team: "Team name"                  # REQUIRED
+related_stories: []                # REQUIRED (array)
+last_update: "ISO-8601"            # Optional but recommended
+oas_paths: []                      # Optional
+```
+
+---
+
+### 🛠️ Fixing Broken Relationships
+
+**Symptom:** Story doesn't appear under PRD on /sitemap
+
+**Diagnosis:**
+```bash
+# Check if PRD links to story
+grep -A 5 "related_stories" docs/prd/PRD-009-loyalty-program.md
+
+# Check if story links to PRD
+grep -A 5 "US-021" docs/stories/_index.yaml
+```
+
+**Fix:** Ensure both directions are linked (see Step 3 and Step 2 above)
+
+---
+
+**Symptom:** Card doesn't appear under Story on /sitemap
+
+**Diagnosis:**
+```bash
+# Check if card links to story
+grep "related_stories" docs/cards/loyalty-points-earn.md
+
+# Check if story lists card
+grep -A 10 "US-021" docs/stories/_index.yaml | grep -A 5 "cards:"
+```
+
+**Fix:** Ensure both directions are linked (see Step 4 and Step 5 above)
+
+---
+
+**Symptom:** Card appears in "Not Found" state
+
+**Cause:** Card slug in story's `cards` array doesn't match any actual card file
+
+**Fix:**
+```bash
+# Find the actual card slug
+ls docs/cards/*.md
+
+# Verify slug in frontmatter matches filename
+grep "slug:" docs/cards/loyalty-points-earn.md
+```
+
+---
+
 ## Performance
 
 ### Load Times
@@ -788,6 +1241,6 @@ The documentation visualization site provides a **zero-maintenance, PM-friendly 
 
 ---
 
-**Last Updated:** 2025-11-29
+**Last Updated:** 2025-11-30
 **Maintainer:** Development Team
 **Related:** [CLAUDE.md](../CLAUDE.md), [KNOWLEDGE-GRAPH.md](KNOWLEDGE-GRAPH.md)
