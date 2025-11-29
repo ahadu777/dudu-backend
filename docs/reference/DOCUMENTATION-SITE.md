@@ -252,6 +252,17 @@ Everything is **dynamically discovered at runtime**:
 4. Applies suggested fixes
 5. Refreshes dashboard to verify (score improves instantly)
 
+**AI as a Story-Telling Guide:**
+
+The compliance dashboard doesn't just report errors - it **tells the story** of what's wrong and guides you to the solution:
+
+- **Understands Context**: "PRD-003 links to US-001, but US-001 links to PRD-001" (explains the relationship mismatch)
+- **Provides Guidance**: "Remove 'US-001' from related_stories in PRD-003" (specific fix, not just "error")
+- **Explains Impact**: "Story won't appear under this PRD on sitemap" (helps you understand why it matters)
+- **Adapts in Real-Time**: Score improves from -28% → -26% instantly when you fix one violation
+
+This creates an **intelligent learning loop** where the AI helps you understand the documentation rules rather than just enforcing them.
+
 ---
 
 ### 10. Test Coverage - `/coverage`
