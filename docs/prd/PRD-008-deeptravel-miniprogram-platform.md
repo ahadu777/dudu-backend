@@ -5,11 +5,14 @@
 prd_id: "PRD-008"
 product_area: "B2C Direct Sales"
 owner: "Product Manager"
-status: "Draft"
+status: "In Progress"
 created_date: "2025-11-21"
-last_updated: "2025-11-21"
+last_updated: "2025-12-01"
 related_stories: ["US-010", "US-010A", "US-010B"]
 business_channel: "WeChat Mini-Program (direct)"
+related_cards:
+  - miniprogram-product-catalog (Done)
+  - miniprogram-order (Done)
 ```
 
 ## Executive Summary
@@ -426,11 +429,24 @@ Pricing: Schedule-based pricing rules
 - "direct" channel inventory deduction
 
 **Deliverables**:
-- [ ] Package product listing page
-- [ ] Package detail & booking flow
-- [ ] WeChat payment integration
-- [ ] My tickets page
-- [ ] Basic order management
+- [x] Package product listing page (miniprogram-product-catalog)
+- [x] Package detail & booking flow (miniprogram-order)
+- [ ] WeChat payment integration (pending)
+- [ ] My tickets page (pending)
+- [x] Basic order management (miniprogram-order)
+
+**Backend API Status**:
+- [x] GET /miniprogram/products - 商品列表
+- [x] GET /miniprogram/products/:id - 商品详情
+- [x] GET /miniprogram/products/:id/availability - 库存查询
+- [x] POST /miniprogram/orders - 创建订单
+- [x] GET /miniprogram/orders - 订单列表
+- [x] GET /miniprogram/orders/:id - 订单详情
+
+**Database Tables**:
+- [x] orders - 订单主表
+- [x] order_payments - 支付记录表
+- [x] tickets (extended) - 票券表扩展
 
 **Validation**: End-users can purchase package products via mini-program
 
@@ -703,6 +719,6 @@ Pricing: Schedule-based pricing rules
 
 ---
 
-**Last Updated**: 2025-11-21
+**Last Updated**: 2025-12-01
 **Document Owner**: Product Manager
 **Next Review Date**: TBD

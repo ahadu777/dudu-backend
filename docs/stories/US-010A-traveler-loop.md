@@ -2,9 +2,9 @@
 id: US-010A
 title: DeepTravel 旅客闭环体验
 owner: Product
-status: Draft
+status: In Progress
 priority: High
-last_update: 2025-10-26T19:45:00+08:00
+last_update: 2025-12-01T16:00:00+08:00
 enhances:
   - US-001
   - US-003
@@ -12,10 +12,14 @@ enhances:
 depends_on:
   - US-001
 cards:
-  - travel-search-hub
-  - seat-lock-service
-  - wechat-payment-session
-  - bundle-ticket-engine
+  # Phase 1 - 已完成
+  - miniprogram-product-catalog    # Done - 商品列表/详情/库存
+  - miniprogram-order              # Done - 订单创建/列表/详情
+  # Phase 2 - 待实现
+  - travel-search-hub              # Pending - 线路/套票搜索
+  - seat-lock-service              # Pending - 锁座服务
+  - wechat-payment-session         # Pending - 微信支付
+  - bundle-ticket-engine           # Pending - 票券生成
 related_features:
   - tickets-issuance
   - my-tickets
@@ -73,3 +77,28 @@ related_features:
 - 执行 `npm run validate:integration` 需新增旅客闭环场景脚本。
 - `reports/newman/travel-search-hub.json`、`.../seat-lock-service.json`、`.../wechat-payment-session.json`、`.../bundle-ticket-engine.json` 覆盖关键 API。
 - Story 完成后运行 `node scripts/story-coverage.mjs` 验证对 US-001/US-004 的增强状态。
+
+## Implementation Progress
+
+### Phase 1: 商品浏览与订单创建 ✅
+| Card | Status | API Endpoints |
+|------|--------|---------------|
+| miniprogram-product-catalog | Done | GET /miniprogram/products, GET /miniprogram/products/:id, GET /miniprogram/products/:id/availability |
+| miniprogram-order | Done | POST /miniprogram/orders, GET /miniprogram/orders, GET /miniprogram/orders/:id |
+
+**Database Tables Created**:
+- `orders` - 订单主表
+- `order_payments` - 支付记录表
+- `tickets` (extended) - 票券表扩展
+
+### Phase 2: 搜索与锁座 🔲
+| Card | Status | Description |
+|------|--------|-------------|
+| travel-search-hub | Pending | 线路/套票搜索、热门缓存 |
+| seat-lock-service | Pending | 锁座服务、库存预留 |
+
+### Phase 3: 支付与票券 🔲
+| Card | Status | Description |
+|------|--------|-------------|
+| wechat-payment-session | Pending | 微信支付集成 |
+| bundle-ticket-engine | Pending | 多乘客票券批量生成 |

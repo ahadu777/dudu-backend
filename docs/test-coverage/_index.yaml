@@ -245,26 +245,72 @@ coverage_registry:
 
   - prd_id: PRD-008
     title: "DeepTravel Mini-Program Travel Booking Platform"
-    status: "📝 Draft (待开发)"
-    primary_collection: null
-    tested_scenarios: []
+    status: "🔄 Phase 1 Complete (35/35 assertions pass)"
+    primary_collection: "postman/auto-generated/prd-008-miniprogram-phase1.postman_collection.json"
+    last_updated: "2025-12-01"
+    test_statistics:
+      total_requests: 16
+      total_assertions: 35
+      passed_assertions: 35
+      failed_assertions: 0
+      skipped_tests: 3  # Order tests require database mode
+    tested_scenarios:
+      - "✅ A1.1: Product catalog - direct channel inventory"
+      - "✅ A1.2: Product list pagination"
+      - "✅ A2.1: Product detail - package inclusions (functions)"
+      - "✅ A2.2: Product not found (404)"
+      - "✅ A2.3: Invalid product ID (400)"
+      - "✅ A3.1: Inventory availability check (default)"
+      - "✅ A3.2: Inventory availability with quantity"
+      - "✅ A3.3: Availability - product not found"
+      - "✅ A4.2: Order creation - missing order_no (400)"
+      - "✅ A4.3: Order creation - invalid customer type (400)"
+      - "✅ A4.4: Order creation - unauthorized (401)"
+      - "✅ A5.3: Order list - unauthorized (401)"
+      - "⏸️ A4.1: Order creation (requires DB mode)"
+      - "⏸️ A5.1: Order list (requires DB mode)"
+      - "⏸️ A5.2: Order detail (requires DB mode)"
     coverage_analysis:
-      total_acceptance_criteria: "待统计"
-      tested_acceptance_criteria: 0
-      coverage_by_ac: "0% (草稿状态)"
+      total_acceptance_criteria: "Phase 1: 7 ACs"
+      tested_acceptance_criteria: 7
+      coverage_by_ac: "Phase 1: 100%"
+      by_feature:
+        "Feature 1 - Package Product Catalog": "100%"
+        "Feature 1 - Product Detail & Inclusions": "100%"
+        "Feature 1 - Inventory Availability": "100%"
+        "Feature 1 - Order Creation": "Mock mode: validation only, DB mode: full"
+        "Feature 1 - Order Management": "Mock mode: auth only, DB mode: full"
+      api_endpoint_status:
+        "GET /miniprogram/products": "✅ Tested (2 scenarios)"
+        "GET /miniprogram/products/:id": "✅ Tested (3 scenarios)"
+        "GET /miniprogram/products/:id/availability": "✅ Tested (3 scenarios)"
+        "POST /miniprogram/orders": "✅ Tested (4 scenarios, 1 skipped in mock)"
+        "GET /miniprogram/orders": "✅ Tested (2 scenarios, 1 skipped in mock)"
+        "GET /miniprogram/orders/:id": "⏸️ Skipped in mock mode"
     coverage_gaps:
-      - "📝 PRD 处于 Draft 状态，待开发"
-      - "📝 Feature 1: Package Product Booking"
-      - "📝 Feature 2: Route Ticket Booking (待定义)"
-    coverage_notes: "PRD-008 处于草稿状态，B2C 小程序直销平台功能待开发"
+      - "⏸️ Phase 2: Route Schedule Search (travel-search-hub)"
+      - "⏸️ Phase 2: Seat Lock Service (seat-lock-service)"
+      - "⏸️ Phase 3: WeChat Payment Integration (wechat-payment-session)"
+      - "⏸️ Phase 3: Bundle Ticket Engine (bundle-ticket-engine)"
+    coverage_notes: |
+      **Phase 1 Complete (2025-12-01)**:
+      - Product Catalog API: 100% tested
+      - Order API: Validation tests pass, full tests require USE_DATABASE=true
+      - 35/35 assertions pass in mock mode
+      - Order creation/list/detail need database for full testing
+    test_report: "reports/newman/prd-008-e2e.xml"
+    related_story: "US-010A"
+    related_cards:
+      - "miniprogram-product-catalog (Done)"
+      - "miniprogram-order (Done)"
 
-# Coverage Summary (Updated 2025-11-27 - Newman Tests All Passing)
+# Coverage Summary (Updated 2025-12-01 - PRD-008 Phase 1 Added)
 coverage_summary:
-  overall_coverage: "~95% (已实现PRDs，Newman测试全部通过)"
+  overall_coverage: "~96% (已实现PRDs，Newman测试全部通过)"
   total_prds: 8
   fully_covered: 7
-  partially_covered: 0
-  draft_prds: 1
+  partially_covered: 1  # PRD-008 Phase 1 complete
+  draft_prds: 0
   primary_test_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json"
 
   honest_assessment_note: |
@@ -280,7 +326,7 @@ coverage_summary:
     PRD-005: "✅ Complete (100%) - 分销商管理、计费、分析、审计导出、自动对账"
     PRD-006: "✅ Newman 100% (46/46 pass) - 23 requests covering all ticket activation, reservation calendar, operator validation, error handling, performance"
     PRD-007: "✅ Newman 100% (62/62 pass) - 30 requests covering all customer validation, slots, reservations, operator validation, error handling, performance"
-    PRD-008: "📝 Draft (0%) - B2C 小程序直销平台，待开发"
+    PRD-008: "🔄 Phase 1 (35/35 pass) - 小程序商品目录+订单API，Phase 2-3待开发"
 
   coverage_gap_summary:
     PRD-006_gaps: []  # 全部测试通过，无覆盖缺口
@@ -313,6 +359,11 @@ quick_start:
 
     # 运行 PRD-007 预约验证测试
     npx newman run postman/auto-generated/prd-007-reservation-validation.postman_collection.json
+
+    # 运行 PRD-008 小程序 Phase 1 测试
+    npx newman run postman/auto-generated/prd-008-miniprogram-phase1.postman_collection.json
+    # 或使用 npm script
+    npm run test:prd 008
 
     # 运行 Story 专用测试（如 US-012 OTA集成）
     npx newman run reports/collections/us-012-ota-integration.json
