@@ -26,13 +26,30 @@ export interface AddonInput {
 }
 
 /**
+ * 乘客信息（可选，用于实名验证）
+ */
+export interface PassengerInput {
+  name: string;                                   // 乘客姓名
+  customer_type: CustomerType;                    // 客户类型
+  id_type?: 'id_card' | 'passport' | 'other';     // 证件类型
+  id_number?: string;                             // 证件号码
+  phone?: string;                                 // 手机号
+}
+
+/**
  * 创建订单请求
  */
 export interface CreateOrderRequest {
   order_no: string;                         // 订单号（前端生成，用于幂等）
   product_id: number;                       // 产品ID
   travel_date: string;                      // 出行日期 (YYYY-MM-DD)
-  customer_breakdown: CustomerBreakdownInput[];  // 客户明细
+  customer_breakdown: CustomerBreakdownInput[];  // 客户明细（必填，用于定价）
+  // 联系人信息（必填）
+  contact_name: string;                     // 联系人姓名
+  contact_phone: string;                    // 联系人手机
+  contact_email?: string;                   // 联系人邮箱（可选）
+  // 可选
+  passengers?: PassengerInput[];            // 乘客信息（可选，用于实名验证）
   addons?: AddonInput[];                    // 附加项（可选）
 }
 
@@ -83,6 +100,12 @@ export interface CreateOrderResponse {
   travel_date: string;
   quantity: number;
   total: number;
+  // 联系人信息
+  contact_name: string;
+  contact_phone: string;
+  contact_email?: string;
+  // 乘客信息（如有）
+  passengers?: PassengerInput[];
   pricing_context: PricingContext;
   created_at: string;
 }

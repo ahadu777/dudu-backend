@@ -525,11 +525,17 @@ export class VenueOperationsService {
   }
 
   /**
-   * Get all active venues for operator selection
-   * Returns list of available venues with supported functions
+   * Get venues list
+   * - With partnerId: return only that partner's venues (OTA)
+   * - Without partnerId: return all venues (miniprogram)
    */
-  async getAllVenues(includeInactive: boolean = false) {
-    const venues = await this.repository.findAllVenues(includeInactive);
+  async getAllVenues(options: { includeInactive?: boolean; partnerId?: string } | boolean = false) {
+    // Support legacy boolean parameter for backward compatibility
+    const opts = typeof options === 'boolean'
+      ? { includeInactive: options }
+      : options;
+
+    const venues = await this.repository.findAllVenues(opts);
 
     return {
       venues: venues.map(v => ({
@@ -540,6 +546,7 @@ export class VenueOperationsService {
         location_address: v.location_address,
         supported_functions: v.supported_functions || [],
         is_active: v.is_active,
+        partner_id: v.partner_id,
         created_at: v.created_at,
         updated_at: v.updated_at
       }))
@@ -560,6 +567,7 @@ export class VenueOperationsService {
     location_address?: string;
     supported_functions?: string[];
     is_active?: boolean;
+    partner_id?: string | null;
   }) {
     logger.info('venue.create.started', { venue_code: venueData.venue_code });
 
@@ -673,15 +681,15 @@ export class VenueOperationsService {
   }
 
   /**
-   * Delete venue (soft delete by default)
+   * Delete venue (soft delete)
    */
-  async deleteVenue(venueId: number, hardDelete: boolean = false) {
-    logger.info('venue.delete.started', { venue_id: venueId, hard_delete: hardDelete });
+  async deleteVenue(venueId: number) {
+    logger.info('venue.delete.started', { venue_id: venueId });
 
-    const success = await this.repository.deleteVenue(venueId, hardDelete);
+    const success = await this.repository.deleteVenue(venueId);
 
     if (success) {
-      logger.info('venue.delete.success', { venue_id: venueId, hard_delete: hardDelete });
+      logger.info('venue.delete.success', { venue_id: venueId });
     } else {
       logger.warn('venue.delete.not_found', { venue_id: venueId });
     }

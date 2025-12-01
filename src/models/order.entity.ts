@@ -44,6 +44,17 @@ export interface PricingContext {
 }
 
 /**
+ * 乘客信息（可选，用于实名验证）
+ */
+export interface PassengerInfo {
+  name: string;                                   // 乘客姓名
+  customer_type: 'adult' | 'child' | 'elderly';   // 客户类型
+  id_type?: 'id_card' | 'passport' | 'other';     // 证件类型
+  id_number?: string;                             // 证件号码
+  phone?: string;                                 // 手机号
+}
+
+/**
  * 订单状态（与 OTA 订单状态统一）
  */
 export enum OrderStatus {
@@ -96,6 +107,22 @@ export class OrderEntity {
   // 渠道：direct=小程序, ota=OTA平台
   @Column({ type: 'varchar', length: 20, default: 'direct' })
   channel!: string;
+
+  // ========== 联系人信息 ==========
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  contact_name!: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  contact_phone!: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  contact_email?: string;
+
+  // ========== 乘客信息（可选，用于实名验证）==========
+
+  @Column({ type: 'json', nullable: true })
+  passengers?: PassengerInfo[];
 
   // 订单类型（PRD-008 双模式：套餐/班次）
   @Column({ type: 'enum', enum: OrderType, default: OrderType.PACKAGE })

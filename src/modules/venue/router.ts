@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { venueOperationsService } from './service';
 import { logger } from '../../utils/logger';
 import { authenticateOperator } from '../../middlewares/auth';
+import { API_KEYS } from '../../middlewares/otaAuth';
 
 const router = Router();
 
@@ -46,8 +47,16 @@ const router = Router();
  */
 router.get('/', async (req, res) => {
   try {
+    const apiKey = req.headers['x-api-key'] as string | undefined;
+    const partner = apiKey ? API_KEYS.get(apiKey) : undefined;
     const includeInactive = req.query.include_inactive === 'true';
-    const result = await venueOperationsService.getAllVenues(includeInactive);
+
+    // OTA partner → only their venues; miniprogram → all venues
+    const result = await venueOperationsService.getAllVenues({
+      includeInactive,
+      partnerId: partner?.partner_id
+    });
+
     res.json(result);
   } catch (error) {
     logger.error('venues.list.error', {
@@ -130,6 +139,10 @@ router.post('/', async (req, res) => {
     });
   }
 
+  // Get partner_id from api-key
+  const apiKey = req.headers['x-api-key'] as string | undefined;
+  const partner = apiKey ? API_KEYS.get(apiKey) : undefined;
+
   try {
     const venue = await venueOperationsService.createVenue({
       venue_code,
@@ -137,7 +150,8 @@ router.post('/', async (req, res) => {
       venue_type,
       location_address,
       supported_functions,
-      is_active
+      is_active,
+      partner_id: partner?.partner_id || null
     });
 
     res.status(201).json(venue);
@@ -487,7 +501,7 @@ router.put('/:venue_id', async (req, res) => {
  * /venue/{venue_id}:
  *   delete:
  *     summary: 删除场馆
- *     description: 删除指定场馆（默认软删除，设置is_active=false）
+ *     description: 软删除指定场馆（设置 deleted_at 时间戳）
  *     tags: [Venue Management]
  *     parameters:
  *       - in: path
@@ -496,12 +510,6 @@ router.put('/:venue_id', async (req, res) => {
  *         schema:
  *           type: integer
  *         description: 场馆ID
- *       - in: query
- *         name: hard_delete
- *         schema:
- *           type: boolean
- *           default: false
- *         description: 是否物理删除（慎用）
  *     responses:
  *       200:
  *         description: Venue deleted successfully
@@ -531,10 +539,8 @@ router.delete('/:venue_id', async (req, res) => {
     });
   }
 
-  const hardDelete = req.query.hard_delete === 'true';
-
   try {
-    const success = await venueOperationsService.deleteVenue(venueId, hardDelete);
+    const success = await venueOperationsService.deleteVenue(venueId);
 
     if (!success) {
       return res.status(404).json({
@@ -545,12 +551,11 @@ router.delete('/:venue_id', async (req, res) => {
 
     res.json({
       success: true,
-      message: hardDelete ? 'Venue permanently deleted' : 'Venue deactivated successfully'
+      message: 'Venue deleted successfully'
     });
   } catch (error) {
     logger.error('venue.delete.error', {
       venue_id: venueId,
-      hard_delete: hardDelete,
       error: (error as Error).message,
       stack: (error as Error).stack
     });

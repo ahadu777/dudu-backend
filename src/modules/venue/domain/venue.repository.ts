@@ -188,8 +188,18 @@ export class VenueRepository {
     return this.venueRepo.findOne({ where: { venue_id: venueId } });
   }
 
-  async findAllVenues(includeInactive: boolean = false): Promise<Venue[]> {
-    const where = includeInactive ? {} : { is_active: true };
+  async findAllVenues(options: { includeInactive?: boolean; partnerId?: string } = {}): Promise<Venue[]> {
+    const { includeInactive = false, partnerId } = options;
+
+    const where: any = {};
+    if (!includeInactive) {
+      where.is_active = true;
+    }
+    // If partnerId provided, filter by it; otherwise return all
+    if (partnerId) {
+      where.partner_id = partnerId;
+    }
+
     return this.venueRepo.find({
       where,
       order: { venue_code: 'ASC' }
@@ -204,18 +214,10 @@ export class VenueRepository {
     return this.venueRepo.save(venue);
   }
 
-  async deleteVenue(venueId: number, hardDelete: boolean = false): Promise<boolean> {
-    const venue = await this.findVenueById(venueId);
-    if (!venue) return false;
-
-    if (hardDelete) {
-      await this.venueRepo.remove(venue);
-    } else {
-      // Soft delete - set is_active to false
-      venue.is_active = false;
-      await this.venueRepo.save(venue);
-    }
-    return true;
+  async deleteVenue(venueId: number): Promise<boolean> {
+    // Soft delete using TypeORM's built-in mechanism
+    const result = await this.venueRepo.softDelete(venueId);
+    return (result.affected ?? 0) > 0;
   }
 
   async isVenueCodeUnique(venueCode: string, excludeVenueId?: number): Promise<boolean> {

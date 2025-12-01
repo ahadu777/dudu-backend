@@ -17,7 +17,8 @@ import {
   OrderListItem,
   CustomerPricingItem,
   AddonPricingItem,
-  PricingContext as PricingContextType
+  PricingContext as PricingContextType,
+  PassengerInput
 } from './order.types';
 
 export class MiniprogramOrderService {
@@ -86,6 +87,12 @@ export class MiniprogramOrderService {
       order.user_id = userId;
       order.order_no = request.order_no;
       order.channel = 'direct';
+      // 联系人信息
+      order.contact_name = request.contact_name;
+      order.contact_phone = request.contact_phone;
+      order.contact_email = request.contact_email;
+      // 乘客信息（可选）
+      order.passengers = request.passengers;
       order.order_type = OrderType.PACKAGE;
       order.product_id = request.product_id;
       order.product_name = product.name;
@@ -235,6 +242,12 @@ export class MiniprogramOrderService {
         : String(order.travel_date),
       quantity: order.quantity,
       total: Number(order.total),
+      // 联系人信息
+      contact_name: order.contact_name,
+      contact_phone: order.contact_phone,
+      contact_email: order.contact_email,
+      // 乘客信息
+      passengers: order.passengers as PassengerInput[],
       pricing_context: order.pricing_context as PricingContextType,
       created_at: order.created_at instanceof Date
         ? order.created_at.toISOString()

@@ -12,18 +12,21 @@
 export * from './user.entity';
 export * from './ota-reseller.entity';
 export * from './operator.entity';
+export * from './order.entity';
+export * from './order-payment.entity';
 
 // Export entity array for TypeORM registration
 // This is the SINGLE SOURCE OF TRUTH for shared entities
 import { UserEntity } from './user.entity';
 import { OTAResellerEntity } from './ota-reseller.entity';
 import { Operator } from './operator.entity';
+import { OrderEntity } from './order.entity';
+import { OrderPaymentEntity } from './order-payment.entity';
 
 export const SHARED_ENTITIES = [
   UserEntity,
   OTAResellerEntity,
   Operator,
-  // Add more shared entities here as they are created
-  // ProductEntity,
-  // OrderEntity,
+  OrderEntity,
+  OrderPaymentEntity,
 ] as const;
