@@ -539,19 +539,15 @@ POST /qr/{ticket_code}:
     - BearerAuth: []  # For normal users
   parameters:
     - ticket_code: string (path) - Ticket code to generate QR for
-    - type: "encrypted" | "url" (query, optional) - QR type
   requestBody:
     expiry_minutes: number (optional, 1-1440, default: 30)
-    qr_type: "encrypted" | "url" (optional, default: "encrypted")
   responses:
     200:
       success: boolean
       qr_image: string (Base64 PNG)
-      qr_type: string
       ticket_code: string
       expires_at: string (ISO 8601)
       valid_for_seconds: number
-      verify_url: string (only for qr_type=url)
       note: string (usage instructions)
     400: Invalid ticket code or expiry parameters
     401: Authentication required
@@ -559,15 +555,6 @@ POST /qr/{ticket_code}:
     404: Ticket not found
     409: Invalid ticket status
     500: Server configuration error
-
-GET /qr/verify:
-  summary: Verify QR code for WeChat users
-  parameters:
-    - t: string (query) - Encrypted token from QR code
-  responses:
-    200: HTML page with ticket verification details
-    400: Invalid or missing token (HTML error page)
-```
 ```
 
 ### Business Logic
@@ -848,9 +835,7 @@ Test Scenarios:
 
 **Phase 4** (Nov 10-12, 2025): QR Code Enhancement - ✅ **COMPLETED**
 - ✅ Unified QR generation API (`POST /qr/:code`)
-- ✅ WeChat verification endpoint (`GET /qr/verify`)
 - ✅ AES-256-GCM encryption with HMAC-SHA256 signature
-- ✅ Support for both encrypted and URL-based QR codes
 - ✅ Configurable expiry times (1-1440 minutes)
 - ✅ Partner isolation for OTA ticket QR generation
 - ✅ Integration guide for OTA partners (OTA_QR_CODE_GUIDE.md)

@@ -470,19 +470,33 @@ router.get('/redemptions', paginationMiddleware({ defaultLimit: 100, maxLimit: 1
     });
 
     // Transform events to response format
-    const responseEvents = events.map(event => ({
-      event_id: event.event_id,
-      ticket_code: event.ticket_code,
-      function_code: event.function_code,
-      venue_id: event.venue_id,
-      venue_name: event.venue?.venue_name || null,
-      operator_id: event.operator_id,
-      session_code: event.session_code,
-      result: event.result,
-      reason: event.reason || null,
-      remaining_uses_after: event.remaining_uses_after,
-      ts: event.redeemed_at.toISOString()
-    }));
+    const responseEvents = events.map(event => {
+      const additionalData = event.additional_data || {};
+      return {
+        event_id: event.event_id,
+        ticket_code: event.ticket_code,
+        function_code: event.function_code,
+        // 场馆信息
+        venue_id: event.venue_id,
+        venue_code: additionalData.venue_code || null,
+        venue_name: additionalData.venue_name || event.venue?.venue_name || null,
+        // 操作员信息
+        operator_id: event.operator_id,
+        operator_name: additionalData.operator_name || null,
+        // 票券信息
+        ticket_type: additionalData.ticket_type || null,
+        product_id: additionalData.product_id || null,
+        product_name: additionalData.product_name || null,
+        customer_name: additionalData.customer_name || null,
+        customer_type: additionalData.customer_type || null,
+        // 核销结果
+        session_code: event.session_code,
+        result: event.result,
+        reason: event.reason || null,
+        remaining_uses_after: event.remaining_uses_after,
+        ts: event.redeemed_at.toISOString()
+      };
+    });
 
     logger.info('venue.redemptions.success', {
       count: responseEvents.length,

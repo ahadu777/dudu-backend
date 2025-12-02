@@ -254,11 +254,10 @@ export class MiniprogramOrderService {
             ticket.travel_date = order.travel_date;
             ticket.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1年有效期
             ticket.channel = 'direct';
-            // 复制产品权益到票券
+            // 复制产品权益到票券（与 OTA 保持一致，使用 remaining_uses）
             ticket.entitlements = productEntitlements.map(e => ({
               function_code: e.type,
-              quantity: e.metadata?.quantity || 1,
-              used_quantity: 0
+              remaining_uses: e.metadata?.quantity || 1
             }));
 
             const savedTicket = await manager.save(ticket);
@@ -331,6 +330,74 @@ export class MiniprogramOrderService {
 
       return { success: true, message: '订单已取消' };
     });
+  }
+
+  /**
+   * 清理指定产品的超时订单（懒惰清理）
+   * 在查询库存时调用，避免定时任务带来的服务器压力
+   *
+   * @param productId - 产品ID
+   * @returns 取消的订单数量
+   */
+  async cleanupExpiredOrdersForProduct(productId: number): Promise<number> {
+    const expireTime = new Date(Date.now() - ORDER_EXPIRY_MINUTES * 60 * 1000);
+
+    // 1. 查找该产品的超时 PENDING 订单
+    const expiredOrders = await this.orderRepo
+      .createQueryBuilder('order')
+      .where('order.product_id = :productId', { productId })
+      .andWhere('order.status = :status', { status: OrderStatus.PENDING })
+      .andWhere('order.created_at < :expireTime', { expireTime })
+      .getMany();
+
+    if (expiredOrders.length === 0) {
+      return 0;
+    }
+
+    // 2. 计算需要释放的库存总量
+    const totalQuantityToRelease = expiredOrders.reduce((sum, order) => sum + order.quantity, 0);
+    const orderIds = expiredOrders.map(o => o.id);
+
+    // 3. 在事务中批量更新订单状态并释放库存
+    await AppDataSource.transaction(async (manager: EntityManager) => {
+      // 批量更新订单状态为 CANCELLED
+      await manager
+        .createQueryBuilder()
+        .update(OrderEntity)
+        .set({
+          status: OrderStatus.CANCELLED,
+          cancelled_at: new Date()
+        })
+        .whereInIds(orderIds)
+        .execute();
+
+      // 释放预留库存
+      const inventory = await manager
+        .createQueryBuilder(ProductInventoryEntity, 'inv')
+        .setLock('pessimistic_write')
+        .where('inv.product_id = :productId', { productId })
+        .getOne();
+
+      if (inventory) {
+        const directAllocation = inventory.channel_allocations?.['direct'];
+        if (directAllocation) {
+          // 确保不会减成负数
+          const releaseAmount = Math.min(directAllocation.reserved, totalQuantityToRelease);
+          directAllocation.reserved -= releaseAmount;
+          inventory.channel_allocations['direct'] = directAllocation;
+          await manager.save(inventory);
+        }
+      }
+    });
+
+    logger.info('miniprogram.orders.expired_cleanup', {
+      product_id: productId,
+      cancelled_count: expiredOrders.length,
+      quantity_released: totalQuantityToRelease,
+      order_ids: orderIds
+    });
+
+    return expiredOrders.length;
   }
 
   /**
@@ -522,8 +589,7 @@ export class MiniprogramOrderService {
         qr_code: t.qr_code,
         entitlements: t.entitlements?.map(e => ({
           function_code: e.function_code,
-          quantity: e.quantity,
-          used_quantity: e.used_quantity || 0
+          remaining_uses: e.remaining_uses ?? 0
         }))
       }))
     };
@@ -560,8 +626,7 @@ export class MiniprogramOrderService {
         qr_code: t.qr_code,
         entitlements: t.entitlements?.map(e => ({
           function_code: e.function_code,
-          quantity: e.quantity,
-          used_quantity: e.used_quantity || 0
+          remaining_uses: e.remaining_uses ?? 0
         }))
       }))
     };

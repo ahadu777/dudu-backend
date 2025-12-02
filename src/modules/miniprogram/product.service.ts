@@ -10,6 +10,7 @@ import { ProductInventoryEntity } from '../ota/domain/product-inventory.entity';
 import { mockDataStore } from '../../core/mock/data';
 import { dataSourceConfig } from '../../config/data-source';
 import { logger } from '../../utils/logger';
+import { MiniprogramOrderService } from './order.service';
 
 export type StockStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
 
@@ -64,10 +65,12 @@ export interface AvailabilityInfo {
 export class MiniprogramProductService {
   private productRepo: Repository<ProductEntity>;
   private inventoryRepo: Repository<ProductInventoryEntity>;
+  private orderService: MiniprogramOrderService;
 
   constructor() {
     this.productRepo = AppDataSource.getRepository(ProductEntity);
     this.inventoryRepo = AppDataSource.getRepository(ProductInventoryEntity);
+    this.orderService = new MiniprogramOrderService();
   }
 
   /**
@@ -243,8 +246,22 @@ export class MiniprogramProductService {
 
   /**
    * 查询库存
+   * 同时会清理该产品的超时订单，释放被占用的库存
    */
   async checkAvailability(productId: number, quantity: number = 1): Promise<AvailabilityInfo | null> {
+    // 懒惰清理：查询库存前先清理该产品的超时订单
+    if (this.useDatabase) {
+      try {
+        await this.orderService.cleanupExpiredOrdersForProduct(productId);
+      } catch (error) {
+        // 清理失败不影响库存查询，仅记录日志
+        logger.warn('miniprogram.cleanup.failed', {
+          product_id: productId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+
     let directAllocation: any = null;
 
     if (this.useDatabase) {

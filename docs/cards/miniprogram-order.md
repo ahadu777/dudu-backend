@@ -418,6 +418,18 @@ components:
                     type: string
                   qr_code:
                     type: string
+                  entitlements:
+                    type: array
+                    description: 票券权益（与OTA票券结构一致）
+                    items:
+                      type: object
+                      properties:
+                        function_code:
+                          type: string
+                          description: 权益代码（ferry, playground_tokens等）
+                        remaining_uses:
+                          type: integer
+                          description: 剩余使用次数
 
     TicketQRResponse:
       type: object

@@ -9,8 +9,7 @@ export type CustomerType = 'adult' | 'child' | 'elderly';
  */
 export interface TicketEntitlement {
   function_code: string;  // ferry, playground_tokens, monchhichi_gift, etc.
-  quantity: number;       // 数量
-  used_quantity?: number; // 已使用数量
+  remaining_uses: number; // 剩余使用次数
 }
 
 @Entity('tickets')

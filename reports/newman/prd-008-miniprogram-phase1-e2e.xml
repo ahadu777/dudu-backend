@@ -1,70 +1,318 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-008 DeepTravel 小程序 Phase 1 - Package Booking" tests="16" time="0.719">
-  <testsuite name="0. Prerequisites - Auth Setup / 0.1 WeChat Login to get Token" id="d7bff053-a6c3-4fc0-bbc8-df5dfd4c5077" timestamp="2025-12-01T08:21:07.576Z" tests="2" failures="0" errors="0" time="0.048">
-    <testcase name="Login returns 200" time="0.048" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns valid token" time="0.048" classname="Prd008DeepTravelPhase1PackageBooking"/>
+<testsuites name="PRD-008 DeepTravel 小程序 Phase 1 - Package Booking" tests="25" time="3.133">
+  <testsuite name="0. Prerequisites - Auth Setup / 0.1 WeChat Login to get Token" id="98272369-6e0f-4384-892e-3635ad2c3d09" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="2" errors="0" time="0.251">
+    <testcase name="Login returns 200" time="0.251" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: 0. Prerequisites - Auth Setup / 0.1 WeChat Login to get Token.]]>
+        <![CDATA[Test description: Login returns 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns valid token" time="0.251" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: 0. Prerequisites - Auth Setup / 0.1 WeChat Login to get Token.]]>
+        <![CDATA[Test description: Returns valid token.]]>
+        <![CDATA[Error message: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'
+   at Object.eval sandbox-script.js:2:1).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="A1. Product Catalog - Direct Channel / A1.1 Get product list (default)" id="df265223-61e1-40d5-abae-bf35058a21e5" timestamp="2025-12-01T08:21:07.576Z" tests="5" failures="0" errors="0" time="0.004">
-    <testcase name="Returns 200" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns product array" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Has pagination info" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Products have required fields" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Products show availability from direct channel" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A1. Product Catalog - Direct Channel / A1.1 Get product list (default)" id="b820a251-37ee-4fe8-8451-36972e567d68" timestamp="2025-12-02T08:34:39.169Z" tests="5" failures="0" errors="0" time="0.334">
+    <testcase name="Returns 200" time="0.334" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns product array" time="0.334" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Has pagination info" time="0.334" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Products have required fields" time="0.334" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Products show availability from direct channel" time="0.334" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A1. Product Catalog - Direct Channel / A1.2 Product list pagination" id="49792fed-a43e-4c18-8c91-302b304ec0e4" timestamp="2025-12-01T08:21:07.576Z" tests="2" failures="0" errors="0" time="0.003">
-    <testcase name="Returns 200" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Respects pagination params" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A1. Product Catalog - Direct Channel / A1.2 Product list pagination" id="479028fd-86f2-4905-816c-7f6865d9c93e" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="0" errors="0" time="0.324">
+    <testcase name="Returns 200" time="0.324" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Respects pagination params" time="0.324" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A2. Product Detail - Package Inclusions / A2.1 Get product detail - cruise package" id="cfa32f81-387f-4edb-b123-9f6ab93a530b" timestamp="2025-12-01T08:21:07.576Z" tests="5" failures="0" errors="0" time="0.001">
-    <testcase name="Returns 200" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns product detail" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Has pricing info" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Has package functions/inclusions" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Has availability info" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A2. Product Detail - Package Inclusions / A2.1 Get product detail - cruise package" id="eaaff0fb-497a-41f9-8696-d0e2caa5900f" timestamp="2025-12-02T08:34:39.169Z" tests="5" failures="0" errors="0" time="0.310">
+    <testcase name="Returns 200" time="0.310" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns product detail" time="0.310" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Has pricing info" time="0.310" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Has package functions/inclusions" time="0.310" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Has availability info" time="0.310" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A2. Product Detail - Package Inclusions / A2.2 Product not found" id="564bbffd-f381-4b54-ba12-074f7e2bab31" timestamp="2025-12-01T08:21:07.576Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="Returns 404" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns NOT_FOUND error" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A2. Product Detail - Package Inclusions / A2.2 Product not found" id="bdafda83-4e3b-4115-be53-6f9368673a8a" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="0" errors="0" time="0.313">
+    <testcase name="Returns 404" time="0.313" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns NOT_FOUND error" time="0.313" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A2. Product Detail - Package Inclusions / A2.3 Invalid product ID" id="125ca7ce-334d-4c7f-a1d6-49f19bf4efb3" timestamp="2025-12-01T08:21:07.576Z" tests="2" failures="0" errors="0" time="0.002">
+  <testsuite name="A2. Product Detail - Package Inclusions / A2.3 Invalid product ID" id="b0a0bb1b-803c-43b1-b54e-3176d7739c63" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="0" errors="0" time="0.002">
     <testcase name="Returns 400" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
     <testcase name="Returns validation error" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A3. Inventory Availability / A3.1 Check availability (default)" id="98d2ad50-ee56-4783-a05e-8aea0b30ca13" timestamp="2025-12-01T08:21:07.576Z" tests="4" failures="0" errors="0" time="0.002">
-    <testcase name="Returns 200" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns availability info" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Availability is boolean" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Available count is number" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A3. Inventory Availability / A3.1 Check availability (default)" id="f9fbc5fa-e28e-4491-a26c-0758f5232eb3" timestamp="2025-12-02T08:34:39.169Z" tests="4" failures="0" errors="0" time="0.622">
+    <testcase name="Returns 200" time="0.622" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns availability info" time="0.622" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Availability is boolean" time="0.622" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Available count is number" time="0.622" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A3. Inventory Availability / A3.2 Check availability with quantity" id="6fc36216-2ebf-402f-9718-157d5727ca39" timestamp="2025-12-01T08:21:07.576Z" tests="3" failures="0" errors="0" time="0.002">
-    <testcase name="Returns 200" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Checks requested quantity" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="is_available reflects quantity check" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A3. Inventory Availability / A3.2 Check availability with quantity" id="95d8fdd9-1cd6-456b-b011-f6b4afbb8382" timestamp="2025-12-02T08:34:39.169Z" tests="3" failures="0" errors="0" time="0.638">
+    <testcase name="Returns 200" time="0.638" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Checks requested quantity" time="0.638" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="is_available reflects quantity check" time="0.638" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A3. Inventory Availability / A3.3 Availability - product not found" id="83a20c5d-cac3-41a9-8ce1-c7322bc24b2f" timestamp="2025-12-01T08:21:07.576Z" tests="1" failures="0" errors="0" time="0.002">
-    <testcase name="Returns 404" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A3. Inventory Availability / A3.3 Availability - product not found" id="8b24186c-ffa7-4e44-b4ae-73bcbf8fc46a" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.316">
+    <testcase name="Returns 404" time="0.316" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A4. Order Creation (DB Required) / A4.1 Create order - success" id="80ed43da-c4f2-418a-947c-e84a14c44414" timestamp="2025-12-01T08:21:07.576Z" tests="1" failures="0" errors="0" time="0.641">
-    <testcase name="Order creation requires database mode" time="0.641" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A4. Order Creation (DB Required) / A4.1 Create order - success" id="adfd81ed-b115-452c-b316-34aa92889f53" timestamp="2025-12-02T08:34:39.169Z" tests="4" failures="4" errors="0" time="0.003">
+    <testcase name="Returns 201" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected response to have status code 201 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A4. Order Creation (DB Required) / A4.1 Create order - success.]]>
+        <![CDATA[Test description: Returns 201.]]>
+        <![CDATA[Error message: expected response to have status code 201 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 401
+   at Object.eval sandbox-script.js:1:10).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns order with ID" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'id'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A4. Order Creation (DB Required) / A4.1 Create order - success.]]>
+        <![CDATA[Test description: Returns order with ID.]]>
+        <![CDATA[Error message: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'id'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'id'
+   at Object.eval sandbox-script.js:2:10).]]>
+      </failure>
+    </testcase>
+    <testcase name="Has pricing context" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'pricing_context'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A4. Order Creation (DB Required) / A4.1 Create order - success.]]>
+        <![CDATA[Test description: Has pricing context.]]>
+        <![CDATA[Error message: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'pricing_context'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'pricing_context'
+   at Object.eval sandbox-script.js:3:10).]]>
+      </failure>
+    </testcase>
+    <testcase name="Total calculated correctly" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="Cannot read properties of undefined (reading 'subtotal')">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A4. Order Creation (DB Required) / A4.1 Create order - success.]]>
+        <![CDATA[Test description: Total calculated correctly.]]>
+        <![CDATA[Error message: Cannot read properties of undefined (reading 'subtotal').]]>
+        <![CDATA[Stacktrace: TypeError: Cannot read properties of undefined (reading 'subtotal')
+   at Object.eval sandbox-script.js:4:10).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="A4. Order Creation (DB Required) / A4.2 Error - missing order_no" id="839277e1-4f98-49ec-8cb9-c8c1c0e53354" timestamp="2025-12-01T08:21:07.576Z" tests="2" failures="0" errors="0" time="0.003">
-    <testcase name="Returns 400" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns INVALID_REQUEST" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A4. Order Creation (DB Required) / A4.2 Error - missing order_no" id="98da0a9a-5325-4f79-a91b-4ea003f181a7" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Returns 400" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected response to have status code 400 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A4. Order Creation (DB Required) / A4.2 Error - missing order_no.]]>
+        <![CDATA[Test description: Returns 400.]]>
+        <![CDATA[Error message: expected response to have status code 400 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 400 but got 401
+   at Object.eval sandbox-script.js:1:11).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns INVALID_REQUEST" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected 'INTERNAL_ERROR' to equal 'INVALID_REQUEST'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A4. Order Creation (DB Required) / A4.2 Error - missing order_no.]]>
+        <![CDATA[Test description: Returns INVALID_REQUEST.]]>
+        <![CDATA[Error message: expected 'INTERNAL_ERROR' to equal 'INVALID_REQUEST'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 'INTERNAL_ERROR' to equal 'INVALID_REQUEST'
+   at Object.eval sandbox-script.js:2:11).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="A4. Order Creation (DB Required) / A4.3 Error - invalid customer type" id="5062760d-7cec-4a58-a5a6-212d54752ca6" timestamp="2025-12-01T08:21:07.576Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="Returns 400" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns INVALID_REQUEST" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A4. Order Creation (DB Required) / A4.3 Error - invalid customer type" id="df446b54-00f6-43b8-bf4e-d4e215d6a93c" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="2" errors="0" time="0.002">
+    <testcase name="Returns 400" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected response to have status code 400 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A4. Order Creation (DB Required) / A4.3 Error - invalid customer type.]]>
+        <![CDATA[Test description: Returns 400.]]>
+        <![CDATA[Error message: expected response to have status code 400 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 400 but got 401
+   at Object.eval sandbox-script.js:1:12).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns INVALID_REQUEST" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected 'INTERNAL_ERROR' to equal 'INVALID_REQUEST'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A4. Order Creation (DB Required) / A4.3 Error - invalid customer type.]]>
+        <![CDATA[Test description: Returns INVALID_REQUEST.]]>
+        <![CDATA[Error message: expected 'INTERNAL_ERROR' to equal 'INVALID_REQUEST'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 'INTERNAL_ERROR' to equal 'INVALID_REQUEST'
+   at Object.eval sandbox-script.js:2:12).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="A4. Order Creation (DB Required) / A4.4 Error - unauthorized" id="11c6370c-d364-45b2-a45d-89ae9244b9db" timestamp="2025-12-01T08:21:07.576Z" tests="1" failures="0" errors="0" time="0.003">
-    <testcase name="Returns 401" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking"/>
-  </testsuite>
-  <testsuite name="A5. Order Management (DB Required) / A5.1 Get order list" id="ebd01839-073e-4d23-ad4f-557737df7e52" timestamp="2025-12-01T08:21:07.576Z" tests="1" failures="0" errors="0" time="0.003">
-    <testcase name="Order list requires database mode" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking"/>
-  </testsuite>
-  <testsuite name="A5. Order Management (DB Required) / A5.2 Get order detail" id="1000d06e-025f-4863-a29b-f1afa23cdbcc" timestamp="2025-12-01T08:21:07.576Z" tests="1" failures="0" errors="0" time="0.002">
-    <testcase name="Order detail requires database mode" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
-  </testsuite>
-  <testsuite name="A5. Order Management (DB Required) / A5.3 Error - unauthorized" id="3ccc6dc1-74ac-4171-a665-35695fbfc648" timestamp="2025-12-01T08:21:07.576Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="A4. Order Creation (DB Required) / A4.4 Error - unauthorized" id="426b06d8-0e18-46b1-9085-d963ccda46ff" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="Returns 401" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  </testsuite>
+  <testsuite name="A5. Order Management (DB Required) / A5.1 Get order list" id="10410472-ae5d-4f16-a2f2-1f7b328d5716" timestamp="2025-12-02T08:34:39.169Z" tests="3" failures="3" errors="0" time="0.001">
+    <testcase name="Returns 200" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A5. Order Management (DB Required) / A5.1 Get order list.]]>
+        <![CDATA[Test description: Returns 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:14).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns orders array" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'orders'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A5. Order Management (DB Required) / A5.1 Get order list.]]>
+        <![CDATA[Test description: Returns orders array.]]>
+        <![CDATA[Error message: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'orders'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'orders'
+   at Object.eval sandbox-script.js:2:14).]]>
+      </failure>
+    </testcase>
+    <testcase name="Has pagination info" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'total'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A5. Order Management (DB Required) / A5.1 Get order list.]]>
+        <![CDATA[Test description: Has pagination info.]]>
+        <![CDATA[Error message: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'total'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'total'
+   at Object.eval sandbox-script.js:3:14).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="A5. Order Management (DB Required) / A5.2 Get order detail" id="b56b9c76-902e-40ef-bdda-7089799c08ae" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="No order created to test detail" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  </testsuite>
+  <testsuite name="A5. Order Management (DB Required) / A5.3 Error - unauthorized" id="b1d12596-febf-4b9b-80bf-f98d8d208688" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="Returns 401" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  </testsuite>
+  <testsuite name="A6. Simulate Payment (DB Required) / A6.1 Simulate payment - success" id="fbeac73a-02e1-4184-b77d-1d6f3756a7f4" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="No order created to test payment" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  </testsuite>
+  <testsuite name="A6. Simulate Payment (DB Required) / A6.2 Error - order not found" id="48221b18-0864-4cec-8dfe-d78aac81d370" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Returns 404" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected response to have status code 404 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A6. Simulate Payment (DB Required) / A6.2 Error - order not found.]]>
+        <![CDATA[Test description: Returns 404.]]>
+        <![CDATA[Error message: expected response to have status code 404 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 404 but got 401
+   at Object.eval sandbox-script.js:1:18).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns ORDER_NOT_FOUND" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected 'INTERNAL_ERROR' to equal 'ORDER_NOT_FOUND'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A6. Simulate Payment (DB Required) / A6.2 Error - order not found.]]>
+        <![CDATA[Test description: Returns ORDER_NOT_FOUND.]]>
+        <![CDATA[Error message: expected 'INTERNAL_ERROR' to equal 'ORDER_NOT_FOUND'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 'INTERNAL_ERROR' to equal 'ORDER_NOT_FOUND'
+   at Object.eval sandbox-script.js:2:18).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="A6. Simulate Payment (DB Required) / A6.3 Error - already paid (invalid status)" id="37e01f23-6ffa-4f85-83a0-6e7de151ac7a" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="No order to test" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  </testsuite>
+  <testsuite name="A6. Simulate Payment (DB Required) / A6.4 Error - unauthorized" id="7b9b2192-905c-4d7d-88dd-5b1a68eafa42" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="Returns 401" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  </testsuite>
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.1 Generate QR - success (default expiry)" id="1c1dfcbb-1617-4fdd-a1e9-2863db97a09c" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="No ticket available for QR test" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  </testsuite>
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.2 Generate QR - custom expiry (60 min)" id="2e7e8eb6-327c-4b8a-8d13-4311bf942206" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="No ticket available for QR test" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  </testsuite>
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.3 Error - ticket not found" id="27baef4c-baa7-43b7-91db-5fdb4985df68" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="2" errors="0" time="0.002">
+    <testcase name="Returns 404" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected response to have status code 404 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A7. Ticket QR Generation (DB Required) / A7.3 Error - ticket not found.]]>
+        <![CDATA[Test description: Returns 404.]]>
+        <![CDATA[Error message: expected response to have status code 404 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 404 but got 401
+   at Object.eval sandbox-script.js:1:23).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns TICKET_NOT_FOUND" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected 'INTERNAL_ERROR' to equal 'TICKET_NOT_FOUND'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A7. Ticket QR Generation (DB Required) / A7.3 Error - ticket not found.]]>
+        <![CDATA[Test description: Returns TICKET_NOT_FOUND.]]>
+        <![CDATA[Error message: expected 'INTERNAL_ERROR' to equal 'TICKET_NOT_FOUND'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 'INTERNAL_ERROR' to equal 'TICKET_NOT_FOUND'
+   at Object.eval sandbox-script.js:2:23).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.4 Error - invalid expiry" id="11094986-0a0c-43bb-ae0c-504a189552cd" timestamp="2025-12-02T08:34:39.169Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Returns 400" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="expected response to have status code 400 but got 404">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A7. Ticket QR Generation (DB Required) / A7.4 Error - invalid expiry.]]>
+        <![CDATA[Test description: Returns 400.]]>
+        <![CDATA[Error message: expected response to have status code 400 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 400 but got 404
+   at Object.eval sandbox-script.js:1:24).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns INVALID_EXPIRY" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
+        <![CDATA[Collection name: PRD-008 DeepTravel 小程序 Phase 1 - Package Booking.]]>
+        <![CDATA[Request name: A7. Ticket QR Generation (DB Required) / A7.4 Error - invalid expiry.]]>
+        <![CDATA[Test description: Returns INVALID_EXPIRY.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+   at Object.eval sandbox-script.js:2:24).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.5 Error - unauthorized" id="52ff3ee5-f675-4d53-8334-43e1fe907dba" timestamp="2025-12-02T08:34:39.169Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="Returns 401" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
 </testsuites>

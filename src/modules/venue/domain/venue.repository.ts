@@ -162,8 +162,7 @@ export class VenueRepository {
   ): Promise<boolean> {
     const entitlements = (ticket.entitlements || []) as Array<{
       function_code: string;
-      quantity: number;
-      used_quantity?: number;
+      remaining_uses: number;
     }>;
 
     const entitlementIndex = entitlements.findIndex(
@@ -174,22 +173,15 @@ export class VenueRepository {
       return false;
     }
 
-    const entitlement = entitlements[entitlementIndex];
-    const usedQty = entitlement.used_quantity || 0;
-    const remainingUses = entitlement.quantity - usedQty;
-
-    if (remainingUses <= 0) {
+    if (entitlements[entitlementIndex].remaining_uses <= 0) {
       return false;
     }
 
-    // Increment used_quantity
-    entitlements[entitlementIndex].used_quantity = usedQty + 1;
+    // Decrement remaining_uses
+    entitlements[entitlementIndex].remaining_uses -= 1;
 
     // Check if all entitlements are fully used
-    const allUsed = entitlements.every((e) => {
-      const used = e.used_quantity || 0;
-      return used >= e.quantity;
-    });
+    const allUsed = entitlements.every((e) => e.remaining_uses === 0);
 
     // Update the ticket in database
     const updateData: Partial<TicketEntity> = {

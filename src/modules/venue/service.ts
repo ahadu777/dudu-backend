@@ -94,6 +94,18 @@ export class VenueOperationsService {
    */
   async validateAndRedeem(request: ValidationRequest): Promise<VenueOperationsResponse> {
     const startTime = Date.now();
+    let venueId: number = 0;  // 场馆ID，用于记录核销事件
+
+    // 额外信息，用于记录核销事件的 additional_data
+    const additionalInfo: {
+      ticketType?: string;
+      venueCode?: string;
+      venueName?: string;
+      productId?: number;
+      productName?: string;
+      customerName?: string;
+      customerType?: string;
+    } = {};
 
     logger.info('venue.scan.started', {
       function_code: request.functionCode,
@@ -146,7 +158,9 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'ALREADY_REDEEMED'
+          reason: 'ALREADY_REDEEMED',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('ALREADY_REDEEMED', startTime, request.operator, false);
@@ -169,11 +183,19 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'TICKET_NOT_FOUND'
+          reason: 'TICKET_NOT_FOUND',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request.operator, true);
       }
+
+      // 收集票券相关的额外信息
+      additionalInfo.ticketType = ticket.ticket_type;
+      additionalInfo.productId = ticket.product_id;
+      additionalInfo.customerName = ticket.customer_name;
+      additionalInfo.customerType = ticket.customer_type;
 
       // ========================================
       // Step 3.1: JTI 匹配验证（一码失效机制）
@@ -207,7 +229,9 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'QR_SUPERSEDED'
+          reason: 'QR_SUPERSEDED',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('QR_SUPERSEDED', startTime, request.operator, false);
@@ -237,7 +261,9 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'TICKET_INVALID_STATUS'
+          reason: 'TICKET_INVALID_STATUS',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('TICKET_INVALID_STATUS', startTime, request.operator, true);
@@ -267,7 +293,9 @@ export class VenueOperationsService {
             functionCode: request.functionCode,
             operator: request.operator,
             result: 'reject',
-            reason: 'VENUE_NOT_FOUND'
+            reason: 'VENUE_NOT_FOUND',
+            venueId,
+            additionalInfo
           });
 
           return this.createRejectResponse('VENUE_NOT_FOUND', startTime, request.operator, true);
@@ -290,14 +318,22 @@ export class VenueOperationsService {
             functionCode: request.functionCode,
             operator: request.operator,
             result: 'reject',
-            reason: 'WRONG_VENUE_FUNCTION'
+            reason: 'WRONG_VENUE_FUNCTION',
+            venueId,
+            additionalInfo
           });
 
           return this.createRejectResponse('WRONG_VENUE_FUNCTION', startTime, request.operator, true);
         }
 
+        // 保存场馆信息用于记录核销事件
+        venueId = venue.venue_id;
+        additionalInfo.venueCode = venue.venue_code;
+        additionalInfo.venueName = venue.venue_name;
+
         logger.info('venue.scan.venue_validation_passed', {
           venue_code: request.venueCode,
+          venue_id: venueId,
           venue_name: venue.venue_name,
           function_code: request.functionCode,
           operator_id: request.operator.operator_id
@@ -325,7 +361,9 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'WRONG_FUNCTION'
+          reason: 'WRONG_FUNCTION',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('WRONG_FUNCTION', startTime, request.operator, true);
@@ -345,7 +383,9 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'NO_REMAINING'
+          reason: 'NO_REMAINING',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('NO_REMAINING', startTime, request.operator, true);
@@ -377,7 +417,9 @@ export class VenueOperationsService {
         functionCode: request.functionCode,
         operator: request.operator,
         result: 'success',
-        remainingUsesAfter
+        remainingUsesAfter,
+        venueId,
+        additionalInfo
       });
 
       // ========================================
@@ -470,19 +512,40 @@ export class VenueOperationsService {
     result: 'success' | 'reject';
     reason?: string;
     remainingUsesAfter?: number;
+    venueId?: number;
+    // 额外信息（存入 additional_data）
+    additionalInfo?: {
+      ticketType?: string;      // OTA / MINIPROGRAM
+      venueCode?: string;       // 场馆代码
+      venueName?: string;       // 场馆名称
+      productId?: number;       // 产品ID
+      productName?: string;     // 产品名称
+      customerName?: string;    // 顾客姓名
+      customerType?: string;    // 顾客类型
+    };
   }): Promise<void> {
     try {
       await this.repository.recordRedemption({
         ticketCode: params.ticketCode,
         functionCode: params.functionCode,
-        venueId: 0, // 默认场馆ID（无session情况）
+        venueId: params.venueId || 0,
         operatorId: params.operator.operator_id,
-        sessionCode: '', // 无session code
+        sessionCode: '',
         terminalDeviceId: undefined,
         jti: params.jti,
         result: params.result,
         reason: params.reason,
-        remainingUsesAfter: params.remainingUsesAfter
+        remainingUsesAfter: params.remainingUsesAfter,
+        additionalData: {
+          operator_name: params.operator.username,
+          ticket_type: params.additionalInfo?.ticketType,
+          venue_code: params.additionalInfo?.venueCode,
+          venue_name: params.additionalInfo?.venueName,
+          product_id: params.additionalInfo?.productId,
+          product_name: params.additionalInfo?.productName,
+          customer_name: params.additionalInfo?.customerName,
+          customer_type: params.additionalInfo?.customerType
+        }
       });
     } catch (error) {
       // 记录失败不应该影响主流程

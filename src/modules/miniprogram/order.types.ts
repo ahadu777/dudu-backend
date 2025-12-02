@@ -113,11 +113,11 @@ export interface CreateOrderResponse {
 
 /**
  * 票券权益信息
+ * 与 OTA 票券保持一致，使用 remaining_uses 倒计数
  */
 export interface EntitlementInfo {
   function_code: string;  // ferry, playground_tokens, monchhichi_gift, etc.
-  quantity: number;
-  used_quantity: number;
+  remaining_uses: number;
 }
 
 /**
