@@ -5,6 +5,7 @@ import { RedemptionEvent } from './redemption-event.entity';
 import { PreGeneratedTicketEntity } from '../../ota/domain/pre-generated-ticket.entity';
 import { OTAOrderEntity } from '../../ota/domain/ota-order.entity';
 import { TicketEntity } from '../../ticket-reservation/domain/ticket.entity';
+import { ProductEntity } from '../../ota/domain/product.entity';
 
 export class VenueRepository {
   private venueRepo: Repository<Venue>;
@@ -13,6 +14,7 @@ export class VenueRepository {
   private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
   private otaOrderRepo: Repository<OTAOrderEntity>;
   private ticketRepo: Repository<TicketEntity>;  // 小程序票券
+  private productRepo: Repository<ProductEntity>;
 
   constructor(dataSource: DataSource) {
     this.venueRepo = dataSource.getRepository(Venue);
@@ -21,6 +23,7 @@ export class VenueRepository {
     this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
     this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
     this.ticketRepo = dataSource.getRepository(TicketEntity);
+    this.productRepo = dataSource.getRepository(ProductEntity);
   }
 
   // Ticket Management
@@ -400,6 +403,12 @@ export class VenueRepository {
     remainingUsesAfter?: number;
     additionalData?: Record<string, any>;
   }): Promise<RedemptionEvent> {
+    // Only set success_unique_key for success records to enforce uniqueness
+    // NULL for reject records allows multiple reject attempts with same jti
+    const successUniqueKey = redemptionData.result === 'success'
+      ? `${redemptionData.jti}_${redemptionData.functionCode}`
+      : null;
+
     const event = this.redemptionRepo.create({
       ticket_code: redemptionData.ticketCode,
       function_code: redemptionData.functionCode,
@@ -408,6 +417,7 @@ export class VenueRepository {
       session_code: redemptionData.sessionCode,
       terminal_device_id: redemptionData.terminalDeviceId,
       jti: redemptionData.jti,
+      success_unique_key: successUniqueKey,
       result: redemptionData.result,
       reason: redemptionData.reason,
       remaining_uses_after: redemptionData.remainingUsesAfter,
@@ -547,5 +557,19 @@ export class VenueRepository {
     const events = await query.getMany();
 
     return { events, total };
+  }
+
+  /**
+   * 根据产品 ID 获取产品名称
+   */
+  async getProductNameById(productId: number): Promise<string | null> {
+    if (!productId) return null;
+
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      select: ['name']
+    });
+
+    return product?.name || null;
   }
 }

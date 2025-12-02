@@ -9,6 +9,7 @@ import { generateSecureQR } from '../../utils/qr-crypto';
 import { TicketRawMetadata } from '../../types/domain';
 import { directusService } from '../../utils/directus';
 import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
+import { ProductEntity } from './domain/product.entity';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -2445,6 +2446,136 @@ export class OTAService {
    */
   async deactivateReseller(resellerId: number, partnerId: string): Promise<any> {
     return this.updateReseller(resellerId, partnerId, { status: 'terminated' });
+  }
+
+  // ============= PRODUCT QR CONFIG MANAGEMENT (NEW) =============
+
+  /**
+   * Get QR code configuration for a product
+   */
+  async getProductQRConfig(productId: number): Promise<any | null> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const productRepo = AppDataSource.getRepository(ProductEntity);
+      const product = await productRepo.findOne({ where: { id: productId } });
+
+      if (!product) {
+        return null;
+      }
+
+      return {
+        product_id: product.id,
+        product_name: product.name,
+        qr_config: product.qr_config || {
+          dark_color: '#CC0000',  // Default red
+          light_color: '#FFFFFF'
+        }
+      };
+    } else {
+      // Mock implementation
+      const product = mockDataStore.getProduct(productId);
+      if (!product) {
+        return null;
+      }
+
+      return {
+        product_id: product.id,
+        product_name: product.name,
+        qr_config: {
+          dark_color: '#CC0000',
+          light_color: '#FFFFFF'
+        }
+      };
+    }
+  }
+
+  /**
+   * Update QR code configuration for a product
+   */
+  async updateProductQRConfig(productId: number, qrConfig: {
+    dark_color?: string;
+    light_color?: string;
+    logo_url?: string;
+  }): Promise<any | null> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const productRepo = AppDataSource.getRepository(ProductEntity);
+      const product = await productRepo.findOne({ where: { id: productId } });
+
+      if (!product) {
+        return null;
+      }
+
+      // Merge with existing config
+      product.qr_config = {
+        ...product.qr_config,
+        ...qrConfig
+      };
+
+      await productRepo.save(product);
+
+      logger.info('ota.product.qr_config_updated', {
+        product_id: productId,
+        qr_config: product.qr_config
+      });
+
+      return {
+        product_id: product.id,
+        product_name: product.name,
+        qr_config: product.qr_config,
+        updated_at: new Date().toISOString()
+      };
+    } else {
+      // Mock implementation - return success with provided config
+      const product = mockDataStore.getProduct(productId);
+      if (!product) {
+        return null;
+      }
+
+      return {
+        product_id: product.id,
+        product_name: product.name,
+        qr_config: qrConfig,
+        updated_at: new Date().toISOString()
+      };
+    }
+  }
+
+  /**
+   * Get QR configurations for all products
+   */
+  async getAllProductQRConfigs(): Promise<any[]> {
+    if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
+      const productRepo = AppDataSource.getRepository(ProductEntity);
+      const products = await productRepo.find({
+        where: { status: 'active' },
+        select: ['id', 'name', 'category', 'qr_config']
+      });
+
+      return products.map(product => ({
+        product_id: product.id,
+        product_name: product.name,
+        category: product.category,
+        qr_config: product.qr_config || {
+          dark_color: '#CC0000',
+          light_color: '#FFFFFF'
+        }
+      }));
+    } else {
+      // Mock implementation
+      return [
+        {
+          product_id: 1,
+          product_name: 'Day Pass',
+          category: 'ticket',
+          qr_config: { dark_color: '#CC0000', light_color: '#FFFFFF' }
+        },
+        {
+          product_id: 2,
+          product_name: 'VIP Package',
+          category: 'package',
+          qr_config: { dark_color: '#CC0000', light_color: '#FFFFFF' }
+        }
+      ];
+    }
   }
 }
 

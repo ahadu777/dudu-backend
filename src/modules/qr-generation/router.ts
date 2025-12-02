@@ -53,63 +53,21 @@ router.post('/decrypt', async (req: Request, res: Response) => {
 
     // Step 2: Fetch complete ticket information
     // Note: No ownership validation here since encrypted_data itself is the security credential
-    // Try all sources without prefix-based restrictions
+    // Query tickets from local database (tickets table for miniprogram, pre_generated_tickets for OTA)
 
     let ticket;
     let ticketType = 'NORMAL';
 
-    // Try Directus first (primary source for customer-created tickets)
-    try {
-      const { DirectusService } = await import('../../utils/directus');
-      const directusService = new DirectusService();
-      ticket = await directusService.getTicketByNumber(ticketCode);
-      if (ticket) {
-        ticketType = 'DIRECTUS';
-        logger.info('qr.decrypt.ticket_source', {
-          ticket_code: ticketCode,
-          source: 'directus',
-          status: ticket.status
-        });
-      }
-    } catch (error) {
-      logger.warn('qr.decrypt.directus_lookup_failed', {
-        ticket_code: ticketCode,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-
-    // Try database second (if available - OTA and miniprogram tickets)
-    if (!ticket && dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+    // Query local database first (OTA pre_generated_tickets + miniprogram tickets)
+    if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
       const venueRepo = new VenueRepository(AppDataSource);
       ticket = await venueRepo.getTicketByCode(ticketCode);
       if (ticket) {
-        ticketType = ticket.ticket_type || 'OTA';  // 使用票券返回的实际类型
+        ticketType = ticket.ticket_type || (ticketCode.startsWith('MP-') ? 'MINIPROGRAM' : 'OTA');
         logger.info('qr.decrypt.ticket_source', {
           ticket_code: ticketCode,
           source: 'database',
           ticket_type: ticketType
-        });
-      }
-    }
-
-    // Fallback to mock stores if not found in Directus or database
-    if (!ticket) {
-      ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
-      if (ticket) {
-        ticketType = 'OTA';
-        logger.info('qr.decrypt.ticket_source', {
-          ticket_code: ticketCode,
-          source: 'mock_pregenerated'
-        });
-      }
-    }
-
-    if (!ticket) {
-      ticket = mockDataStore.getTicketByCode(ticketCode);
-      if (ticket) {
-        logger.info('qr.decrypt.ticket_source', {
-          ticket_code: ticketCode,
-          source: 'mock_store'
         });
       }
     }

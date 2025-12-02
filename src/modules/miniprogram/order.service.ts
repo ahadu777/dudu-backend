@@ -237,6 +237,14 @@ export class MiniprogramOrderService {
       });
       const productEntitlements = product?.entitlements || [];
 
+      logger.info('miniprogram.order.product_entitlements', {
+        order_id: orderId,
+        product_id: order.product_id,
+        product_found: !!product,
+        entitlements_raw: product?.entitlements,
+        entitlements_count: productEntitlements.length
+      });
+
       // 6. 生成票券
       const tickets: TicketEntity[] = [];
       const pricingContext = order.pricing_context as PricingContextType;
@@ -255,10 +263,16 @@ export class MiniprogramOrderService {
             ticket.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1年有效期
             ticket.channel = 'direct';
             // 复制产品权益到票券（与 OTA 保持一致，使用 remaining_uses）
+            // 支持两种数据格式：{ type, metadata: { quantity } } 或 { type, quantity }
             ticket.entitlements = productEntitlements.map(e => ({
               function_code: e.type,
-              remaining_uses: e.metadata?.quantity || 1
+              remaining_uses: e.metadata?.quantity || (e as any).quantity || 1
             }));
+
+            logger.debug('miniprogram.ticket.entitlements_generated', {
+              ticket_code: ticket.ticket_code,
+              entitlements: ticket.entitlements
+            });
 
             const savedTicket = await manager.save(ticket);
             tickets.push(savedTicket);

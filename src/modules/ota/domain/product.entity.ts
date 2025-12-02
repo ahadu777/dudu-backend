@@ -41,6 +41,13 @@ export class ProductEntity {
     metadata?: Record<string, any>;
   }>;
 
+  @Column({ type: 'json', nullable: true })
+  qr_config?: {
+    dark_color?: string;   // QR foreground color (default: #CC0000)
+    light_color?: string;  // QR background color (default: #FFFFFF)
+    logo_url?: string;     // Optional logo overlay URL
+  };
+
   @OneToMany(() => ProductInventoryEntity, inventory => inventory.product)
   inventory!: ProductInventoryEntity[];
 

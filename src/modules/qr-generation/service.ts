@@ -1,11 +1,12 @@
 import { Request } from 'express';
 import { mockDataStore } from '../../core/mock/data';
-import { generateSecureQR, EncryptedQRResult } from '../../utils/qr-crypto';
+import { generateSecureQR, EncryptedQRResult, QRColorConfig } from '../../utils/qr-crypto';
 import { logger } from '../../utils/logger';
 import { getAuthContext } from '../../middlewares/unified-auth';
 import { AppDataSource } from '../../config/database';
 import { dataSourceConfig } from '../../config/data-source';
 import { OTARepository } from '../ota/domain/ota.repository';
+import { ProductEntity } from '../ota/domain/product.entity';
 
 /**
  * Ticket type detection result
@@ -185,6 +186,42 @@ export class UnifiedQRService {
   }
 
   /**
+   * Get QR color configuration from product
+   * @param productId - Product ID
+   * @returns QR color config or undefined
+   */
+  private async getProductQRConfig(productId: number): Promise<QRColorConfig | undefined> {
+    if (!productId || productId <= 0) {
+      return undefined;
+    }
+
+    try {
+      if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+        const productRepo = AppDataSource.getRepository(ProductEntity);
+        const product = await productRepo.findOne({ where: { id: productId } });
+
+        if (product?.qr_config) {
+          logger.debug('qr.service.product_qr_config_found', {
+            product_id: productId,
+            qr_config: product.qr_config
+          });
+          return {
+            dark_color: product.qr_config.dark_color,
+            light_color: product.qr_config.light_color
+          };
+        }
+      }
+    } catch (error) {
+      logger.warn('qr.service.product_qr_config_error', {
+        product_id: productId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
+    return undefined;
+  }
+
+  /**
    * Generate QR token for a ticket (unified for both OTA and normal tickets)
    * No authentication required - ticket_code itself is the credential
    *
@@ -216,7 +253,10 @@ export class UnifiedQRService {
     // Step 3: Validate status (ownership verification removed - ticket_code is sufficient credential)
     this.validateStatus(ticket);
 
-    // Step 4: Generate encrypted QR code with appropriate expiry time
+    // Step 4: Get product QR color config
+    const qrColorConfig = await this.getProductQRConfig(ticket.product_id);
+
+    // Step 5: Generate encrypted QR code with appropriate expiry time
     // OTA tickets: Permanent QR codes (100 years = 52,560,000 minutes)
     //   - QR validity is determined by ticket status, not expiry time
     //   - Ticket status (PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED) controls usability
@@ -225,7 +265,9 @@ export class UnifiedQRService {
 
     const qrResult = await generateSecureQR(
       ticket.ticket_code,
-      qrExpiryMinutes
+      qrExpiryMinutes,
+      undefined, // logoBuffer
+      qrColorConfig
     );
 
     logger.info('qr.service.generate_success', {

@@ -982,4 +982,137 @@ router.delete('/resellers/:id', async (req: AuthenticatedRequest, res: Response)
   }
 });
 
+// ============= PRODUCT QR CONFIG MANAGEMENT (NEW) =============
+
+/**
+ * GET /api/ota/products/:id/qr-config
+ * Get QR code configuration for a product
+ */
+router.get('/products/:id/qr-config', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'Invalid product ID'
+      });
+    }
+
+    const qrConfig = await otaService.getProductQRConfig(productId);
+
+    if (!qrConfig) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Product not found'
+      });
+    }
+
+    res.json(qrConfig);
+  } catch (error: any) {
+    logger.error('OTA get product QR config failed', {
+      partner: req.ota_partner?.name,
+      product_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve product QR configuration'
+    });
+  }
+});
+
+/**
+ * PUT /api/ota/products/:id/qr-config
+ * Update QR code configuration for a product
+ *
+ * Request body:
+ * {
+ *   "dark_color": "#0066CC",    // QR foreground color (hex format)
+ *   "light_color": "#FFFFFF",   // QR background color (hex format)
+ *   "logo_url": "https://..."   // Optional logo URL
+ * }
+ */
+router.put('/products/:id/qr-config', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'Invalid product ID'
+      });
+    }
+
+    const { dark_color, light_color, logo_url } = req.body;
+
+    // Validate hex color format
+    const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+
+    if (dark_color && !hexColorRegex.test(dark_color)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'dark_color must be a valid hex color (e.g., #CC0000)'
+      });
+    }
+
+    if (light_color && !hexColorRegex.test(light_color)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'light_color must be a valid hex color (e.g., #FFFFFF)'
+      });
+    }
+
+    const result = await otaService.updateProductQRConfig(productId, {
+      dark_color,
+      light_color,
+      logo_url
+    });
+
+    if (!result) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Product not found'
+      });
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('OTA update product QR config failed', {
+      partner: req.ota_partner?.name,
+      product_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to update product QR configuration'
+    });
+  }
+});
+
+/**
+ * GET /api/ota/products/qr-configs
+ * Get QR configurations for all products (batch query)
+ */
+router.get('/products/qr-configs', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const configs = await otaService.getAllProductQRConfigs();
+
+    res.json({
+      products: configs,
+      total_count: configs.length
+    });
+  } catch (error: any) {
+    logger.error('OTA get all product QR configs failed', {
+      partner: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve product QR configurations'
+    });
+  }
+});
+
 export default router;

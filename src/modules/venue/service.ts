@@ -197,6 +197,11 @@ export class VenueOperationsService {
       additionalInfo.customerName = ticket.customer_name;
       additionalInfo.customerType = ticket.customer_type;
 
+      // 获取产品名称
+      if (ticket.product_id) {
+        additionalInfo.productName = await this.repository.getProductNameById(ticket.product_id) || undefined;
+      }
+
       // ========================================
       // Step 3.1: JTI 匹配验证（一码失效机制）
       // - OTA 票券：current_jti 存储在 raw.jti.current_jti

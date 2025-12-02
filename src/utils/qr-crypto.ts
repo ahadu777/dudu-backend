@@ -38,6 +38,18 @@ export interface DecryptedQRResult {
   remaining_seconds: number;
 }
 
+/**
+ * QR Color Configuration
+ */
+export interface QRColorConfig {
+  dark_color?: string;   // QR foreground color (default: #CC0000)
+  light_color?: string;  // QR background color (default: #FFFFFF)
+}
+
+// Default QR colors
+const DEFAULT_QR_DARK_COLOR = '#CC0000';
+const DEFAULT_QR_LIGHT_COLOR = '#FFFFFF';
+
 // Constants
 const IV_LENGTH = 12; // GCM recommends 12 bytes
 const AUTH_TAG_LENGTH = 16; // GCM auth tag is 16 bytes
@@ -140,21 +152,26 @@ function verifySignature(data: string, signature: string): boolean {
  * Generate PNG QR code image from encrypted data with optional logo overlay
  * @param encryptedData - Encrypted data string
  * @param logoBuffer - Optional logo image buffer to overlay in center
+ * @param colorConfig - Optional color configuration for QR code
  * @returns Base64-encoded PNG image (data:image/png;base64,...)
  */
 async function generateQRImage(
   encryptedData: string,
-  logoBuffer?: Buffer
+  logoBuffer?: Buffer,
+  colorConfig?: QRColorConfig
 ): Promise<string> {
   const QR_SIZE = 180; // Optimized size: balance between scanning reliability and file size
+  const darkColor = colorConfig?.dark_color || DEFAULT_QR_DARK_COLOR;
+  const lightColor = colorConfig?.light_color || DEFAULT_QR_LIGHT_COLOR;
+
   const options = {
     errorCorrectionLevel: logoBuffer ? ('H' as const) : ('M' as const), // High correction when logo present
     type: 'png' as const,
     margin: 2,
     width: QR_SIZE,
     color: {
-      dark: '#CC0000',  // 红色
-      light: '#FFFFFF'
+      dark: darkColor,
+      light: lightColor
     }
   };
 
@@ -247,12 +264,14 @@ export function getRemainingSeconds(data: QRTicketData): number {
  * @param ticketCode - Ticket code (only essential data stored in QR)
  * @param expiryMinutes - QR code expiration time in minutes (default from env)
  * @param logoBuffer - Optional logo image buffer to overlay (for branded QR codes)
+ * @param colorConfig - Optional color configuration for QR code
  * @returns Encrypted QR result with image
  */
 export async function generateSecureQR(
   ticketCode: string,
   expiryMinutes?: number,
-  logoBuffer?: Buffer
+  logoBuffer?: Buffer,
+  colorConfig?: QRColorConfig
 ): Promise<EncryptedQRResult> {
   const now = new Date();
   const expiryTime = expiryMinutes || Number(env.QR_EXPIRY_MINUTES) || 30;
@@ -284,8 +303,8 @@ export async function generateSecureQR(
   // Step 3: Combine: encrypted:signature
   const signedData = `${encrypted}:${signature}`;
 
-  // Step 4: Generate QR image with optional logo
-  const qrImage = await generateQRImage(signedData, logoBuffer);
+  // Step 4: Generate QR image with optional logo and colors
+  const qrImage = await generateQRImage(signedData, logoBuffer, colorConfig);
 
   logger.info('qr.generation.success', {
     jti,
