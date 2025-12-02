@@ -122,6 +122,35 @@ router.post('/decrypt', async (req: Request, res: Response) => {
       });
     }
 
+    // JTI 验证：检查二维码是否已被新码替代（一码失效机制）
+    // - OTA 票券：current_jti 存储在 raw.jti.current_jti
+    // - 小程序票券：current_jti 存储在 extra.current_jti
+    let currentJti: string | undefined;
+
+    // OTA 票券
+    if (ticket.raw?.jti?.current_jti) {
+      currentJti = ticket.raw.jti.current_jti;
+    }
+    // 小程序票券
+    else if (ticket.extra?.current_jti) {
+      currentJti = ticket.extra.current_jti;
+    }
+
+    if (currentJti && currentJti !== result.data.jti) {
+      logger.warn('qr.decrypt.jti_mismatch', {
+        ticket_code: ticketCode,
+        qr_jti: result.data.jti,
+        current_jti: currentJti,
+        ticket_type: ticketType
+      });
+      return res.status(401).json({
+        error: 'QR_SUPERSEDED',
+        message: '此二维码已失效，请重新生成',
+        jti: result.data.jti,
+        ticket_code: ticketCode
+      });
+    }
+
     // Get product information (database first, then fallback to mock)
     let product: any = null;
     if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {

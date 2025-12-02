@@ -4,7 +4,7 @@ import ordersRouter from './orders/router';
 import paymentsRouter from './payments/router';
 import ticketsRouter from './tickets/router';
 import operatorsRouter from './operators/router';
-import reportsRouter from './reports/router';
+// reports module removed - redemptions endpoint moved to venue module
 import refundsRouter from './refunds/router';
 import policiesRouter from './policies/router';
 import profileRouter from './profile/router';
@@ -37,7 +37,6 @@ export const registerModuleRouters = (app: Application): void => {
   app.use('/tickets', ticketsRouter);
   app.use('/operators', operatorsRouter);
   app.use('/validators', operatorsRouter);
-  app.use('/reports', reportsRouter);
   app.use('/api/ota', otaRouter);
   app.use('/venue', venueRouter);
   app.use('/qr', qrGenerationRouter); // Unified QR generation and verification

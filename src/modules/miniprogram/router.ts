@@ -308,4 +308,158 @@ router.get('/orders/:id', authenticate, async (req: any, res) => {
   }
 });
 
+/**
+ * POST /miniprogram/tickets/:code/qr
+ * 为票券生成二维码
+ *
+ * 特性：
+ * 1. 验证票券所有权（必须是当前用户的票券）
+ * 2. 生成新二维码时，旧二维码自动失效（通过 jti 机制）
+ * 3. 默认有效期 30 分钟
+ *
+ * @param code - 票券编码 (ticket_code)
+ * @body expiry_minutes - 可选，二维码有效期（分钟），默认30，最大1440
+ */
+router.post('/tickets/:code/qr', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const ticketCode = req.params.code;
+    if (!ticketCode || ticketCode.length < 3) {
+      return res.status(400).json({
+        code: 'INVALID_TICKET_CODE',
+        message: '无效的票券编码'
+      });
+    }
+
+    // 验证有效期参数
+    let expiryMinutes = 30;
+    if (req.body?.expiry_minutes !== undefined) {
+      expiryMinutes = Number(req.body.expiry_minutes);
+      if (isNaN(expiryMinutes) || expiryMinutes < 1 || expiryMinutes > 1440) {
+        return res.status(400).json({
+          code: 'INVALID_EXPIRY',
+          message: '有效期必须在 1-1440 分钟之间'
+        });
+      }
+    }
+
+    const result = await orderService.generateTicketQR(userId, ticketCode, expiryMinutes);
+
+    logger.info('miniprogram.ticket.qr.success', {
+      ticket_code: ticketCode,
+      user_id: userId,
+      expires_at: result.expires_at
+    });
+
+    res.status(200).json({
+      success: true,
+      qr_image: result.qr_image,
+      encrypted_data: result.encrypted_data,
+      ticket_code: result.ticket_code,
+      expires_at: result.expires_at,
+      valid_for_seconds: result.valid_for_seconds,
+      issued_at: new Date().toISOString(),
+      jti: result.jti
+    });
+
+  } catch (error: any) {
+    logger.error('miniprogram.ticket.qr.error', {
+      error: error.message || String(error),
+      code: error.code
+    });
+
+    if (error.code) {
+      const statusMap: Record<string, number> = {
+        'TICKET_NOT_FOUND': 404,
+        'UNAUTHORIZED': 403,
+        'INVALID_TICKET_STATUS': 400
+      };
+      const status = statusMap[error.code] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '生成二维码失败'
+    });
+  }
+});
+
+/**
+ * POST /miniprogram/orders/:id/simulate-payment
+ * 模拟支付成功（仅用于测试环境）
+ *
+ * 功能：
+ * 1. 将订单状态从 PENDING 更新为 PAID
+ * 2. 确认库存（reserved -> sold）
+ * 3. 自动生成票券
+ *
+ * 注意：此接口仅用于开发测试，生产环境应禁用
+ */
+router.post('/orders/:id/simulate-payment', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const orderId = parseInt(req.params.id);
+    if (isNaN(orderId)) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '无效的订单ID'
+      });
+    }
+
+    const result = await orderService.simulatePayment(userId, orderId);
+
+    logger.info('miniprogram.order.simulate_payment.success', {
+      order_id: orderId,
+      user_id: userId,
+      ticket_count: result.tickets?.length || 0
+    });
+
+    res.status(200).json({
+      message: '模拟支付成功',
+      order: result
+    });
+
+  } catch (error: any) {
+    logger.error('miniprogram.order.simulate_payment.error', {
+      error: error.message || String(error),
+      code: error.code
+    });
+
+    if (error.code) {
+      const statusMap: Record<string, number> = {
+        'ORDER_NOT_FOUND': 404,
+        'INVALID_ORDER_STATUS': 400
+      };
+      const status = statusMap[error.code] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '模拟支付失败'
+    });
+  }
+});
+
 export default router;

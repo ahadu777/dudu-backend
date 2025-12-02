@@ -3,6 +3,8 @@ import { venueOperationsService } from './service';
 import { logger } from '../../utils/logger';
 import { authenticateOperator } from '../../middlewares/auth';
 import { API_KEYS } from '../../middlewares/otaAuth';
+import { AppDataSource } from '../../config/database';
+import { VenueRepository } from './domain/venue.repository';
 
 const router = Router();
 
@@ -259,6 +261,259 @@ router.post('/scan', authenticateOperator, async (req, res) => {
         fraud_checks_passed: false
       },
       ts: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /venue/redemptions:
+ *   get:
+ *     tags: [Venue Operations]
+ *     summary: 查询核销记录
+ *     description: 查询核销事件记录，支持时间范围、权益类型、场馆等过滤条件
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: 开始时间 (ISO 8601 格式)
+ *         example: "2025-11-01T00:00:00Z"
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: 结束时间 (ISO 8601 格式)
+ *         example: "2025-11-28T23:59:59Z"
+ *       - in: query
+ *         name: function
+ *         schema:
+ *           type: string
+ *           enum: [ferry_boarding, gift_redemption, playground_token]
+ *         description: 按权益类型过滤
+ *       - in: query
+ *         name: venue_id
+ *         schema:
+ *           type: integer
+ *         description: 按场馆ID过滤
+ *       - in: query
+ *         name: result
+ *         schema:
+ *           type: string
+ *           enum: [success, reject]
+ *         description: 按核销结果过滤
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *         description: 返回数量上限 (最大 1000)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: 分页偏移量
+ *     responses:
+ *       200:
+ *         description: 核销记录列表
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 events:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       event_id:
+ *                         type: integer
+ *                       ticket_code:
+ *                         type: string
+ *                       function_code:
+ *                         type: string
+ *                       venue_id:
+ *                         type: integer
+ *                       venue_name:
+ *                         type: string
+ *                       operator_id:
+ *                         type: integer
+ *                       result:
+ *                         type: string
+ *                         enum: [success, reject]
+ *                       reason:
+ *                         type: string
+ *                         nullable: true
+ *                       ts:
+ *                         type: string
+ *                         format: date-time
+ *                 total:
+ *                   type: integer
+ *                   description: 匹配的总记录数
+ *                 limit:
+ *                   type: integer
+ *                 offset:
+ *                   type: integer
+ *       400:
+ *         description: 请求参数无效
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.get('/redemptions', async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Parse query parameters
+    const fromStr = req.query.from as string | undefined;
+    const toStr = req.query.to as string | undefined;
+    const functionCode = req.query.function as string | undefined;
+    const venueIdStr = req.query.venue_id as string | undefined;
+    const result = req.query.result as 'success' | 'reject' | undefined;
+    const limitStr = req.query.limit as string | undefined;
+    const offsetStr = req.query.offset as string | undefined;
+
+    // Parse and validate dates
+    let from: Date | undefined;
+    let to: Date | undefined;
+
+    if (fromStr) {
+      from = new Date(fromStr);
+      if (isNaN(from.getTime())) {
+        return res.status(400).json({
+          error: 'INVALID_DATE',
+          message: 'Invalid "from" date format. Use ISO 8601 format.'
+        });
+      }
+    }
+
+    if (toStr) {
+      to = new Date(toStr);
+      if (isNaN(to.getTime())) {
+        return res.status(400).json({
+          error: 'INVALID_DATE',
+          message: 'Invalid "to" date format. Use ISO 8601 format.'
+        });
+      }
+    }
+
+    // Validate from < to
+    if (from && to && from > to) {
+      return res.status(400).json({
+        error: 'INVALID_DATE_RANGE',
+        message: '"from" date must be before "to" date'
+      });
+    }
+
+    // Default to last 24 hours if no dates provided
+    if (!from && !to) {
+      to = new Date();
+      from = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    }
+
+    // Parse venue_id
+    let venueId: number | undefined;
+    if (venueIdStr) {
+      venueId = parseInt(venueIdStr, 10);
+      if (isNaN(venueId)) {
+        return res.status(400).json({
+          error: 'INVALID_VENUE_ID',
+          message: 'venue_id must be a valid integer'
+        });
+      }
+    }
+
+    // Validate result parameter
+    if (result && !['success', 'reject'].includes(result)) {
+      return res.status(400).json({
+        error: 'INVALID_RESULT',
+        message: 'result must be "success" or "reject"'
+      });
+    }
+
+    // Parse pagination
+    let limit = parseInt(limitStr || '100', 10);
+    let offset = parseInt(offsetStr || '0', 10);
+
+    // Enforce limits
+    if (isNaN(limit) || limit < 1) limit = 100;
+    if (limit > 1000) limit = 1000;
+    if (isNaN(offset) || offset < 0) offset = 0;
+
+    logger.info('venue.redemptions.query', {
+      from: from?.toISOString(),
+      to: to?.toISOString(),
+      function: functionCode,
+      venue_id: venueId,
+      result,
+      limit,
+      offset
+    });
+
+    // Check if database is initialized
+    if (!AppDataSource.isInitialized) {
+      // Return empty results in mock mode
+      logger.info('venue.redemptions.mock_mode', { message: 'Database not initialized, returning empty results' });
+      return res.status(200).json({
+        events: [],
+        total: 0,
+        limit,
+        offset
+      });
+    }
+
+    // Query redemption events
+    const repository = new VenueRepository(AppDataSource);
+    const { events, total } = await repository.queryRedemptionEvents({
+      from,
+      to,
+      functionCode,
+      venueId,
+      result,
+      limit,
+      offset
+    });
+
+    // Transform events to response format
+    const responseEvents = events.map(event => ({
+      event_id: event.event_id,
+      ticket_code: event.ticket_code,
+      function_code: event.function_code,
+      venue_id: event.venue_id,
+      venue_name: event.venue?.venue_name || null,
+      operator_id: event.operator_id,
+      session_code: event.session_code,
+      result: event.result,
+      reason: event.reason || null,
+      remaining_uses_after: event.remaining_uses_after,
+      ts: event.redeemed_at.toISOString()
+    }));
+
+    logger.info('venue.redemptions.success', {
+      count: responseEvents.length,
+      total,
+      duration_ms: Date.now() - startTime
+    });
+
+    res.status(200).json({
+      events: responseEvents,
+      total,
+      limit,
+      offset
+    });
+
+  } catch (error) {
+    logger.error('venue.redemptions.error', {
+      error: (error as Error).message,
+      stack: (error as Error).stack,
+      duration_ms: Date.now() - startTime
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to query redemption events'
     });
   }
 });

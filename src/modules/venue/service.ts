@@ -175,6 +175,44 @@ export class VenueOperationsService {
         return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request.operator, true);
       }
 
+      // ========================================
+      // Step 3.1: JTI 匹配验证（一码失效机制）
+      // - OTA 票券：current_jti 存储在 raw.jti.current_jti
+      // - 小程序票券：current_jti 存储在 extra.current_jti
+      // ========================================
+      let currentJti: string | undefined;
+
+      // OTA 票券：检查 raw.jti.current_jti
+      if (ticket.raw?.jti?.current_jti) {
+        currentJti = ticket.raw.jti.current_jti;
+      }
+      // 小程序票券：检查 extra.current_jti
+      else if (ticket.extra?.current_jti) {
+        currentJti = ticket.extra.current_jti;
+      }
+
+      if (currentJti && currentJti !== jti) {
+        logger.warn('venue.scan.jti_mismatch', {
+          ticket_code: ticketCode,
+          qr_jti: jti,
+          current_jti: currentJti,
+          ticket_type: ticket.ticket_type,
+          operator_id: request.operator.operator_id,
+          reason: 'QR code superseded by newer one'
+        });
+
+        await this.recordRedemption({
+          ticketCode,
+          jti,
+          functionCode: request.functionCode,
+          operator: request.operator,
+          result: 'reject',
+          reason: 'QR_SUPERSEDED'
+        });
+
+        return this.createRejectResponse('QR_SUPERSEDED', startTime, request.operator, false);
+      }
+
       logger.info('venue.scan.ticket_found', {
         ticket_code: ticketCode,
         status: ticket.status,

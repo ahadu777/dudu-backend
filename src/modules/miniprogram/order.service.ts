@@ -10,6 +10,8 @@ import { ProductEntity } from '../ota/domain/product.entity';
 import { ProductInventoryEntity } from '../ota/domain/product-inventory.entity';
 import { TicketEntity } from '../ticket-reservation/domain/ticket.entity';
 import { logger } from '../../utils/logger';
+import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
+import { generateSecureQR, EncryptedQRResult } from '../../utils/qr-crypto';
 import {
   CreateOrderRequest,
   CreateOrderResponse,
@@ -159,11 +161,168 @@ export class MiniprogramOrderService {
   }
 
   /**
+   * 模拟支付成功（仅用于测试环境）
+   * 在没有真实微信支付的情况下，模拟支付成功流程：
+   * 1. 更新订单状态为 PAID
+   * 2. 确认库存（reserved -> sold）
+   * 3. 生成票券
+   */
+  async simulatePayment(userId: number, orderId: number): Promise<OrderDetailResponse> {
+    return AppDataSource.transaction(async (manager: EntityManager) => {
+      // 1. 查找订单
+      const order = await manager.findOne(OrderEntity, {
+        where: { id: orderId, user_id: userId }
+      });
+
+      if (!order) {
+        throw { code: 'ORDER_NOT_FOUND', message: '订单不存在' };
+      }
+
+      // 2. 检查订单状态
+      if (order.status === OrderStatus.CONFIRMED) {
+        // 已支付，直接返回订单详情（幂等）
+        const tickets = await this.ticketRepo.find({ where: { order_id: orderId } });
+        return this.formatOrderDetailResponse(order, tickets);
+      }
+
+      if (order.status !== OrderStatus.PENDING) {
+        throw { code: 'INVALID_ORDER_STATUS', message: `订单状态不正确: ${order.status}` };
+      }
+
+      // 3. 更新库存（reserved -> sold）
+      const inventory = await manager
+        .createQueryBuilder(ProductInventoryEntity, 'inv')
+        .setLock('pessimistic_write')
+        .where('inv.product_id = :productId', { productId: order.product_id })
+        .getOne();
+
+      if (inventory) {
+        const directAllocation = inventory.channel_allocations?.['direct'];
+        if (directAllocation) {
+          // 从预留转为已售
+          directAllocation.reserved -= order.quantity;
+          directAllocation.sold += order.quantity;
+          inventory.channel_allocations['direct'] = directAllocation;
+          await manager.save(inventory);
+        }
+      }
+
+      // 4. 更新订单状态
+      order.status = OrderStatus.CONFIRMED;
+      order.paid_at = new Date();
+      await manager.save(order);
+
+      // 5. 生成票券
+      const tickets: TicketEntity[] = [];
+      const pricingContext = order.pricing_context as PricingContextType;
+
+      if (pricingContext?.customer_breakdown) {
+        for (const breakdown of pricingContext.customer_breakdown) {
+          for (let i = 0; i < breakdown.count; i++) {
+            const ticket = new TicketEntity();
+            ticket.ticket_code = ticketCodeGenerator.generate('MP');
+            ticket.order_id = orderId;
+            ticket.product_id = order.product_id!;
+            ticket.orq = 1; // 默认组织ID
+            ticket.customer_type = breakdown.customer_type;
+            ticket.status = 'ACTIVATED';
+            ticket.travel_date = order.travel_date;
+            ticket.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1年有效期
+            ticket.channel = 'direct';
+
+            const savedTicket = await manager.save(ticket);
+            tickets.push(savedTicket);
+          }
+        }
+      }
+
+      logger.info('miniprogram.order.payment_simulated', {
+        order_id: orderId,
+        user_id: userId,
+        ticket_count: tickets.length
+      });
+
+      return this.formatOrderDetailResponse(order, tickets);
+    });
+  }
+
+  /**
+   * 为票券生成二维码
+   * 生成新二维码时会更新 ticket.extra.current_jti，使旧二维码失效
+   *
+   * @param userId - 用户ID（用于权限校验）
+   * @param ticketCode - 票券编码
+   * @param expiryMinutes - 二维码有效期（分钟），默认30分钟
+   * @returns 加密的二维码结果
+   */
+  async generateTicketQR(
+    userId: number,
+    ticketCode: string,
+    expiryMinutes: number = 30
+  ): Promise<EncryptedQRResult & { valid_for_seconds: number }> {
+    // 1. 查找票券并验证所有权
+    const ticket = await this.ticketRepo.findOne({
+      where: { ticket_code: ticketCode }
+    });
+
+    if (!ticket) {
+      throw { code: 'TICKET_NOT_FOUND', message: '票券不存在' };
+    }
+
+    // 2. 验证票券归属（通过订单关联）
+    const order = await this.orderRepo.findOne({
+      where: { id: ticket.order_id, user_id: userId }
+    });
+
+    if (!order) {
+      throw { code: 'UNAUTHORIZED', message: '无权访问此票券' };
+    }
+
+    // 3. 验证票券状态
+    const validStatuses = ['ACTIVATED', 'RESERVED'];
+    if (!validStatuses.includes(ticket.status)) {
+      throw {
+        code: 'INVALID_TICKET_STATUS',
+        message: `票券状态 "${ticket.status}" 不允许生成二维码`
+      };
+    }
+
+    // 4. 生成二维码
+    const qrResult = await generateSecureQR(ticketCode, expiryMinutes);
+
+    // 5. 更新 ticket.extra.current_jti（使旧二维码失效）
+    const extra = ticket.extra || {};
+    extra.current_jti = qrResult.jti;
+    extra.qr_generated_at = new Date().toISOString();
+    ticket.extra = extra;
+
+    await this.ticketRepo.save(ticket);
+
+    logger.info('miniprogram.ticket.qr_generated', {
+      ticket_code: ticketCode,
+      jti: qrResult.jti,
+      expires_at: qrResult.expires_at,
+      user_id: userId
+    });
+
+    // 6. 计算剩余有效时间
+    const expiresAt = new Date(qrResult.expires_at);
+    const now = new Date();
+    const validForSeconds = Math.floor((expiresAt.getTime() - now.getTime()) / 1000);
+
+    return {
+      ...qrResult,
+      valid_for_seconds: validForSeconds
+    };
+  }
+
+  /**
    * 计算定价
    */
   private calculatePricing(product: ProductEntity, request: CreateOrderRequest): PricingContextType {
     const basePrice = Number(product.base_price);
-    const weekendPremium = Number(product.weekend_premium) || 0;
+    // TODO: 周末加价暂未启用
+    // const weekendPremium = Number(product.weekend_premium) || 0;
     const customerDiscounts = product.customer_discounts || {};
 
     // 判断是否周末
@@ -175,15 +334,15 @@ export class MiniprogramOrderService {
     const customerBreakdown: CustomerPricingItem[] = request.customer_breakdown.map(item => {
       let unitPrice = basePrice;
 
-      // 周末加价（仅成人）
-      if (isWeekend && item.customer_type === 'adult') {
-        unitPrice += weekendPremium;
-      }
+      // TODO: 周末加价（仅成人）- 暂未启用
+      // if (isWeekend && item.customer_type === 'adult') {
+      //   unitPrice += weekendPremium;
+      // }
 
-      // 客户类型折扣/固定价格
+      // 客户类型折扣（在基础价格上减少）
       const discount = customerDiscounts[item.customer_type];
       if (discount && typeof discount === 'number') {
-        unitPrice = discount;
+        unitPrice -= discount;
       }
 
       return {
