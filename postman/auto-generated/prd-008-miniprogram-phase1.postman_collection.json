@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "prd-008-miniprogram-phase1",
     "name": "PRD-008 DeepTravel 小程序 Phase 1 - Package Booking",
-    "description": "PRD-008 Phase 1: Package Product Booking Foundation\n\n验收标准覆盖:\n- A1: Display all active package products from direct channel\n- A2: Show package inclusions and pricing\n- A3: Dynamic pricing (customer type + weekend)\n- A4: Inventory availability real-time display\n- A5: Order creation with pricing context (requires USE_DATABASE=true)\n- A6: Order management (requires USE_DATABASE=true)\n\nNOTE: Order tests (A4-A6) require database mode. Run with USE_DATABASE=true.\n\nEndpoints:\n- GET /miniprogram/products\n- GET /miniprogram/products/:id\n- GET /miniprogram/products/:id/availability\n- POST /miniprogram/orders\n- GET /miniprogram/orders\n- GET /miniprogram/orders/:id",
+    "description": "PRD-008 Phase 1+: Package Product Booking Foundation\n\n验收标准覆盖:\n- A1: Display all active package products from direct channel\n- A2: Show package inclusions and pricing\n- A3: Dynamic pricing (customer type + weekend)\n- A4: Inventory availability real-time display\n- A5: Order creation with pricing context (requires USE_DATABASE=true)\n- A6: Order management (requires USE_DATABASE=true)\n- A7: Simulate payment (requires USE_DATABASE=true)\n- A8: Ticket QR generation (requires USE_DATABASE=true)\n\nNOTE: Order/Payment/QR tests (A5-A8) require database mode. Run with USE_DATABASE=true.\n\nEndpoints:\n- GET /miniprogram/products\n- GET /miniprogram/products/:id\n- GET /miniprogram/products/:id/availability\n- POST /miniprogram/orders\n- GET /miniprogram/orders\n- GET /miniprogram/orders/:id\n- POST /miniprogram/orders/:id/simulate-payment\n- POST /miniprogram/tickets/:code/qr",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,7 +10,8 @@
     { "key": "auth_token", "value": "" },
     { "key": "test_product_id", "value": "106" },
     { "key": "test_order_no", "value": "" },
-    { "key": "test_order_id", "value": "" }
+    { "key": "test_order_id", "value": "" },
+    { "key": "test_ticket_code", "value": "" }
   ],
   "item": [
     {
@@ -572,6 +573,333 @@
           "request": {
             "method": "GET",
             "url": { "raw": "{{base_url}}/miniprogram/orders", "host": ["{{base_url}}"], "path": ["miniprogram", "orders"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A6. Simulate Payment (DB Required)",
+      "description": "PRD AC: Simulate payment to generate tickets. NOTE: Requires USE_DATABASE=true",
+      "item": [
+        {
+          "name": "A6.1 Simulate payment - success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('Simulate payment requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "const orderId = pm.collectionVariables.get('test_order_id');",
+                  "if (!orderId) {",
+                  "    pm.test.skip('No order created to test payment');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns success message', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('message');",
+                  "    pm.expect(data.message).to.include('成功');",
+                  "});",
+                  "",
+                  "pm.test('Order status is paid/confirmed', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('order');",
+                  "    pm.expect(['paid', 'confirmed']).to.include(data.order.status);",
+                  "});",
+                  "",
+                  "pm.test('Tickets generated', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.order).to.have.property('tickets');",
+                  "    pm.expect(data.order.tickets).to.be.an('array');",
+                  "    pm.expect(data.order.tickets.length).to.be.greaterThan(0);",
+                  "    // Save first ticket code for QR test",
+                  "    if (data.order.tickets.length > 0) {",
+                  "        pm.collectionVariables.set('test_ticket_code', data.order.tickets[0].ticket_code);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/miniprogram/orders/{{test_order_id}}/simulate-payment", "host": ["{{base_url}}"], "path": ["miniprogram", "orders", "{{test_order_id}}", "simulate-payment"] }
+          }
+        },
+        {
+          "name": "A6.2 Error - order not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404', function() { pm.response.to.have.status(404); });",
+                  "pm.test('Returns ORDER_NOT_FOUND', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('ORDER_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/miniprogram/orders/99999/simulate-payment", "host": ["{{base_url}}"], "path": ["miniprogram", "orders", "99999", "simulate-payment"] }
+          }
+        },
+        {
+          "name": "A6.3 Error - already paid (invalid status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('Requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "const orderId = pm.collectionVariables.get('test_order_id');",
+                  "if (!orderId) {",
+                  "    pm.test.skip('No order to test');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 400', function() { pm.response.to.have.status(400); });",
+                  "pm.test('Returns INVALID_ORDER_STATUS', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('INVALID_ORDER_STATUS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/miniprogram/orders/{{test_order_id}}/simulate-payment", "host": ["{{base_url}}"], "path": ["miniprogram", "orders", "{{test_order_id}}", "simulate-payment"] }
+          }
+        },
+        {
+          "name": "A6.4 Error - unauthorized",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/miniprogram/orders/1/simulate-payment", "host": ["{{base_url}}"], "path": ["miniprogram", "orders", "1", "simulate-payment"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A7. Ticket QR Generation (DB Required)",
+      "description": "PRD AC: Generate QR code for ticket. NOTE: Requires USE_DATABASE=true",
+      "item": [
+        {
+          "name": "A7.1 Generate QR - success (default expiry)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('QR generation requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "const ticketCode = pm.collectionVariables.get('test_ticket_code');",
+                  "if (!ticketCode) {",
+                  "    pm.test.skip('No ticket available for QR test');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns success', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Has QR image', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('qr_image');",
+                  "    pm.expect(data.qr_image).to.be.a('string');",
+                  "    pm.expect(data.qr_image.length).to.be.greaterThan(100);",
+                  "});",
+                  "",
+                  "pm.test('Has expiry info', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('expires_at');",
+                  "    pm.expect(data).to.have.property('valid_for_seconds');",
+                  "    pm.expect(data.valid_for_seconds).to.equal(1800); // 30 minutes default",
+                  "});",
+                  "",
+                  "pm.test('Has jti for invalidation', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('jti');",
+                  "    pm.expect(data.jti).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{base_url}}/miniprogram/tickets/{{test_ticket_code}}/qr", "host": ["{{base_url}}"], "path": ["miniprogram", "tickets", "{{test_ticket_code}}", "qr"] }
+          }
+        },
+        {
+          "name": "A7.2 Generate QR - custom expiry (60 min)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('QR generation requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "const ticketCode = pm.collectionVariables.get('test_ticket_code');",
+                  "if (!ticketCode) {",
+                  "    pm.test.skip('No ticket available for QR test');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Respects custom expiry', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.valid_for_seconds).to.equal(3600); // 60 minutes",
+                  "});",
+                  "",
+                  "pm.test('New jti generated (old QR invalidated)', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('jti');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"expiry_minutes\": 60 }" },
+            "url": { "raw": "{{base_url}}/miniprogram/tickets/{{test_ticket_code}}/qr", "host": ["{{base_url}}"], "path": ["miniprogram", "tickets", "{{test_ticket_code}}", "qr"] }
+          }
+        },
+        {
+          "name": "A7.3 Error - ticket not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404', function() { pm.response.to.have.status(404); });",
+                  "pm.test('Returns TICKET_NOT_FOUND', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('TICKET_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{base_url}}/miniprogram/tickets/NONEXISTENT123/qr", "host": ["{{base_url}}"], "path": ["miniprogram", "tickets", "NONEXISTENT123", "qr"] }
+          }
+        },
+        {
+          "name": "A7.4 Error - invalid expiry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400', function() { pm.response.to.have.status(400); });",
+                  "pm.test('Returns INVALID_EXPIRY', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('INVALID_EXPIRY');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"expiry_minutes\": 9999 }" },
+            "url": { "raw": "{{base_url}}/miniprogram/tickets/{{test_ticket_code}}/qr", "host": ["{{base_url}}"], "path": ["miniprogram", "tickets", "{{test_ticket_code}}", "qr"] }
+          }
+        },
+        {
+          "name": "A7.5 Error - unauthorized",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{base_url}}/miniprogram/tickets/TEST123/qr", "host": ["{{base_url}}"], "path": ["miniprogram", "tickets", "TEST123", "qr"] }
           }
         }
       ]

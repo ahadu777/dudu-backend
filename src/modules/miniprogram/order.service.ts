@@ -23,6 +23,9 @@ import {
   PassengerInput
 } from './order.types';
 
+// 订单支付过期时长（分钟）
+const ORDER_EXPIRY_MINUTES = 15;
+
 export class MiniprogramOrderService {
   private orderRepo: Repository<OrderEntity>;
   private ticketRepo: Repository<TicketEntity>;
@@ -154,8 +157,24 @@ export class MiniprogramOrderService {
       take: pageSize
     });
 
+    // 获取所有订单的票券
+    const orderIds = orders.map(o => Number(o.id));
+    const tickets = orderIds.length > 0
+      ? await this.ticketRepo.find({ where: orderIds.map(id => ({ order_id: id })) })
+      : [];
+
+    // 按订单ID分组票券
+    const ticketsByOrderId = new Map<number, typeof tickets>();
+    for (const ticket of tickets) {
+      const orderId = Number(ticket.order_id);
+      if (!ticketsByOrderId.has(orderId)) {
+        ticketsByOrderId.set(orderId, []);
+      }
+      ticketsByOrderId.get(orderId)!.push(ticket);
+    }
+
     return {
-      orders: orders.map(o => this.formatOrderListItem(o)),
+      orders: orders.map(o => this.formatOrderListItem(o, ticketsByOrderId.get(Number(o.id)) || [])),
       total
     };
   }
@@ -212,7 +231,13 @@ export class MiniprogramOrderService {
       order.paid_at = new Date();
       await manager.save(order);
 
-      // 5. 生成票券
+      // 5. 获取产品权益
+      const product = await manager.findOne(ProductEntity, {
+        where: { id: order.product_id }
+      });
+      const productEntitlements = product?.entitlements || [];
+
+      // 6. 生成票券
       const tickets: TicketEntity[] = [];
       const pricingContext = order.pricing_context as PricingContextType;
 
@@ -229,6 +254,12 @@ export class MiniprogramOrderService {
             ticket.travel_date = order.travel_date;
             ticket.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1年有效期
             ticket.channel = 'direct';
+            // 复制产品权益到票券
+            ticket.entitlements = productEntitlements.map(e => ({
+              function_code: e.type,
+              quantity: e.metadata?.quantity || 1,
+              used_quantity: 0
+            }));
 
             const savedTicket = await manager.save(ticket);
             tickets.push(savedTicket);
@@ -243,6 +274,62 @@ export class MiniprogramOrderService {
       });
 
       return this.formatOrderDetailResponse(order, tickets);
+    });
+  }
+
+  /**
+   * 取消订单
+   * 仅允许取消 PENDING 状态的订单，取消后释放预留库存
+   */
+  async cancelOrder(userId: number, orderId: number): Promise<{ success: boolean; message: string }> {
+    return AppDataSource.transaction(async (manager: EntityManager) => {
+      // 1. 查找订单
+      const order = await manager.findOne(OrderEntity, {
+        where: { id: orderId, user_id: userId }
+      });
+
+      if (!order) {
+        throw { code: 'ORDER_NOT_FOUND', message: '订单不存在' };
+      }
+
+      // 2. 检查订单状态（只有 PENDING 可以取消）
+      if (order.status === OrderStatus.CANCELLED) {
+        // 幂等：已取消的订单直接返回成功
+        return { success: true, message: '订单已取消' };
+      }
+
+      if (order.status !== OrderStatus.PENDING) {
+        throw { code: 'INVALID_ORDER_STATUS', message: `订单状态 "${order.status}" 不允许取消` };
+      }
+
+      // 3. 释放预留库存
+      const inventory = await manager
+        .createQueryBuilder(ProductInventoryEntity, 'inv')
+        .setLock('pessimistic_write')
+        .where('inv.product_id = :productId', { productId: order.product_id })
+        .getOne();
+
+      if (inventory) {
+        const directAllocation = inventory.channel_allocations?.['direct'];
+        if (directAllocation && directAllocation.reserved >= order.quantity) {
+          directAllocation.reserved -= order.quantity;
+          inventory.channel_allocations['direct'] = directAllocation;
+          await manager.save(inventory);
+        }
+      }
+
+      // 4. 更新订单状态
+      order.status = OrderStatus.CANCELLED;
+      order.cancelled_at = new Date();
+      await manager.save(order);
+
+      logger.info('miniprogram.order.cancelled', {
+        order_id: orderId,
+        user_id: userId,
+        quantity_released: order.quantity
+      });
+
+      return { success: true, message: '订单已取消' };
     });
   }
 
@@ -410,7 +497,11 @@ export class MiniprogramOrderService {
       pricing_context: order.pricing_context as PricingContextType,
       created_at: order.created_at instanceof Date
         ? order.created_at.toISOString()
-        : String(order.created_at)
+        : String(order.created_at),
+      // 动态计算过期时间：created_at + ORDER_EXPIRY_MINUTES
+      expires_at: order.status === 'pending' && order.created_at instanceof Date
+        ? new Date(order.created_at.getTime() + ORDER_EXPIRY_MINUTES * 60 * 1000).toISOString()
+        : undefined
     };
   }
 
@@ -428,7 +519,12 @@ export class MiniprogramOrderService {
         ticket_code: t.ticket_code,
         customer_type: t.customer_type || 'adult',
         status: t.status,
-        qr_code: t.qr_code
+        qr_code: t.qr_code,
+        entitlements: t.entitlements?.map(e => ({
+          function_code: e.function_code,
+          quantity: e.quantity,
+          used_quantity: e.used_quantity || 0
+        }))
       }))
     };
   }
@@ -436,7 +532,7 @@ export class MiniprogramOrderService {
   /**
    * 格式化订单列表项
    */
-  private formatOrderListItem(order: OrderEntity): OrderListItem {
+  private formatOrderListItem(order: OrderEntity, tickets: TicketEntity[]): OrderListItem {
     return {
       order_id: Number(order.id),
       order_no: order.order_no,
@@ -451,7 +547,23 @@ export class MiniprogramOrderService {
       created_at: order.created_at instanceof Date
         ? order.created_at.toISOString()
         : String(order.created_at),
-      paid_at: order.paid_at instanceof Date ? order.paid_at.toISOString() : undefined
+      // 动态计算过期时间：created_at + ORDER_EXPIRY_MINUTES（仅 pending 状态）
+      expires_at: order.status === 'pending' && order.created_at instanceof Date
+        ? new Date(order.created_at.getTime() + ORDER_EXPIRY_MINUTES * 60 * 1000).toISOString()
+        : undefined,
+      paid_at: order.paid_at instanceof Date ? order.paid_at.toISOString() : undefined,
+      tickets: tickets.map(t => ({
+        ticket_id: t.id,
+        ticket_code: t.ticket_code,
+        customer_type: t.customer_type || 'adult',
+        status: t.status,
+        qr_code: t.qr_code,
+        entitlements: t.entitlements?.map(e => ({
+          function_code: e.function_code,
+          quantity: e.quantity,
+          used_quantity: e.used_quantity || 0
+        }))
+      }))
     };
   }
 }

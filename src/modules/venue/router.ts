@@ -5,6 +5,7 @@ import { authenticateOperator } from '../../middlewares/auth';
 import { API_KEYS } from '../../middlewares/otaAuth';
 import { AppDataSource } from '../../config/database';
 import { VenueRepository } from './domain/venue.repository';
+import { paginationMiddleware } from '../../middlewares/pagination';
 
 const router = Router();
 
@@ -362,7 +363,7 @@ router.post('/scan', authenticateOperator, async (req, res) => {
  *       500:
  *         description: 服务器内部错误
  */
-router.get('/redemptions', async (req, res) => {
+router.get('/redemptions', paginationMiddleware({ defaultLimit: 100, maxLimit: 1000, style: 'offset' }), async (req, res) => {
   const startTime = Date.now();
 
   try {
@@ -372,8 +373,9 @@ router.get('/redemptions', async (req, res) => {
     const functionCode = req.query.function as string | undefined;
     const venueIdStr = req.query.venue_id as string | undefined;
     const result = req.query.result as 'success' | 'reject' | undefined;
-    const limitStr = req.query.limit as string | undefined;
-    const offsetStr = req.query.offset as string | undefined;
+
+    // Get pagination from middleware
+    const { limit, offset } = req.pagination;
 
     // Parse and validate dates
     let from: Date | undefined;
@@ -432,15 +434,6 @@ router.get('/redemptions', async (req, res) => {
         message: 'result must be "success" or "reject"'
       });
     }
-
-    // Parse pagination
-    let limit = parseInt(limitStr || '100', 10);
-    let offset = parseInt(offsetStr || '0', 10);
-
-    // Enforce limits
-    if (isNaN(limit) || limit < 1) limit = 100;
-    if (limit > 1000) limit = 1000;
-    if (isNaN(offset) || offset < 0) offset = 0;
 
     logger.info('venue.redemptions.query', {
       from: from?.toISOString(),

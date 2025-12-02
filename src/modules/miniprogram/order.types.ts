@@ -108,6 +108,16 @@ export interface CreateOrderResponse {
   passengers?: PassengerInput[];
   pricing_context: PricingContext;
   created_at: string;
+  expires_at?: string;  // 支付截止时间
+}
+
+/**
+ * 票券权益信息
+ */
+export interface EntitlementInfo {
+  function_code: string;  // ferry, playground_tokens, monchhichi_gift, etc.
+  quantity: number;
+  used_quantity: number;
 }
 
 /**
@@ -119,6 +129,7 @@ export interface TicketInfo {
   customer_type: CustomerType;
   status: string;
   qr_code?: string;
+  entitlements?: EntitlementInfo[];
 }
 
 /**
@@ -142,7 +153,9 @@ export interface OrderListItem {
   quantity: number;
   total: number;
   created_at: string;
+  expires_at?: string;
   paid_at?: string;
+  tickets?: TicketInfo[];
 }
 
 /**

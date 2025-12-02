@@ -4,7 +4,9 @@ slug: miniprogram-order
 team: "A - Commerce"
 oas_paths: [
   "/miniprogram/orders",
-  "/miniprogram/orders/{orderId}"
+  "/miniprogram/orders/{orderId}",
+  "/miniprogram/orders/{orderId}/simulate-payment",
+  "/miniprogram/tickets/{code}/qr"
 ]
 migrations: [
   "016-create-orders.ts",
@@ -17,7 +19,7 @@ branch: "init-ai"
 pr: ""
 newman_report: ""
 postman_collection: ""
-last_update: "2025-12-01T16:00:00+08:00"
+last_update: "2025-12-02T10:00:00+08:00"
 related_stories: ["US-010A"]
 relationships:
   depends_on: ["miniprogram-product-catalog", "wechat-auth-login"]
@@ -27,10 +29,10 @@ relationships:
 
 ## Status & Telemetry
 - Status: Done
-- Readiness: mvp（小程序订单创建、列表、详情）
-- Spec Paths: /miniprogram/orders, /miniprogram/orders/:id
+- Readiness: mvp（小程序订单创建、列表、详情、模拟支付、票券QR）
+- Spec Paths: /miniprogram/orders, /miniprogram/orders/:id, /miniprogram/orders/:id/simulate-payment, /miniprogram/tickets/:code/qr
 - Migrations: 016-create-orders.ts, 017-create-order-payments.ts, 018-extend-tickets-for-miniprogram.ts
-- Last Update: 2025-12-01
+- Last Update: 2025-12-02
 
 ## 0) Prerequisites
 - miniprogram-product-catalog 已实现（提供商品数据）
@@ -46,6 +48,7 @@ sequenceDiagram
   participant API as Miniprogram API
   participant SVC as OrderService
   participant DB as Database
+  participant QR as QR Crypto
 
   USER->>+API: POST /miniprogram/orders
   API->>API: 验证 JWT Token
@@ -57,6 +60,20 @@ sequenceDiagram
   SVC->>DB: 创建订单
   SVC->>DB: 预留库存
   SVC-->>-USER: 201 { order }
+
+  USER->>+API: POST /miniprogram/orders/:id/simulate-payment
+  API->>SVC: simulatePayment(userId, orderId)
+  SVC->>DB: 更新订单状态 pending → paid
+  SVC->>DB: 确认库存 reserved → sold
+  SVC->>DB: 生成票券
+  SVC-->>-USER: 200 { order, tickets[] }
+
+  USER->>+API: POST /miniprogram/tickets/:code/qr
+  API->>SVC: generateTicketQR(userId, ticketCode, expiryMinutes)
+  SVC->>DB: 验证票券所有权
+  SVC->>DB: 更新 jti（旧QR失效）
+  SVC->>QR: 生成加密二维码
+  SVC-->>-USER: 200 { qr_image, expires_at, jti }
 
   USER->>+API: GET /miniprogram/orders
   API->>SVC: getOrderList(userId, page, limit)
@@ -195,6 +212,97 @@ paths:
         "404":
           description: 订单不存在
 
+  /miniprogram/orders/{orderId}/simulate-payment:
+    post:
+      tags: [Miniprogram - Orders]
+      summary: 模拟支付成功（仅测试环境）
+      description: |
+        将订单状态从 PENDING 更新为 PAID，确认库存，自动生成票券。
+        **注意：此接口仅用于开发测试，生产环境应禁用。**
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 模拟支付成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "模拟支付成功"
+                  order:
+                    $ref: '#/components/schemas/OrderDetailResponse'
+        "400":
+          description: 订单状态不是 PENDING
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: "INVALID_ORDER_STATUS"
+                  message:
+                    type: string
+        "401":
+          description: 未授权
+        "404":
+          description: 订单不存在
+
+  /miniprogram/tickets/{code}/qr:
+    post:
+      tags: [Miniprogram - Tickets]
+      summary: 为票券生成二维码
+      description: |
+        为指定票券生成加密二维码，特性：
+        1. 验证票券所有权（必须是当前用户的票券）
+        2. 生成新二维码时，旧二维码自动失效（通过 jti 机制）
+        3. 默认有效期 30 分钟
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: 票券编码 (ticket_code)
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expiry_minutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 1440
+                  default: 30
+                  description: 二维码有效期（分钟）
+      responses:
+        "200":
+          description: 二维码生成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketQRResponse'
+        "400":
+          description: 无效的票券编码或有效期参数
+        "401":
+          description: 未授权
+        "403":
+          description: 票券不属于当前用户
+        "404":
+          description: 票券不存在
+
 components:
   schemas:
     OrderResponse:
@@ -310,6 +418,36 @@ components:
                     type: string
                   qr_code:
                     type: string
+
+    TicketQRResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        qr_image:
+          type: string
+          description: Base64 编码的二维码图片
+        encrypted_data:
+          type: string
+          description: 加密的票券数据
+        ticket_code:
+          type: string
+          description: 票券编码
+        expires_at:
+          type: string
+          format: date-time
+          description: 二维码过期时间
+        valid_for_seconds:
+          type: integer
+          description: 二维码有效秒数
+        issued_at:
+          type: string
+          format: date-time
+          description: 二维码签发时间
+        jti:
+          type: string
+          description: 二维码唯一标识（用于失效旧码）
 ```
 
 ## 3) Invariants
@@ -319,6 +457,9 @@ components:
 - 库存预留使用悲观锁（FOR UPDATE）
 - 订单状态流转：pending → confirmed → in_progress → completed
 - 订单状态流转（取消）：pending/confirmed → cancelled → refunded
+- 票券 QR 只能由票券所有者生成（user_id 校验）
+- 生成新 QR 时旧 QR 自动失效（jti 机制）
+- 模拟支付仅限测试环境使用
 
 ## 4) Business Rules
 
@@ -375,15 +516,36 @@ await AppDataSource.transaction(async (manager) => {
   - `miniprogram.order.create.error` - 订单创建失败
   - `miniprogram.order.list` - 订单列表查询
   - `miniprogram.order.detail` - 订单详情查询
+  - `miniprogram.order.simulate_payment.success` - 模拟支付成功
+  - `miniprogram.order.simulate_payment.error` - 模拟支付失败
+  - `miniprogram.ticket.qr.success` - 票券QR生成成功
+  - `miniprogram.ticket.qr.error` - 票券QR生成失败
 
 ## 7) Acceptance — Given / When / Then
+
+### 订单创建
 - Given 用户已登录，When POST /miniprogram/orders with valid data，Then 返回 201 创建成功
 - Given 相同 order_no，When 重复提交，Then 返回已存在的订单（幂等）
 - Given 产品库存不足，When 创建订单，Then 返回 400 INSUFFICIENT_INVENTORY
 - Given 产品不存在，When 创建订单，Then 返回 404 PRODUCT_NOT_FOUND
 - Given 用户未登录，When 创建订单，Then 返回 401 UNAUTHORIZED
 - Given 周末出行日期，When 成人购买，Then 价格包含周末加价
+
+### 订单查询
 - Given 订单存在，When GET /miniprogram/orders/:id，Then 返回订单详情和关联票券
+
+### 模拟支付
+- Given 订单状态为 pending，When POST /miniprogram/orders/:id/simulate-payment，Then 返回 200 订单状态变为 paid 并生成票券
+- Given 订单状态不是 pending，When 模拟支付，Then 返回 400 INVALID_ORDER_STATUS
+- Given 订单不存在，When 模拟支付，Then 返回 404 ORDER_NOT_FOUND
+- Given 用户未登录，When 模拟支付，Then 返回 401 UNAUTHORIZED
+
+### 票券QR生成
+- Given 票券属于当前用户，When POST /miniprogram/tickets/:code/qr，Then 返回 200 包含 qr_image 和 expires_at
+- Given 票券不属于当前用户，When 生成QR，Then 返回 403 UNAUTHORIZED
+- Given 票券不存在，When 生成QR，Then 返回 404 TICKET_NOT_FOUND
+- Given 已生成QR，When 再次生成，Then 旧QR失效（jti更新）
+- Given expiry_minutes=60，When 生成QR，Then valid_for_seconds=3600
 
 ## 8) Implementation Files
 ```
@@ -410,7 +572,8 @@ src/migrations/
 - **ticket-service** - 支付成功后生成票券
 
 ## Notes
-- 当前实现为 Phase 1（创建订单、查询订单）
-- Phase 2 将实现支付集成（WeChat Pay）
-- Phase 3 将实现票券生成和核销流程
+- 当前实现为 Phase 1+（创建订单、查询订单、模拟支付、票券QR生成）
+- Phase 2 将实现正式支付集成（WeChat Pay）
+- simulate-payment 仅用于开发测试，生产环境应通过环境变量禁用
+- 票券QR使用jti机制确保同一票券同一时间只有一个有效QR
 - 订单号由前端生成，格式建议：MP{YYYYMMDD}{HHMMSS}{RANDOM}

@@ -1,20 +1,64 @@
 # AI Development Guide
 
-## Quick Navigation
+## ⚠️ MANDATORY WORKFLOW (每次任务必须执行)
 
-| Task | Action |
-|------|--------|
-| **Start here** | [Reality Check](#reality-check) |
-| **Natural language request** | @docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md |
-| **New story?** | @docs/reference/DUPLICATE-PREVENTION.md |
-| **PRD vs Story vs Card?** | @docs/reference/DOCUMENT-LAYER-DECISION.md |
-| **API changing?** | @docs/reference/API-CHANGE-MANAGEMENT.md |
-| **New API?** | @docs/reference/RESTFUL-API-DESIGN.md |
-| **Generate tests?** | @docs/reference/AI-TEST-GENERATION.md |
-| **Newman reports?** | @docs/reference/NEWMAN-REPORT-STANDARD.md |
-| **Troubleshooting?** | @docs/reference/TROUBLESHOOTING.md |
-| **Complex scenario?** | @docs/reference/KNOWLEDGE-GRAPH.md |
-| **Refactoring code?** | @docs/reference/REFACTORING-IMPACT.md |
+### Step 0: Task Classification / 任务分类
+
+Identify task type and load corresponding spec document:
+
+| Request Pattern | Task Type | Must Read First |
+|-----------------|-----------|-----------------|
+| "我想做..." / "I want to..." / "Help me implement..." | Natural Language Requirement | `@docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md` |
+| New feature / New Story / 新功能 | New Feature Development | `@docs/reference/DUPLICATE-PREVENTION.md` |
+| "PRD or Story?" / "这应该是 PRD 还是 Story？" | Document Layer Decision | `@docs/reference/DOCUMENT-LAYER-DECISION.md` |
+| Modify existing API / Change fields / 改 API | API Change | `@docs/reference/API-CHANGE-MANAGEMENT.md` |
+| Design new API / New endpoint / 新端点 | New API Design | `@docs/reference/RESTFUL-API-DESIGN.md` |
+| Write tests / Generate tests / 写测试 | Test Generation | `@docs/reference/AI-TEST-GENERATION.md` |
+| Newman report / 测试报告 | Test Report | `@docs/reference/NEWMAN-REPORT-STANDARD.md` |
+| Refactor / Change architecture / 重构 | Refactoring | `@docs/reference/REFACTORING-IMPACT.md` |
+| Cross-module / Complex dependencies / 跨模块 | Complex Scenario | `@docs/reference/KNOWLEDGE-GRAPH.md` |
+| Error / Stuck / Not working / 报错 | Troubleshooting | `@docs/reference/TROUBLESHOOTING.md` |
+| Fix bug / Simple change / 简单改动 | Simple Fix | No doc needed → Go to Step 1 |
+
+### Step 1: Reality Check (Required / 必须执行)
+
+```bash
+# Service status / 服务状态
+curl http://localhost:8080/healthz
+
+# Document status / 相关文档状态
+grep -ri "keywords" docs/cards/ docs/stories/
+grep "status:" docs/cards/related-card.md
+
+# Code status / 代码现状
+ls src/modules/related-module/
+grep -r "related-function" src/modules/
+```
+
+**5-Minute Rule**: If basic commands don't clarify state, complex analysis won't help.
+
+### Step 2: Execute Development / 执行开发
+
+```
+1. Update Card status: "Ready" → "In Progress"
+2. Follow spec document loaded in Step 0
+3. Follow existing patterns in src/modules/
+4. Ensure TypeScript compiles
+```
+
+### Step 3: Verify Completion / 验证完成
+
+```bash
+# Endpoint test / 端点测试
+curl http://localhost:8080/[endpoint]
+
+# Run related tests / 运行相关测试
+npm run test:prd [N]    # PRD test
+npm run test:story [N]  # Story test
+
+# Update status / 更新状态
+# Card: "In Progress" → "Done"
+```
 
 ---
 
@@ -31,87 +75,59 @@
 
 ---
 
-## Core Pattern (Read First)
+## Quick Reference
 
-### Request Classification
-```
-"I want users to..." → Story → Cards → Code (check duplicates first)
-"Implement card XYZ" → Work with existing card
-```
+### 文档层级决策
 
-### The Working Pattern
-```
-0. LAYER DECISION: PRD? Story? Card?
-1. DUPLICATE CHECK: grep -ri "keywords" docs/prd/ docs/stories/ docs/cards/
-2. REALITY CHECK: curl endpoints, grep imports
-3. STATUS: "Ready" → "In Progress" → "Done"
-4. CODE: src/modules/[name]/ following existing patterns
-5. TEST: curl http://localhost:8080/endpoint
-```
+| 用户说的 | 层级 | 动作 |
+|---------|------|------|
+| "我想做会员积分系统" | **PRD** | 创建 PRD |
+| "用户能查看订单历史" | **Story** | 创建 Story |
+| "订单列表需要分页" | **Card** | 更新 Card |
+| "修复分页的bug" | **Code** | 直接修代码 |
 
----
-
-## Reality Check
-
-**Always verify before implementing:**
-```bash
-# What's running?
-curl http://localhost:8080/healthz
-curl http://localhost:8080/[endpoint]
-
-# What's imported?
-grep -r "import.*Service" src/modules/[name]/
-
-# What exists?
-ls src/modules/[name]/
-```
-
-**5-Minute Rule**: If basic commands don't clarify state, complex analysis won't help.
-
----
-
-## Document Layer Decision (Quick Reference)
-
-| User Request | Layer | Action |
-|-------------|-------|--------|
-| "我想做会员积分系统" | **PRD** | Create PRD |
-| "用户能查看订单历史" | **Story** | Create Story |
-| "订单列表需要分页" | **Card** | Update Card |
-| "修复分页的bug" | **Code** | Fix code only |
-
----
-
-## Key Commands
+### 常用命令
 
 ```bash
-# Development
+# 开发
 npm run build && npm start
 curl http://localhost:8080/healthz
 
-# Status
+# 状态查询
 grep "status:" docs/cards/*.md
 grep "status: In Progress" docs/cards/*.md
 
-# Testing (Auto-discovery)
-npm test                      # Smoke + All PRD + US-014
-npm run test:prd 006          # Specific PRD test
-npm run test:story 014        # Specific Story test
+# 测试 (自动发现)
+npm test                      # Smoke + PRD + Story
+npm run test:prd 006          # 指定 PRD
+npm run test:story 014        # 指定 Story
 
-# Search
-grep -ri "keywords" docs/
+# 搜索
+grep -ri "关键词" docs/
 ```
+
+### Single Source of Truth
+
+1. **Cards** (`docs/cards/`) = API 契约
+2. **domain.ts** = 类型定义
+3. **OpenAPI** = 外部工具
+4. **Tests** = 必须与以上对齐
 
 ---
 
-## Reference Links
+## 状态评估原则
 
-| Resource | Location |
-|----------|----------|
-| Detailed workflows | [docs/reference/](docs/reference/) |
-| Case studies | [docs/cases/](docs/cases/) |
-| PRDs | [docs/prd/](docs/prd/) |
-| Test coverage | [docs/test-coverage/_index.yaml](docs/test-coverage/_index.yaml) |
-| OpenAPI spec | [openapi/openapi.json](openapi/openapi.json) |
+**测试通过 ≠ Done**
+
+| 测试通过能证明 | 测试通过不能证明 |
+|--------------|----------------|
+| ✅ 已实现的代码逻辑正确 | ❌ 所有功能都已实现 |
+| ✅ API 端点可用 | ❌ 业务目标已达成 |
+| | ❌ 生产环境就绪 |
+
+**状态变更原则：**
+- `Draft → In Progress`: 开始实施时
+- `In Progress → Done`: 需要产品/业务验收，不能仅凭测试通过
 
 ---
 
@@ -124,12 +140,16 @@ grep -ri "keywords" docs/
 - **US-014**: WeChat mini-program authentication
 - **PRD-006**: Ticket activation system (46 assertions)
 - **PRD-007**: Reservation validation (62 assertions)
+- **PRD-008**: Miniprogram Phase 1 (35 assertions)
 
 ---
 
-## Single Source of Truth
+## Reference Links
 
-1. **Cards** (`docs/cards/`) = API contracts
-2. **domain.ts** = Type definitions
-3. **OpenAPI** = External tooling
-4. **Tests** = Must align with above
+| 资源 | 位置 |
+|------|------|
+| 详细工作流 | [docs/reference/](docs/reference/) |
+| 案例研究 | [docs/cases/](docs/cases/) |
+| PRDs | [docs/prd/](docs/prd/) |
+| 测试覆盖率 | [docs/test-coverage/_index.yaml](docs/test-coverage/_index.yaml) |
+| OpenAPI 规范 | [openapi/openapi.json](openapi/openapi.json) |

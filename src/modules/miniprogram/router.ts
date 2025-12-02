@@ -309,6 +309,71 @@ router.get('/orders/:id', authenticate, async (req: any, res) => {
 });
 
 /**
+ * POST /miniprogram/orders/:id/cancel
+ * 取消订单
+ *
+ * 功能：
+ * 1. 仅允许取消 PENDING 状态的订单
+ * 2. 取消后释放预留库存
+ * 3. 支持幂等调用（已取消的订单再次取消返回成功）
+ *
+ * 使用场景：
+ * - 用户主动取消
+ * - 前端检测到订单超时（expires_at）后自动调用
+ */
+router.post('/orders/:id/cancel', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const orderId = parseInt(req.params.id);
+    if (isNaN(orderId)) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '无效的订单ID'
+      });
+    }
+
+    const result = await orderService.cancelOrder(userId, orderId);
+
+    logger.info('miniprogram.order.cancel.success', {
+      order_id: orderId,
+      user_id: userId
+    });
+
+    res.status(200).json(result);
+
+  } catch (error: any) {
+    logger.error('miniprogram.order.cancel.error', {
+      error: error.message || String(error),
+      code: error.code
+    });
+
+    if (error.code) {
+      const statusMap: Record<string, number> = {
+        'ORDER_NOT_FOUND': 404,
+        'INVALID_ORDER_STATUS': 400
+      };
+      const status = statusMap[error.code] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '取消订单失败'
+    });
+  }
+});
+
+/**
  * POST /miniprogram/tickets/:code/qr
  * 为票券生成二维码
  *
