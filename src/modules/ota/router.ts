@@ -985,6 +985,31 @@ router.delete('/resellers/:id', async (req: AuthenticatedRequest, res: Response)
 // ============= PRODUCT QR CONFIG MANAGEMENT (NEW) =============
 
 /**
+ * GET /api/ota/products/qr-configs
+ * Get QR configurations for all products (batch query)
+ */
+router.get('/products/qr-configs', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const configs = await otaService.getAllProductQRConfigs();
+
+    res.json({
+      products: configs,
+      total_count: configs.length
+    });
+  } catch (error: any) {
+    logger.error('OTA get all product QR configs failed', {
+      partner: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve product QR configurations'
+    });
+  }
+});
+
+/**
  * GET /api/ota/products/:id/qr-config
  * Get QR code configuration for a product
  */
@@ -1086,31 +1111,6 @@ router.put('/products/:id/qr-config', async (req: AuthenticatedRequest, res: Res
     res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Failed to update product QR configuration'
-    });
-  }
-});
-
-/**
- * GET /api/ota/products/qr-configs
- * Get QR configurations for all products (batch query)
- */
-router.get('/products/qr-configs', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const configs = await otaService.getAllProductQRConfigs();
-
-    res.json({
-      products: configs,
-      total_count: configs.length
-    });
-  } catch (error: any) {
-    logger.error('OTA get all product QR configs failed', {
-      partner: req.ota_partner?.name,
-      error: error.message
-    });
-
-    res.status(500).json({
-      error: 'INTERNAL_ERROR',
-      message: 'Failed to retrieve product QR configurations'
     });
   }
 });

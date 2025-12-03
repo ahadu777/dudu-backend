@@ -455,10 +455,23 @@ export class MiniprogramOrderService {
       };
     }
 
-    // 4. 生成二维码
-    const qrResult = await generateSecureQR(ticketCode, expiryMinutes);
+    // 4. 获取产品 QR 配置（颜色等）
+    let qrColorConfig;
+    if (order.product_id) {
+      const productRepo = AppDataSource.getRepository(ProductEntity);
+      const product = await productRepo.findOne({ where: { id: order.product_id } });
+      if (product?.qr_config) {
+        qrColorConfig = {
+          dark_color: product.qr_config.dark_color,
+          light_color: product.qr_config.light_color
+        };
+      }
+    }
 
-    // 5. 更新 ticket.extra.current_jti（使旧二维码失效）
+    // 5. 生成二维码
+    const qrResult = await generateSecureQR(ticketCode, expiryMinutes, undefined, qrColorConfig);
+
+    // 6. 更新 ticket.extra.current_jti（使旧二维码失效）
     const extra = ticket.extra || {};
     extra.current_jti = qrResult.jti;
     extra.qr_generated_at = new Date().toISOString();

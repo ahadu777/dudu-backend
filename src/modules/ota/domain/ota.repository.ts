@@ -450,8 +450,14 @@ export class OTARepository {
         // Get customer_type for this ticket (if provided)
         const customerType = customerTypes && customerTypes[i] ? customerTypes[i] : undefined;
 
-        // Generate QR code for activated ticket
-        const qrResult = await generateSecureQR(ticketCode);
+        // Get product QR color config
+        const qrColorConfig = product.qr_config ? {
+          dark_color: product.qr_config.dark_color,
+          light_color: product.qr_config.light_color
+        } : undefined;
+
+        // Generate QR code for activated ticket with color config
+        const qrResult = await generateSecureQR(ticketCode, undefined, undefined, qrColorConfig);
         const rawMetadata = {
           jti: {
             pre_generated_jti: qrResult.jti,

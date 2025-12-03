@@ -410,8 +410,35 @@ router.post('/public/:code', async (req: Request, res: Response, next: NextFunct
     // Import QR generation utility
     const { generateSecureQR } = await import('../../utils/qr-crypto');
 
-    // Generate QR code with calculated expiry
-    const qrResult = await generateSecureQR(ticketCode, expiryMinutes);
+    // Get product QR color config (if ticket has product_id)
+    let qrColorConfig;
+    const productId = (ticket as any).product_id;
+    if (productId && dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+      try {
+        const productRepo = AppDataSource.getRepository(ProductEntity);
+        const product = await productRepo.findOne({ where: { id: productId } });
+        if (product?.qr_config) {
+          qrColorConfig = {
+            dark_color: product.qr_config.dark_color,
+            light_color: product.qr_config.light_color
+          };
+          logger.debug('qr.public.color_config_loaded', {
+            ticket_code: ticketCode,
+            product_id: productId,
+            qr_config: qrColorConfig
+          });
+        }
+      } catch (error) {
+        logger.warn('qr.public.color_config_error', {
+          ticket_code: ticketCode,
+          product_id: productId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Generate QR code with calculated expiry and color config
+    const qrResult = await generateSecureQR(ticketCode, expiryMinutes, undefined, qrColorConfig);
 
     // Calculate remaining time
     const expiresAt = new Date(qrResult.expires_at);

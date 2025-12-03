@@ -946,8 +946,12 @@ export class OTAService {
 
         // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
         // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
-        // 🆕 Pass logoBuffer to generate branded QR codes
-        const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined);
+        // 🆕 Pass logoBuffer and colorConfig to generate branded QR codes
+        const qrColorConfig = product.qr_config ? {
+          dark_color: product.qr_config.dark_color,
+          light_color: product.qr_config.light_color
+        } : undefined;
+        const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined, qrColorConfig);
         const rawMetadata: TicketRawMetadata = {
           jti: {
             pre_generated_jti: qrResult.jti,
@@ -1046,8 +1050,12 @@ export class OTAService {
 
       // Generate QR code for bulk pre-generated tickets (for printing/PDF distribution)
       // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
-      // 🆕 Pass logoBuffer to generate branded QR codes (works in both DB and mock modes)
-      const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined);
+      // 🆕 Pass logoBuffer and colorConfig to generate branded QR codes (works in both DB and mock modes)
+      const qrColorConfig = (product as any).qr_config ? {
+        dark_color: (product as any).qr_config.dark_color,
+        light_color: (product as any).qr_config.light_color
+      } : undefined;
+      const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined, qrColorConfig);
       const rawMetadata: TicketRawMetadata = {
         jti: {
           pre_generated_jti: qrResult.jti,
@@ -2457,6 +2465,8 @@ export class OTAService {
     if (dataSourceConfig.useDatabase && await this.isDatabaseAvailable()) {
       const productRepo = AppDataSource.getRepository(ProductEntity);
       const product = await productRepo.findOne({ where: { id: productId } });
+
+      console.log('product.........', product?.qr_config);
 
       if (!product) {
         return null;
