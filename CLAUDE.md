@@ -56,6 +56,9 @@ curl http://localhost:8080/[endpoint]
 npm run test:prd [N]    # PRD test
 npm run test:story [N]  # Story test
 
+# Document consistency / 文档一致性校验
+npm run validate:docs   # 检查 PRD→Stories→Cards→Code 一致性
+
 # Update status / 更新状态
 # Card: "In Progress" → "Done"
 ```
@@ -101,6 +104,9 @@ grep "status: In Progress" docs/cards/*.md
 npm test                      # Smoke + PRD + Story
 npm run test:prd 006          # 指定 PRD
 npm run test:story 014        # 指定 Story
+
+# 文档校验
+npm run validate:docs         # 检查 PRD→Stories→Cards→Code 一致性
 
 # 搜索
 grep -ri "关键词" docs/

@@ -2,7 +2,7 @@
 card: "Enhanced venue scanning with cross-terminal fraud detection"
 slug: venue-enhanced-scanning
 team: "C - Gate"
-oas_paths: ["/venue/scan", "/qr/decrypt", "/venue"]
+oas_paths: ["/venue/scan"]
 migrations: ["db/migrations/redemption_events.sql"]
 status: "Done"
 readiness: "production"

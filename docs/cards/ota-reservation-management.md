@@ -2,7 +2,7 @@
 card: "OTA Reservation Management - Lifecycle and Operations"
 slug: ota-reservation-management
 team: "A - Commerce"
-oas_paths: ["/api/ota/reservations", "/api/ota/reservations/:id", "/api/ota/reservations/:id/activate", "/api/ota/reservations/cleanup", "/api/ota/reservations/:id"]
+oas_paths: ["/api/ota/reservations", "/api/ota/reservations/:id", "/api/ota/reservations/:id/activate", "/api/ota/reservations/cleanup"]
 migrations: ["db/migrations/0011_channel_reservations.sql"]
 status: "Done"
 readiness: "mvp"

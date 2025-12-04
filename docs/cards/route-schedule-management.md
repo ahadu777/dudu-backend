@@ -11,7 +11,7 @@ oas_paths: [
   "/schedules/{scheduleId}/availability"
 ]
 migrations: ["db/migrations/0020_routes_schedules.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""

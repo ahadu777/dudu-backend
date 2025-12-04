@@ -8,7 +8,7 @@ oas_paths: [
   "/pricing/schedules/calculate"
 ]
 migrations: ["db/migrations/0021_schedule_pricing_rules.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""

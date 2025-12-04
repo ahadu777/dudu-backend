@@ -4,7 +4,7 @@ slug: merchant-redemption-console
 team: "C - Gate"
 oas_paths: ["/merchant/tickets/scan", "/merchant/orders/{orderId}", "/merchant/redemptions"]
 migrations: ["db/migrations/0014_merchant_redemptions.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""

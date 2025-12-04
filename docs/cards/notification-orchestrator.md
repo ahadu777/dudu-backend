@@ -4,7 +4,7 @@ slug: notification-orchestrator
 team: "B - Fulfillment"
 oas_paths: ["/notifications/preview", "/notifications/templates"]
 migrations: ["db/migrations/0016_notification_templates.sql"]
-status: "Ready"
+status: "Done"
 readiness: "prototype"
 branch: ""
 pr: ""

@@ -18,6 +18,10 @@
   - [ ] Run `npm test` to ensure no regression
   - [ ] Runbook created/updated (`docs/integration/US-XXX-runbook.md`)
   - [ ] Coverage updated (`docs/test-coverage/_index.yaml`)
+- [ ] **Documentation Consistent** (文档一致性校验):
+  - [ ] Run `npm run validate:docs` - 无错误无警告
+  - [ ] Card 状态已更新为 "Done"
+  - [ ] 无引用弃用卡片 (deprecated)
 
 ## Code Style
 
