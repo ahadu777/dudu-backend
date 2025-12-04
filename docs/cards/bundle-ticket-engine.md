@@ -4,17 +4,17 @@ slug: bundle-ticket-engine
 team: "B - Fulfillment"
 oas_paths: []
 migrations: ["db/migrations/0012_ticket_entitlements.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""
 newman_report: "reports/newman/bundle-ticket-engine.json"
-last_update: "2025-10-24T18:28:44+08:00"
+last_update: "2025-12-04T15:00:00+08:00"
 related_stories: ["US-010"]
 ---
 
 ## Status & Telemetry
-- Status: Ready
+- Status: Done
 - Readiness: mvp（发券逻辑覆盖多人套票权益）
 - Spec Paths: 内部 service（扩展 tickets-issuance）
 - Migrations: db/migrations/0012_ticket_entitlements.sql

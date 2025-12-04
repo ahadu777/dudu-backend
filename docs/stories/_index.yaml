@@ -9,16 +9,16 @@ stories:
       - payment-webhook
       - tickets-issuance
       - my-tickets
-      - qr-token
-      - tickets-scan
+      - qr-generation-api
+      - venue-enhanced-scanning
     # Sequence dependencies for temporal relationships
     sequence:
       - catalog-endpoint → order-create
       - order-create → payment-webhook
       - payment-webhook → tickets-issuance
       - tickets-issuance → my-tickets
-      - tickets-issuance → qr-token
-      - "[operators-login, qr-token] → tickets-scan"
+      - tickets-issuance → qr-generation-api
+      - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
     # Cross-story relationships
     enhances: []
     enhanced_by: [US-011]
@@ -29,11 +29,10 @@ stories:
     status: Approved
     cards:
       - operators-login
-      - validators-sessions
-      - tickets-scan
+      - venue-enhanced-scanning
     sequence:
-      - operators-login → validators-sessions
-      - "[validators-sessions, qr-token] → tickets-scan"
+      - operators-login → venue-enhanced-scanning
+      - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
     enhances: [US-001]
     # Business requirements
     business_requirement: "PRD-001"
@@ -43,10 +42,10 @@ stories:
     status: Approved
     cards:
       - my-tickets
-      - qr-token
+      - qr-generation-api
     sequence:
       - tickets-issuance → my-tickets
-      - my-tickets → qr-token
+      - my-tickets → qr-generation-api
     enhances: [US-001]
     # Business requirements
     business_requirement: "PRD-001"
@@ -70,7 +69,7 @@ stories:
     cards:
       - reports-redemptions
     sequence:
-      - tickets-scan → reports-redemptions
+      - venue-enhanced-scanning → reports-redemptions
       - refund-processing → reports-redemptions
     enhances: [US-001, US-002, US-007]
     # Business requirements
@@ -81,9 +80,9 @@ stories:
     status: Approved
     cards:
       - operators-login
-      - validators-sessions
+      # validators-sessions removed - operator JWT token is now sufficient
     sequence:
-      - operators-login → validators-sessions
+      - operators-login → venue-enhanced-scanning
     enhances: [US-002]
     # Business requirements
     business_requirement: "PRD-001"
@@ -196,7 +195,7 @@ stories:
       - tickets-issuance → ticket-lifecycle-daemon
       - ticket-lifecycle-daemon → notification-orchestrator
       - refund-processing → notification-orchestrator
-      - "[operators-login, validators-sessions] → merchant-redemption-console"
+      - "[operators-login] → merchant-redemption-console"
     enhances: [US-002, US-005, US-006, US-007]
     # Business requirements
     business_requirement: "PRD-008"
@@ -255,12 +254,12 @@ stories:
     status: Done
     cards:
       - venue-management-crud
-      - venue-session-management
       - venue-enhanced-scanning
       - venue-analytics-reporting
+      # venue-session-management removed - operator JWT token is now sufficient
     # Sequence dependencies
     sequence:
-      - venue-session-management → venue-enhanced-scanning
+      - operators-login → venue-enhanced-scanning
       - venue-enhanced-scanning → venue-analytics-reporting
     # Cross-story relationships
     enhances: [US-001, US-002]
@@ -269,7 +268,7 @@ stories:
     business_requirement: "PRD-003"
     deadline: "2025-11-04"
     implementation_date: "2025-11-03"
-    implicit_dependencies: [qr-token, tickets-issuance]
+    implicit_dependencies: [qr-generation-api, tickets-issuance]
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-013-runbook.md

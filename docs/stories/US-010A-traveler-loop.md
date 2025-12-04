@@ -4,7 +4,7 @@ title: DeepTravel 旅客闭环体验
 owner: Product
 status: In Progress
 priority: High
-last_update: 2025-12-01T16:00:00+08:00
+last_update: 2025-12-04T15:00:00+08:00
 enhances:
   - US-001
   - US-003
@@ -19,7 +19,7 @@ cards:
   - travel-search-hub              # Pending - 线路/套票搜索
   - seat-lock-service              # Pending - 锁座服务
   - wechat-payment-session         # Pending - 微信支付
-  - bundle-ticket-engine           # Pending - 票券生成
+  - bundle-ticket-engine           # Done - 票券生成（已在 miniprogram/order.service.ts 实现）
 related_features:
   - tickets-issuance
   - my-tickets
@@ -101,4 +101,4 @@ related_features:
 | Card | Status | Description |
 |------|--------|-------------|
 | wechat-payment-session | Pending | 微信支付集成 |
-| bundle-ticket-engine | Pending | 多乘客票券批量生成 |
+| bundle-ticket-engine | Done | 多乘客票券批量生成（已在 miniprogram/order.service.ts 实现） |

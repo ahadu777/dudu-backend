@@ -57,10 +57,11 @@ router.post('/decrypt', async (req: Request, res: Response) => {
 
     let ticket;
     let ticketType = 'NORMAL';
+    let venueRepo: VenueRepository | null = null;
 
     // Query local database first (OTA pre_generated_tickets + miniprogram tickets)
     if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
-      const venueRepo = new VenueRepository(AppDataSource);
+      venueRepo = new VenueRepository(AppDataSource);
       ticket = await venueRepo.getTicketByCode(ticketCode);
       if (ticket) {
         ticketType = ticket.ticket_type || (ticketCode.startsWith('MP-') ? 'MINIPROGRAM' : 'OTA');
@@ -162,6 +163,32 @@ router.post('/decrypt', async (req: Request, res: Response) => {
       };
     });
 
+    // Fetch reservation information for slot_date and slot_time (using TypeORM)
+    let reservationInfo: { slot_date: string | null; slot_time: string | null } = {
+      slot_date: null,
+      slot_time: null
+    };
+
+    if (venueRepo) {
+      try {
+        const slotInfo = await venueRepo.getTicketReservationSlot(ticketCode);
+        if (slotInfo) {
+          reservationInfo = slotInfo;
+          logger.info('qr.decrypt.reservation_found', {
+            ticket_code: ticketCode,
+            slot_date: reservationInfo.slot_date,
+            slot_time: reservationInfo.slot_time
+          });
+        }
+      } catch (error) {
+        logger.warn('qr.decrypt.reservation_lookup_failed', {
+          ticket_code: ticketCode,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        // Continue without reservation info - not a fatal error
+      }
+    }
+
     // Return complete information: QR metadata + ticket details
     return res.status(200).json({
       // QR code metadata (解密信息)
@@ -183,6 +210,9 @@ router.post('/decrypt', async (req: Request, res: Response) => {
           email: ticket.customer_email || null,      // 顾客邮箱
           phone: ticket.customer_phone || null       // 顾客电话
         },
+        // Reservation information (预订信息)
+        slot_date: reservationInfo.slot_date,        // 预订日期 (e.g., "2025-01-15")
+        slot_time: reservationInfo.slot_time,        // 预订时段 (e.g., "10:00 - 12:00")
         entitlements: formattedEntitlements,
         product_info: productInfo,
         // Additional fields for debugging

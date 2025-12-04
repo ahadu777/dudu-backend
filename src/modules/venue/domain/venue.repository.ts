@@ -5,6 +5,8 @@ import { RedemptionEvent } from './redemption-event.entity';
 import { PreGeneratedTicketEntity } from '../../ota/domain/pre-generated-ticket.entity';
 import { OTAOrderEntity } from '../../ota/domain/ota-order.entity';
 import { TicketEntity } from '../../ticket-reservation/domain/ticket.entity';
+import { TicketReservationEntity } from '../../ticket-reservation/domain/ticket-reservation.entity';
+import { ReservationSlotEntity } from '../../ticket-reservation/domain/reservation-slot.entity';
 import { ProductEntity } from '../../ota/domain/product.entity';
 
 export class VenueRepository {
@@ -14,6 +16,8 @@ export class VenueRepository {
   private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
   private otaOrderRepo: Repository<OTAOrderEntity>;
   private ticketRepo: Repository<TicketEntity>;  // 小程序票券
+  private reservationRepo: Repository<TicketReservationEntity>;  // 票券预订
+  private slotRepo: Repository<ReservationSlotEntity>;  // 预订时段
   private productRepo: Repository<ProductEntity>;
 
   constructor(dataSource: DataSource) {
@@ -23,6 +27,8 @@ export class VenueRepository {
     this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
     this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
     this.ticketRepo = dataSource.getRepository(TicketEntity);
+    this.reservationRepo = dataSource.getRepository(TicketReservationEntity);
+    this.slotRepo = dataSource.getRepository(ReservationSlotEntity);
     this.productRepo = dataSource.getRepository(ProductEntity);
   }
 
@@ -571,5 +577,52 @@ export class VenueRepository {
     });
 
     return product?.name || null;
+  }
+
+  /**
+   * 获取票券的预订时间信息
+   * @param ticketCode 票券编号
+   * @returns 预订时间信息 { slot_date, slot_time } 或 null
+   */
+  async getTicketReservationSlot(ticketCode: string): Promise<{
+    slot_date: string | null;
+    slot_time: string | null;
+  } | null> {
+    // 1. 先查询小程序票券获取 ticket_id
+    const ticket = await this.ticketRepo.findOne({
+      where: { ticket_code: ticketCode },
+      select: ['id', 'travel_date']
+    });
+
+    if (!ticket) {
+      return null;
+    }
+
+    // 2. 通过 ticket_id 查询预订关联（带 slot 关系）
+    const reservation = await this.reservationRepo.findOne({
+      where: { ticket_id: ticket.id },
+      relations: ['slot']
+    });
+
+    if (reservation && reservation.slot) {
+      return {
+        slot_date: reservation.slot.date,
+        slot_time: reservation.slot.start_time && reservation.slot.end_time
+          ? `${reservation.slot.start_time} - ${reservation.slot.end_time}`
+          : reservation.slot.start_time || null
+      };
+    }
+
+    // 3. 如果没有预订关联，尝试使用 travel_date
+    if (ticket.travel_date) {
+      return {
+        slot_date: ticket.travel_date instanceof Date
+          ? ticket.travel_date.toISOString().split('T')[0]
+          : String(ticket.travel_date),
+        slot_time: null
+      };
+    }
+
+    return null;
   }
 }
