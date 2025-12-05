@@ -229,11 +229,12 @@ changelog:
 
 ### Pending Features (Cards exist but not implemented)
 - GET /my/tickets - List user's tickets
-- POST /tickets/:code/qr-token - Generate QR codes
+- POST /qr/:code - Generate QR codes (replaces /tickets/:code/qr-token)
 - POST /operators/login - Gate operator authentication
-- POST /validators/sessions - Session management
-- POST /tickets/scan - QR code scanning
+- POST /venue/scan - QR code scanning and redemption (replaces deprecated /tickets/scan)
 - GET /reports/redemptions - Redemption reporting
+
+> **Note**: `/validators/sessions` has been deprecated. Use operator JWT authentication instead.
 
 ### Missing Components
 - Real database (using mock)

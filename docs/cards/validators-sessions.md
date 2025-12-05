@@ -88,7 +88,7 @@ paths:
 
 ## 3) Invariants
 - `session_id` belongs to the `operator_id` from the token.
-- Only active (unexpired) sessions are accepted at `/tickets/scan`.
+- Only active (unexpired) sessions are accepted at `/venue/scan` (previously `/tickets/scan`).
 
 ## 4) Validations, Idempotency & Concurrency
 - 401 if bearer token invalid/expired.

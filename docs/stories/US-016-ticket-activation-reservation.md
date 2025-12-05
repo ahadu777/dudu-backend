@@ -116,7 +116,7 @@ So that I can monitor entry patterns and resolve disputes
 **Card**: `reservation-validation-scanning`
 **Team**: C - Operations
 **Endpoints** (extending existing):
-- `POST /api/tickets/scan` (enhanced)
+- `POST /venue/scan` (enhanced with reservation validation)
 - `GET /api/operators/scan-history`
 
 **Responsibilities**:

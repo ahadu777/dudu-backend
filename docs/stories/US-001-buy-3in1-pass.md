@@ -50,14 +50,14 @@ Enable a user to purchase a package with multiple functions (bus, ferry, museum)
 - When the gateway notifies SUCCESS (valid HMAC)  
 - Then order becomes `PAID`, inventory commits, and tickets are issued exactly once
 
-**Story C — View & QR**  
-- Given the user has tickets  
-- When they call `/my/tickets` and `/tickets/{code}/qr-token`  
-- Then tickets include entitlements and a short-lived token is returned
+**Story C — View & QR**
+- Given the user has tickets
+- When they call `/my/tickets` and `POST /qr/:code`
+- Then tickets include entitlements and a short-lived encrypted QR is returned
 
-**Story D — Redemption & reporting**  
-- Given an operator session  
-- When `/tickets/scan` is called with a valid token and function  
+**Story D — Redemption & reporting**
+- Given an operator with valid JWT token
+- When `POST /venue/scan` is called with a valid QR token and function
 - Then remaining uses decrement atomically and a redemption event is stored
 
 ## Non-functional constraints

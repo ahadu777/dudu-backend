@@ -31,17 +31,14 @@ Allow an operator to validate and redeem a buyer’s ticket **safely and traceab
 - When POST /operators/login { username, password }  
 - Then 200 { operator_token } (invalid creds → 401)
 
-**Story B — Start validator session**  
-- Given a valid operator_token  
-- When POST /validators/sessions { device_id, location_id? }  
-- Then 200 { session_id, expires_in } and subsequent scans require this session_id
+**Story B — Scan success (atomic decrement)**
+- Given a valid QR token for ticket T and entitlement F with remaining_uses > 0
+- When POST /venue/scan { qr_token, function_code: F, venue_code?, terminal_device_id? }
+- Then 200 { result: "success", ticket_status, entitlements[], venue_info }
+- And remaining_uses(F) decrements by 1 atomically; ticket status updates if needed
+- And an audit row is stored: { ticket_code, function_code, operator_id, venue_code, terminal_device_id, jti, result: "success", ts }
 
-**Story C — Scan success (atomic decrement)**  
-- Given a valid QR token for ticket T and entitlement F with remaining_uses > 0  
-- When POST /tickets/scan { qr_token, function_code: F, session_id, location_id }  
-- Then 200 { result: "success", ticket_status, entitlements[] }  
-- And remaining_uses(F) decrements by 1 atomically; ticket status updates if needed  
-- And an audit row is stored: { ticket_id, function_code, operator_id, session_id, location_id, jti, result: "success", ts }
+> **Note**: `/validators/sessions` has been deprecated. Operator authentication is now handled via JWT token from `/operators/login`.
 
 **Story D — Replay prevention**  
 - Given the same QR token (same jti) is reused  
@@ -76,5 +73,7 @@ Allow an operator to validate and redeem a buyer’s ticket **safely and traceab
 - validator_sessions binds operator_id + device_id (+ optional location_id)
 
 ## Links
-- OAS paths: /operators/login, /validators/sessions, /tickets/scan  
-- Related cards: operators-login, validators-sessions, tickets-scan
+- OAS paths: /operators/login, /venue/scan, /qr/decrypt
+- Related cards: operators-login, venue-enhanced-scanning, qr-generation-api
+
+> **Deprecated**: `/validators/sessions` and `/tickets/scan` have been replaced by operator JWT auth and `/venue/scan`.

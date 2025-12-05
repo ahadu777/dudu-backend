@@ -37,18 +37,18 @@
 
     <div class="step ready">
         <h3>⏳ Step 3: Generate QR Token</h3>
-        <p>User prepares ticket for redemption by generating time-limited QR token</p>
-        <button onclick="testQRToken()" disabled>Test POST /tickets/{code}/qr-token</button>
+        <p>User prepares ticket for redemption by generating encrypted QR code</p>
+        <button onclick="testQRToken()" disabled>Test POST /qr/{code}</button>
         <div id="qr-result" class="result" style="display:none;"></div>
-        <small><em>Card: qr-token (Ready for implementation)</em></small>
+        <small><em>Card: qr-generation-api (Done)</em></small>
     </div>
 
     <div class="step ready">
         <h3>⏳ Step 4: Redeem at Gate</h3>
         <p>Operator scans QR code and redeems specific function</p>
-        <button onclick="testScan()" disabled>Test POST /tickets/scan</button>
+        <button onclick="testScan()" disabled>Test POST /venue/scan</button>
         <div id="scan-result" class="result" style="display:none;"></div>
-        <small><em>Card: tickets-scan (Ready for implementation)</em></small>
+        <small><em>Card: venue-enhanced-scanning (Done)</em></small>
     </div>
 
     <div class="step">
@@ -126,16 +126,16 @@
         async function testQRToken() {
             const result = document.getElementById('qr-result');
             result.style.display = 'block';
-            result.textContent = 'Testing QR token generation...';
+            result.textContent = 'Testing QR code generation...';
 
-            const response = await makeRequest('/tickets/TKT-123-001/qr-token', {
+            const response = await makeRequest('/qr/TKT-123-001', {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer user123' }
             });
 
             if (response.status === 200) {
                 result.className = 'result success';
-                result.textContent = `✅ SUCCESS: QR token generated\n\n${JSON.stringify(response.data, null, 2)}`;
+                result.textContent = `✅ SUCCESS: QR code generated\n\n${JSON.stringify(response.data, null, 2)}`;
             } else {
                 result.className = 'result error';
                 result.textContent = `❌ ERROR: ${response.status}\n${JSON.stringify(response.data || response.error, null, 2)}`;
@@ -147,12 +147,14 @@
             result.style.display = 'block';
             result.textContent = 'Testing ticket scan...';
 
-            const response = await makeRequest('/tickets/scan', {
+            // Note: In production, use operator JWT from /operators/login
+            const response = await makeRequest('/venue/scan', {
                 method: 'POST',
                 body: JSON.stringify({
-                    qr_token: 'sample-qr-token',
-                    function_code: 'bus',
-                    session_id: 'sess-123'
+                    qr_token: 'sample-encrypted-qr-data',
+                    function_code: 'ferry_boarding',
+                    venue_code: 'central-pier',
+                    terminal_device_id: 'demo-terminal'
                 })
             });
 

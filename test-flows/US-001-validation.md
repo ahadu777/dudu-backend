@@ -24,14 +24,14 @@ sequenceDiagram
     API->>Mock: getTicketsByUserId(123)
     API-->>U: 200 {tickets[entitlements]}
 
-    Note over U,Mock: 3. QR Generation (⏳ READY)
-    U->>API: POST /tickets/TKT-123-001/qr-token
-    API-->>U: 200 {token, expires_in}
+    Note over U,Mock: 3. QR Generation (✅ DONE)
+    U->>API: POST /qr/TKT-123-001
+    API-->>U: 200 {encrypted_data, expires_at, jti}
 
-    Note over U,Mock: 4. Redemption (⏳ READY)
-    U->>API: POST /tickets/scan {qr_token, function_code}
+    Note over U,Mock: 4. Redemption (✅ DONE)
+    U->>API: POST /venue/scan {qr_token, function_code, venue_code}
     API->>Mock: decrementEntitlement()
-    API-->>U: 200 {result: success}
+    API-->>U: 200 {result: success, venue_info}
 ```
 
 ## Current Test Results
@@ -49,17 +49,21 @@ curl -H "Authorization: Bearer user123" http://localhost:8080/my/tickets
 # ✅ Returns 2 tickets with entitlements
 ```
 
-### ⏳ Phase 2: QR & Redemption (2 cards remaining)
+### ✅ Phase 2: QR & Redemption (COMPLETE)
 ```bash
-# Test 5: Generate QR token (needs qr-token card)
-curl -X POST http://localhost:8080/tickets/TKT-123-001/qr-token
-# Expected: {token, expires_in}
+# Test 5: Generate QR code
+curl -X POST http://localhost:8080/qr/TKT-123-001 \
+  -H "Authorization: Bearer user123"
+# Returns: {encrypted_data, expires_at, jti, qr_image}
 
-# Test 6: Redeem at gate (needs tickets-scan card)
-curl -X POST http://localhost:8080/tickets/scan \
-  -d '{"qr_token":"...", "function_code":"bus", "session_id":"sess-123"}'
-# Expected: {result: "success", ticket_status, entitlements}
+# Test 6: Redeem at gate (POST /venue/scan)
+curl -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer operator_token" \
+  -d '{"qr_token":"encrypted_data...", "function_code":"ferry_boarding", "venue_code":"central-pier"}'
+# Returns: {result: "success", ticket_status, entitlements[], venue_info}
 ```
+
+> **Note**: `/tickets/scan` and `/validators/sessions` have been deprecated. Use `/venue/scan` with operator JWT authentication.
 
 ## Success Metrics
 - **Story Completion:** 6/10 cards done (60%) with canonical tracking

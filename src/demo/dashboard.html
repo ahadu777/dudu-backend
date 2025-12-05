@@ -1224,17 +1224,18 @@
             showLoading('us002-response');
             const qrToken = (document.getElementById('scan-qr-token') || {}).value;
             const functionCode = (document.getElementById('scan-function-code') || {}).value;
-            const sessionId = (document.getElementById('validator-session-id') || {}).value;
-            const locationId = (document.getElementById('validator-location-id') || {}).value;
-            if (!qrToken || !functionCode || !sessionId) {
-                showResponse('us002-response', '❌ Missing required fields: qr_token/function_code/session_id', 'error');
+            const operatorToken = (document.getElementById('operator-token') || {}).value;
+            const venueCode = (document.getElementById('venue-code') || {}).value || 'central-pier';
+            if (!qrToken || !functionCode) {
+                showResponse('us002-response', '❌ Missing required fields: qr_token/function_code', 'error');
                 return;
             }
             try {
-                const body = { qr_token: qrToken, function_code: functionCode, session_id: sessionId };
-                if (locationId) body.location_id = Number(locationId);
-                const result = await apiCall(`${BASE_URL}/tickets/scan`, {
+                const body = { qr_token: qrToken, function_code: functionCode, venue_code: venueCode };
+                const headers = operatorToken ? { 'Authorization': `Bearer ${operatorToken}` } : {};
+                const result = await apiCall(`${BASE_URL}/venue/scan`, {
                     method: 'POST',
+                    headers: headers,
                     body: JSON.stringify(body)
                 });
                 if (result.ok) {
@@ -1302,15 +1303,15 @@
                 const fnCode = ((pickTicket.entitlements||[]).find(e => e.remaining_uses > 0) || (pickTicket.entitlements||[])[0]).function_code;
                 log += `✅ Using ticket ${pickTicket.ticket_code} with function_code=${fnCode}\n`;
 
-                // 3) Generate QR token
-                const qrRes = await apiCall(`${BASE_URL}/tickets/${pickTicket.ticket_code}/qr-token`, { method: 'POST', headers: { 'Authorization': `Bearer ${userToken}` } });
+                // 3) Generate QR code
+                const qrRes = await apiCall(`${BASE_URL}/qr/${pickTicket.ticket_code}`, { method: 'POST', headers: { 'Authorization': `Bearer ${userToken}` } });
                 if (!qrRes.ok) throw new Error(`QR generation failed: ${qrRes.data && (qrRes.data.message || qrRes.data.error)}`);
-                const qrToken = qrRes.data.token;
+                const qrToken = qrRes.data.encrypted_data;
                 const scanTokenEl = document.getElementById('scan-qr-token');
                 const fnInputEl = document.getElementById('scan-function-code');
                 if (scanTokenEl) scanTokenEl.value = qrToken;
                 if (fnInputEl) fnInputEl.value = fnCode;
-                log += '✅ QR token generated\n';
+                log += '✅ QR code generated\n';
 
                 // 4) Operator login
                 const opLogin = await apiCall(`${BASE_URL}/operators/login`, { method: 'POST', body: JSON.stringify({ username: 'alice', password: 'secret123' }) });
@@ -1318,24 +1319,13 @@
                 const opToken = opLogin.data.operator_token;
                 const opTokenEl = document.getElementById('operator-token');
                 if (opTokenEl) opTokenEl.value = opToken;
-                log += '✅ Operator logged in\n';
+                log += '✅ Operator logged in (JWT obtained)\n';
 
-                // 5) Create validator session
-                const sess = await apiCall(`${BASE_URL}/validators/sessions`, {
+                // 5) Scan & redeem (using /venue/scan - no session needed)
+                const scan = await apiCall(`${BASE_URL}/venue/scan`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${opToken}` },
-                    body: JSON.stringify({ device_id: 'gate-01', location_id: 52 })
-                });
-                if (!sess.ok) throw new Error(`Session creation failed: ${sess.data && (sess.data.message || sess.data.error)}`);
-                const sessionId = sess.data.session_id;
-                const sessEl = document.getElementById('validator-session-id');
-                if (sessEl) sessEl.value = sessionId;
-                log += `✅ Session created: ${sessionId}\n`;
-
-                // 6) Scan & redeem
-                const scan = await apiCall(`${BASE_URL}/tickets/scan`, {
-                    method: 'POST',
-                    body: JSON.stringify({ qr_token: qrToken, function_code: fnCode, session_id: sessionId, location_id: 52 })
+                    body: JSON.stringify({ qr_token: qrToken, function_code: fnCode, venue_code: 'central-pier', terminal_device_id: 'gate-01' })
                 });
                 if (!scan.ok) {
                     const err = scan.data && (scan.data.message || scan.data.error) || 'Unknown';

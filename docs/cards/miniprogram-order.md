@@ -5,6 +5,7 @@ team: "A - Commerce"
 oas_paths: [
   "/miniprogram/orders",
   "/miniprogram/orders/{orderId}",
+  "/miniprogram/orders/{orderId}/cancel",
   "/miniprogram/orders/{orderId}/simulate-payment",
   "/miniprogram/tickets/{code}/qr"
 ]
@@ -19,7 +20,7 @@ branch: "init-ai"
 pr: ""
 newman_report: ""
 postman_collection: ""
-last_update: "2025-12-02T10:00:00+08:00"
+last_update: "2025-12-05T10:00:00+08:00"
 related_stories: ["US-010A"]
 relationships:
   depends_on: ["miniprogram-product-catalog", "wechat-auth-login"]
@@ -29,10 +30,10 @@ relationships:
 
 ## Status & Telemetry
 - Status: Done
-- Readiness: mvp（小程序订单创建、列表、详情、模拟支付、票券QR）
-- Spec Paths: /miniprogram/orders, /miniprogram/orders/:id, /miniprogram/orders/:id/simulate-payment, /miniprogram/tickets/:code/qr
+- Readiness: mvp（小程序订单创建、列表、详情、取消、模拟支付、票券QR）
+- Spec Paths: /miniprogram/orders, /miniprogram/orders/:id, /miniprogram/orders/:id/cancel, /miniprogram/orders/:id/simulate-payment, /miniprogram/tickets/:code/qr
 - Migrations: 016-create-orders.ts, 017-create-order-payments.ts, 018-extend-tickets-for-miniprogram.ts
-- Last Update: 2025-12-02
+- Last Update: 2025-12-05
 
 ## 0) Prerequisites
 - miniprogram-product-catalog 已实现（提供商品数据）
@@ -84,6 +85,13 @@ sequenceDiagram
   API->>SVC: getOrderDetail(userId, orderId)
   SVC->>DB: 查询订单 + 关联票券
   SVC-->>-USER: 200 { order, tickets[] }
+
+  USER->>+API: POST /miniprogram/orders/:id/cancel
+  API->>SVC: cancelOrder(userId, orderId)
+  SVC->>DB: 验证订单状态 (仅 pending 可取消)
+  SVC->>DB: 更新订单状态 pending → cancelled
+  SVC->>DB: 释放预留库存 (reserved -= quantity)
+  SVC-->>-USER: 200 { message, order }
 ```
 
 ## 2) Contract (OAS 3.0.3)
@@ -209,6 +217,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderDetailResponse'
+        "404":
+          description: 订单不存在
+
+  /miniprogram/orders/{orderId}/cancel:
+    post:
+      tags: [Miniprogram - Orders]
+      summary: 取消订单
+      description: |
+        取消待支付的订单，释放预留库存。
+
+        **功能特性：**
+        1. 仅允许取消 PENDING 状态的订单
+        2. 取消后自动释放预留库存
+        3. 支持幂等调用（已取消的订单再次取消返回成功）
+
+        **使用场景：**
+        - 用户主动取消未支付订单
+        - 前端检测到订单超时（expires_at）后自动调用
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 取消成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "订单已取消"
+                  order:
+                    $ref: '#/components/schemas/OrderResponse'
+        "400":
+          description: 订单状态不允许取消
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: "INVALID_ORDER_STATUS"
+                  message:
+                    type: string
+                    example: "只能取消待支付的订单"
+        "401":
+          description: 未授权
         "404":
           description: 订单不存在
 
@@ -465,10 +527,12 @@ components:
 ## 3) Invariants
 - 订单只能由已登录用户创建
 - (user_id, order_no) 组合唯一（幂等性保证）
-- 订单只能查看自己的（user_id 校验）
+- 订单只能查看/操作自己的（user_id 校验）
 - 库存预留使用悲观锁（FOR UPDATE）
 - 订单状态流转：pending → confirmed → in_progress → completed
-- 订单状态流转（取消）：pending/confirmed → cancelled → refunded
+- 订单状态流转（取消）：pending → cancelled（仅待支付可取消）
+- 取消订单时必须释放预留库存
+- 已取消订单再次取消为幂等操作（返回成功）
 - 票券 QR 只能由票券所有者生成（user_id 校验）
 - 生成新 QR 时旧 QR 自动失效（jti 机制）
 - 模拟支付仅限测试环境使用
@@ -505,9 +569,9 @@ components:
 ### 数据库表
 | 表名 | 操作 |
 |------|------|
-| orders | INSERT (创建), SELECT (查询) |
-| product_inventory | UPDATE (预留库存) |
-| tickets | SELECT (关联查询) |
+| orders | INSERT (创建), SELECT (查询), UPDATE (取消/支付状态) |
+| product_inventory | UPDATE (预留/释放库存) |
+| tickets | SELECT (关联查询), INSERT (支付后生成) |
 | order_payments | - (后续支付功能使用) |
 
 ### 事务处理
@@ -528,6 +592,8 @@ await AppDataSource.transaction(async (manager) => {
   - `miniprogram.order.create.error` - 订单创建失败
   - `miniprogram.order.list` - 订单列表查询
   - `miniprogram.order.detail` - 订单详情查询
+  - `miniprogram.order.cancel.success` - 订单取消成功
+  - `miniprogram.order.cancel.error` - 订单取消失败
   - `miniprogram.order.simulate_payment.success` - 模拟支付成功
   - `miniprogram.order.simulate_payment.error` - 模拟支付失败
   - `miniprogram.ticket.qr.success` - 票券QR生成成功
@@ -545,6 +611,15 @@ await AppDataSource.transaction(async (manager) => {
 
 ### 订单查询
 - Given 订单存在，When GET /miniprogram/orders/:id，Then 返回订单详情和关联票券
+
+### 订单取消
+- Given 订单状态为 pending，When POST /miniprogram/orders/:id/cancel，Then 返回 200 订单状态变为 cancelled
+- Given 订单状态为 pending，When 取消订单，Then 预留库存被释放（reserved -= quantity）
+- Given 订单状态不是 pending（如 confirmed/cancelled），When 取消订单，Then 返回 400 INVALID_ORDER_STATUS
+- Given 订单已取消，When 再次取消，Then 返回 200（幂等）
+- Given 订单不存在，When 取消订单，Then 返回 404 ORDER_NOT_FOUND
+- Given 订单属于其他用户，When 取消订单，Then 返回 404 ORDER_NOT_FOUND（不暴露存在性）
+- Given 用户未登录，When 取消订单，Then 返回 401 UNAUTHORIZED
 
 ### 模拟支付
 - Given 订单状态为 pending，When POST /miniprogram/orders/:id/simulate-payment，Then 返回 200 订单状态变为 paid 并生成票券

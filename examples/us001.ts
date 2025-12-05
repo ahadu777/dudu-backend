@@ -1,20 +1,20 @@
 /**
- * US-001 Example (v0.4.1): Buy package and redeem via QR
+ * US-001 Example (v0.5.0): Buy package and redeem via QR
  *
  * Flow:
  * 1. GET /catalog
  * 2. POST /orders
  * 3. POST /payments/notify
  * 4. GET /my/tickets
- * 5. POST /tickets/{code}/qr-token   -> { token, expires_in }
+ * 5. POST /qr/{code}                 -> { encrypted_data, expires_at, jti }
  * 6. POST /operators/login           -> { operator_token }
- * 7. POST /validators/sessions       -> { session_id, expires_in }
- * 8. POST /tickets/scan              -> { result, ticket_status, entitlements[] }
+ * 7. POST /venue/scan                -> { result, ticket_status, entitlements[], venue_info }
  *
  * Notes:
  * - Catalog items are { id, name } (not product_id/product_name)
- * - Send scan body.qr_token = token returned from QR step
+ * - Send scan body.qr_token = encrypted_data returned from QR step
  * - Read remaining uses from entitlements[] (match by function_code)
+ * - /validators/sessions has been deprecated - use operator JWT directly
  */
 
 import { OpenAPI } from '../sdk';
@@ -77,14 +77,14 @@ async function runUS001Example() {
     const newTicket = my.tickets.find((t: any) => t.order_id === order.order_id) ?? my.tickets[0];
     console.log(`Ticket: ${newTicket.ticket_code} (${newTicket.product_name})\n`);
 
-    // 5) QR Token
-    console.log('📱 5) QR Token');
-    const qrResp: any = await fetch(`${base}/tickets/${newTicket.ticket_code}/qr-token`, {
+    // 5) Generate QR Code
+    console.log('📱 5) Generate QR Code');
+    const qrResp: any = await fetch(`${base}/qr/${newTicket.ticket_code}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${USER_TOKEN}` }
-    }).then(r => ok(r, 'qr token').json());
-    const qrToken: string = qrResp.token; // { token, expires_in }
-    console.log(`QR token: ${qrToken.slice(0, 40)}... (ttl=${qrResp.expires_in}s)\n`);
+    }).then(r => ok(r, 'qr generation').json());
+    const qrToken: string = qrResp.encrypted_data;
+    console.log(`QR encrypted_data: ${qrToken.slice(0, 40)}... (expires_at=${qrResp.expires_at})\n`);
 
     // 6) Operator Login
     console.log('👮 6) Operator Login');
@@ -94,39 +94,34 @@ async function runUS001Example() {
       body: JSON.stringify({ username: 'alice', password: 'secret123' })
     }).then(r => ok(r, 'operator login').json());
     const opToken: string = op.operator_token;
+    console.log(`Operator authenticated (JWT obtained)\n`);
 
-    // 7) Validator Session
-    console.log('🛰️ 7) Validator Session');
-    const sess: any = await fetch(`${base}/validators/sessions`, {
+    // 7) Scan & Redeem (using /venue/scan)
+    console.log('🔍 7) Scan & Redeem');
+    const scan: any = await fetch(`${base}/venue/scan`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${opToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${opToken}`
       },
-      body: JSON.stringify({ device_id: 'gate-01', location_id: 52 })
-    }).then(r => ok(r, 'validator session').json());
-    console.log(`Session: ${sess.session_id}\n`);
-
-    // 8) Scan & Redeem
-    console.log('🔍 8) Scan & Redeem');
-    const scan: any = await fetch(`${base}/tickets/scan`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        qr_token: qrToken,           // NOTE: field name is qr_token (spec)
-        function_code: 'ferry',
-        session_id: sess.session_id,
-        location_id: 52
+        qr_token: qrToken,
+        function_code: 'ferry_boarding',
+        venue_code: 'central-pier',
+        terminal_device_id: 'gate-01'
       })
     }).then(r => ok(r, 'scan').json());
 
     const ferryEnt = Array.isArray(scan.entitlements)
-      ? scan.entitlements.find((e: any) => e.function_code === 'ferry')
+      ? scan.entitlements.find((e: any) => e.function_code === 'ferry_boarding' || e.function_code === 'ferry')
       : null;
 
     console.log(`Result: ${scan.result}, ticket_status: ${scan.ticket_status}`);
-    console.log(`Remaining uses (ferry): ${ferryEnt?.remaining_uses}\n`);
-    console.log('✅ US-001 Complete');
+    console.log(`Remaining uses (ferry): ${ferryEnt?.remaining_uses}`);
+    if (scan.venue_info) {
+      console.log(`Venue: ${scan.venue_info.venue_name}`);
+    }
+    console.log('\n✅ US-001 Complete');
   } catch (err) {
     console.error('❌ US-001 failed:', err);
     process.exit(1);

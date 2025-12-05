@@ -142,7 +142,7 @@
     - Return success confirmation
 
 - [ ] **Extend Existing Operator Scanning**
-  - [ ] Update `src/modules/tickets/scan` (US-002) to call new validation
+  - [ ] Update `src/modules/venue/router.ts` (POST /venue/scan) to call new validation
   - [ ] Add reservation status to scan response
   - [ ] Show reserved date/time in operator UI
 

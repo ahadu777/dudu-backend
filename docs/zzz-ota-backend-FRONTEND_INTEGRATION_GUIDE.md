@@ -964,24 +964,32 @@ const createSession = async (operatorToken: string, deviceId: string): Promise<V
 
 #### **2. Scan and Redeem Ticket**
 ```typescript
-// POST /tickets/scan
+// POST /venue/scan (replaces deprecated /tickets/scan)
 interface ScanRequest {
-  qr_token?: string;      // From QR code scan
-  code?: string;          // Manual ticket code entry
-  function_code: string;  // Which function to redeem
-  session_id: string;     // From validator session
-  location_id?: number;   // Optional location
+  qr_token: string;        // Encrypted QR data from scan
+  function_code: string;   // Which function to redeem (e.g., "ferry_boarding")
+  venue_code?: string;     // Optional venue selection
+  terminal_device_id?: string; // Optional device identifier
 }
 
 interface ScanResponse {
   result: 'success' | 'reject';
   ticket_status: string;
   entitlements: TicketEntitlement[];
+  venue_info?: {
+    venue_code: string;
+    venue_name: string;
+    terminal_device: string;
+  };
+  performance_metrics?: {
+    response_time_ms: number;
+    fraud_checks_passed: boolean;
+  };
   reason?: string; // If result is 'reject'
 }
 
 const scanTicket = async (scanData: ScanRequest, operatorToken: string): Promise<ScanResponse> => {
-  const response = await fetch('/tickets/scan', {
+  const response = await fetch('/venue/scan', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${operatorToken}`,
@@ -993,6 +1001,8 @@ const scanTicket = async (scanData: ScanRequest, operatorToken: string): Promise
   return response.json();
 };
 ```
+
+> **Note**: `/tickets/scan` has been deprecated. Use `/venue/scan` with operator JWT authentication.
 
 ### **React Component: Ticket Scanner**
 

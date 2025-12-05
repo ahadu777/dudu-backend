@@ -111,7 +111,7 @@ class ReservationService {
 5. Display result (GREEN/RED/YELLOW)
 ```
 
-**Action:** Extend existing `/api/tickets/scan` endpoint with reservation checks
+**Action:** Extend existing `/venue/scan` endpoint with reservation checks
 
 ---
 
@@ -183,7 +183,7 @@ if (reservation.date !== currentDate) {
 ### **Phase 1B: Operator Validation (Weeks 3-4)**
 
 **Week 3: Validation API + Web Interface**
-1. Extend `/api/tickets/scan` with reservation validation
+1. Extend `/venue/scan` with reservation validation
 2. Build operator web UI (responsive for tablets)
 3. Multi-venue support in validation
 
