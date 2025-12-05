@@ -691,7 +691,8 @@ export class VenueOperationsService {
       venue_type: venueData.venue_type,
       location_address: venueData.location_address,
       supported_functions: venueData.supported_functions || [],
-      is_active: venueData.is_active !== false
+      is_active: venueData.is_active !== false,
+      partner_id: venueData.partner_id ?? null
     });
 
     logger.info('venue.create.success', { venue_id: venue.venue_id, venue_code: venue.venue_code });
@@ -704,6 +705,7 @@ export class VenueOperationsService {
       location_address: venue.location_address,
       supported_functions: venue.supported_functions || [],
       is_active: venue.is_active,
+      partner_id: venue.partner_id,
       created_at: venue.created_at,
       updated_at: venue.updated_at
     };
@@ -727,6 +729,7 @@ export class VenueOperationsService {
       location_address: venue.location_address,
       supported_functions: venue.supported_functions || [],
       is_active: venue.is_active,
+      partner_id: venue.partner_id,
       created_at: venue.created_at,
       updated_at: venue.updated_at
     };
@@ -783,6 +786,7 @@ export class VenueOperationsService {
       location_address: venue.location_address,
       supported_functions: venue.supported_functions || [],
       is_active: venue.is_active,
+      partner_id: venue.partner_id,
       created_at: venue.created_at,
       updated_at: venue.updated_at
     };
