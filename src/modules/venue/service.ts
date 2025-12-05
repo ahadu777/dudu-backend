@@ -251,7 +251,8 @@ export class VenueOperationsService {
 
       // 验证票据状态 - 票券必须先激活才能核销
       // OTA票券使用 'ACTIVE'，小程序票券使用 'ACTIVATED'
-      const validStatuses = ['ACTIVE', 'ACTIVATED'];
+      // RESERVED 状态也允许核销（预订票券可直接使用）
+      const validStatuses = ['ACTIVE', 'ACTIVATED', 'RESERVED'];
       if (!validStatuses.includes(ticket.status)) {
         logger.warn('venue.scan.invalid_status', {
           ticket_code: ticketCode,
