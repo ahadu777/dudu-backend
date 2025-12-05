@@ -607,9 +607,10 @@ export class VenueOperationsService {
       operator_name: sessionData.operatorName,
       expires_at: expiresAt.toISOString(),
       supported_functions: venue?.supported_functions || [
-        'ferry_boarding',
-        'gift_redemption',
-        'playground_token'
+        'ferry',
+        'gift',
+        'tokens',
+        'park_admission'
       ]
     };
   }

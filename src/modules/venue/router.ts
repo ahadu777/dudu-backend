@@ -113,8 +113,9 @@ router.get('/', async (req, res) => {
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: 支持的功能列表
- *                 example: ["ferry_boarding", "gift_redemption"]
+ *                   enum: [ferry, gift, tokens, park_admission, pet_area, vip, exclusive]
+ *                 description: 支持的权益类型（与产品权益一致）
+ *                 example: ["ferry", "gift"]
  *               is_active:
  *                 type: boolean
  *                 description: 是否启用
@@ -210,9 +211,9 @@ router.post('/', async (req, res) => {
  *                 example: "a1b2c3d4:e5f6g7h8:i9j0k1l2:m3n4o5p6"
  *               function_code:
  *                 type: string
- *                 description: 要核销的权益类型
- *                 enum: [ferry_boarding, gift_redemption, playground_token]
- *                 example: "ferry_boarding"
+ *                 description: 要核销的权益类型（与产品权益一致）
+ *                 enum: [ferry, gift, tokens, park_admission, pet_area, vip, exclusive]
+ *                 example: "ferry"
  *               venue_code:
  *                 type: string
  *                 description: 场馆代码（可选，用于场馆选择和功能验证）
@@ -292,8 +293,8 @@ router.post('/scan', authenticateOperator, async (req, res) => {
  *         name: function
  *         schema:
  *           type: string
- *           enum: [ferry_boarding, gift_redemption, playground_token]
- *         description: 按权益类型过滤
+ *           enum: [ferry, gift, tokens, park_admission, pet_area, vip, exclusive]
+ *         description: 按权益类型过滤（与产品权益一致）
  *       - in: query
  *         name: venue_id
  *         schema:

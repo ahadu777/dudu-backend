@@ -445,9 +445,10 @@ export class VenueRepository {
       totalScans,
       successfulScans,
       fraudAttempts,
-      ferryBoardings,
-      giftRedemptions,
-      playgroundTokens
+      ferryCount,
+      giftCount,
+      tokensCount,
+      parkAdmissionCount
     ] = await Promise.all([
       query.clone().getCount(),
       query.clone().andWhere('re.result = :result', { result: 'success' }).getCount(),
@@ -455,13 +456,16 @@ export class VenueRepository {
         fraudReasons: ['ALREADY_REDEEMED', 'DUPLICATE_JTI']
       }).getCount(),
       query.clone().andWhere('re.function_code = :func AND re.result = :result', {
-        func: 'ferry_boarding', result: 'success'
+        func: 'ferry', result: 'success'
       }).getCount(),
       query.clone().andWhere('re.function_code = :func AND re.result = :result', {
-        func: 'gift_redemption', result: 'success'
+        func: 'gift', result: 'success'
       }).getCount(),
       query.clone().andWhere('re.function_code = :func AND re.result = :result', {
-        func: 'playground_token', result: 'success'
+        func: 'tokens', result: 'success'
+      }).getCount(),
+      query.clone().andWhere('re.function_code = :func AND re.result = :result', {
+        func: 'park_admission', result: 'success'
       }).getCount()
     ]);
 
@@ -475,9 +479,10 @@ export class VenueRepository {
         success_rate: totalScans > 0 ? (successfulScans / totalScans) * 100 : 0,
         fraud_rate: totalScans > 0 ? (fraudAttempts / totalScans) * 100 : 0,
         function_breakdown: {
-          ferry_boarding: ferryBoardings,
-          gift_redemption: giftRedemptions,
-          playground_token: playgroundTokens
+          ferry: ferryCount,
+          gift: giftCount,
+          tokens: tokensCount,
+          park_admission: parkAdmissionCount
         }
       }
     };

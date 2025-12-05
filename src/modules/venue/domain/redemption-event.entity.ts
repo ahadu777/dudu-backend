@@ -14,7 +14,7 @@ export class RedemptionEvent {
   ticket_code!: string; // e.g., 'TIK-USR123-106'
 
   @Column({ type: 'varchar', length: 50 })
-  function_code!: string; // 'ferry_boarding', 'gift_redemption', 'playground_token'
+  function_code!: string; // 与产品权益类型一致: 'ferry', 'gift', 'tokens', 'park_admission', 'pet_area', 'vip', 'exclusive'
 
   @Column({ type: 'int' })
   venue_id!: number;
@@ -67,6 +67,6 @@ export class RedemptionEvent {
 
   isMultiFunction(): boolean {
     // Check if this ticket has multiple function types in same session
-    return ['ferry_boarding', 'gift_redemption', 'playground_token'].includes(this.function_code);
+    return ['ferry', 'gift', 'tokens', 'park_admission', 'pet_area', 'vip', 'exclusive'].includes(this.function_code);
   }
 }
