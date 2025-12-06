@@ -40,6 +40,19 @@ export class VenueRepository {
     });
 
     if (otaTicket) {
+      // Cascading lookup for customer_name: ticket → reservation
+      let customer_name = otaTicket.customer_name;
+
+      // If OTA ticket doesn't have customer_name, try to get it from reservation
+      if (!customer_name) {
+        const reservation = await this.reservationRepo.findOne({
+          where: { ota_ticket_code: otaTicket.ticket_code, source: 'ota' }
+        });
+        if (reservation?.customer_name) {
+          customer_name = reservation.customer_name;
+        }
+      }
+
       return {
         ticket_code: otaTicket.ticket_code,
         product_id: otaTicket.product_id,
@@ -50,8 +63,8 @@ export class VenueRepository {
         order_id: otaTicket.order_id,
         batch_id: otaTicket.batch_id,
         partner_id: otaTicket.partner_id,
-        // Customer information (顾客信息)
-        customer_name: otaTicket.customer_name,
+        // Customer information (顾客信息) - with cascading lookup
+        customer_name: customer_name,
         customer_email: otaTicket.customer_email,
         customer_phone: otaTicket.customer_phone,
         customer_type: otaTicket.customer_type,
@@ -66,6 +79,19 @@ export class VenueRepository {
     });
 
     if (mpTicket) {
+      // Cascading lookup for customer_name: ticket → reservation
+      let customer_name = mpTicket.customer_name;
+
+      // If ticket doesn't have customer_name, try to get it from reservation
+      if (!customer_name) {
+        const reservation = await this.reservationRepo.findOne({
+          where: { ticket_id: mpTicket.id, source: 'direct' }
+        });
+        if (reservation?.customer_name) {
+          customer_name = reservation.customer_name;
+        }
+      }
+
       return {
         ticket_code: mpTicket.ticket_code,
         product_id: mpTicket.product_id,
@@ -76,8 +102,8 @@ export class VenueRepository {
         order_id: mpTicket.order_id?.toString(),
         user_id: mpTicket.user_id,
         channel: mpTicket.channel,
-        // Customer information (顾客信息)
-        customer_name: mpTicket.customer_name,
+        // Customer information (顾客信息) - with cascading lookup
+        customer_name: customer_name,
         customer_email: mpTicket.customer_email,
         customer_phone: mpTicket.customer_phone,
         customer_type: mpTicket.customer_type,

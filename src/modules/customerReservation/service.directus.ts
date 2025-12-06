@@ -241,7 +241,7 @@ export class CustomerReservationServiceDirectus {
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
     await this.ensureInitialized();
-    const { ticket_code, slot_id, orq, customer_email: providedEmail, customer_phone: providedPhone } = request;
+    const { ticket_code, slot_id, orq, customer_name: providedName, customer_email: providedEmail, customer_phone: providedPhone } = request;
 
     logger.info('reservation.create.start', { ticket_code, slot_id, orq });
 
@@ -252,9 +252,9 @@ export class CustomerReservationServiceDirectus {
     }
 
     const ticketSource = validation.ticket.source || 'direct';
-    const customer_name = validation.ticket.customer_name || undefined;
 
-    // Determine customer contact info
+    // Determine customer info: use provided values or fallback to ticket values
+    const customer_name = providedName || validation.ticket.customer_name || undefined;
     let customer_email: string;
     let customer_phone: string;
 
@@ -312,7 +312,7 @@ export class CustomerReservationServiceDirectus {
     if (ticketSource === 'direct') {
       await this.ticketRepo.update(
         { ticket_code },
-        { status: 'RESERVED', reserved_at: new Date(), customer_email, customer_phone }
+        { status: 'RESERVED', reserved_at: new Date(), customer_name, customer_email, customer_phone }
       );
     }
 

@@ -39,6 +39,7 @@ export interface CreateReservationRequest {
   ticket_code: string;
   slot_id: string;
   orq?: number;  // Optional: will use ticket's own orq
+  customer_name?: string;   // Optional: if provided, use this instead of fetching from ticket
   customer_email?: string;  // Optional: if provided, use this instead of fetching from ticket
   customer_phone?: string;  // Optional: if provided, use this instead of fetching from ticket
 }

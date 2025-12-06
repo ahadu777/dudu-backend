@@ -489,7 +489,7 @@ export class CustomerReservationServiceEnhanced {
    * NEW: Supports both direct and OTA tickets
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_code, slot_id, orq } = request;
+    const { ticket_code, slot_id, orq, customer_name: providedName, customer_email: providedEmail, customer_phone: providedPhone } = request;
 
     try {
       // 1. Validate ticket (includes activation check)
@@ -502,7 +502,11 @@ export class CustomerReservationServiceEnhanced {
       }
 
       // Get customer info, source, and orq from validated ticket
-      const { customer_email, customer_phone, source, orq: ticketOrq } = validation.ticket;
+      // Use provided values if available, otherwise fallback to ticket values
+      const { customer_name: ticketName, customer_email: ticketEmail, customer_phone: ticketPhone, source, orq: ticketOrq } = validation.ticket;
+      const customer_name = providedName || ticketName;
+      const customer_email = providedEmail || ticketEmail;
+      const customer_phone = providedPhone || ticketPhone;
       const ticketSource = source || 'direct';
       const reservationOrq = ticketOrq || 1; // Default to 1 if not available
 
@@ -579,6 +583,7 @@ export class CustomerReservationServiceEnhanced {
         const ticket = this.tickets.get(ticket_code);
         if (ticket) {
           ticket.status = 'RESERVED';
+          ticket.customer_name = customer_name || undefined;
           ticket.customer_email = customer_email;
           ticket.customer_phone = customer_phone;
         }
