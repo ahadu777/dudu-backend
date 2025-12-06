@@ -40,17 +40,19 @@ export class VenueRepository {
     });
 
     if (otaTicket) {
-      // Cascading lookup for customer_name: ticket → reservation
+      // Cascading lookup: reservation (优先) → ticket (兜底)
       let customer_name = otaTicket.customer_name;
+      let customer_email = otaTicket.customer_email;
+      let customer_phone = otaTicket.customer_phone;
 
-      // If OTA ticket doesn't have customer_name, try to get it from reservation
-      if (!customer_name) {
-        const reservation = await this.reservationRepo.findOne({
-          where: { ota_ticket_code: otaTicket.ticket_code, source: 'ota' }
-        });
-        if (reservation?.customer_name) {
-          customer_name = reservation.customer_name;
-        }
+      // Check reservation for customer info (优先使用预约表的信息)
+      const reservation = await this.reservationRepo.findOne({
+        where: { ota_ticket_code: otaTicket.ticket_code, source: 'ota' }
+      });
+      if (reservation) {
+        customer_name = reservation.customer_name || customer_name;
+        customer_email = reservation.customer_email || customer_email;
+        customer_phone = reservation.customer_phone || customer_phone;
       }
 
       return {
@@ -63,10 +65,10 @@ export class VenueRepository {
         order_id: otaTicket.order_id,
         batch_id: otaTicket.batch_id,
         partner_id: otaTicket.partner_id,
-        // Customer information (顾客信息) - with cascading lookup
+        // Customer information - 预约表优先，票券表兜底
         customer_name: customer_name,
-        customer_email: otaTicket.customer_email,
-        customer_phone: otaTicket.customer_phone,
+        customer_email: customer_email,
+        customer_phone: customer_phone,
         customer_type: otaTicket.customer_type,
         raw: otaTicket.raw,
         extra: null  // OTA 票券没有 extra 字段
@@ -79,17 +81,19 @@ export class VenueRepository {
     });
 
     if (mpTicket) {
-      // Cascading lookup for customer_name: ticket → reservation
+      // Cascading lookup: reservation (优先) → ticket (兜底)
       let customer_name = mpTicket.customer_name;
+      let customer_email = mpTicket.customer_email;
+      let customer_phone = mpTicket.customer_phone;
 
-      // If ticket doesn't have customer_name, try to get it from reservation
-      if (!customer_name) {
-        const reservation = await this.reservationRepo.findOne({
-          where: { ticket_id: mpTicket.id, source: 'direct' }
-        });
-        if (reservation?.customer_name) {
-          customer_name = reservation.customer_name;
-        }
+      // Check reservation for customer info (优先使用预约表的信息)
+      const reservation = await this.reservationRepo.findOne({
+        where: { ticket_id: mpTicket.id, source: 'direct' }
+      });
+      if (reservation) {
+        customer_name = reservation.customer_name || customer_name;
+        customer_email = reservation.customer_email || customer_email;
+        customer_phone = reservation.customer_phone || customer_phone;
       }
 
       return {
@@ -102,10 +106,10 @@ export class VenueRepository {
         order_id: mpTicket.order_id?.toString(),
         user_id: mpTicket.user_id,
         channel: mpTicket.channel,
-        // Customer information (顾客信息) - with cascading lookup
+        // Customer information - 预约表优先，票券表兜底
         customer_name: customer_name,
-        customer_email: mpTicket.customer_email,
-        customer_phone: mpTicket.customer_phone,
+        customer_email: customer_email,
+        customer_phone: customer_phone,
         customer_type: mpTicket.customer_type,
         travel_date: mpTicket.travel_date,
         extra: mpTicket.extra  // 包含 current_jti 用于一码失效验证
