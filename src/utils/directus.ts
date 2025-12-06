@@ -361,6 +361,7 @@ export class DirectusService {
     slot_id: string;
     customer_email: string;
     customer_phone: string;
+    customer_name?: string;
     orq: number;
   }): Promise<{ success: boolean; reservation?: any; error?: string }> {
     if (!this.baseURL) {
@@ -418,6 +419,7 @@ export class DirectusService {
         slot_id: data.slot_id,
         customer_email: data.customer_email,
         customer_phone: data.customer_phone,
+        customer_name: data.customer_name || null,
         orq: data.orq,
         status: 'RESERVED',
         reserved_at: new Date().toISOString()
