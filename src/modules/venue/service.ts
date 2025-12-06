@@ -49,6 +49,15 @@ export interface VenueOperationsResponse {
     venue_name: string;
     terminal_device?: string;
   };
+  customer_info?: {
+    customer_name: string | null;
+    customer_phone: string | null;
+    customer_email: string | null;
+  };
+  product_info?: {
+    product_id: number | null;
+    product_name: string | null;
+  };
   performance_metrics: {
     response_time_ms: number;
     fraud_checks_passed: boolean;
@@ -104,6 +113,8 @@ export class VenueOperationsService {
       productId?: number;
       productName?: string;
       customerName?: string;
+      customerPhone?: string;
+      customerEmail?: string;
       customerType?: string;
     } = {};
 
@@ -195,6 +206,8 @@ export class VenueOperationsService {
       additionalInfo.ticketType = ticket.ticket_type;
       additionalInfo.productId = ticket.product_id;
       additionalInfo.customerName = ticket.customer_name;
+      additionalInfo.customerPhone = ticket.customer_phone;
+      additionalInfo.customerEmail = ticket.customer_email;
       additionalInfo.customerType = ticket.customer_type;
 
       // 获取产品名称
@@ -455,6 +468,15 @@ export class VenueOperationsService {
           operator_id: request.operator.operator_id,
           username: request.operator.username
         },
+        customer_info: {
+          customer_name: additionalInfo.customerName || null,
+          customer_phone: additionalInfo.customerPhone || null,
+          customer_email: additionalInfo.customerEmail || null
+        },
+        product_info: {
+          product_id: additionalInfo.productId || null,
+          product_name: additionalInfo.productName || null
+        },
         performance_metrics: {
           response_time_ms: responseTime,
           fraud_checks_passed: true
@@ -528,6 +550,8 @@ export class VenueOperationsService {
       productId?: number;       // 产品ID
       productName?: string;     // 产品名称
       customerName?: string;    // 顾客姓名
+      customerPhone?: string;   // 顾客手机号
+      customerEmail?: string;   // 顾客邮箱
       customerType?: string;    // 顾客类型
     };
   }): Promise<void> {

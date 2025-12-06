@@ -412,14 +412,18 @@ export interface TicketValidationRequest {
   ticket_code: string;
 }
 
+export type ReservationSource = 'direct' | 'ota';
+
 export interface TicketValidationResponse {
   success: boolean;
   data?: {
-    ticket_id: number;
+    ticket_id?: number;        // For direct tickets
     ticket_code: string;
-    status: TicketReservationStatus;
+    source: ReservationSource; // NEW: ticket source
+    status: TicketReservationStatus | 'ACTIVE'; // OTA tickets use ACTIVE status
     product_id: number;
-    order_id: number;
+    order_id?: number | string; // OTA tickets may have string order_id
+    partner_id?: string;       // For OTA tickets
   };
   error?: {
     code: string;
@@ -455,10 +459,12 @@ export interface AvailableSlotsResponse {
 }
 
 export interface CreateReservationRequest {
-  ticket_id: number;
+  ticket_id?: number;          // For direct tickets (optional when using ticket_code)
+  ticket_code?: string;        // For OTA or direct tickets (optional when using ticket_id)
   slot_id: number;
   customer_email: string;
   customer_phone: string;
+  orq?: number;                // Organization ID
 }
 
 export interface CreateReservationResponse {
@@ -466,6 +472,8 @@ export interface CreateReservationResponse {
   data?: {
     reservation_id: number;
     ticket_code: string;
+    source: ReservationSource;      // NEW: ticket source
+    ota_ticket_code?: string;       // NEW: for OTA tickets
     slot: {
       date: string;
       start_time: string;
@@ -506,7 +514,7 @@ export interface OperatorValidateTicketResponse {
     validation_status: 'VALID' | 'INVALID';
   };
   error?: {
-    code: 'WRONG_DATE' | 'NO_RESERVATION' | 'ALREADY_VERIFIED' | 'TICKET_NOT_FOUND' | 'TICKET_NOT_ACTIVATED' | 'TICKET_EXPIRED';
+    code: 'WRONG_DATE' | 'NO_RESERVATION' | 'ALREADY_VERIFIED' | 'TICKET_NOT_FOUND' | 'TICKET_NOT_ACTIVATED' | 'TICKET_EXPIRED' | 'TICKET_CANCELLED' | 'TICKET_ALREADY_USED';
     message: string;
     reservation_date?: string;
     today?: string;

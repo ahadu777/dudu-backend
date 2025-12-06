@@ -258,7 +258,7 @@ export class CustomerReservationServiceMock {
       const reservation: TicketReservation = {
         id: reservationId,
         ticket_code,
-        slot_id: parseInt(slot_id),
+        slot_id: slot_id, // Keep as string
         visitor_name: customer_email, // Use customer_email from ticket
         visitor_phone: customer_phone, // Use customer_phone from ticket
         status: 'RESERVED',
@@ -294,7 +294,7 @@ export class CustomerReservationServiceMock {
         data: {
           reservation_id: reservationId,
           ticket_code,
-          slot_id: parseInt(slot_id),
+          slot_id: slot_id, // Keep as string
           slot_date: slot.date,
           slot_time: `${slot.start_time} - ${slot.end_time}`,
           customer_email,

@@ -244,7 +244,7 @@ export class CustomerReservationServiceDirectus {
       data: {
         reservation_id: result.reservation.id,
         ticket_code,
-        slot_id: parseInt(slot_id),
+        slot_id: slot_id,
         slot_date: '2025-12-01', // TODO: fetch from slot data
         slot_time: '09:00-12:00', // TODO: fetch from slot data
         customer_email,
@@ -284,7 +284,7 @@ export class CustomerReservationServiceDirectus {
       data: {
         reservation_id,
         ticket_code: 'TKT-XXX', // TODO: fetch from reservation
-        new_slot_id: parseInt(new_slot_id),
+        new_slot_id: new_slot_id,
         new_slot_date: '2025-12-02', // TODO: fetch from slot data
         new_slot_time: '14:00-17:00', // TODO: fetch from slot data
         updated_at: new Date().toISOString()

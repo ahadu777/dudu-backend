@@ -32,7 +32,9 @@ export interface ValidateTicketResponse {
     color_code: 'GREEN' | 'YELLOW' | 'RED';
     message: string;
     details: {
-      customer_email: string;
+      customer_name: string;   // 客户姓名
+      customer_phone: string;  // 客户手机（后4位脱敏）
+      customer_email: string;  // 客户邮箱
       slot_date: string;
       slot_time: string;
       product_name: string;

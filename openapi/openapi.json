@@ -476,39 +476,33 @@
         }
       }
     },
-    "/payments/notify": {
+    "/payments/wechat/prepay": {
       "post": {
         "tags": [
-          "Commerce"
+          "Payments"
         ],
-        "summary": "Payment notification webhook",
-        "description": "Receive payment notification from payment gateway and synchronously issue tickets",
+        "summary": "Create WeChat prepay order via Wallyt",
+        "description": "Create a prepay order for WeChat Mini Program payment. Returns payment parameters for wx.requestPayment().",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "out_trade_no",
-                  "trade_status",
-                  "total_amount"
-                ],
+                "required": ["orderId", "openid"],
                 "properties": {
-                  "out_trade_no": {
-                    "type": "string",
-                    "description": "External transaction number"
+                  "orderId": {
+                    "type": "integer",
+                    "description": "Order ID"
                   },
-                  "trade_status": {
+                  "openid": {
                     "type": "string",
-                    "enum": [
-                      "TRADE_SUCCESS",
-                      "TRADE_FAILED"
-                    ]
-                  },
-                  "total_amount": {
-                    "type": "string",
-                    "description": "Payment amount as string"
+                    "description": "User's OpenID in the Mini Program"
                   }
                 }
               }
@@ -517,42 +511,59 @@
         },
         "responses": {
           "200": {
-            "description": "Payment processed successfully",
+            "description": "Prepay order created successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "order_id": {
-                      "type": "integer"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "tickets_issued": {
-                      "type": "integer"
-                    }
-                  }
+                  "$ref": "#/components/schemas/WallytPrepayResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid payment notification",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+            "description": "Order status does not allow payment"
+          },
+          "401": {
+            "description": "Unauthorized"
           },
           "404": {
-            "description": "Order not found",
+            "description": "Order not found"
+          },
+          "422": {
+            "description": "Invalid request parameters"
+          },
+          "503": {
+            "description": "Payment service not configured"
+          }
+        }
+      }
+    },
+    "/payments/wallyt/notify": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Wallyt payment callback",
+        "description": "Wallyt server callback for payment notification. XML format request body. Must return 'success' string within 5 seconds.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/xml": {
+              "schema": {
+                "type": "string",
+                "description": "XML formatted notification from Wallyt"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns 'success' or 'fail' as plain text",
             "content": {
-              "application/json": {
+              "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "type": "string",
+                  "enum": ["success", "fail"]
                 }
               }
             }
@@ -560,39 +571,111 @@
         }
       }
     },
-    "/payments/wechat/session": {
+    "/payments/status/{orderId}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Query payment status",
+        "description": "Query the payment status of an order",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Order ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment status retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        }
+      }
+    },
+    "/payments/refund": {
       "post": {
         "tags": [
           "Payments"
         ],
-        "summary": "Create WeChat pay session",
-        "description": "Generates WeChat prepay parameters for DeepTravel orders",
+        "summary": "Apply for refund",
+        "description": "Apply for a full or partial refund for a paid order",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WeChatSessionRequest"
+                "type": "object",
+                "required": ["orderId"],
+                "properties": {
+                  "orderId": {
+                    "type": "integer",
+                    "description": "Order ID"
+                  },
+                  "refundAmount": {
+                    "type": "number",
+                    "description": "Refund amount in CNY. If not provided, full refund will be applied."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Reason for refund"
+                  }
+                }
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "WeChat payment session created",
+            "description": "Refund processed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WeChatSessionResponse"
+                  "$ref": "#/components/schemas/RefundResponse"
                 }
               }
             }
           },
-          "404": {
-            "description": "Order not found"
+          "400": {
+            "description": "Order status does not allow refund or refund amount exceeds limit"
           },
-          "422": {
-            "description": "Invalid request payload"
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Order or payment record not found"
+          },
+          "500": {
+            "description": "Refund processing failed"
+          },
+          "503": {
+            "description": "Payment service not configured"
           }
         }
       }
@@ -4288,6 +4371,125 @@
   },
   "components": {
     "schemas": {
+      "WallytPrepayResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "integer",
+                "description": "Order ID"
+              },
+              "outTradeNo": {
+                "type": "string",
+                "description": "Merchant order number sent to Wallyt"
+              },
+              "payParams": {
+                "type": "object",
+                "description": "Parameters for wx.requestPayment()",
+                "properties": {
+                  "appId": {
+                    "type": "string"
+                  },
+                  "timeStamp": {
+                    "type": "string"
+                  },
+                  "nonceStr": {
+                    "type": "string"
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "signType": {
+                    "type": "string"
+                  },
+                  "paySign": {
+                    "type": "string"
+                  }
+                }
+              },
+              "paymentId": {
+                "type": "integer",
+                "description": "Payment record ID"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Prepay expiration time"
+              }
+            }
+          }
+        }
+      },
+      "PaymentStatusResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["PENDING", "CONFIRMED", "CANCELLED", "REFUNDED"],
+                "description": "Order payment status"
+              },
+              "paidAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Payment completion time"
+              },
+              "transactionId": {
+                "type": "string",
+                "description": "Wallyt transaction ID"
+              }
+            }
+          }
+        }
+      },
+      "RefundResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "integer",
+                "description": "Order ID"
+              },
+              "outRefundNo": {
+                "type": "string",
+                "description": "Merchant refund order number"
+              },
+              "refundId": {
+                "type": "string",
+                "description": "Wallyt refund ID"
+              },
+              "refundAmount": {
+                "type": "number",
+                "description": "Refund amount in CNY"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["SUCCESS", "PROCESSING", "FAILED"],
+                "description": "Refund status"
+              },
+              "errorMessage": {
+                "type": "string",
+                "description": "Error message if refund failed"
+              }
+            }
+          }
+        }
+      },
       "Venue": {
         "type": "object",
         "properties": {
@@ -5207,76 +5409,6 @@
           },
           "expires_in_seconds": {
             "type": "integer"
-          }
-        }
-      },
-      "WeChatSessionRequest": {
-        "type": "object",
-        "required": [
-          "orderId",
-          "amount",
-          "currency"
-        ],
-        "properties": {
-          "orderId": {
-            "type": "integer"
-          },
-          "amount": {
-            "type": "number"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "reservationId": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          }
-        }
-      },
-      "WeChatSessionResponse": {
-        "type": "object",
-        "properties": {
-          "order_id": {
-            "type": "integer"
-          },
-          "reservation_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "amount": {
-            "type": "number"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "prepay_id": {
-            "type": "string"
-          },
-          "nonce_str": {
-            "type": "string"
-          },
-          "time_stamp": {
-            "type": "string"
-          },
-          "sign_type": {
-            "type": "string"
-          },
-          "package": {
-            "type": "string"
-          },
-          "pay_sign": {
-            "type": "string"
-          },
-          "expires_at": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       },

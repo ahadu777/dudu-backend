@@ -83,6 +83,8 @@ export class OperatorValidationServiceDirectus {
           color_code: 'RED',
           message: 'Invalid ticket - Deny entry',
           details: {
+            customer_name: 'N/A',
+            customer_phone: 'N/A',
             customer_email: 'N/A',
             slot_date: 'N/A',
             slot_time: 'N/A',
@@ -117,6 +119,8 @@ export class OperatorValidationServiceDirectus {
           color_code: 'RED',
           message: 'Ticket not reserved - Deny entry',
           details: {
+            customer_name: 'N/A',
+            customer_phone: 'N/A',
             customer_email: 'N/A',
             slot_date: 'N/A',
             slot_time: 'N/A',
@@ -141,6 +145,8 @@ export class OperatorValidationServiceDirectus {
           color_code: 'RED',
           message: 'Error: No reservation found for this ticket',
           details: {
+            customer_name: ticket.customer_name || 'N/A',
+            customer_phone: 'N/A',
             customer_email: ticket.customer_email || 'N/A',
             slot_date: 'N/A',
             slot_time: 'N/A',
@@ -191,6 +197,8 @@ export class OperatorValidationServiceDirectus {
           color_code: 'YELLOW',
           message: `Warning: Reservation is for ${reservationDate}, not today`,
           details: {
+            customer_name: reservation.customer_name || 'N/A',
+            customer_phone: reservation.customer_phone || 'N/A',
             customer_email: reservation.customer_email || 'N/A',
             slot_date: reservationDate,
             slot_time: slotTime,
@@ -211,6 +219,8 @@ export class OperatorValidationServiceDirectus {
         color_code: 'GREEN',
         message: 'Valid reservation - Allow entry',
         details: {
+          customer_name: reservation.customer_name || 'N/A',
+          customer_phone: reservation.customer_phone ? `****${reservation.customer_phone.slice(-4)}` : 'N/A',
           customer_email: reservation.customer_email || 'N/A',
           slot_date: reservationDate,
           slot_time: slotTime,

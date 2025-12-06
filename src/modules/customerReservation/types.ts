@@ -3,6 +3,8 @@ export interface TicketValidationRequest {
   orq: number;
 }
 
+export type ReservationSource = 'direct' | 'ota';
+
 export interface TicketValidationResponse {
   valid: boolean;
   ticket?: {
@@ -15,6 +17,7 @@ export interface TicketValidationResponse {
     customer_email?: string | null;
     customer_phone?: string | null;
     order_id?: number | null;
+    source?: ReservationSource; // NEW: ticket source
   };
   error?: string;
 }
@@ -43,7 +46,8 @@ export interface CreateReservationResponse {
   data?: {
     reservation_id: string;
     ticket_code: string;
-    slot_id: number;
+    source?: ReservationSource; // NEW: ticket source
+    slot_id: string; // UUID string
     slot_date: string;
     slot_time: string;
     customer_email: string;
@@ -57,13 +61,15 @@ export interface CreateReservationResponse {
 export interface TicketReservation {
   id: string;
   ticket_code: string;
-  slot_id: number;
-  visitor_name: string;
-  visitor_phone: string;
+  slot_id: string; // UUID string
+  visitor_name: string;  // customer_email (legacy field name)
+  visitor_phone: string; // customer_phone (legacy field name)
+  customer_name?: string; // NEW: optional customer name
   status: 'RESERVED' | 'VERIFIED' | 'CANCELLED' | 'EXPIRED';
   reserved_at: string;
   verified_at: string | null;
   orq: number;
+  source?: ReservationSource; // reservation source
   created_at: string;
   updated_at: string;
 }
@@ -87,7 +93,7 @@ export interface ModifyReservationResponse {
   data?: {
     reservation_id: string;
     ticket_code: string;
-    new_slot_id: number;
+    new_slot_id: string;
     new_slot_date: string;
     new_slot_time: string;
     updated_at: string;

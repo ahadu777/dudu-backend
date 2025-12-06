@@ -23,7 +23,8 @@ export class CustomerReservationController {
       this.service = new CustomerReservationServiceDirectus();
     } else {
       logger.info('customer_reservation.controller.using_mock');
-      this.service = new CustomerReservationServiceEnhanced();
+      // Use singleton to share state with operatorValidation module
+      this.service = CustomerReservationServiceEnhanced.getInstance();
     }
   }
 

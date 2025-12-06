@@ -135,9 +135,11 @@ for (let dayOffset = 0; dayOffset < 90; dayOffset++) {
 }
 
 // Mock Ticket Reservations
-export const mockTicketReservations: TicketReservationEntity[] = [
+export const mockTicketReservations: any[] = [
   {
     id: 1,
+    source: 'direct',
+    ota_ticket_code: undefined,
     ticket_id: 2,
     slot_id: 2, // Today's afternoon slot
     customer_email: 'john@example.com',
@@ -150,6 +152,8 @@ export const mockTicketReservations: TicketReservationEntity[] = [
   },
   {
     id: 2,
+    source: 'direct',
+    ota_ticket_code: undefined,
     ticket_id: 3,
     slot_id: 1, // Today's morning slot
     customer_email: 'jane@example.com',
@@ -162,14 +166,95 @@ export const mockTicketReservations: TicketReservationEntity[] = [
   },
 ];
 
+// Mock OTA Tickets (pre-generated tickets from OTA partners)
+export interface MockOtaTicket {
+  ticket_code: string;
+  product_id: number;
+  batch_id: string;
+  partner_id: string;
+  status: 'PRE_GENERATED' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'CANCELLED';
+  qr_code: string;
+  customer_name?: string;
+  customer_email?: string;
+  customer_phone?: string;
+  order_id?: string;
+  created_at: Date;
+  activated_at?: Date;
+}
+
+export const mockOtaTickets: MockOtaTicket[] = [
+  {
+    ticket_code: 'OTA-2025-BATCH001-001',
+    product_id: 106,
+    batch_id: 'BATCH-2025-001',
+    partner_id: 'PARTNER-KLOOK',
+    status: 'ACTIVE',
+    qr_code: 'data:image/png;base64,OTA_QR_CODE_001',
+    customer_name: 'Alice Wong',
+    customer_email: 'alice@example.com',
+    customer_phone: '+85291234567',
+    order_id: 'OTA-ORD-001',
+    created_at: new Date('2025-11-20T10:00:00Z'),
+    activated_at: new Date('2025-11-21T14:00:00Z'),
+  },
+  {
+    ticket_code: 'OTA-2025-BATCH001-002',
+    product_id: 106,
+    batch_id: 'BATCH-2025-001',
+    partner_id: 'PARTNER-KLOOK',
+    status: 'ACTIVE',
+    qr_code: 'data:image/png;base64,OTA_QR_CODE_002',
+    customer_name: 'Bob Chen',
+    customer_email: 'bob@example.com',
+    customer_phone: '+85298765432',
+    order_id: 'OTA-ORD-002',
+    created_at: new Date('2025-11-20T10:00:00Z'),
+    activated_at: new Date('2025-11-22T09:00:00Z'),
+  },
+  {
+    ticket_code: 'OTA-2025-BATCH002-001',
+    product_id: 107,
+    batch_id: 'BATCH-2025-002',
+    partner_id: 'PARTNER-KKDAY',
+    status: 'PRE_GENERATED', // Not yet activated
+    qr_code: 'data:image/png;base64,OTA_QR_CODE_003',
+    created_at: new Date('2025-11-22T08:00:00Z'),
+  },
+  {
+    ticket_code: 'OTA-2025-BATCH002-002',
+    product_id: 107,
+    batch_id: 'BATCH-2025-002',
+    partner_id: 'PARTNER-KKDAY',
+    status: 'USED', // Already used
+    qr_code: 'data:image/png;base64,OTA_QR_CODE_004',
+    customer_name: 'Charlie Lee',
+    customer_email: 'charlie@example.com',
+    order_id: 'OTA-ORD-003',
+    created_at: new Date('2025-11-18T08:00:00Z'),
+    activated_at: new Date('2025-11-19T10:00:00Z'),
+  },
+];
+
 // Helper function to find ticket by code
 export function findTicketByCode(ticketCode: string): TicketEntity | undefined {
   return mockTickets.find(t => t.ticket_code === ticketCode);
 }
 
+// Helper function to find OTA ticket by code
+export function findOtaTicketByCode(ticketCode: string): MockOtaTicket | undefined {
+  return mockOtaTickets.find(t => t.ticket_code === ticketCode);
+}
+
 // Helper function to find reservation by ticket_id
 export function findReservationByTicketId(ticketId: number): TicketReservationEntity | undefined {
   return mockTicketReservations.find(r => r.ticket_id === ticketId && r.status === 'RESERVED');
+}
+
+// Helper function to find reservation by OTA ticket code
+export function findReservationByOtaTicketCode(ticketCode: string): any | undefined {
+  return mockTicketReservations.find(
+    (r: any) => r.ota_ticket_code === ticketCode && r.source === 'ota'
+  );
 }
 
 // Helper function to find slot by id
