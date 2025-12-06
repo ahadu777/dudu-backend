@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import { ERR } from '../../core/errors/codes';
 import { logger } from '../../utils/logger';
 import { AppDataSource } from '../../config/database';
@@ -2466,7 +2467,7 @@ export class OTAService {
       const productRepo = AppDataSource.getRepository(ProductEntity);
       const product = await productRepo.findOne({ where: { id: productId } });
 
-      console.log('product.........', product?.qr_config);
+      logger.debug('ota.product.qr_config', { productId, qr_config: product?.qr_config });
 
       if (!product) {
         return null;

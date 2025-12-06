@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import { code2Session, getPhoneNumber } from '../infrastructure/wechat.client';
 import { generateToken } from '../../../middlewares/auth';
 import { dataSourceConfig } from '../../../config/data-source';
@@ -192,13 +193,7 @@ export class WeChatAuthService {
     // Dual-mode: Check if database is available
     const useDatabase = dataSourceConfig.useDatabase && AppDataSource.isInitialized;
 
-    console.log('===== WECHAT LOGIN MODE SELECTION =====');
-    console.log('USE_DATABASE config:', dataSourceConfig.useDatabase);
-    console.log('DataSource initialized:', AppDataSource.isInitialized);
-    console.log('Final mode:', useDatabase ? 'DATABASE' : 'MOCK');
-    console.log('=======================================');
-
-    logger.info('wechat_auth.login.mode_selection', {
+    logger.debug('wechat_auth.login.mode_selection', {
       use_database_config: dataSourceConfig.useDatabase,
       datasource_initialized: AppDataSource.isInitialized,
       final_mode: useDatabase ? 'database' : 'mock',

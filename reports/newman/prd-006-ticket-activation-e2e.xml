@@ -1,95 +1,95 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-006: Ticket Activation &amp; Reservation System Tests" tests="23" time="0.046">
-  <testsuite name="Feature 1: Ticket Activation System / AC-1.1: Tickets default to inactive status (pre-made mode)" id="1645ee21-fe89-4740-9da7-3460e2f80572" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.010">
-    <testcase name="Status code is 400" time="0.010" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-1.1: Inactive ticket cannot reserve" time="0.010" classname="Prd006TicketActivationReservationSystemTests"/>
+<testsuites name="PRD-006: Ticket Activation &amp; Reservation System Tests" tests="23" time="0.059">
+  <testsuite name="Feature 1: Ticket Activation System / AC-1.1: Tickets default to inactive status (pre-made mode)" id="90386c31-9b86-4643-b703-f3e05cd0737c" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.021">
+    <testcase name="Status code is 400" time="0.021" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-1.1: Inactive ticket cannot reserve" time="0.021" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 1: Ticket Activation System / AC-1.2: Immediate mode activates tickets at purchase" id="eb089e88-7384-4d92-be9f-acbd087cd34d" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-1.2: Activated ticket is valid" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Feature 1: Ticket Activation System / AC-1.2: Immediate mode activates tickets at purchase" id="0eb2e45b-e4f8-4ac5-824b-281d29e79dbd" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Status code is 200" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-1.2: Activated ticket is valid" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 1: Ticket Activation System / AC-1.3: Only active tickets can make reservations" id="b208800c-06c9-490c-96d3-4100f40e0697" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-1.3: Active ticket can proceed to reservation" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Feature 1: Ticket Activation System / AC-1.3: Only active tickets can make reservations" id="83dec9ad-c959-4081-b463-c96f5c337eab" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="Status code is 200" time="0.004" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-1.3: Active ticket can proceed to reservation" time="0.004" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 1: Ticket Activation System / AC-1.4: Reserved ticket shows reserved status" id="abf7f7d7-5255-4ebd-86ef-a54051a9b7a6" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-1.4: Reserved ticket has RESERVED status" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Feature 1: Ticket Activation System / AC-1.4: Reserved ticket shows reserved status" id="d204e126-e4a0-400f-b3a5-203afa35541e" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-1.4: Reserved ticket has RESERVED status" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 1: Ticket Activation System / AC-1.5: Verified ticket cannot be reused" id="fe05af30-b006-43cd-a69a-2ab08b852edd" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.002">
+  <testsuite name="Feature 1: Ticket Activation System / AC-1.5: Verified ticket cannot be reused" id="13d05944-47b5-481f-91dc-7693c3161a23" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.002">
     <testcase name="Status code is 200 or 400" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-1.5: Verified ticket returns error" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.1: Calendar displays available dates" id="371deb96-ecff-47ee-88f7-b067ce74c766" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.003">
-    <testcase name="Status code is 200" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-2.1: Returns slot data grouped by date" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.1: Calendar displays available dates" id="5e7bcca0-347b-42b0-8793-f73dbf78607b" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.007">
+    <testcase name="Status code is 200" time="0.007" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-2.1: Returns slot data grouped by date" time="0.007" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.2: Slots have time ranges and capacity" id="d449b826-327e-4ff9-a63d-77a57166855f" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.003">
-    <testcase name="Status code is 200" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-2.2: Slots have complete info" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.2: Slots have time ranges and capacity" id="161422c2-c901-4a3e-8093-5217a1cfddd4" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-2.2: Slots have complete info" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.3: Capacity status indicators" id="30f66d84-f6cd-4766-b06c-41e7a66209fc" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.002">
+  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.3: Capacity status indicators" id="64a71f11-e0d6-4a6c-9364-cab1aa9dcc2c" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.002">
     <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-2.3: Slots have capacity_status" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.4: Contact verification required before reservation" id="5f2c0297-c32b-442f-b876-ca25384060af" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.003">
+  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.4: Contact verification required before reservation" id="166eae3b-1b94-4530-9f59-f3169f851e76" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.003">
     <testcase name="Status code is 200 or 400" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-2.4: Verify-contact endpoint responds" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.5: Reservation creation endpoint" id="1d3135a4-a07c-422b-bfbe-c89d0c7545a6" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 200 or 400" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-2.5: Create reservation endpoint responds" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Feature 2: Time-Slot Reservation Calendar / AC-2.5: Reservation creation endpoint" id="d8263fbd-5475-496d-8015-62c0ed356380" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200 or 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-2.5: Create reservation endpoint responds" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 3: Enhanced Operator Scanning / AC-3.1: Operator login system" id="43e94ae8-3257-4c0b-811a-ebb39eb0ec3b" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Feature 3: Enhanced Operator Scanning / AC-3.1: Operator login system" id="f3bbed53-0e4d-44c2-ba1e-1670ee275c3d" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-3.1: Login returns session token" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 3: Enhanced Operator Scanning / AC-3.2: QR scan displays ticket info with color code" id="ef19b9c6-c034-48d6-94a6-abf5b6b4d6af" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Feature 3: Enhanced Operator Scanning / AC-3.2: QR scan displays ticket info with color code" id="1b0d6950-c06e-4c64-916b-547c1e02e3f2" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-3.2: Returns validation result with color code" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 3: Enhanced Operator Scanning / AC-3.3: Ticket not found returns RED" id="6b81ef9d-9b75-4d57-b2ef-9beb8e4d4e08" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-3.3: Non-existent ticket returns RED" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Feature 3: Enhanced Operator Scanning / AC-3.3: Ticket not found returns RED" id="0dfdb223-b4b0-42ca-a5fd-8cd7564e740c" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-3.3: Non-existent ticket returns RED" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 3: Enhanced Operator Scanning / AC-3.4: Inactive ticket returns RED" id="b8c9419c-d74b-4a2a-a226-c57962704132" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Feature 3: Enhanced Operator Scanning / AC-3.4: Inactive ticket returns RED" id="a13d0cb2-556d-41c1-8f17-a7b395d1fda7" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-3.4: Inactive ticket returns RED" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 4: Reservation Validation Logic / AC-4.1: With reservation - allowed on reserved date" id="a3b8f2d4-41f1-42f7-b322-8ca853692893" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Feature 4: Reservation Validation Logic / AC-4.1: With reservation - allowed on reserved date" id="34241a24-e3aa-486a-8da8-15f474960c10" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-4.1: Reserved ticket returns validation result" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 4: Reservation Validation Logic / AC-4.2: Without reservation returns YELLOW" id="e877d555-055e-4465-a794-f1f50810e952" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Feature 4: Reservation Validation Logic / AC-4.2: Without reservation returns YELLOW" id="ff6fc758-fc9d-41d0-98a0-0a3db545ea4f" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-4.2: No reservation returns YELLOW" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 4: Reservation Validation Logic / AC-4.3: Already verified returns RED" id="a8530979-4b9b-44b3-8578-cddb5128820e" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Feature 4: Reservation Validation Logic / AC-4.3: Already verified returns RED" id="5aba7e77-766b-479f-94f8-f9fc2a59a2c5" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-4.3: Already verified ticket returns RED" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Feature 4: Reservation Validation Logic / AC-4.4: Verify ticket endpoint (ALLOW decision)" id="4b5ca6b3-09a9-4355-bdd9-5d527b5b79f1" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 200 or 400" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-4.4: Verify-ticket endpoint responds" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Feature 4: Reservation Validation Logic / AC-4.4: Verify ticket endpoint (ALLOW decision)" id="86e51584-8e37-4615-875d-280bbfca6c07" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200 or 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-4.4: Verify-ticket endpoint responds" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Error Handling &amp; Edge Cases / Missing required fields in validation" id="0814081b-7daa-44b7-90de-9f1a5dc3c8e9" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Error Handling &amp; Edge Cases / Missing required fields in validation" id="f2be38e1-d11f-497a-bc60-88407eef86a1" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="Error response returned" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Error Handling &amp; Edge Cases / Invalid operator credentials" id="f74a6838-3684-4b76-8690-cd13d2b778a2" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Error Handling &amp; Edge Cases / Invalid operator credentials" id="6ae0fc56-0cd8-4c70-86d1-57fe7c866414" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 401 or 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="Auth error returned" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Error Handling &amp; Edge Cases / Missing ticket code in customer validation" id="4123ef16-4293-4492-b556-37d876fad881" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Error Handling &amp; Edge Cases / Missing ticket code in customer validation" id="c43c8574-2aa4-490b-9ed7-2fc33799f303" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="Error response returned" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Performance Tests / Validation response &lt; 500ms" id="c1482db1-ae99-429c-acb4-8f43a72146e4" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="Performance Tests / Validation response &lt; 500ms" id="54b06082-68e8-4115-b659-dafda7eb43a2" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="Response time is under 500ms" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="Performance Tests / Slots query &lt; 500ms" id="6ac8c8bb-9578-4cd0-86d0-a18254a790b2" timestamp="2025-12-05T07:46:44.730Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="Response time is under 500ms" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="Performance Tests / Slots query &lt; 500ms" id="2f403a87-0982-4e7a-9c3e-a21b6435f026" timestamp="2025-12-06T02:10:14.039Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Response time is under 500ms" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
 </testsuites>

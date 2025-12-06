@@ -5,7 +5,7 @@ import paymentsRouter from './payments/router';
 import ticketsRouter from './tickets/router';
 import operatorsRouter from './operators/router';
 // reports module removed - redemptions endpoint moved to venue module
-import refundsRouter from './refunds/router';
+// refunds module removed - refund functionality moved to payments module
 import policiesRouter from './policies/router';
 import profileRouter from './profile/router';
 import usersRouter from './users/router';
@@ -50,8 +50,6 @@ export const registerModuleRouters = (app: Application): void => {
   app.use('/api', customerReservationRouter); // Enhanced customer reservation with activation checks + Directus
 
   // These have catch-all routes, so register them LAST
-  app.use('/payments', refundsRouter);
-  app.use('/', refundsRouter);
   app.use('/', policiesRouter);
 
   app.use('/profile', profileRouter);

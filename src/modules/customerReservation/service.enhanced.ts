@@ -244,7 +244,7 @@ export class CustomerReservationServiceEnhanced {
 
     // Phone validation (E.164 format)
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(customer_phone.replace(/[\s\-\(\)]/g, ''))) {
+    if (!phoneRegex.test(customer_phone.replace(/[\s\-()]/g, ''))) {
       return {
         success: false,
         error: 'INVALID_PHONE_FORMAT',

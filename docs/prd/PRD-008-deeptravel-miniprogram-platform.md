@@ -7,12 +7,13 @@ product_area: "B2C Direct Sales"
 owner: "Product Manager"
 status: "In Progress"
 created_date: "2025-11-21"
-last_updated: "2025-12-01"
+last_updated: "2025-12-06"
 related_stories: ["US-010", "US-010A", "US-010B"]
 business_channel: "WeChat Mini-Program (direct)"
 related_cards:
   - miniprogram-product-catalog (Done)
   - miniprogram-order (Done)
+  - wallyt-payment (Done)
 ```
 
 ## Executive Summary
@@ -431,7 +432,7 @@ Pricing: Schedule-based pricing rules
 **Deliverables**:
 - [x] Package product listing page (miniprogram-product-catalog)
 - [x] Package detail & booking flow (miniprogram-order)
-- [ ] WeChat payment integration (pending)
+- [x] WeChat payment integration (wallyt-payment)
 - [ ] My tickets page (pending)
 - [x] Basic order management (miniprogram-order)
 
@@ -442,6 +443,10 @@ Pricing: Schedule-based pricing rules
 - [x] POST /miniprogram/orders - 创建订单
 - [x] GET /miniprogram/orders - 订单列表
 - [x] GET /miniprogram/orders/:id - 订单详情
+- [x] POST /payments/wechat/prepay - 创建预支付订单 (Wallyt)
+- [x] POST /payments/wallyt/notify - 支付回调
+- [x] GET /payments/status/:orderId - 查询支付状态
+- [x] POST /payments/refund - 申请退款 (Wallyt)
 
 **Database Tables**:
 - [x] orders - 订单主表

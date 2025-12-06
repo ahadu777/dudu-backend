@@ -3,6 +3,7 @@ import { mockStore } from '../../core/mock/store';
 import { ERR } from '../../core/errors/codes';
 import { TicketStatus, TicketEntitlement } from '../../types/domain';
 import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
+import { logger } from '../../utils/logger';
 
 interface Entitlement {
   function_code: string;
@@ -22,19 +23,9 @@ interface Ticket {
   created_at?: Date;
 }
 
-const logger = {
-  info: (event: string, data?: any) => {
-    console.log(JSON.stringify({
-      event,
-      ...data,
-      timestamp: new Date().toISOString()
-    }));
-  }
-};
-
 const metrics = {
   increment: (metric: string, value: number = 1) => {
-    console.log(`[METRIC] ${metric} +${value}`);
+    logger.info(`[METRIC] ${metric} +${value}`);
   }
 };
 

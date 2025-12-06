@@ -182,7 +182,7 @@ export class CustomerReservationServiceMock {
       };
     }
 
-    if (!/^[\d\s\+\-\(\)]+$/.test(customer_phone)) {
+    if (!/^[\d\s+\-()]+$/.test(customer_phone)) {
       return {
         success: false,
         error: 'Valid phone number is required',

@@ -7,6 +7,7 @@ import {
   OperatorValidateTicketRequest,
   OperatorVerifyTicketRequest,
 } from '../../types/domain';
+import { logger } from '../../utils/logger';
 
 export class TicketReservationController {
   constructor(private service: TicketReservationService) {}
@@ -43,7 +44,7 @@ export class TicketReservationController {
         res.status(statusCode).json(response);
       }
     } catch (error) {
-      console.error('Error validating ticket:', error);
+      logger.error('ticket.validation.error', { error });
       res.status(500).json({
         success: false,
         error: {
@@ -79,7 +80,7 @@ export class TicketReservationController {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('Error getting available slots:', error);
+      logger.error('slots.fetch.error', { error });
       res.status(500).json({
         success: false,
         error: {
@@ -119,7 +120,7 @@ export class TicketReservationController {
         res.status(statusCode).json(response);
       }
     } catch (error) {
-      console.error('Error creating reservation:', error);
+      logger.error('reservation.create.error', { error });
       res.status(500).json({
         success: false,
         error: {
@@ -162,7 +163,7 @@ export class TicketReservationController {
         res.status(statusCode).json(response);
       }
     } catch (error) {
-      console.error('Error validating ticket for operator:', error);
+      logger.error('operator.validate.error', { error });
       res.status(500).json({
         success: false,
         error: {
@@ -196,7 +197,7 @@ export class TicketReservationController {
 
       res.status(200).json(response);
     } catch (error) {
-      console.error('Error verifying ticket:', error);
+      logger.error('operator.verify.error', { error });
       res.status(500).json({
         success: false,
         error: {

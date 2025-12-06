@@ -8,6 +8,7 @@ import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
 import { OTATicketBatchWithStatsDTO } from './ota-ticket-batch.dto';
 import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 import { generateSecureQR } from '../../../utils/qr-crypto';
+import { logger } from '../../../utils/logger';
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
@@ -392,7 +393,7 @@ export class OTARepository {
         }
 
         // DEBUG: Log price calculation
-        console.log('ota.reservation.activation_price_calculated', {
+        logger.debug('ota.reservation.activation_price_calculated', {
           reservation_id: reservationId,
           customer_types: customerTypes,
           individual_prices: customerTypes.map(ct => {
@@ -406,7 +407,7 @@ export class OTARepository {
         const basePrice = reservation.pricing_snapshot?.base_price || Number(product.base_price);
         totalAmount = basePrice * reservation.quantity;
 
-        console.log('ota.reservation.activation_price_fallback', {
+        logger.debug('ota.reservation.activation_price_fallback', {
           reservation_id: reservationId,
           base_price: basePrice,
           quantity: reservation.quantity,

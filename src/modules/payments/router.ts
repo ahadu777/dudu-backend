@@ -1,216 +1,237 @@
-import { Router } from 'express';
-import { randomBytes } from 'crypto';
-import { mockDataStore } from '../../core/mock/data';
-import { ticketService } from '../tickets/service';
+/**
+ * 支付路由
+ * 支持 Wallyt 微信小程序支付
+ */
+
+import { Router, Request, Response } from 'express';
+import { logger } from '../../utils/logger';
+import { authenticate } from '../../middlewares/auth';
+import { getWallytPaymentService } from './wallyt-payment.service';
+import { isWallytConfigured } from './wallyt.client';
+import { parseRequestBody } from './xml.util';
+import type { WallytNotification } from './wallyt.types';
 
 const router = Router();
 
-const logger = {
-  info: (event: string, data?: any) => {
-    console.log(JSON.stringify({
-      event,
-      ...data,
-      timestamp: new Date().toISOString()
-    }));
-  }
-};
+// ========== Wallyt 支付接口 ==========
 
-const metrics = {
-  increment: (metric: string) => {
-    console.log(`[METRIC] ${metric} +1`);
-  }
-};
-
-interface PaymentNotification {
-  order_id: number;
-  payment_status: 'SUCCESS' | 'FAILED';
-  paid_at: string;
-  signature: string;
-}
-
-// Mock signature validation
-function validateSignature(signature: string): boolean {
-  // In production, would verify with payment provider's secret
-  return !!(signature && signature.length > 0);
-}
-
-router.post('/wechat/session', (req, res) => {
-  const { orderId, amount, currency, reservationId, description } = req.body ?? {};
-
-  if (!orderId || typeof orderId !== 'number') {
-    return res.status(422).json({
-      code: 'WECHAT_SESSION_INVALID_ORDER_ID',
-      message: 'orderId (number) is required'
-    });
-  }
-
-  if (amount === undefined || Number.isNaN(Number(amount)) || Number(amount) <= 0) {
-    return res.status(422).json({
-      code: 'WECHAT_SESSION_INVALID_AMOUNT',
-      message: 'amount must be a positive number'
-    });
-  }
-
-  if (!currency || typeof currency !== 'string') {
-    return res.status(422).json({
-      code: 'WECHAT_SESSION_INVALID_CURRENCY',
-      message: 'currency is required'
-    });
-  }
-
-  const order = mockDataStore.getOrderById(orderId);
-  if (!order) {
-    return res.status(404).json({
-      code: 'WECHAT_SESSION_ORDER_NOT_FOUND',
-      message: 'Order not found'
-    });
-  }
-
-  const prepayId = `wx_${randomBytes(12).toString('hex')}`;
-  const nonceStr = randomBytes(16).toString('hex');
-  const timeStamp = Math.floor(Date.now() / 1000).toString();
-  const packageValue = `prepay_id=${prepayId}`;
-  const paySign = randomBytes(16).toString('hex');
-
-  return res.status(200).json({
-    order_id: orderId,
-    reservation_id: reservationId ?? null,
-    amount: Number(amount),
-    currency,
-    description: description ?? '',
-    prepay_id: prepayId,
-    nonce_str: nonceStr,
-    time_stamp: timeStamp,
-    sign_type: 'HMAC-SHA256',
-    package: packageValue,
-    pay_sign: paySign,
-    expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
-  });
-});
-
-// POST /payments/notify - Payment webhook handler
-router.post('/notify', async (req, res) => {
+/**
+ * 创建预支付订单 (Wallyt)
+ * POST /payments/wechat/prepay
+ *
+ * 需要认证，从 JWT 中获取用户信息
+ */
+router.post('/wechat/prepay', authenticate, async (req: Request, res: Response) => {
   try {
-    const notification: PaymentNotification = req.body;
-    logger.info('payment.webhook.received', { order_id: notification.order_id });
+    const { orderId, openid } = req.body;
+    const userId = req.user?.id;
 
-    // Validate signature
-    if (!validateSignature(notification.signature)) {
-      logger.info('payment.webhook.invalid_signature', { order_id: notification.order_id });
+    // 验证参数
+    if (!userId) {
       return res.status(401).json({
-        error: 'Invalid signature'
+        code: 'UNAUTHORIZED',
+        message: 'User not authenticated'
       });
     }
 
-    // Find order
-    const order = mockDataStore.getOrderById(notification.order_id);
-
-    if (!order) {
-      logger.info('payment.webhook.order_not_found', { order_id: notification.order_id });
-      return res.status(404).json({
-        error: 'Order not found'
+    if (!orderId || typeof orderId !== 'number') {
+      return res.status(422).json({
+        code: 'INVALID_ORDER_ID',
+        message: 'orderId (number) is required'
       });
     }
 
-    // Check if already paid (idempotency)
-    if (order.status === 'PAID') {
-      logger.info('payment.webhook.already_paid', { order_id: notification.order_id });
-      metrics.increment('payment.webhook.count');
-      return res.status(200).json({
-        message: 'Order already paid',
-        order_id: notification.order_id
+    if (!openid || typeof openid !== 'string') {
+      return res.status(422).json({
+        code: 'INVALID_OPENID',
+        message: 'openid is required'
       });
     }
 
-    // Only process SUCCESS payments
-    if (notification.payment_status !== 'SUCCESS') {
-      logger.info('payment.webhook.payment_failed', { order_id: notification.order_id });
-      return res.status(400).json({
-        error: 'Payment failed'
+    // 检查 Wallyt 配置
+    if (!isWallytConfigured()) {
+      return res.status(503).json({
+        code: 'PAYMENT_NOT_CONFIGURED',
+        message: 'Payment service is not configured'
       });
     }
 
-    // Check order is PENDING
-    if (order.status !== 'PENDING_PAYMENT') {
-      logger.info('payment.webhook.invalid_order_status', {
-        order_id: notification.order_id,
-        status: order.status
-      });
-      return res.status(400).json({
-        error: 'Order not in pending status'
-      });
-    }
+    // 获取客户端 IP
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+      || req.socket.remoteAddress
+      || '127.0.0.1';
 
-    // Update order to PAID
-    const updatedOrder = mockDataStore.updateOrderStatus(
-      notification.order_id,
-      'PAID',
-      new Date(notification.paid_at)
-    );
-
-    if (!updatedOrder) {
-      logger.info('payment.webhook.update_failed', { order_id: notification.order_id });
-      return res.status(500).json({
-        error: 'Failed to update order status'
-      });
-    }
-
-    // Commit inventory (reserved -> sold)
-    for (const item of order.items) {
-      const committed = mockDataStore.commitInventory(item.product_id, item.qty);
-      if (!committed) {
-        // Rollback order status if inventory commit fails
-        mockDataStore.updateOrderStatus(notification.order_id, 'PENDING_PAYMENT');
-        logger.info('payment.webhook.inventory_commit_failed', {
-          order_id: notification.order_id,
-          product_id: item.product_id
-        });
-        return res.status(500).json({
-          error: 'Failed to commit inventory'
-        });
-      }
-    }
-
-    // Synchronously call ticket issuance
-    try {
-      const tickets = await ticketService.issueTicketsForPaidOrder(notification.order_id);
-      logger.info('payment.webhook.tickets_issued', {
-        order_id: notification.order_id,
-        ticket_count: tickets.length
-      });
-    } catch (ticketError: any) {
-      // Rollback order status if ticket issuance fails
-      mockDataStore.updateOrderStatus(notification.order_id, 'PENDING_PAYMENT');
-
-      // Release committed inventory
-      for (const item of order.items) {
-        mockDataStore.releaseInventory(item.product_id, item.qty);
-      }
-
-      logger.info('payment.webhook.ticket_issuance_failed', {
-        order_id: notification.order_id,
-        error: ticketError.message
-      });
-
-      return res.status(500).json({
-        error: 'Ticket issuance failed',
-        message: ticketError.message
-      });
-    }
-
-    logger.info('payment.webhook.success', { order_id: notification.order_id });
-    metrics.increment('payment.webhook.count');
+    // 调用支付服务
+    const paymentService = getWallytPaymentService();
+    const result = await paymentService.createPrepay(userId, orderId, openid, clientIp);
 
     res.status(200).json({
-      message: 'Payment processed successfully',
-      order_id: notification.order_id
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('payment.prepay.error', { error: error.message, code: error.code });
+
+    const statusCode = error.code === 'ORDER_NOT_FOUND' ? 404
+      : error.code === 'INVALID_ORDER_STATUS' ? 400
+      : 500;
+
+    res.status(statusCode).json({
+      success: false,
+      code: error.code || 'PREPAY_ERROR',
+      message: error.message || 'Failed to create prepay order'
+    });
+  }
+});
+
+/**
+ * Wallyt 支付回调通知
+ * POST /payments/wallyt/notify
+ *
+ * Wallyt 服务器调用，XML 格式
+ */
+router.post('/wallyt/notify', async (req: Request, res: Response) => {
+  try {
+    // 解析请求体 (可能是 XML 字符串或已解析的对象)
+    const notification = parseRequestBody<WallytNotification>(req.body);
+
+    logger.info('payment.wallyt.notify.received', {
+      out_trade_no: notification.out_trade_no,
+      pay_result: notification.pay_result
     });
 
+    // 处理通知
+    const paymentService = getWallytPaymentService();
+    const result = await paymentService.handleNotification(notification);
+
+    // Wallyt 要求返回纯字符串 "success" 或 "fail"
+    if (result.success) {
+      res.send('success');
+    } else {
+      res.send('fail');
+    }
   } catch (error: any) {
-    logger.info('payment.webhook.error', { error: error.message });
-    res.status(500).json({
-      error: 'Internal server error',
-      message: error.message
+    logger.error('payment.wallyt.notify.error', { error: error.message });
+    res.send('fail');
+  }
+});
+
+/**
+ * 查询支付状态
+ * GET /payments/status/:orderId
+ */
+router.get('/status/:orderId', authenticate, async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.orderId, 10);
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: 'User not authenticated'
+      });
+    }
+
+    if (isNaN(orderId)) {
+      return res.status(422).json({
+        code: 'INVALID_ORDER_ID',
+        message: 'Invalid order ID'
+      });
+    }
+
+    const paymentService = getWallytPaymentService();
+    const status = await paymentService.queryPaymentStatus(orderId);
+
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error: any) {
+    logger.error('payment.status.error', { error: error.message });
+
+    res.status(error.code === 'ORDER_NOT_FOUND' ? 404 : 500).json({
+      success: false,
+      code: error.code || 'STATUS_ERROR',
+      message: error.message || 'Failed to query payment status'
+    });
+  }
+});
+
+/**
+ * 申请退款
+ * POST /payments/refund
+ *
+ * 需要认证
+ */
+router.post('/refund', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { orderId, refundAmount, reason } = req.body;
+    const userId = req.user?.id;
+
+    // 验证参数
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: 'User not authenticated'
+      });
+    }
+
+    if (!orderId || typeof orderId !== 'number') {
+      return res.status(422).json({
+        code: 'INVALID_ORDER_ID',
+        message: 'orderId (number) is required'
+      });
+    }
+
+    if (refundAmount !== undefined && (typeof refundAmount !== 'number' || refundAmount <= 0)) {
+      return res.status(422).json({
+        code: 'INVALID_REFUND_AMOUNT',
+        message: 'refundAmount must be a positive number'
+      });
+    }
+
+    // 检查 Wallyt 配置
+    if (!isWallytConfigured()) {
+      return res.status(503).json({
+        code: 'PAYMENT_NOT_CONFIGURED',
+        message: 'Payment service is not configured'
+      });
+    }
+
+    // 调用退款服务
+    const paymentService = getWallytPaymentService();
+    const result = await paymentService.refund({
+      orderId,
+      refundAmount,
+      reason
+    });
+
+    if (result.status === 'FAILED') {
+      return res.status(500).json({
+        success: false,
+        code: 'REFUND_FAILED',
+        message: result.errorMessage,
+        data: result
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('payment.refund.error', { error: error.message, code: error.code });
+
+    const statusCode = error.code === 'ORDER_NOT_FOUND' ? 404
+      : error.code === 'PAYMENT_NOT_FOUND' ? 404
+      : error.code === 'INVALID_ORDER_STATUS' ? 400
+      : error.code === 'REFUND_AMOUNT_EXCEEDS_LIMIT' ? 400
+      : 500;
+
+    res.status(statusCode).json({
+      success: false,
+      code: error.code || 'REFUND_ERROR',
+      message: error.message || 'Failed to process refund'
     });
   }
 });
