@@ -1,6 +1,6 @@
 export interface TicketValidationRequest {
   ticket_code: string;
-  orq: number;
+  orq?: number;  // Optional: customer doesn't need to know organization
 }
 
 export type ReservationSource = 'direct' | 'ota';
@@ -18,14 +18,15 @@ export interface TicketValidationResponse {
     customer_email?: string | null;
     customer_phone?: string | null;
     order_id?: number | null;
-    source?: ReservationSource; // NEW: ticket source
+    orq?: number;  // Organization ID from ticket
+    source?: ReservationSource; // ticket source
   };
   error?: string;
 }
 
 export interface VerifyContactRequest {
   ticket_code: string;
-  orq: number;
+  orq?: number;  // Optional: customer doesn't need to know organization
 }
 
 export interface VerifyContactResponse {
@@ -37,7 +38,7 @@ export interface VerifyContactResponse {
 export interface CreateReservationRequest {
   ticket_code: string;
   slot_id: string;
-  orq: number;
+  orq?: number;  // Optional: will use ticket's own orq
   customer_email?: string;  // Optional: if provided, use this instead of fetching from ticket
   customer_phone?: string;  // Optional: if provided, use this instead of fetching from ticket
 }

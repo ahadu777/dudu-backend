@@ -60,7 +60,7 @@ export class CustomerReservationServiceDirectus {
     });
 
     if (directTicket) {
-      return this.validateDirectTicket(directTicket, orq);
+      return this.validateDirectTicket(directTicket);
     }
 
     // 2. Then try OTA tickets table
@@ -70,7 +70,7 @@ export class CustomerReservationServiceDirectus {
     });
 
     if (otaTicket) {
-      return this.validateOtaTicket(otaTicket, orq);
+      return this.validateOtaTicket(otaTicket);
     }
 
     // 3. Not found in either source
@@ -85,16 +85,12 @@ export class CustomerReservationServiceDirectus {
    * Validate mini-program ticket from tickets table
    */
   private async validateDirectTicket(
-    ticket: TicketEntity,
-    orq: number
+    ticket: TicketEntity
   ): Promise<TicketValidationResponse> {
     const ticket_code = ticket.ticket_code;
 
-    // Check organization match
-    if (ticket.orq !== orq) {
-      logger.warn('reservation.validate_ticket.wrong_org', { ticket_code, expected: orq, actual: ticket.orq });
-      return { valid: false, error: 'Ticket belongs to a different organization' };
-    }
+    // Note: orq check removed - customer doesn't need to know organization
+    // The ticket already contains its own orq value
 
     // Check if ticket is activated
     if (ticket.status !== 'ACTIVATED') {
@@ -137,6 +133,7 @@ export class CustomerReservationServiceDirectus {
         customer_email: ticket.customer_email,
         customer_phone: ticket.customer_phone,
         order_id: Number(ticket.order_id),
+        orq: ticket.orq,  // Return ticket's own organization
         source: 'direct' as ReservationSource
       }
     };
@@ -146,8 +143,7 @@ export class CustomerReservationServiceDirectus {
    * Validate OTA ticket from pre_generated_tickets table
    */
   private async validateOtaTicket(
-    otaTicket: PreGeneratedTicketEntity,
-    orq: number
+    otaTicket: PreGeneratedTicketEntity
   ): Promise<TicketValidationResponse> {
     const ticket_code = otaTicket.ticket_code;
 
@@ -197,6 +193,7 @@ export class CustomerReservationServiceDirectus {
             customer_name: otaTicket.customer_name,
             customer_email: otaTicket.customer_email,
             customer_phone: otaTicket.customer_phone,
+            // OTA tickets: orq will be determined from slot during reservation
             source: 'ota' as ReservationSource
           }
         };
@@ -281,7 +278,10 @@ export class CustomerReservationServiceDirectus {
       return { success: false, error: 'Slot is full' };
     }
 
-    // 3. Create reservation record
+    // 3. Determine orq: use ticket's orq for direct, slot's orq for OTA
+    const reservationOrq = validation.ticket.orq || slot.orq;
+
+    // 4. Create reservation record
     // Get ticket_id for direct tickets (need to look it up)
     let directTicketId: number | undefined;
     if (ticketSource === 'direct') {
@@ -297,7 +297,7 @@ export class CustomerReservationServiceDirectus {
       customer_email,
       customer_phone,
       customer_name,
-      orq,
+      orq: reservationOrq,
       status: 'RESERVED' as const,
       reserved_at: new Date()
     });

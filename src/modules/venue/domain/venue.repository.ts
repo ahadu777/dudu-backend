@@ -593,21 +593,16 @@ export class VenueRepository {
     slot_date: string | null;
     slot_time: string | null;
   } | null> {
-    // 1. 先查询小程序票券获取 ticket_id
-    const ticket = await this.ticketRepo.findOne({
-      where: { ticket_code: ticketCode },
-      select: ['id', 'travel_date']
-    });
-
-    if (!ticket) {
-      return null;
-    }
-
-    // 2. 通过 ticket_id 查询预订关联（带 slot 关系）
-    const reservation = await this.reservationRepo.findOne({
-      where: { ticket_id: ticket.id },
-      relations: ['slot']
-    });
+    // 统一查询 ticket_reservations 表（支持小程序和 OTA）
+    // 小程序：通过 ticket 关联查询
+    // OTA：通过 ota_ticket_code 直接查询
+    const reservation = await this.reservationRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.slot', 'slot')
+      .leftJoin('r.ticket', 'ticket')
+      .where('r.ota_ticket_code = :ticketCode', { ticketCode })
+      .orWhere('ticket.ticket_code = :ticketCode', { ticketCode })
+      .getOne();
 
     if (reservation && reservation.slot) {
       return {
@@ -618,8 +613,13 @@ export class VenueRepository {
       };
     }
 
-    // 3. 如果没有预订关联，尝试使用 travel_date
-    if (ticket.travel_date) {
+    // 回退：查询 tickets 表的 travel_date
+    const ticket = await this.ticketRepo.findOne({
+      where: { ticket_code: ticketCode },
+      select: ['travel_date']
+    });
+
+    if (ticket?.travel_date) {
       return {
         slot_date: ticket.travel_date instanceof Date
           ? ticket.travel_date.toISOString().split('T')[0]

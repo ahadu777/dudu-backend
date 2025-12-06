@@ -248,20 +248,20 @@ export class CustomerReservationServiceEnhanced {
    * NEW: Supports both direct and OTA tickets
    */
   async validateTicket(request: TicketValidationRequest): Promise<TicketValidationResponse> {
-    const { ticket_code, orq } = request;
+    const { ticket_code } = request;
 
     // Try direct ticket first
     const ticket = this.tickets.get(ticket_code);
 
     if (ticket) {
-      return this.validateDirectTicket(ticket, ticket_code, orq);
+      return this.validateDirectTicket(ticket, ticket_code);
     }
 
     // Try OTA ticket if direct not found
     const otaTicket = this.otaTickets.get(ticket_code);
 
     if (otaTicket) {
-      return this.validateOtaTicket(otaTicket, ticket_code, orq);
+      return this.validateOtaTicket(otaTicket, ticket_code);
     }
 
     // Neither found
@@ -274,14 +274,8 @@ export class CustomerReservationServiceEnhanced {
   /**
    * Validate direct ticket
    */
-  private validateDirectTicket(ticket: MockTicket, ticket_code: string, orq: number): TicketValidationResponse {
-    // Check organization match
-    if (ticket.orq !== orq) {
-      return {
-        valid: false,
-        error: 'TICKET_WRONG_ORG',
-      };
-    }
+  private validateDirectTicket(ticket: MockTicket, ticket_code: string): TicketValidationResponse {
+    // Note: orq check removed - customer doesn't need to know organization
 
     // Check activation status (Phase 2 requirement)
     if (ticket.activation_status === 'inactive') {
@@ -357,14 +351,8 @@ export class CustomerReservationServiceEnhanced {
   /**
    * Validate OTA ticket
    */
-  private validateOtaTicket(otaTicket: MockOtaTicket, ticket_code: string, orq: number): TicketValidationResponse {
-    // Check organization match
-    if (otaTicket.orq !== orq) {
-      return {
-        valid: false,
-        error: 'TICKET_WRONG_ORG',
-      };
-    }
+  private validateOtaTicket(otaTicket: MockOtaTicket, ticket_code: string): TicketValidationResponse {
+    // Note: orq check removed - customer doesn't need to know organization
 
     // Check OTA ticket status
     switch (otaTicket.status) {
@@ -513,9 +501,10 @@ export class CustomerReservationServiceEnhanced {
         };
       }
 
-      // Get customer info and source from validated ticket
-      const { customer_email, customer_phone, source } = validation.ticket;
+      // Get customer info, source, and orq from validated ticket
+      const { customer_email, customer_phone, source, orq: ticketOrq } = validation.ticket;
       const ticketSource = source || 'direct';
+      const reservationOrq = ticketOrq || 1; // Default to 1 if not available
 
       if (!customer_email || !customer_phone) {
         return {
@@ -573,7 +562,7 @@ export class CustomerReservationServiceEnhanced {
         status: 'RESERVED',
         reserved_at: new Date().toISOString(),
         verified_at: null,
-        orq,
+        orq: reservationOrq,
         source: ticketSource, // NEW: track source
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

@@ -214,8 +214,9 @@ export class CustomerReservationServiceMock {
         };
       }
 
-      // Get customer info from validated ticket
-      const { customer_email, customer_phone } = validation.ticket;
+      // Get customer info and orq from validated ticket
+      const { customer_email, customer_phone, orq: ticketOrq } = validation.ticket;
+      const reservationOrq = ticketOrq || 1; // Default to 1 if not available
 
       if (!customer_email || !customer_phone) {
         return {
@@ -264,7 +265,7 @@ export class CustomerReservationServiceMock {
         status: 'RESERVED',
         reserved_at: new Date().toISOString(),
         verified_at: null,
-        orq,
+        orq: reservationOrq,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
