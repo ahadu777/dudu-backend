@@ -1,12 +1,14 @@
 import { Repository, DataSource, QueryRunner, In } from 'typeorm';
-import { ProductEntity, ProductInventoryEntity, TicketEntity, TicketStatus } from '../../../models';
+import { ProductEntity, ProductInventoryEntity, TicketEntity, TicketStatus, OrderEntity, OrderStatus, OrderChannel } from '../../../models';
 import { ChannelReservationEntity, ReservationStatus } from './channel-reservation.entity';
-import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
 import { OTATicketBatchWithStatsDTO } from './ota-ticket-batch.dto';
 import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 import { generateSecureQR } from '../../../utils/qr-crypto';
 import { logger } from '../../../utils/logger';
+
+// 保持向后兼容的类型别名
+type OTAOrderEntity = OrderEntity;
 
 // 类型别名，保持向后兼容
 type PreGeneratedTicketEntity = TicketEntity;
@@ -16,7 +18,7 @@ export class OTARepository {
   private inventoryRepo: Repository<ProductInventoryEntity>;
   private reservationRepo: Repository<ChannelReservationEntity>;
   private ticketRepo: Repository<TicketEntity>;
-  private otaOrderRepo: Repository<OTAOrderEntity>;
+  private orderRepo: Repository<OrderEntity>;
   private batchRepo: Repository<OTATicketBatchEntity>;
   private resellerRepo: Repository<OTAResellerEntity>;
 
@@ -25,7 +27,7 @@ export class OTARepository {
     this.inventoryRepo = dataSource.getRepository(ProductInventoryEntity);
     this.reservationRepo = dataSource.getRepository(ChannelReservationEntity);
     this.ticketRepo = dataSource.getRepository(TicketEntity);
-    this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
+    this.orderRepo = dataSource.getRepository(OrderEntity);
     this.batchRepo = dataSource.getRepository(OTATicketBatchEntity);
     this.resellerRepo = dataSource.getRepository(OTAResellerEntity);
   }
@@ -417,22 +419,23 @@ export class OTARepository {
         });
       }
 
-      const order = queryRunner.manager.create(OTAOrderEntity, {
-        order_id: orderId,
+      const order = queryRunner.manager.create(OrderEntity, {
+        order_no: orderId,
+        channel: OrderChannel.OTA,
         product_id: reservation.product_id,
-        channel_id: 2, // OTA channel
         partner_id: reservation.channel_id,
-        customer_name: customerData.name,
-        customer_email: customerData.email,
-        customer_phone: customerData.phone,
+        contact_name: customerData.name,
+        contact_email: customerData.email,
+        contact_phone: customerData.phone,
         payment_reference: paymentReference,
-        total_amount: totalAmount,
-        status: 'confirmed' as OrderStatus,
+        total: totalAmount,
+        status: OrderStatus.CONFIRMED,
         confirmation_code: confirmationCode,
-        special_requests: specialRequests
+        special_requests: specialRequests,
+        quantity: reservation.quantity
       });
 
-      const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
+      const savedOrder = await queryRunner.manager.save(OrderEntity, order);
 
       // 4. Generate tickets
       const tickets: PreGeneratedTicketEntity[] = [];
@@ -484,7 +487,8 @@ export class OTARepository {
           customer_email: customerData.email,
           customer_phone: customerData.phone,
           customer_type: customerType,
-          ota_order_id: orderId,  // OTA 使用字符串订单ID
+          order_id: Number(savedOrder.id),  // 统一使用数字订单ID
+          order_no: orderId,  // 业务订单号
           payment_reference: paymentReference,
           activated_at: new Date(),
           raw: rawMetadata
@@ -591,16 +595,22 @@ export class OTARepository {
       }
 
       // Create the order
-      const order = queryRunner.manager.create(OTAOrderEntity, {
-        ...orderData,
-        partner_id: partnerId,  // Add partner_id for order isolation
-        customer_name: customerData.customer_name,
-        customer_email: customerData.customer_email,
-        customer_phone: customerData.customer_phone,
-        payment_reference: customerData.payment_reference
+      const order = queryRunner.manager.create(OrderEntity, {
+        order_no: (orderData as any).order_id || `OTA-${Date.now()}`,
+        channel: OrderChannel.OTA,
+        partner_id: partnerId,
+        contact_name: customerData.customer_name,
+        contact_email: customerData.customer_email,
+        contact_phone: customerData.customer_phone,
+        payment_reference: customerData.payment_reference,
+        product_id: ticket.product_id,
+        quantity: 1,
+        total: (orderData as any).total_amount || 0,
+        status: OrderStatus.CONFIRMED,
+        confirmation_code: (orderData as any).confirmation_code
       });
 
-      const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
+      const savedOrder = await queryRunner.manager.save(OrderEntity, order);
 
       // Fetch batch to get pricing information
       const batch = await queryRunner.manager.findOne(OTATicketBatchEntity, {
@@ -638,7 +648,8 @@ export class OTARepository {
       ticket.customer_phone = customerData.customer_phone;
       ticket.customer_type = customerData.customer_type;
       ticket.payment_reference = customerData.payment_reference;
-      ticket.ota_order_id = savedOrder.order_id;
+      ticket.order_id = Number(savedOrder.id);
+      ticket.order_no = savedOrder.order_no;
       ticket.status = 'ACTIVATED';
       ticket.activated_at = new Date();
       ticket.ticket_price = ticketPrice;
@@ -674,31 +685,34 @@ export class OTARepository {
   }
 
   // OTA Order Operations
-  async createOTAOrder(orderData: Partial<OTAOrderEntity>): Promise<OTAOrderEntity> {
-    const order = this.otaOrderRepo.create(orderData);
-    return this.otaOrderRepo.save(order);
+  async createOTAOrder(orderData: Partial<OrderEntity>): Promise<OrderEntity> {
+    const order = this.orderRepo.create({
+      ...orderData,
+      channel: OrderChannel.OTA
+    });
+    return this.orderRepo.save(order);
   }
 
-  async findOTAOrdersByChannel(partnerId?: string): Promise<OTAOrderEntity[]> {
-    const whereClause: any = { channel_id: 2 }; // OTA channel
+  async findOTAOrdersByChannel(partnerId?: string): Promise<OrderEntity[]> {
+    const whereClause: any = { channel: OrderChannel.OTA };
     if (partnerId) {
       whereClause.partner_id = partnerId;
     }
-    return this.otaOrderRepo.find({
+    return this.orderRepo.find({
       where: whereClause,
       order: { created_at: 'DESC' }
     });
   }
 
-  async findOTAOrderById(orderId: string): Promise<OTAOrderEntity | null> {
-    return this.otaOrderRepo.findOne({
-      where: { order_id: orderId }
+  async findOTAOrderById(orderId: string): Promise<OrderEntity | null> {
+    return this.orderRepo.findOne({
+      where: { order_no: orderId, channel: OrderChannel.OTA }
     });
   }
 
   async findTicketsByOrderId(orderId: string): Promise<TicketEntity[]> {
     return this.ticketRepo.find({
-      where: { ota_order_id: orderId, channel: 'ota' }
+      where: { order_no: orderId, channel: 'ota' }
       // Removed status: 'ACTIVE' filter - should return tickets in ANY status (ACTIVATED, VERIFIED, EXPIRED, etc.)
       // This allows viewing ticket details for completed orders with redeemed tickets
     });
@@ -1075,8 +1089,9 @@ export class OTARepository {
    * Get orders summary for a specific partner
    */
   async getPartnerOrdersSummary(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
-    const query = this.otaOrderRepo.createQueryBuilder('order')
-      .where('order.partner_id = :partnerId', { partnerId });
+    const query = this.orderRepo.createQueryBuilder('order')
+      .where('order.partner_id = :partnerId', { partnerId })
+      .andWhere('order.channel = :channel', { channel: OrderChannel.OTA });
 
     if (dateRange?.start_date) {
       query.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
@@ -1094,9 +1109,9 @@ export class OTARepository {
 
     return {
       total_count: orders.length,
-      total_revenue: orders.reduce((sum, o) => sum + Number(o.total_amount), 0),
+      total_revenue: orders.reduce((sum, o) => sum + Number(o.total), 0),
       avg_order_value: orders.length > 0
-        ? orders.reduce((sum, o) => sum + Number(o.total_amount), 0) / orders.length
+        ? orders.reduce((sum, o) => sum + Number(o.total), 0) / orders.length
         : 0,
       by_status: byStatus
     };
@@ -1188,7 +1203,8 @@ export class OTARepository {
    * Get platform-wide summary
    */
   async getPlatformSummary(dateRange?: { start_date?: string; end_date?: string }) {
-    const orderQuery = this.otaOrderRepo.createQueryBuilder('order');
+    const orderQuery = this.orderRepo.createQueryBuilder('order')
+      .where('order.channel = :channel', { channel: OrderChannel.OTA });
 
     if (dateRange?.start_date) {
       orderQuery.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
@@ -1198,7 +1214,7 @@ export class OTARepository {
     }
 
     const orders = await orderQuery.getMany();
-    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total), 0);
 
     const totalTickets = await this.ticketRepo.count();
     const activeTickets = await this.ticketRepo.count({ where: { status: 'ACTIVATED', channel: 'ota' } });
@@ -1215,10 +1231,11 @@ export class OTARepository {
    * Get top partners by revenue
    */
   async getTopPartners(limit: number = 5, dateRange?: { start_date?: string; end_date?: string }) {
-    const query = this.otaOrderRepo.createQueryBuilder('order')
+    const query = this.orderRepo.createQueryBuilder('order')
       .select('order.partner_id', 'partner_id')
-      .addSelect('COUNT(order.order_id)', 'orders_count')
-      .addSelect('SUM(order.total_amount)', 'revenue')
+      .addSelect('COUNT(order.id)', 'orders_count')
+      .addSelect('SUM(order.total)', 'revenue')
+      .where('order.channel = :channel', { channel: OrderChannel.OTA })
       .groupBy('order.partner_id')
       .orderBy('revenue', 'DESC')
       .limit(limit);

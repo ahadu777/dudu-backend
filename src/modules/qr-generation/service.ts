@@ -92,7 +92,7 @@ export class UnifiedQRService {
           status: otaTicket.status,
           ticket_type: 'OTA',
           owner_id: otaTicket.partner_id || 'unknown',
-          order_id: otaTicket.ota_order_id,  // OTA 使用 ota_order_id
+          order_id: otaTicket.order_no,  // 使用统一的 order_no
           batch_id: otaTicket.batch_id,
           channel_id: 'ota',
           partner_id: otaTicket.partner_id

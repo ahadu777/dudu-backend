@@ -55,7 +55,7 @@ export interface PassengerInfo {
 }
 
 /**
- * 订单状态（与 OTA 订单状态统一）
+ * 订单状态（统一小程序和 OTA）
  */
 export enum OrderStatus {
   PENDING = 'pending',           // 待处理/待支付
@@ -75,8 +75,16 @@ export enum OrderType {
 }
 
 /**
- * 订单主表实体
- * 支持小程序订单流程 (PRD-008)
+ * 渠道类型
+ */
+export enum OrderChannel {
+  DIRECT = 'direct',   // 小程序直销
+  OTA = 'ota'          // OTA 平台
+}
+
+/**
+ * 统一订单实体
+ * 合并了原 orders 表（小程序）和 ota_orders 表（OTA）
  *
  * 数据关系：
  * - 一个订单对应一个产品
@@ -88,53 +96,66 @@ export enum OrderType {
 @Index(['travel_date'])
 @Index(['created_at'])
 @Index(['product_id'])
+@Index(['channel'])
+@Index(['partner_id'])
+@Index(['partner_id', 'created_at'])
 export class OrderEntity {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  // 用户关联
-  @Column({ type: 'bigint' })
-  user_id!: number;
+  // ========== 订单标识 ==========
+
+  // 订单号（唯一业务标识）
+  // - 小程序: 客户端生成，用于微信支付 out_trade_no
+  // - OTA: OTA 平台的原始订单号
+  @Column({ type: 'varchar', length: 64 })
+  order_no!: string;
+
+  // 渠道：direct=小程序, ota=OTA平台
+  @Column({ type: 'enum', enum: OrderChannel, default: OrderChannel.DIRECT })
+  channel!: OrderChannel;
+
+  // ========== 用户/合作伙伴标识 ==========
+
+  // 用户ID（小程序用户，OTA 订单为 null）
+  @Column({ type: 'bigint', nullable: true })
+  user_id?: number;
 
   @ManyToOne(() => UserEntity)
   @JoinColumn({ name: 'user_id' })
   user?: UserEntity;
 
-  // 订单号（唯一标识，用于幂等校验和微信支付 out_trade_no）
-  @Column({ type: 'varchar', length: 64 })
-  order_no!: string;
+  // OTA 合作伙伴 ID（小程序订单为 null）
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  partner_id?: string;
 
-  // 渠道：direct=小程序, ota=OTA平台
-  @Column({ type: 'varchar', length: 20, default: 'direct' })
-  channel!: string;
-
-  // ========== 联系人信息 ==========
+  // ========== 联系人/客户信息 ==========
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  contact_name!: string;
+  contact_name?: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  contact_phone!: string;
+  contact_phone?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   contact_email?: string;
 
-  // ========== 乘客信息（可选，用于实名验证）==========
-
+  // 乘客信息（小程序可选，用于实名验证）
   @Column({ type: 'json', nullable: true })
   passengers?: PassengerInfo[];
+
+  // ========== 订单类型 ==========
 
   // 订单类型（PRD-008 双模式：套餐/班次）
   @Column({ type: 'enum', enum: OrderType, default: OrderType.PACKAGE })
   order_type!: OrderType;
 
-  // ========== 产品信息（一个订单对应一个产品）==========
+  // ========== 产品信息 ==========
 
-  // 产品ID
   @Column({ type: 'bigint' })
   product_id!: number;
 
-  // 产品名称快照（下单时记录，防止产品改名后订单显示异常）
+  // 产品名称快照（下单时记录）
   @Column({ type: 'varchar', length: 255, nullable: true })
   product_name?: string;
 
@@ -144,9 +165,9 @@ export class OrderEntity {
 
   // ========== 出行信息 ==========
 
-  // 出行日期（动态定价依据）
-  @Column({ type: 'date' })
-  travel_date!: Date;
+  // 出行日期（动态定价依据，OTA 可为 null）
+  @Column({ type: 'date', nullable: true })
+  travel_date?: Date;
 
   // ========== 金额 ==========
 
@@ -154,17 +175,31 @@ export class OrderEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   total!: number;
 
-  // 定价上下文（包含完整定价明细：customer_breakdown, addons 等）
+  // 定价上下文（小程序订单包含完整定价明细）
   @Column({ type: 'json', nullable: true })
   pricing_context?: PricingContext;
 
   // ========== 状态 ==========
 
-  // 订单状态
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status!: OrderStatus;
 
-  // 时间戳
+  // ========== OTA 专用字段 ==========
+
+  // OTA 确认码
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  confirmation_code?: string;
+
+  // OTA 支付引用
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  payment_reference?: string;
+
+  // OTA 特殊请求
+  @Column({ type: 'text', nullable: true })
+  special_requests?: string;
+
+  // ========== 时间戳 ==========
+
   @CreateDateColumn()
   created_at!: Date;
 
@@ -180,14 +215,17 @@ export class OrderEntity {
   @Column({ type: 'datetime', nullable: true })
   refunded_at?: Date;
 
-  // 退款信息
+  // ========== 退款信息 ==========
+
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   refund_amount?: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   refund_reason?: string;
 
-  // 关联票券（一个订单可生成多张票）
+  // ========== 关联 ==========
+
+  // 关联票券
   @OneToMany('TicketEntity', 'order')
   tickets?: any[];
 

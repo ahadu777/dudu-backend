@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { OrderEntity } from './order.entity';
 
 /**
  * 统一票券状态
@@ -35,7 +36,7 @@ export interface TicketEntitlement {
 @Entity('tickets')
 @Index(['ticket_code'])
 @Index(['order_id'])
-@Index(['ota_order_id'])
+@Index(['order_no'])
 @Index(['status'])
 @Index(['orq'])
 @Index(['user_id'])
@@ -51,13 +52,21 @@ export class TicketEntity {
   @Column({ type: 'varchar', length: 100, unique: true })
   ticket_code!: string;
 
-  // 订单ID（小程序内部订单，BIGINT）
-  @Column({ type: 'bigint', nullable: true, comment: '小程序订单ID' })
+  // ========== 订单关联（统一方式）==========
+
+  // 订单 ID（外键关联 orders.id）
+  @Column({ type: 'bigint', nullable: true, comment: '订单ID（外键）' })
   order_id?: number;
 
-  // OTA 订单ID（VARCHAR，OTA 平台使用）
-  @Column({ type: 'varchar', length: 50, nullable: true, comment: 'OTA订单ID' })
-  ota_order_id?: string;
+  // 订单号（业务标识，方便查询）
+  // - 小程序: 微信支付订单号
+  // - OTA: OTA 平台原始订单号
+  @Column({ type: 'varchar', length: 64, nullable: true, comment: '订单号（业务标识）' })
+  order_no?: string;
+
+  @ManyToOne(() => OrderEntity, order => order.tickets)
+  @JoinColumn({ name: 'order_id' })
+  order?: OrderEntity;
 
   // 用户ID（小程序用户）
   @Column({ type: 'bigint', nullable: true, comment: '小程序用户ID' })

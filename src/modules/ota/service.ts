@@ -610,13 +610,13 @@ export class OTAService {
         logger.info('ota.reservation.activated', {
           source: 'database',
           reservation_id: reservationId,
-          order_id: result.order.order_id,
-          total_amount: result.order.total_amount,
+          order_id: result.order.order_no,
+          total_amount: result.order.total,
           tickets_generated: result.tickets.length
         });
 
         return {
-          order_id: result.order.order_id,
+          order_id: result.order.order_no!,
           tickets: result.tickets.map(ticket => ({
             code: ticket.ticket_code,
             qr_code: ticket.qr_code,
@@ -624,8 +624,8 @@ export class OTAService {
             entitlements: ticket.entitlements,
             status: toOTAAPIStatus(ticket.status)  // 映射为 OTA API 状态
           })),
-          total_amount: Number(result.order.total_amount),
-          confirmation_code: result.order.confirmation_code
+          total_amount: Number(result.order.total),
+          confirmation_code: result.order.confirmation_code!
         };
 
       } catch (error: any) {
@@ -714,11 +714,11 @@ export class OTAService {
       // Database implementation
       const orders = await this.otaRepository!.findOTAOrdersByChannel(partnerId);
       return orders.map((order: any) => ({
-        order_id: order.order_id,
+        order_id: order.order_no,
         product_id: order.product_id,
-        customer_name: order.customer_name,
-        customer_email: order.customer_email,
-        total_amount: order.total_amount,
+        customer_name: order.contact_name,
+        customer_email: order.contact_email,
+        total_amount: order.total,
         status: order.status,
         created_at: order.created_at.toISOString(),
         confirmation_code: order.confirmation_code
@@ -1287,15 +1287,12 @@ export class OTAService {
         const orderId = `ORD-${Date.now()}`;
         const now = new Date();
 
-        // Prepare order data with correct pricing
+        // Prepare order data with correct pricing (for OrderEntity)
         const orderData = {
-          order_id: orderId,
+          order_no: orderId,
           product_id: ticket.product_id,
-          channel_id: 2, // OTA channel
-          total_amount: ticketPrice, // Use actual price based on customer type
-          status: 'confirmed' as const,
-          confirmation_code: `CONF-${Date.now()}`,
-          created_at: now
+          total: ticketPrice, // Use actual price based on customer type
+          confirmation_code: `CONF-${Date.now()}`
         };
 
         // Prepare raw metadata for audit trail
@@ -1331,7 +1328,7 @@ export class OTAService {
 
         logger.info('ota.ticket.activation_database_completed', {
           ticket_code: ticketCode,
-          order_id: result.order.order_id,
+          order_id: result.order.order_no,
           customer_name: result.ticket.customer_name,
           customer_type: request.customer_type,
           ticket_price: ticketPrice
@@ -1339,7 +1336,7 @@ export class OTAService {
 
         return {
           ticket_code: ticketCode,
-          order_id: result.order.order_id,
+          order_id: result.order.order_no,
           customer_name: result.ticket.customer_name!,
           customer_type: request.customer_type,
           ticket_price: ticketPrice,
@@ -1783,7 +1780,7 @@ export class OTAService {
             qr_code: ticket.qr_code,
             created_at: ticket.created_at.toISOString(),
             activated_at: ticket.activated_at ? ticket.activated_at.toISOString() : null,
-            order_id: ticket.ota_order_id || null,  // 使用 ota_order_id
+            order_id: ticket.order_no || null,  // 使用统一的 order_no
             customer_name: ticket.customer_name || null,
             customer_email: ticket.customer_email || null
           })),

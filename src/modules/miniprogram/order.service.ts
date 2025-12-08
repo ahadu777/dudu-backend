@@ -5,7 +5,7 @@
 
 import { Repository, EntityManager } from 'typeorm';
 import { AppDataSource } from '../../config/database';
-import { OrderEntity, OrderStatus, OrderType, PricingContext } from '../../models/order.entity';
+import { OrderEntity, OrderStatus, OrderType, OrderChannel, PricingContext } from '../../models/order.entity';
 import { ProductEntity, ProductInventoryEntity, TicketEntity } from '../../models';
 import { logger } from '../../utils/logger';
 import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
@@ -89,7 +89,7 @@ export class MiniprogramOrderService {
       const order = new OrderEntity();
       order.user_id = userId;
       order.order_no = request.order_no;
-      order.channel = 'direct';
+      order.channel = OrderChannel.DIRECT;
       // 联系人信息
       order.contact_name = request.contact_name;
       order.contact_phone = request.contact_phone;
@@ -581,8 +581,8 @@ export class MiniprogramOrderService {
       quantity: order.quantity,
       total: Number(order.total),
       // 联系人信息
-      contact_name: order.contact_name,
-      contact_phone: order.contact_phone,
+      contact_name: order.contact_name || '',
+      contact_phone: order.contact_phone || '',
       contact_email: order.contact_email,
       // 乘客信息
       passengers: order.passengers as PassengerInput[],

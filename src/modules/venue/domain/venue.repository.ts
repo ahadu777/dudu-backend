@@ -2,14 +2,13 @@ import { DataSource, Repository } from 'typeorm';
 import { Venue } from './venue.entity';
 import { VenueSession } from './venue-session.entity';
 import { RedemptionEvent } from './redemption-event.entity';
-import { TicketEntity, TicketStatus, TicketReservationEntity, ReservationSlotEntity, ProductEntity, ReservationSource } from '../../../models';
-import { OTAOrderEntity } from '../../ota/domain/ota-order.entity';
+import { TicketEntity, TicketStatus, TicketReservationEntity, ReservationSlotEntity, ProductEntity, ReservationSource, OrderEntity, OrderChannel } from '../../../models';
 
 export class VenueRepository {
   private venueRepo: Repository<Venue>;
   private sessionRepo: Repository<VenueSession>;
   private redemptionRepo: Repository<RedemptionEvent>;
-  private otaOrderRepo: Repository<OTAOrderEntity>;
+  private orderRepo: Repository<OrderEntity>;
   private ticketRepo: Repository<TicketEntity>;  // 统一票券表（小程序 + OTA）
   private reservationRepo: Repository<TicketReservationEntity>;  // 票券预订
   private slotRepo: Repository<ReservationSlotEntity>;  // 预订时段
@@ -19,7 +18,7 @@ export class VenueRepository {
     this.venueRepo = dataSource.getRepository(Venue);
     this.sessionRepo = dataSource.getRepository(VenueSession);
     this.redemptionRepo = dataSource.getRepository(RedemptionEvent);
-    this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
+    this.orderRepo = dataSource.getRepository(OrderEntity);
     this.ticketRepo = dataSource.getRepository(TicketEntity);
     this.reservationRepo = dataSource.getRepository(TicketReservationEntity);
     this.slotRepo = dataSource.getRepository(ReservationSlotEntity);
@@ -69,7 +68,7 @@ export class VenueRepository {
         entitlements: ticket.entitlements,
         ticket_type: 'OTA',
         source: 'OTA',
-        order_id: ticket.ota_order_id,  // OTA 使用 ota_order_id
+        order_id: ticket.order_no,  // 使用统一的 order_no
         batch_id: ticket.batch_id,
         partner_id: ticket.partner_id,
         // Customer information - 预约表优先，票券表兜底
@@ -166,9 +165,9 @@ export class VenueRepository {
       updateData
     );
 
-    // Update order status if ticket has an ota_order_id
-    if (ticket.ota_order_id) {
-      await this.updateOrderStatusIfNeeded(ticket.ota_order_id);
+    // Update order status if ticket has an order_no
+    if (ticket.order_no) {
+      await this.updateOrderStatusIfNeeded(ticket.order_no);
     }
 
     return true;
@@ -232,10 +231,10 @@ export class VenueRepository {
    * - in_progress: Some (but not all) entitlements redeemed
    * - completed: All entitlements redeemed
    */
-  private async updateOrderStatusIfNeeded(orderId: string): Promise<void> {
+  private async updateOrderStatusIfNeeded(orderNo: string): Promise<void> {
     // Get all OTA tickets for this order
     const tickets = await this.ticketRepo.find({
-      where: { ota_order_id: orderId, channel: 'ota' }
+      where: { order_no: orderNo, channel: 'ota' }
     });
 
     if (tickets.length === 0) {
@@ -275,10 +274,10 @@ export class VenueRepository {
       newStatus = 'confirmed';
     }
 
-    // Update order status
-    await this.otaOrderRepo.update(
-      { order_id: orderId },
-      { status: newStatus }
+    // Update order status using unified orders table
+    await this.orderRepo.update(
+      { order_no: orderNo, channel: OrderChannel.OTA },
+      { status: newStatus as any }
     );
   }
 
