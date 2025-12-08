@@ -91,8 +91,8 @@ export class UnifiedQRService {
           product_id: otaTicket.product_id,
           status: otaTicket.status,
           ticket_type: 'OTA',
-          owner_id: otaTicket.partner_id,
-          order_id: otaTicket.order_id,
+          owner_id: otaTicket.partner_id || 'unknown',
+          order_id: otaTicket.ota_order_id,  // OTA 使用 ota_order_id
           batch_id: otaTicket.batch_id,
           channel_id: 'ota',
           partner_id: otaTicket.partner_id
@@ -110,12 +110,12 @@ export class UnifiedQRService {
         }
 
         return {
-          ticket_code: otaTicket.ticket_code,
+          ticket_code: otaTicket.code,
           product_id: otaTicket.product_id,
           status: otaTicket.status,
           ticket_type: 'OTA',
-          owner_id: otaTicket.partner_id,
-          order_id: otaTicket.order_id,
+          owner_id: otaTicket.partner_id || 'unknown',
+          order_id: otaTicket.order_id,  // Mock 数据结构保持不变
           batch_id: otaTicket.batch_id,
           channel_id: 'ota',
           partner_id: otaTicket.partner_id
@@ -175,8 +175,8 @@ export class UnifiedQRService {
    */
   private validateStatus(ticket: TicketInfo): void {
     const validStatuses: Record<'OTA' | 'NORMAL', string[]> = {
-      OTA: ['PRE_GENERATED', 'ACTIVE'],
-      NORMAL: ['active', 'partially_redeemed']
+      OTA: ['PRE_GENERATED', 'ACTIVATED'],  // 使用统一内部状态
+      NORMAL: ['active', 'partially_redeemed', 'ACTIVATED']  // 兼容两种状态格式
     };
 
     const valid = validStatuses[ticket.ticket_type];

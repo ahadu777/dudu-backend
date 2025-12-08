@@ -140,7 +140,7 @@ export class TicketReservationService {
       };
     }
 
-    if (otaTicket.status === 'USED') {
+    if (otaTicket.status === 'VERIFIED') {  // 统一状态：USED → VERIFIED
       return {
         success: false,
         error: {
@@ -184,13 +184,13 @@ export class TicketReservationService {
       };
     }
 
-    // OTA ticket is ACTIVE and ready for reservation
+    // OTA ticket is ACTIVATED and ready for reservation
     return {
       success: true,
       data: {
         ticket_code: otaTicket.ticket_code,
         source: 'ota' as ReservationSource,
-        status: 'ACTIVE',
+        status: TicketReservationStatus.ACTIVATED,  // 统一状态
         product_id: otaTicket.product_id,
         order_id: otaTicket.order_id,
         partner_id: otaTicket.partner_id,
@@ -244,7 +244,7 @@ export class TicketReservationService {
       if (ticket_code) {
         // Try OTA ticket first
         const otaTicket = findOtaTicketByCode(ticket_code);
-        if (otaTicket && otaTicket.status === 'ACTIVE') {
+        if (otaTicket && otaTicket.status === 'ACTIVATED') {  // 统一状态：ACTIVE → ACTIVATED
           return this.createOtaReservation(otaTicket, slot_id, customer_email, customer_phone);
         }
 
@@ -630,7 +630,7 @@ export class TicketReservationService {
       };
     }
 
-    if (otaTicket.status === 'USED') {
+    if (otaTicket.status === 'VERIFIED') {  // 统一状态：USED → VERIFIED
       return {
         success: false,
         error: {

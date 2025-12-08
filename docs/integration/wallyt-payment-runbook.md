@@ -13,15 +13,16 @@
 
 ```bash
 # .env
-WECHAT_MINI_APPID=your_mini_program_appid
-WECHAT_MINI_SECRET=your_mini_program_secret
+# WeChat (登录和支付共用)
+WECHAT_APPID=wx39a36fbaaefacd42
+WECHAT_APP_SECRET=your_app_secret
 
-# Wallyt UAT 环境
-WALLYT_API_URL=https://payuat.wepayez.com/pay/gateway
-WALLYT_MCH_ID=your_merchant_id
+# Wallyt/SwiftPass 生产环境
+WALLYT_API_URL=https://gateway.wepayez.com/pay/gateway
+WALLYT_MCH_ID=119540000342
 WALLYT_SECRET_KEY=your_secret_key
 WALLYT_SIGN_TYPE=MD5
-WALLYT_NOTIFY_URL=https://your-domain.com/payments/wallyt/notify
+WALLYT_NOTIFY_URL=https://express-jdpny.ondigitalocean.app/payments/wallyt/notify
 ```
 
 ## API 序列图
@@ -108,7 +109,7 @@ curl -s -X POST http://localhost:8080/payments/wechat/prepay \
   "success": true,
   "data": {
     "orderId": 123,
-    "outTradeNo": "MP123_1701849600000",
+    "outTradeNo": "ORD20241206120000123",  // 即 order.order_no
     "payParams": {
       "appId": "wx1234567890",
       "timeStamp": "1701849600",
@@ -163,11 +164,10 @@ curl -s -X POST http://localhost:8080/payments/wallyt/notify \
   <nonce_str>abc123</nonce_str>
   <sign>VALID_SIGNATURE</sign>
   <pay_result>0</pay_result>
-  <out_trade_no>MP123_1701849600000</out_trade_no>
+  <out_trade_no>ORD20241206120000123</out_trade_no>
   <transaction_id>WX1234567890</transaction_id>
   <total_fee>10000</total_fee>
   <time_end>20241206120500</time_end>
-  <attach>{"orderId":123,"userId":1}</attach>
 </xml>'
 ```
 
@@ -210,7 +210,7 @@ curl -s -X POST http://localhost:8080/payments/refund \
   "success": true,
   "data": {
     "orderId": 123,
-    "outRefundNo": "RF123_1701849700000",
+    "outRefundNo": "RF_ORD20241206120000123_1701849700000",
     "refundId": "WALLYT_REFUND_123",
     "refundAmount": 100.00,
     "status": "SUCCESS"

@@ -172,7 +172,7 @@ export interface MockOtaTicket {
   product_id: number;
   batch_id: string;
   partner_id: string;
-  status: 'PRE_GENERATED' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'CANCELLED';
+  status: 'PRE_GENERATED' | 'ACTIVATED' | 'VERIFIED' | 'EXPIRED' | 'CANCELLED';  // 统一状态
   qr_code: string;
   customer_name?: string;
   customer_email?: string;
@@ -188,7 +188,7 @@ export const mockOtaTickets: MockOtaTicket[] = [
     product_id: 106,
     batch_id: 'BATCH-2025-001',
     partner_id: 'PARTNER-KLOOK',
-    status: 'ACTIVE',
+    status: 'ACTIVATED',  // 统一状态
     qr_code: 'data:image/png;base64,OTA_QR_CODE_001',
     customer_name: 'Alice Wong',
     customer_email: 'alice@example.com',
@@ -202,7 +202,7 @@ export const mockOtaTickets: MockOtaTicket[] = [
     product_id: 106,
     batch_id: 'BATCH-2025-001',
     partner_id: 'PARTNER-KLOOK',
-    status: 'ACTIVE',
+    status: 'ACTIVATED',  // 统一状态
     qr_code: 'data:image/png;base64,OTA_QR_CODE_002',
     customer_name: 'Bob Chen',
     customer_email: 'bob@example.com',
@@ -225,7 +225,7 @@ export const mockOtaTickets: MockOtaTicket[] = [
     product_id: 107,
     batch_id: 'BATCH-2025-002',
     partner_id: 'PARTNER-KKDAY',
-    status: 'USED', // Already used
+    status: 'VERIFIED', // Already used (统一状态：USED → VERIFIED)
     qr_code: 'data:image/png;base64,OTA_QR_CODE_004',
     customer_name: 'Charlie Lee',
     customer_email: 'charlie@example.com',

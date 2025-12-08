@@ -420,7 +420,7 @@ export interface TicketValidationResponse {
     ticket_id?: number;        // For direct tickets
     ticket_code: string;
     source: ReservationSource; // NEW: ticket source
-    status: TicketReservationStatus | 'ACTIVE'; // OTA tickets use ACTIVE status
+    status: TicketReservationStatus; // OTA tickets now use ACTIVATED status (unified)
     product_id: number;
     order_id?: number | string; // OTA tickets may have string order_id
     partner_id?: string;       // For OTA tickets

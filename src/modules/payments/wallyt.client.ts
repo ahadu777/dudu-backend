@@ -122,7 +122,10 @@ export class WallytClient {
         out_trade_no: params.outTradeNo,
         status: result.status,
         result_code: result.result_code,
-        err_code: result.err_code
+        err_code: result.err_code,
+        err_msg: result.err_msg,
+        message: result.message,
+        raw_response: response.data.substring(0, 500)
       });
 
       // 检查通信状态

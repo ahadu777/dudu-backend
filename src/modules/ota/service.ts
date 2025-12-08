@@ -11,6 +11,7 @@ import { TicketRawMetadata } from '../../types/domain';
 import { directusService } from '../../utils/directus';
 import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
 import { ProductEntity } from './domain/product.entity';
+import { toOTAAPIStatus, fromOTAAPIStatus } from './status-mapper';
 
 export interface OTAInventoryResponse {
   available_quantities: { [productId: number]: number };
@@ -621,7 +622,7 @@ export class OTAService {
             qr_code: ticket.qr_code,
             customer_type: ticket.customer_type,
             entitlements: ticket.entitlements,
-            status: ticket.status
+            status: toOTAAPIStatus(ticket.status)  // 映射为 OTA API 状态
           })),
           total_amount: Number(result.order.total_amount),
           confirmation_code: result.order.confirmation_code
@@ -755,7 +756,7 @@ export class OTAService {
         qr_code: ticket.qr_code,
         customer_type: ticket.customer_type,
         entitlements: ticket.entitlements,
-        status: ticket.status
+        status: toOTAAPIStatus(ticket.status)  // 映射为 OTA API 状态
       }));
     }
 
@@ -773,7 +774,7 @@ export class OTAService {
         qr_code: `data:image/png;base64,${Buffer.from(JSON.stringify({ticket_id: ticket.id, product_id: order.product_id})).toString('base64')}`,
         customer_type: ticket.customer_type,
         entitlements: ticket.entitlements,
-        status: ticket.status
+        status: toOTAAPIStatus(ticket.status)  // 映射为 OTA API 状态
       }));
   }
 
@@ -1005,7 +1006,7 @@ export class OTAService {
         tickets: savedTickets.map(ticket => ({
           ticket_code: ticket.ticket_code,
           qr_code: ticket.qr_code,
-          status: ticket.status,
+          status: toOTAAPIStatus(ticket.status),  // 映射为 OTA API 状态
           entitlements: ticket.entitlements
         })),
         total_generated: savedTickets.length
@@ -1197,6 +1198,12 @@ export class OTAService {
         }
 
         // Get batch to retrieve pricing snapshot
+        if (!ticket.batch_id) {
+          throw {
+            code: 'BATCH_NOT_FOUND',
+            message: `Ticket ${ticketCode} has no batch_id`
+          };
+        }
         const batch = await repo.findBatchById(ticket.batch_id);
         if (!batch) {
           throw {
@@ -1505,8 +1512,8 @@ export class OTAService {
         .filter(t => t.batch_id === batchId);
 
       const tickets_generated = tickets.length;
-      const tickets_activated = tickets.filter(t => t.status === 'ACTIVE' || t.status === 'REDEEMED').length;
-      const tickets_redeemed = tickets.filter(t => t.status === 'REDEEMED').length;
+      const tickets_activated = tickets.filter(t => t.status === 'ACTIVATED' || t.status === 'VERIFIED').length;  // 统一状态
+      const tickets_redeemed = tickets.filter(t => t.status === 'VERIFIED').length;  // 统一状态
 
       const basePrice = storedBatch.pricing_snapshot?.base_price || 288;
 
@@ -1740,7 +1747,8 @@ export class OTAService {
         };
 
         if (filters.status) {
-          dbFilters.status = filters.status as any; // TypeORM will validate the enum
+          // 将 OTA API 状态转换为内部状态 (ACTIVE → ACTIVATED, USED → VERIFIED)
+          dbFilters.status = fromOTAAPIStatus(filters.status as any);
         }
 
         if (filters.batch_id) {
@@ -1769,13 +1777,13 @@ export class OTAService {
         return {
           tickets: result.tickets.map(ticket => ({
             ticket_code: ticket.ticket_code,
-            status: ticket.status,
+            status: toOTAAPIStatus(ticket.status),  // 映射为 OTA API 状态
             batch_id: ticket.batch_id,
             product_id: ticket.product_id,
             qr_code: ticket.qr_code,
             created_at: ticket.created_at.toISOString(),
             activated_at: ticket.activated_at ? ticket.activated_at.toISOString() : null,
-            order_id: ticket.order_id || null,
+            order_id: ticket.ota_order_id || null,  // 使用 ota_order_id
             customer_name: ticket.customer_name || null,
             customer_email: ticket.customer_email || null
           })),
@@ -1803,7 +1811,9 @@ export class OTAService {
 
     // Apply filters
     if (filters.status) {
-      allTickets = allTickets.filter(ticket => ticket.status === filters.status);
+      // 将 OTA API 状态转换为内部状态 (ACTIVE → ACTIVATED, USED → VERIFIED)
+      const internalStatus = fromOTAAPIStatus(filters.status as any);
+      allTickets = allTickets.filter(ticket => ticket.status === internalStatus);
     }
 
     if (filters.batch_id) {
@@ -1841,7 +1851,7 @@ export class OTAService {
     return {
       tickets: paginatedTickets.map(ticket => ({
         ticket_code: ticket.code,
-        status: ticket.status,
+        status: toOTAAPIStatus(ticket.status),  // 映射为 OTA API 状态
         batch_id: ticket.batch_id,
         product_id: ticket.product_id,
         qr_code: ticket.qr_code,

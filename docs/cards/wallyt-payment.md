@@ -250,7 +250,7 @@ paths:
 
 ## 3) Invariants
 - 仅 `status=PENDING` 的订单允许创建预支付
-- 商户订单号 `out_trade_no` 格式: `MP{orderId}_{timestamp}` 确保唯一
+- 商户订单号 `out_trade_no` 直接使用订单的 `order_no` 字段
 - 支付回调必须验证签名（MD5/SHA256/RSA_1_256）
 - 支付成功后原子性更新：订单状态、库存、支付记录、生成票券
 - 幂等性：已支付订单重复回调直接返回成功
@@ -271,7 +271,7 @@ paths:
 1. 验证用户认证和订单归属
 2. 检查订单状态为 PENDING
 3. 查找/创建支付记录 (OrderPaymentEntity)
-4. 生成商户订单号 `MP{orderId}_{timestamp}`
+4. 使用订单的 `order_no` 作为商户订单号 `out_trade_no`
 5. 调用 Wallyt `pay.weixin.jspay` API
 6. 保存 `prepay_id` 到支付记录
 7. 返回小程序支付参数
@@ -280,7 +280,7 @@ paths:
 1. 解析 XML 请求体
 2. 验证签名（MD5/SHA256/RSA_1_256）
 3. 检查 status=0, result_code=0, pay_result=0
-4. 从 attach 或 out_trade_no 解析订单 ID
+4. 通过 `out_trade_no` (即 `order_no`) 查找订单
 5. 加锁查询订单
 6. 幂等检查：已 CONFIRMED 直接返回成功
 7. 验证金额一致
@@ -340,18 +340,24 @@ src/modules/payments/
 ## 11) Environment Variables
 
 ```bash
-# WeChat Mini Program
-WECHAT_MINI_APPID=your_mini_program_appid
-WECHAT_MINI_SECRET=your_mini_program_secret
+# WeChat Mini Program (用于登录和支付)
+WECHAT_APPID=wx39a36fbaaefacd42
+WECHAT_APP_SECRET=your_app_secret
 
-# Wallyt Payment
-WALLYT_API_URL=https://payuat.wepayez.com/pay/gateway  # UAT
-# WALLYT_API_URL=https://gateway.wepayez.com/pay/gateway  # PROD
-WALLYT_MCH_ID=your_merchant_id
+# Wallyt/SwiftPass Payment
+WALLYT_API_URL=https://gateway.wepayez.com/pay/gateway
+WALLYT_MCH_ID=119540000342
 WALLYT_SECRET_KEY=your_secret_key
-WALLYT_SIGN_TYPE=MD5  # MD5 | SHA256 | RSA_1_256
+WALLYT_SIGN_TYPE=MD5  # MD5 | SHA256
 WALLYT_NOTIFY_URL=https://your-domain.com/payments/wallyt/notify
 ```
+
+配置说明:
+- `WECHAT_APPID` - 小程序 AppID，登录和支付共用
+- `WALLYT_API_URL` - SwiftPass 网关地址
+- `WALLYT_MCH_ID` - 商户号
+- `WALLYT_SECRET_KEY` - API 密钥
+- `WALLYT_NOTIFY_URL` - 支付回调地址（需要外网可访问）
 
 ## 12) Wallyt API Reference
 

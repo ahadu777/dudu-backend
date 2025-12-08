@@ -2,7 +2,7 @@ import { Repository, DataSource, QueryRunner, In } from 'typeorm';
 import { ProductEntity } from './product.entity';
 import { ProductInventoryEntity } from './product-inventory.entity';
 import { ChannelReservationEntity, ReservationStatus } from './channel-reservation.entity';
-import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
+import { TicketEntity, TicketStatus } from '../../ticket-reservation/domain/ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
 import { OTATicketBatchWithStatsDTO } from './ota-ticket-batch.dto';
@@ -10,11 +10,14 @@ import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 import { generateSecureQR } from '../../../utils/qr-crypto';
 import { logger } from '../../../utils/logger';
 
+// 类型别名，保持向后兼容
+type PreGeneratedTicketEntity = TicketEntity;
+
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
   private inventoryRepo: Repository<ProductInventoryEntity>;
   private reservationRepo: Repository<ChannelReservationEntity>;
-  private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
+  private ticketRepo: Repository<TicketEntity>;
   private otaOrderRepo: Repository<OTAOrderEntity>;
   private batchRepo: Repository<OTATicketBatchEntity>;
   private resellerRepo: Repository<OTAResellerEntity>;
@@ -23,7 +26,7 @@ export class OTARepository {
     this.productRepo = dataSource.getRepository(ProductEntity);
     this.inventoryRepo = dataSource.getRepository(ProductInventoryEntity);
     this.reservationRepo = dataSource.getRepository(ChannelReservationEntity);
-    this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
+    this.ticketRepo = dataSource.getRepository(TicketEntity);
     this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
     this.batchRepo = dataSource.getRepository(OTATicketBatchEntity);
     this.resellerRepo = dataSource.getRepository(OTAResellerEntity);
@@ -470,19 +473,20 @@ export class OTARepository {
           }
         };
 
-        const ticket = queryRunner.manager.create(PreGeneratedTicketEntity, {
+        const ticket = queryRunner.manager.create(TicketEntity, {
           ticket_code: ticketCode,
           product_id: reservation.product_id,
           batch_id: `RESERVATION-${reservationId}`,
           partner_id: reservation.channel_id,
-          status: 'ACTIVE' as TicketStatus,
+          status: 'ACTIVATED' as TicketStatus,
+          channel: 'ota',
           qr_code: qrResult.qr_image,  // Store QR image for immediate use
           entitlements: entitlements,
           customer_name: customerData.name,
           customer_email: customerData.email,
           customer_phone: customerData.phone,
           customer_type: customerType,
-          order_id: orderId,
+          ota_order_id: orderId,  // OTA 使用字符串订单ID
           payment_reference: paymentReference,
           activated_at: new Date(),
           raw: rawMetadata
@@ -491,7 +495,7 @@ export class OTARepository {
         tickets.push(ticket);
       }
 
-      const savedTickets = await queryRunner.manager.save(PreGeneratedTicketEntity, tickets);
+      const savedTickets = await queryRunner.manager.save(TicketEntity, tickets);
 
       // 5. Update reservation status
       reservation.activate(Number(orderId.split('-')[1])); // Extract numeric part for order_id field
@@ -517,7 +521,7 @@ export class OTARepository {
 
     try {
       // Bulk insert tickets
-      const savedTickets = await queryRunner.manager.save(PreGeneratedTicketEntity, tickets);
+      const savedTickets = await queryRunner.manager.save(TicketEntity, tickets);
 
       // Update inventory (reserve units for the batch)
       if (tickets.length > 0) {
@@ -549,13 +553,13 @@ export class OTARepository {
   }
 
   async findPreGeneratedTicket(ticketCode: string): Promise<PreGeneratedTicketEntity | null> {
-    return this.preGeneratedTicketRepo.findOne({
+    return this.ticketRepo.findOne({
       where: { ticket_code: ticketCode }
     });
   }
 
   async findPreGeneratedTicketsByBatch(batchId: string): Promise<PreGeneratedTicketEntity[]> {
-    return this.preGeneratedTicketRepo.find({
+    return this.ticketRepo.find({
       where: { batch_id: batchId },
       order: { created_at: 'ASC' }
     });
@@ -580,8 +584,8 @@ export class OTARepository {
 
     try {
       // Find the pre-generated ticket (with partner isolation)
-      const ticket = await queryRunner.manager.findOne(PreGeneratedTicketEntity, {
-        where: { ticket_code: ticketCode, status: 'PRE_GENERATED', partner_id: partnerId }
+      const ticket = await queryRunner.manager.findOne(TicketEntity, {
+        where: { ticket_code: ticketCode, status: 'PRE_GENERATED' as TicketStatus, partner_id: partnerId, channel: 'ota' }
       });
 
       if (!ticket) {
@@ -636,8 +640,8 @@ export class OTARepository {
       ticket.customer_phone = customerData.customer_phone;
       ticket.customer_type = customerData.customer_type;
       ticket.payment_reference = customerData.payment_reference;
-      ticket.order_id = savedOrder.order_id;
-      ticket.status = 'ACTIVE';
+      ticket.ota_order_id = savedOrder.order_id;
+      ticket.status = 'ACTIVATED';
       ticket.activated_at = new Date();
       ticket.ticket_price = ticketPrice;
 
@@ -648,7 +652,7 @@ export class OTARepository {
 
       // QR code removed - will be generated on-demand via POST /qr/{code}
 
-      const savedTicket = await queryRunner.manager.save(PreGeneratedTicketEntity, ticket);
+      const savedTicket = await queryRunner.manager.save(TicketEntity, ticket);
 
       // Update inventory (move from reserved to sold)
       const inventory = await queryRunner.manager.findOne(ProductInventoryEntity, {
@@ -694,10 +698,10 @@ export class OTARepository {
     });
   }
 
-  async findTicketsByOrderId(orderId: string): Promise<PreGeneratedTicketEntity[]> {
-    return this.preGeneratedTicketRepo.find({
-      where: { order_id: orderId }
-      // Removed status: 'ACTIVE' filter - should return tickets in ANY status (ACTIVE, USED, EXPIRED, etc.)
+  async findTicketsByOrderId(orderId: string): Promise<TicketEntity[]> {
+    return this.ticketRepo.find({
+      where: { ota_order_id: orderId, channel: 'ota' }
+      // Removed status: 'ACTIVE' filter - should return tickets in ANY status (ACTIVATED, VERIFIED, EXPIRED, etc.)
       // This allows viewing ticket details for completed orders with redeemed tickets
     });
   }
@@ -714,7 +718,7 @@ export class OTARepository {
       limit?: number;
     }
   ): Promise<{ tickets: PreGeneratedTicketEntity[]; total: number }> {
-    const query = this.preGeneratedTicketRepo.createQueryBuilder('ticket')
+    const query = this.ticketRepo.createQueryBuilder('ticket')
       .where('ticket.partner_id = :partnerId', { partnerId });
 
     // Apply filters
@@ -802,20 +806,20 @@ export class OTARepository {
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
-        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'VERIFIED' THEN 1 ELSE 0 END) as tickets_redeemed,
         SUM(CASE
-          WHEN t.status = 'USED' AND t.customer_type = 'adult' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'adult' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status = 'USED' AND t.customer_type = 'child' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
             )
-          WHEN t.status = 'USED' AND t.customer_type = 'elderly' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
@@ -823,7 +827,7 @@ export class OTARepository {
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
-      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+      LEFT JOIN tickets t ON t.batch_id = b.batch_id AND t.channel = 'ota'
       WHERE b.batch_id = ?
       GROUP BY b.batch_id
     `, [batchId]);
@@ -842,20 +846,20 @@ export class OTARepository {
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
-        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'VERIFIED' THEN 1 ELSE 0 END) as tickets_redeemed,
         SUM(CASE
-          WHEN t.status = 'USED' AND t.customer_type = 'adult' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'adult' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status = 'USED' AND t.customer_type = 'child' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
             )
-          WHEN t.status = 'USED' AND t.customer_type = 'elderly' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
@@ -863,7 +867,7 @@ export class OTARepository {
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
-      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+      LEFT JOIN tickets t ON t.batch_id = b.batch_id AND t.channel = 'ota'
     `;
 
     const params: any[] = [];
@@ -974,19 +978,19 @@ export class OTARepository {
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_sold,
+        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_sold,
         SUM(CASE
-          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'adult' THEN
+          WHEN t.status IN ('ACTIVATED', 'VERIFIED') AND t.customer_type = 'adult' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'child' THEN
+          WHEN t.status IN ('ACTIVATED', 'VERIFIED') AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
             )
-          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'elderly' THEN
+          WHEN t.status IN ('ACTIVATED', 'VERIFIED') AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
@@ -994,7 +998,7 @@ export class OTARepository {
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
-      LEFT JOIN pre_generated_tickets t ON LOWER(t.batch_id) = LOWER(b.batch_id)
+      LEFT JOIN tickets t ON LOWER(t.batch_id) = LOWER(b.batch_id) AND t.channel = 'ota'
       WHERE b.reseller_metadata IS NOT NULL
         AND JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?
         AND DATE_FORMAT(b.created_at, '%Y-%m') = ?
@@ -1050,7 +1054,7 @@ export class OTARepository {
         v.venue_name,
         JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) as wholesale_price
       FROM redemption_events r
-      INNER JOIN pre_generated_tickets t ON r.ticket_code = t.ticket_code
+      INNER JOIN tickets t ON r.ticket_code = t.ticket_code AND t.channel = 'ota'
       INNER JOIN ota_ticket_batches b ON t.batch_id = b.batch_id
       LEFT JOIN venues v ON r.venue_id = v.venue_id
       WHERE b.batch_id = ?
@@ -1132,7 +1136,7 @@ export class OTARepository {
    * Get tickets summary for a specific partner
    */
   async getPartnerTicketsSummary(partnerId: string) {
-    const tickets = await this.preGeneratedTicketRepo.find({
+    const tickets = await this.ticketRepo.find({
       where: { partner_id: partnerId }
     });
 
@@ -1198,8 +1202,8 @@ export class OTARepository {
     const orders = await orderQuery.getMany();
     const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
-    const totalTickets = await this.preGeneratedTicketRepo.count();
-    const activeTickets = await this.preGeneratedTicketRepo.count({ where: { status: 'ACTIVE' } });
+    const totalTickets = await this.ticketRepo.count();
+    const activeTickets = await this.ticketRepo.count({ where: { status: 'ACTIVATED', channel: 'ota' } });
 
     return {
       total_orders: orders.length,
@@ -1346,11 +1350,11 @@ export class OTARepository {
       LEFT JOIN (
         SELECT
           batch_id,
-          COUNT(CASE WHEN status IN ('ACTIVE', 'USED') THEN 1 END) as activated_count,
-          COUNT(CASE WHEN status = 'USED' THEN 1 END) as used_count,
+          COUNT(CASE WHEN status IN ('ACTIVATED', 'VERIFIED') THEN 1 END) as activated_count,
+          COUNT(CASE WHEN status = 'VERIFIED' THEN 1 END) as used_count,
           -- 总收入：所有已激活票券的实际价格（包含客户类型折扣）
           SUM(
-            CASE WHEN status IN ('ACTIVE', 'USED') THEN
+            CASE WHEN status IN ('ACTIVATED', 'VERIFIED') THEN
               COALESCE(
                 CAST(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.pricing_breakdown.final_price')) AS DECIMAL(10,2)),
                 0
@@ -1359,15 +1363,15 @@ export class OTARepository {
           ) as total_revenue,
           -- 已实现收入：已核销票券的实际价格
           SUM(
-            CASE WHEN status = 'USED' THEN
+            CASE WHEN status = 'VERIFIED' THEN
               COALESCE(
                 CAST(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.pricing_breakdown.final_price')) AS DECIMAL(10,2)),
                 0
               )
             ELSE 0 END
           ) as realized_revenue
-        FROM pre_generated_tickets
-        WHERE status IN ('ACTIVE', 'USED')
+        FROM tickets
+        WHERE channel = 'ota' AND status IN ('ACTIVATED', 'VERIFIED')
         GROUP BY batch_id
       ) batch_stats ON otb.batch_id = batch_stats.batch_id
 

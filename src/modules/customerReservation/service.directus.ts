@@ -165,7 +165,7 @@ export class CustomerReservationServiceDirectus {
         logger.warn('reservation.validate_ticket.ota_cancelled', { ticket_code });
         return { valid: false, error: 'Ticket has been cancelled' };
 
-      case 'ACTIVE':
+      case 'ACTIVATED':  // 统一状态：ACTIVE → ACTIVATED
         // Check if OTA ticket already has a reservation
         const existingReservation = await this.reservationRepo.findOne({
           where: {
@@ -188,7 +188,7 @@ export class CustomerReservationServiceDirectus {
             ticket_code: otaTicket.ticket_code,
             product_id: otaTicket.product_id,
             product_name: 'OTA Product', // TODO: join with products table
-            status: 'ACTIVE',
+            status: 'ACTIVATED',  // 统一状态
             expires_at: null,
             customer_name: otaTicket.customer_name,
             customer_email: otaTicket.customer_email,

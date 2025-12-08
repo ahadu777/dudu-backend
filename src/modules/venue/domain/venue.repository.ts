@@ -2,9 +2,8 @@ import { DataSource, Repository } from 'typeorm';
 import { Venue } from './venue.entity';
 import { VenueSession } from './venue-session.entity';
 import { RedemptionEvent } from './redemption-event.entity';
-import { PreGeneratedTicketEntity } from '../../ota/domain/pre-generated-ticket.entity';
+import { TicketEntity, TicketStatus } from '../../ticket-reservation/domain/ticket.entity';
 import { OTAOrderEntity } from '../../ota/domain/ota-order.entity';
-import { TicketEntity } from '../../ticket-reservation/domain/ticket.entity';
 import { TicketReservationEntity } from '../../ticket-reservation/domain/ticket-reservation.entity';
 import { ReservationSlotEntity } from '../../ticket-reservation/domain/reservation-slot.entity';
 import { ProductEntity } from '../../ota/domain/product.entity';
@@ -13,9 +12,8 @@ export class VenueRepository {
   private venueRepo: Repository<Venue>;
   private sessionRepo: Repository<VenueSession>;
   private redemptionRepo: Repository<RedemptionEvent>;
-  private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
   private otaOrderRepo: Repository<OTAOrderEntity>;
-  private ticketRepo: Repository<TicketEntity>;  // 小程序票券
+  private ticketRepo: Repository<TicketEntity>;  // 统一票券表（小程序 + OTA）
   private reservationRepo: Repository<TicketReservationEntity>;  // 票券预订
   private slotRepo: Repository<ReservationSlotEntity>;  // 预订时段
   private productRepo: Repository<ProductEntity>;
@@ -24,7 +22,6 @@ export class VenueRepository {
     this.venueRepo = dataSource.getRepository(Venue);
     this.sessionRepo = dataSource.getRepository(VenueSession);
     this.redemptionRepo = dataSource.getRepository(RedemptionEvent);
-    this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
     this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
     this.ticketRepo = dataSource.getRepository(TicketEntity);
     this.reservationRepo = dataSource.getRepository(TicketReservationEntity);
@@ -34,108 +31,96 @@ export class VenueRepository {
 
   // Ticket Management
   async getTicketByCode(ticketCode: string): Promise<any | null> {
-    // 1. 先查询 OTA 票券表 (pre_generated_tickets)
-    const otaTicket = await this.preGeneratedTicketRepo.findOne({
+    // 统一查询 tickets 表（已合并 OTA 和小程序票券）
+    const ticket = await this.ticketRepo.findOne({
       where: { ticket_code: ticketCode }
     });
 
-    if (otaTicket) {
-      // Cascading lookup: reservation (优先) → ticket (兜底)
-      let customer_name = otaTicket.customer_name;
-      let customer_email = otaTicket.customer_email;
-      let customer_phone = otaTicket.customer_phone;
+    if (!ticket) {
+      return null;
+    }
 
-      // Check reservation for customer info (优先使用预约表的信息)
-      const reservation = await this.reservationRepo.findOne({
-        where: { ota_ticket_code: otaTicket.ticket_code, source: 'ota' }
-      });
-      if (reservation) {
-        customer_name = reservation.customer_name || customer_name;
-        customer_email = reservation.customer_email || customer_email;
-        customer_phone = reservation.customer_phone || customer_phone;
-      }
+    // 根据 channel 判断来源
+    const isOTA = ticket.channel === 'ota';
+    const source = isOTA ? 'OTA' : 'MINIPROGRAM';
+    const reservationSource = isOTA ? 'ota' : 'direct';
 
+    // Cascading lookup: reservation (优先) → ticket (兜底)
+    let customer_name = ticket.customer_name;
+    let customer_email = ticket.customer_email;
+    let customer_phone = ticket.customer_phone;
+
+    // Check reservation for customer info (优先使用预约表的信息)
+    const reservationWhere = isOTA
+      ? { ota_ticket_code: ticket.ticket_code, source: reservationSource }
+      : { ticket_id: ticket.id, source: reservationSource };
+
+    const reservation = await this.reservationRepo.findOne({
+      where: reservationWhere
+    });
+    if (reservation) {
+      customer_name = reservation.customer_name || customer_name;
+      customer_email = reservation.customer_email || customer_email;
+      customer_phone = reservation.customer_phone || customer_phone;
+    }
+
+    if (isOTA) {
       return {
-        ticket_code: otaTicket.ticket_code,
-        product_id: otaTicket.product_id,
-        status: otaTicket.status,
-        entitlements: otaTicket.entitlements,
+        ticket_code: ticket.ticket_code,
+        product_id: ticket.product_id,
+        status: ticket.status,
+        entitlements: ticket.entitlements,
         ticket_type: 'OTA',
         source: 'OTA',
-        order_id: otaTicket.order_id,
-        batch_id: otaTicket.batch_id,
-        partner_id: otaTicket.partner_id,
+        order_id: ticket.ota_order_id,  // OTA 使用 ota_order_id
+        batch_id: ticket.batch_id,
+        partner_id: ticket.partner_id,
         // Customer information - 预约表优先，票券表兜底
         customer_name: customer_name,
         customer_email: customer_email,
         customer_phone: customer_phone,
-        customer_type: otaTicket.customer_type,
-        raw: otaTicket.raw,
-        extra: null  // OTA 票券没有 extra 字段
+        customer_type: ticket.customer_type,
+        raw: ticket.raw,
+        extra: ticket.extra
       };
     }
 
-    // 2. 再查询小程序票券表 (tickets)
-    const mpTicket = await this.ticketRepo.findOne({
-      where: { ticket_code: ticketCode }
-    });
-
-    if (mpTicket) {
-      // Cascading lookup: reservation (优先) → ticket (兜底)
-      let customer_name = mpTicket.customer_name;
-      let customer_email = mpTicket.customer_email;
-      let customer_phone = mpTicket.customer_phone;
-
-      // Check reservation for customer info (优先使用预约表的信息)
-      const reservation = await this.reservationRepo.findOne({
-        where: { ticket_id: mpTicket.id, source: 'direct' }
-      });
-      if (reservation) {
-        customer_name = reservation.customer_name || customer_name;
-        customer_email = reservation.customer_email || customer_email;
-        customer_phone = reservation.customer_phone || customer_phone;
-      }
-
-      return {
-        ticket_code: mpTicket.ticket_code,
-        product_id: mpTicket.product_id,
-        status: mpTicket.status,
-        entitlements: mpTicket.entitlements,
-        ticket_type: 'MINIPROGRAM',
-        source: 'MINIPROGRAM',
-        order_id: mpTicket.order_id?.toString(),
-        user_id: mpTicket.user_id,
-        channel: mpTicket.channel,
-        // Customer information - 预约表优先，票券表兜底
-        customer_name: customer_name,
-        customer_email: customer_email,
-        customer_phone: customer_phone,
-        customer_type: mpTicket.customer_type,
-        travel_date: mpTicket.travel_date,
-        extra: mpTicket.extra  // 包含 current_jti 用于一码失效验证
-      };
-    }
-
-    return null;
+    // 小程序票券
+    return {
+      ticket_code: ticket.ticket_code,
+      product_id: ticket.product_id,
+      status: ticket.status,
+      entitlements: ticket.entitlements,
+      ticket_type: 'MINIPROGRAM',
+      source: 'MINIPROGRAM',
+      order_id: ticket.order_id?.toString(),
+      user_id: ticket.user_id,
+      channel: ticket.channel,
+      // Customer information - 预约表优先，票券表兜底
+      customer_name: customer_name,
+      customer_email: customer_email,
+      customer_phone: customer_phone,
+      customer_type: ticket.customer_type,
+      travel_date: ticket.travel_date,
+      extra: ticket.extra  // 包含 current_jti 用于一码失效验证
+    };
   }
 
   async decrementEntitlement(ticketCode: string, functionCode: string): Promise<boolean> {
-    // 1. 先尝试 OTA 票券
-    const otaTicket = await this.preGeneratedTicketRepo.findOne({
+    // 统一查询 tickets 表
+    const ticket = await this.ticketRepo.findOne({
       where: { ticket_code: ticketCode }
     });
 
-    if (otaTicket) {
-      return this.decrementOtaEntitlement(otaTicket, functionCode);
+    if (!ticket) {
+      return false;
     }
 
-    // 2. 再尝试小程序票券
-    const mpTicket = await this.ticketRepo.findOne({
-      where: { ticket_code: ticketCode }
-    });
-
-    if (mpTicket) {
-      return this.decrementMiniprogramEntitlement(mpTicket, functionCode);
+    // 根据 channel 选择不同的处理方法
+    if (ticket.channel === 'ota') {
+      return this.decrementOtaEntitlement(ticket, functionCode);
+    } else {
+      return this.decrementMiniprogramEntitlement(ticket, functionCode);
     }
 
     return false;
@@ -145,7 +130,7 @@ export class VenueRepository {
    * 核销 OTA 票券权益
    */
   private async decrementOtaEntitlement(
-    ticket: PreGeneratedTicketEntity,
+    ticket: TicketEntity,
     functionCode: string
   ): Promise<boolean> {
     const entitlements = ticket.entitlements as Array<{
@@ -174,19 +159,19 @@ export class VenueRepository {
     // Update the ticket in database
     const updateData: any = { entitlements: entitlements as any };
 
-    // If all entitlements are used up, mark ticket as USED
+    // If all entitlements are used up, mark ticket as VERIFIED (原 USED)
     if (allUsed) {
-      updateData.status = 'USED';
+      updateData.status = 'VERIFIED' as TicketStatus;
     }
 
-    await this.preGeneratedTicketRepo.update(
+    await this.ticketRepo.update(
       { ticket_code: ticket.ticket_code },
       updateData
     );
 
-    // Update order status if ticket has an order_id
-    if (ticket.order_id) {
-      await this.updateOrderStatusIfNeeded(ticket.order_id);
+    // Update order status if ticket has an ota_order_id
+    if (ticket.ota_order_id) {
+      await this.updateOrderStatusIfNeeded(ticket.ota_order_id);
     }
 
     return true;
@@ -251,9 +236,9 @@ export class VenueRepository {
    * - completed: All entitlements redeemed
    */
   private async updateOrderStatusIfNeeded(orderId: string): Promise<void> {
-    // Get all tickets for this order
-    const tickets = await this.preGeneratedTicketRepo.find({
-      where: { order_id: orderId }
+    // Get all OTA tickets for this order
+    const tickets = await this.ticketRepo.find({
+      where: { ota_order_id: orderId, channel: 'ota' }
     });
 
     if (tickets.length === 0) {

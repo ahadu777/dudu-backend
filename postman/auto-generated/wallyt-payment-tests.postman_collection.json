@@ -1,0 +1,264 @@
+{
+  "info": {
+    "name": "Wallyt Payment Tests",
+    "description": "微信支付 (Wallyt/SwiftPass) 端点测试集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "openid",
+      "value": "test_openid"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('服务健康', function() {",
+              "    pm.response.to.have.status(200);",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.equal('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/healthz"
+      }
+    },
+    {
+      "name": "1. 预支付 - 未认证 (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('未认证返回 401', function() {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('返回正确错误信息', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.message).to.include('token');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"orderId\": 1,\n    \"openid\": \"test_openid\"\n}"
+        },
+        "url": "{{baseUrl}}/payments/wechat/prepay"
+      }
+    },
+    {
+      "name": "2. 预支付 - 缺少 orderId (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('缺少 orderId 返回 422 或 401', function() {",
+              "    pm.expect([401, 422]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"openid\": \"test_openid\"\n}"
+        },
+        "url": "{{baseUrl}}/payments/wechat/prepay"
+      }
+    },
+    {
+      "name": "3. 预支付 - 缺少 openid (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('缺少 openid 返回 422 或 401', function() {",
+              "    pm.expect([401, 422]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"orderId\": 1\n}"
+        },
+        "url": "{{baseUrl}}/payments/wechat/prepay"
+      }
+    },
+    {
+      "name": "4. 查询支付状态 - 未认证 (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('未认证返回 401', function() {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/payments/status/1"
+      }
+    },
+    {
+      "name": "5. 退款 - 未认证 (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('未认证返回 401', function() {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"orderId\": 1\n}"
+        },
+        "url": "{{baseUrl}}/payments/refund"
+      }
+    },
+    {
+      "name": "6. 回调端点 - 无效 XML",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('无效请求返回 fail', function() {",
+              "    pm.expect(pm.response.text()).to.equal('fail');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/xml"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xml>\n  <invalid>data</invalid>\n</xml>"
+        },
+        "url": "{{baseUrl}}/payments/wallyt/notify"
+      }
+    },
+    {
+      "name": "7. 回调端点 - 签名无效",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('签名无效返回 fail', function() {",
+              "    pm.expect(pm.response.text()).to.equal('fail');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/xml"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xml>\n  <version>2.0</version>\n  <charset>UTF-8</charset>\n  <sign_type>MD5</sign_type>\n  <status>0</status>\n  <result_code>0</result_code>\n  <mch_id>119540000342</mch_id>\n  <nonce_str>test123</nonce_str>\n  <sign>INVALID_SIGNATURE</sign>\n  <pay_result>0</pay_result>\n  <out_trade_no>TEST_ORDER_123</out_trade_no>\n  <transaction_id>WX123456</transaction_id>\n  <total_fee>100</total_fee>\n</xml>"
+        },
+        "url": "{{baseUrl}}/payments/wallyt/notify"
+      }
+    }
+  ]
+}

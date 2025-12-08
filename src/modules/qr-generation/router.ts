@@ -370,7 +370,8 @@ router.post('/public/:code', async (req: Request, res: Response, next: NextFunct
     }
 
     // Validate ticket status - only allow QR generation for valid statuses
-    const validStatuses = ['RESERVED', 'ACTIVATED', 'PRE_GENERATED', 'ACTIVE', 'active', 'partially_redeemed'];
+    // 统一状态：使用 ACTIVATED（不再使用 ACTIVE）
+    const validStatuses = ['RESERVED', 'ACTIVATED', 'PRE_GENERATED', 'active', 'partially_redeemed'];
     if (!validStatuses.includes(ticket.status)) {
       logger.warn('qr.public.invalid_status', {
         ticket_code: ticketCode,
@@ -748,7 +749,7 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
           phone: ticket.customer_phone || null       // 顾客电话
         },
         entitlements: formattedEntitlements,
-        can_generate_qr: ['PRE_GENERATED', 'ACTIVE', 'USED', 'active', 'partially_redeemed'].includes(ticket.status),
+        can_generate_qr: ['PRE_GENERATED', 'ACTIVATED', 'VERIFIED', 'active', 'partially_redeemed'].includes(ticket.status),
         product_info: productInfo,
         // Additional fields for backward compatibility and debugging
         product_id: ticket.product_id,

@@ -41,14 +41,14 @@ interface MockTicket {
   source?: 'direct' | 'ota';
 }
 
-// OTA ticket interface (from pre_generated_tickets)
+// OTA ticket interface (from tickets table - unified)
 interface MockOtaTicket {
   ticket_code: string;
   product_id: number;
   product_name: string;
   batch_id: string;
   partner_id: string;
-  status: 'PRE_GENERATED' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'CANCELLED';
+  status: 'PRE_GENERATED' | 'ACTIVATED' | 'VERIFIED' | 'EXPIRED' | 'CANCELLED';  // 统一状态
   qr_code: string;
   customer_name?: string;
   customer_email?: string;
@@ -173,14 +173,14 @@ export class CustomerReservationServiceEnhanced {
    */
   private seedOtaTickets() {
     const otaTickets: MockOtaTicket[] = [
-      // Active OTA ticket (can reserve)
+      // Activated OTA ticket (can reserve) - 统一状态
       {
         ticket_code: 'OTA-2025-BATCH001-001',
         product_id: 106,
         product_name: 'Cruise Package - Standard',
         batch_id: 'BATCH-2025-001',
         partner_id: 'PARTNER-KLOOK',
-        status: 'ACTIVE',
+        status: 'ACTIVATED',  // 统一状态
         qr_code: 'data:image/png;base64,OTA_QR_CODE_001',
         customer_name: 'Alice Wong',
         customer_email: 'alice@example.com',
@@ -196,7 +196,7 @@ export class CustomerReservationServiceEnhanced {
         product_name: 'Cruise Package - Standard',
         batch_id: 'BATCH-2025-001',
         partner_id: 'PARTNER-KLOOK',
-        status: 'ACTIVE',
+        status: 'ACTIVATED',  // 统一状态
         qr_code: 'data:image/png;base64,OTA_QR_CODE_002',
         customer_name: 'Bob Chen',
         customer_email: 'bob@example.com',
@@ -218,14 +218,14 @@ export class CustomerReservationServiceEnhanced {
         orq: 1,
         created_at: '2025-11-22T08:00:00Z',
       },
-      // USED (already consumed)
+      // VERIFIED (already consumed) - 统一状态
       {
         ticket_code: 'OTA-2025-BATCH002-002',
         product_id: 107,
         product_name: 'Cruise Package - Premium',
         batch_id: 'BATCH-2025-002',
         partner_id: 'PARTNER-KKDAY',
-        status: 'USED',
+        status: 'VERIFIED',  // 统一状态：USED → VERIFIED
         qr_code: 'data:image/png;base64,OTA_QR_CODE_004',
         customer_name: 'Charlie Lee',
         customer_email: 'charlie@example.com',
@@ -362,10 +362,10 @@ export class CustomerReservationServiceEnhanced {
           error: 'TICKET_NOT_ACTIVATED',
         };
 
-      case 'USED':
+      case 'VERIFIED':  // 统一状态：USED → VERIFIED
         return {
           valid: false,
-          error: 'TICKET_ALREADY_VERIFIED', // OTA "USED" = verified
+          error: 'TICKET_ALREADY_VERIFIED',
         };
 
       case 'EXPIRED':
@@ -380,7 +380,7 @@ export class CustomerReservationServiceEnhanced {
           error: 'TICKET_CANCELLED',
         };
 
-      case 'ACTIVE':
+      case 'ACTIVATED':  // 统一状态：ACTIVE → ACTIVATED
         // Check if already has reservation
         const existingReservation = Array.from(this.reservations.values()).find(
           r => r.ticket_code === ticket_code && r.status === 'RESERVED'
@@ -394,7 +394,7 @@ export class CustomerReservationServiceEnhanced {
               ticket_code: otaTicket.ticket_code,
               product_id: otaTicket.product_id,
               product_name: otaTicket.product_name,
-              status: 'ACTIVE',
+              status: 'ACTIVATED',  // 统一状态
               expires_at: null,
               source: 'ota',
             }
@@ -415,7 +415,7 @@ export class CustomerReservationServiceEnhanced {
             ticket_code: otaTicket.ticket_code,
             product_id: otaTicket.product_id,
             product_name: otaTicket.product_name,
-            status: 'ACTIVE',
+            status: 'ACTIVATED',  // 统一状态
             expires_at: null,
             source: 'ota',
             customer_email: otaTicket.customer_email,
