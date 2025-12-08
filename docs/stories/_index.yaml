@@ -2,7 +2,7 @@
 stories:
   - id: US-001
     title: Buy package and redeem via QR
-    status: Approved
+    status: Done
     cards:
       - catalog-endpoint
       - order-create
@@ -11,6 +11,10 @@ stories:
       - my-tickets
       - qr-generation-api
       - venue-enhanced-scanning
+      - operators-login
+      - reports-redemptions
+      - qr-token           # deprecated - replaced by qr-generation-api
+      - tickets-scan       # deprecated - replaced by venue-enhanced-scanning
     # Sequence dependencies for temporal relationships
     sequence:
       - catalog-endpoint → order-create
@@ -26,10 +30,12 @@ stories:
     business_requirement: "PRD-001"
   - id: US-002
     title: Operator scan & redemption
-    status: Approved
+    status: Done
     cards:
       - operators-login
       - venue-enhanced-scanning
+      - tickets-scan         # deprecated - replaced by venue-enhanced-scanning
+      - validators-sessions  # deprecated - removed, use operator JWT token
     sequence:
       - operators-login → venue-enhanced-scanning
       - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
@@ -39,10 +45,11 @@ stories:
 
   - id: US-003
     title: Buyer views tickets & QR
-    status: Approved
+    status: Done
     cards:
       - my-tickets
       - qr-generation-api
+      - qr-token  # deprecated - replaced by qr-generation-api
     sequence:
       - tickets-issuance → my-tickets
       - my-tickets → qr-generation-api
@@ -52,7 +59,7 @@ stories:
 
   - id: US-004
     title: Payment notify → issue tickets (sync)
-    status: Approved
+    status: Done
     cards:
       - payment-webhook
       - tickets-issuance
@@ -65,7 +72,7 @@ stories:
 
   - id: US-005
     title: Reporting — redemptions list
-    status: Approved
+    status: Done
     cards:
       - reports-redemptions
     sequence:
@@ -77,10 +84,10 @@ stories:
 
   - id: US-006
     title: Operator auth & session lifecycle
-    status: Approved
+    status: Done
     cards:
       - operators-login
-      # validators-sessions removed - operator JWT token is now sufficient
+      - validators-sessions  # deprecated - removed, use operator JWT token
     sequence:
       - operators-login → venue-enhanced-scanning
     enhances: [US-002]
@@ -89,7 +96,7 @@ stories:
 
   - id: US-007
     title: Ticket cancellation and refund
-    status: Approved
+    status: Done
     cards:
       - ticket-cancellation
       - refund-processing
@@ -104,7 +111,7 @@ stories:
 
   - id: US-008
     title: Promotion detail view for dashboard
-    status: Approved
+    status: Done
     cards:
       - promotion-detail-endpoint
     sequence:
@@ -115,7 +122,7 @@ stories:
 
   - id: US-009
     title: User profile and settings management
-    status: Approved
+    status: Done
     cards:
       - user-profile-endpoint
       - user-settings-endpoint
@@ -141,6 +148,7 @@ stories:
       - notification-orchestrator
       - route-schedule-management
       - schedule-pricing-rules
+      - wallyt-payment
     decomposed_into:
       - US-010A
       - US-010B
@@ -155,7 +163,7 @@ stories:
         - reports/collections/us-010b-operations-backbone.json
   - id: US-010A
     title: DeepTravel 旅客闭环体验
-    status: Draft
+    status: In Progress
     cards:
       - travel-search-hub
       - seat-lock-service
@@ -163,6 +171,9 @@ stories:
       - bundle-ticket-engine
       - route-schedule-management
       - schedule-pricing-rules
+      - miniprogram-product-catalog
+      - miniprogram-order
+      - wallyt-payment
     sequence:
       - catalog-endpoint → travel-search-hub
       - travel-search-hub → seat-lock-service
@@ -206,7 +217,7 @@ stories:
         - reports/collections/us-010b-operations-backbone.json
   - id: US-011
     title: Complex multi-variable pricing system
-    status: Approved
+    status: Done
     cards:
       - complex-pricing-engine
       - order-create
@@ -226,7 +237,9 @@ stories:
       - ota-premade-tickets
       - ota-reservation-management
       - ota-order-retrieval
+      - ota-reseller-management
       - qr-generation-api
+      - venue-enhanced-scanning
     # Sequence dependencies
     sequence:
       - ota-channel-management → ota-premade-tickets
@@ -256,7 +269,7 @@ stories:
       - venue-management-crud
       - venue-enhanced-scanning
       - venue-analytics-reporting
-      # venue-session-management removed - operator JWT token is now sufficient
+      - venue-session-management  # deprecated - removed, use operator JWT token
     # Sequence dependencies
     sequence:
       - operators-login → venue-enhanced-scanning
@@ -326,9 +339,10 @@ stories:
     title: Ticket Activation and Time-Slot Reservation System
     status: Draft
     cards:
-      - ticket-activation
-      - time-slot-reservation
-      - reservation-validation-scanning
+      - reservation-slot-management
+      - customer-reservation-portal
+      - operator-validation-scanner
+      - ticket-lifecycle-daemon
     # Sequence dependencies
     sequence:
       - tickets-issuance → ticket-activation

@@ -10,7 +10,7 @@ branch: ""
 pr: ""
 newman_report: "reports/collections/us-010a-traveler-loop.json"
 last_update: "2025-12-06"
-related_stories: ["US-010"]
+related_stories: ["US-010", "US-010A"]
 deprecated_by: "wallyt-payment"
 deprecation_note: "此卡片为 Mock 实现，已被 wallyt-payment 替代。端点保留向后兼容。"
 ---

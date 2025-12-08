@@ -1,6 +1,6 @@
 ---
 card: "Order create (idempotent) with complex pricing support"
-slug: order-create-idempotent
+slug: order-create
 team: "A - Commerce"
 oas_paths: ["/orders"]
 migrations: ["migrations/0002_orders.sql"]
