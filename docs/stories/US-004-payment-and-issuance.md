@@ -2,9 +2,13 @@
 id: US-004
 title: Payment notification marks order paid and issues tickets (synchronous)
 owner: Product
-status: Approved
+status: "Done"
 priority: High
 last_update: 2025-10-19T23:44:00+0800
+business_requirement: "PRD-003"
+cards:
+  - payment-webhook
+  - tickets-issuance
 ---
 
 ## Business goal

@@ -4,7 +4,7 @@ slug: tickets-scan
 team: "C - Gate"
 oas_paths: []
 migrations: ["db/migrations/0004_redemption_events_jti.sql", "db/migrations/0007_redemptions_indexes.sql"]
-status: "Deprecated"
+status: "Done"
 readiness: "production"
 branch: "init-ai"
 pr: ""

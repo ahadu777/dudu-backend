@@ -4,7 +4,7 @@ slug: qr-token
 team: "B - Tickets"
 oas_paths: []
 migrations: []
-status: "Deprecated"
+status: "Done"
 readiness: "prototype"
 branch: ""
 pr: ""

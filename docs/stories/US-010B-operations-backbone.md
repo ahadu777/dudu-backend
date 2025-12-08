@@ -2,9 +2,10 @@
 id: US-010B
 title: DeepTravel 运营支撑体系
 owner: Product
-status: Draft
+status: "Draft"
 priority: High
 last_update: 2025-10-26T19:45:00+08:00
+business_requirement: "PRD-008"
 enhances:
   - US-002
   - US-005

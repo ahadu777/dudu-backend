@@ -5,7 +5,7 @@
 prd_id: "PRD-005"
 product_area: "Finance & Analytics"
 owner: "Finance Team"
-status: "Planning"
+status: "Draft"
 created_date: "2025-11-15"
 last_updated: "2025-11-15"
 related_stories: ["US-015"]

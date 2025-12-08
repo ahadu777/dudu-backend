@@ -2,9 +2,13 @@
 id: US-003
 title: Buyer views tickets and generates a short-lived QR token
 owner: Product
-status: Approved
+status: "Done"
 priority: Medium
 last_update: 2025-10-19T23:44:00+0800
+business_requirement: "PRD-001"
+cards:
+  - my-tickets
+  - qr-generation-api
 ---
 
 ## Business goal

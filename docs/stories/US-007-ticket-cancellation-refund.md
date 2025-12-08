@@ -1,3 +1,16 @@
+---
+id: US-007
+title: Ticket Cancellation and Refund
+owner: Product
+status: "Done"
+priority: Medium
+business_requirement: "PRD-001"
+cards:
+  - ticket-cancellation
+  - cancellation-policies
+  - refund-processing
+---
+
 # US-007: Ticket Cancellation and Refund
 
 ## Story

@@ -10,7 +10,7 @@ branch: ""
 pr: ""
 newman_report: "reports/newman/reports-redemptions.json"
 last_update: "2025-10-20T00:12:44+0800"
-related_stories: ["US-005"]
+related_stories: ["US-001", "US-005"]
 ---
 
 ## Status & Telemetry

@@ -1,19 +1,18 @@
-# US-015: Ticket Reservation & Validation System
-
-## Story Metadata
-```yaml
-story_id: "US-015"
-title: "Ticket Reservation & Validation System"
+---
+id: US-015
+title: Ticket Reservation & Validation System
+owner: Product
 status: "Draft"
-priority: "High"
-business_value: "High"
-complexity: "Medium"
-estimated_effort: "6 weeks (4 sprints)"
+priority: High
 created_date: "2025-11-14"
-related_prd: "PRD-007"
-depends_on: ["US-001"]
-enhances: ["US-001", "US-002"]
-```
+business_requirement: "PRD-007"
+cards:
+  - reservation-slot-management
+  - customer-reservation-portal
+  - operator-validation-scanner
+---
+
+# US-015: Ticket Reservation & Validation System
 
 ## Business Context
 

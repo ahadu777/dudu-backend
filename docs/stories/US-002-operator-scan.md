@@ -2,9 +2,13 @@
 id: US-002
 title: Operator scan with session + atomic redemption
 owner: Product
-status: Approved
+status: "Done"
 priority: High
 last_update: 2025-10-19T23:36:45+0800
+business_requirement: "PRD-003"
+cards:
+  - operators-login
+  - venue-enhanced-scanning
 ---
 
 ## Business goal

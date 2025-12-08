@@ -1,3 +1,14 @@
+---
+id: US-008
+title: Promotion Details
+owner: Product
+status: "Done"
+priority: Medium
+business_requirement: "PRD-001"
+cards:
+  - promotion-detail-endpoint
+---
+
 # Story Analysis: Promotion Details (US-008)
 
 ## Story: Promotion Detail View

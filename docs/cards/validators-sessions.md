@@ -4,7 +4,7 @@ slug: validators-sessions
 team: "C - Gate"
 oas_paths: ["/validators/sessions"]
 migrations: ["db/migrations/0005_validator_sessions.sql"]
-status: "Deprecated"
+status: "Done"
 readiness: "production"
 branch: "init-ai"
 pr: ""

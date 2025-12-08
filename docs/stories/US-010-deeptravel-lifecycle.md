@@ -2,9 +2,16 @@
 id: US-010
 title: DeepTravel 小程序全链路购票与核销体验
 owner: Product
-status: Draft
+status: "Draft"
 priority: High
 last_update: 2025-10-24T18:28:44+08:00
+business_requirement: "PRD-008"
+cards:
+  - travel-search-hub
+  - seat-lock-service
+  - miniprogram-order
+  - miniprogram-product-catalog
+  - wallyt-payment
 ---
 
 ## Business goal

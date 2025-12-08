@@ -4,7 +4,7 @@ slug: venue-session-management
 team: "C - Gate"
 oas_paths: ["/venue/sessions"]
 migrations: ["db/migrations/venue_sessions.sql", "db/migrations/venues.sql"]
-status: "Deprecated"
+status: "Done"
 readiness: "production"
 branch: "init-ai"
 pr: ""

@@ -6,8 +6,9 @@ last_updated: 2025-12-04T16:00:00+08:00
 api_ssot: openapi/openapi-3.0.3.json
 types_ssot: src/types/domain.ts
 owner: Product
-status: Approved
+status: "Done"
 priority: High
+business_requirement: "PRD-001"
 cards:
   - catalog-endpoint
   - order-create-idempotent

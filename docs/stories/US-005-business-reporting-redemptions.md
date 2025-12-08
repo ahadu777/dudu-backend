@@ -2,9 +2,12 @@
 id: US-005
 title: Business user views redemption events for reporting
 owner: Product
-status: Approved
+status: "Done"
 priority: Medium
 last_update: 2025-10-19T23:44:00+0800
+business_requirement: "PRD-003"
+cards:
+  - reports-redemptions
 ---
 
 ## Business goal

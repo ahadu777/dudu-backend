@@ -1,19 +1,16 @@
-# US-016: Ticket Activation and Time-Slot Reservation
-
-## Story Metadata
-```yaml
-story_id: "US-016"
-title: "Ticket Activation and Time-Slot Reservation System"
+---
+id: US-016
+title: Ticket Activation and Time-Slot Reservation System
+owner: Product
 status: "Draft"
-priority: "High"
-business_value: "High"
-complexity: "Medium"
-estimated_effort: "3 weeks"
+priority: High
 created_date: "2025-11-14"
-related_prd: "PRD-006"
-depends_on: ["US-001", "US-003"]
-enhances: ["US-001", "US-003", "US-002"]
-```
+business_requirement: "PRD-006"
+cards:
+  - ticket-lifecycle-daemon
+---
+
+# US-016: Ticket Activation and Time-Slot Reservation
 
 ## Business Context
 

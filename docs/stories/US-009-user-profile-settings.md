@@ -1,3 +1,16 @@
+---
+id: US-009
+title: User Profile and Settings
+owner: Product
+status: "Done"
+priority: Medium
+business_requirement: "PRD-001"
+cards:
+  - user-profile-endpoint
+  - user-activity-endpoint
+  - user-settings-endpoint
+---
+
 # Story Analysis: User Profile and Settings
 
 ## Story: User Profile and Settings Management

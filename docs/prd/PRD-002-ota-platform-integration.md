@@ -5,7 +5,7 @@
 prd_id: "PRD-002"
 product_area: "Commerce"
 owner: "Product Manager"
-status: "Production Ready"
+status: "Done"
 created_date: "2025-11-03"
 last_updated: "2025-11-14"
 related_stories: ["US-012"]

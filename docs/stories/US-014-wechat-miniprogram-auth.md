@@ -1,16 +1,18 @@
-# US-014: WeChat Mini-Program User Authentication
-
-## Document Metadata
-```yaml
-story_id: "US-014"
-title: "WeChat Mini-Program User Authentication"
-status: "Draft"
+---
+id: US-014
+title: WeChat Mini-Program User Authentication
+owner: Product
+status: "Done"
+priority: High
 created_date: "2025-01-06"
 last_updated: "2025-01-06"
 business_requirement: "PRD-004"
-related_stories: ["US-001", "US-009", "US-010A"]
-priority: "High"
-```
+cards:
+  - wechat-auth-login
+  - wechat-phone-binding
+---
+
+# US-014: WeChat Mini-Program User Authentication
 
 ## Story Analysis
 

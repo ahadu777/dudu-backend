@@ -2,9 +2,10 @@
 id: US-010A
 title: DeepTravel 旅客闭环体验
 owner: Product
-status: In Progress
+status: "In Progress"
 priority: High
 last_update: 2025-12-04T15:00:00+08:00
+business_requirement: "PRD-008"
 enhances:
   - US-001
   - US-003

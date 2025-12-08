@@ -1,16 +1,21 @@
-# US-012: OTA Platform Integration for Bulk Ticket Reservation
-
-## Document Metadata
-```yaml
-story_id: "US-012"
-title: "OTA Platform Integration for Bulk Ticket Reservation"
+---
+id: US-012
+title: OTA Platform Integration for Bulk Ticket Reservation
+owner: Product
 status: "Done"
+priority: High
 created_date: "2025-11-03"
 completed_date: "2025-11-06"
 business_requirement: "PRD-002"
-deadline: "2025-11-15"
-related_stories: ["US-001", "US-011"]
-```
+cards:
+  - ota-channel-management
+  - ota-reseller-management
+  - ota-order-retrieval
+  - ota-premade-tickets
+  - ota-reservation-management
+---
+
+# US-012: OTA Platform Integration for Bulk Ticket Reservation
 
 ## Story Analysis
 

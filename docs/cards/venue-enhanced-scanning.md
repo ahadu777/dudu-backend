@@ -10,7 +10,7 @@ branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-enhanced-scanning-result.json"
 last_update: "2025-11-25T14:00:00+08:00"
-related_stories: ["US-013", "US-012"]
+related_stories: ["US-001", "US-002", "US-012", "US-013"]
 relationships:
   replaces: ["tickets-scan"]
   depends_on: ["qr-generation-api", "ota-premade-tickets"]
