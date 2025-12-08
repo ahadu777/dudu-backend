@@ -82,6 +82,27 @@ router.post('/decrypt', async (req: Request, res: Response) => {
       });
     }
 
+    // ========================================
+    // 小程序票券 QR 过期检查
+    // - OTA 票券：QR 码长期有效，不检查过期
+    // - 小程序票券：QR 码有 30 分钟有效期，过期后需重新生成
+    // ========================================
+    if (ticketType === 'MINIPROGRAM' && result.is_expired) {
+      logger.warn('qr.decrypt.qr_expired', {
+        ticket_code: ticketCode,
+        ticket_type: ticketType,
+        qr_expires_at: result.data.expires_at,
+        reason: 'Miniprogram QR code has expired'
+      });
+      return res.status(401).json({
+        error: 'QR_EXPIRED',
+        message: '二维码已过期，请重新生成',
+        jti: result.data.jti,
+        ticket_code: ticketCode,
+        expires_at: result.data.expires_at
+      });
+    }
+
     // JTI 验证：检查二维码是否已被新码替代（一码失效机制）
     // - OTA 票券：current_jti 存储在 raw.jti.current_jti
     // - 小程序票券：current_jti 存储在 extra.current_jti

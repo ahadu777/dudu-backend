@@ -121,7 +121,7 @@ CREATE INDEX idx_reseller_id ON ota_ticket_batches(reseller_id);
 OTA Partner (partner_id from middleware)
   └── ota_resellers (1:N)
         └── ota_ticket_batches (1:N)
-              └── pre_generated_tickets (1:N)
+              └── tickets (1:N, channel='ota')
 ```
 
 ## 3) Technical Specifications

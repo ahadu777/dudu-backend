@@ -15,7 +15,7 @@ related_stories: ["US-012"]
 relationships:
   depends_on: ["ota-channel-management"]
   triggers: ["order-create", "qr-generation-api"]
-  data_dependencies: ["PreGeneratedTicket", "OtaOrder", "ChannelReservation", "OTATicketBatch"]
+  data_dependencies: ["Ticket", "OtaOrder", "ChannelReservation", "OTATicketBatch"]
   integration_points:
     data_stores: ["ota.repository.ts"]
     external_apis: ["OTA Partner Platforms"]

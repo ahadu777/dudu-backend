@@ -130,19 +130,12 @@ export class VenueOperationsService {
       // ========================================
       const decryptResult = await decryptAndVerifyQR(request.qrToken);
 
-      // OTA票券不进行时间过期校验（QR码长期有效）
-      // QR加密仍然保留用于防篡改，但不强制过期时间
-      logger.info('venue.scan.qr_decryption_success', {
-        operator_id: request.operator.operator_id,
-        qr_expired: decryptResult.is_expired,
-        note: 'OTA tickets do not enforce QR expiry validation'
-      });
-
       const { ticket_code: ticketCode, jti } = decryptResult.data;
 
       logger.info('venue.scan.qr_decrypted', {
         ticket_code: ticketCode,
         jti,
+        qr_expired: decryptResult.is_expired,
         operator_id: request.operator.operator_id
       });
 
@@ -200,6 +193,34 @@ export class VenueOperationsService {
         });
 
         return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request.operator, true);
+      }
+
+      // ========================================
+      // Step 3.1: 小程序票券 QR 过期检查
+      // - OTA 票券：QR 码长期有效，不检查过期
+      // - 小程序票券：QR 码有 30 分钟有效期，过期后需重新生成
+      // ========================================
+      if (ticket.ticket_type === 'MINIPROGRAM' && decryptResult.is_expired) {
+        logger.warn('venue.scan.qr_expired', {
+          ticket_code: ticketCode,
+          ticket_type: ticket.ticket_type,
+          qr_expires_at: decryptResult.data.expires_at,
+          operator_id: request.operator.operator_id,
+          reason: 'Miniprogram QR code has expired'
+        });
+
+        await this.recordRedemption({
+          ticketCode,
+          jti,
+          functionCode: request.functionCode,
+          operator: request.operator,
+          result: 'reject',
+          reason: 'QR_EXPIRED',
+          venueId,
+          additionalInfo
+        });
+
+        return this.createRejectResponse('QR_EXPIRED', startTime, request.operator, true);
       }
 
       // 收集票券相关的额外信息

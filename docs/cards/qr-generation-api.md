@@ -15,7 +15,7 @@ related_stories: ["US-012", "US-001", "US-003"]
 relationships:
   depends_on: ["ota-premade-tickets", "tickets-issuance"]
   enhances: ["qr-token"]
-  data_dependencies: ["PreGeneratedTicket", "Ticket"]
+  data_dependencies: ["Ticket"]
   integration_points:
     middlewares: ["unified-auth", "otaAuth"]
     utilities: ["qr-crypto"]

@@ -15,7 +15,7 @@ relationships:
   replaces: ["tickets-scan"]
   depends_on: ["qr-generation-api", "ota-premade-tickets"]
   triggers: ["venue-analytics-reporting"]
-  data_dependencies: ["RedemptionEvent", "Ticket", "PreGeneratedTicket", "Venue"]
+  data_dependencies: ["RedemptionEvent", "Ticket", "Venue"]
   integration_points:
     data_stores: ["venue.service.ts", "venue.repository.ts"]
 notes: "Added venue selection feature (2025-11-25). Operators can now select venue during redemption."

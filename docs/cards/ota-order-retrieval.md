@@ -13,7 +13,7 @@ last_update: "2025-11-04T16:50:00+08:00"
 related_stories: ["US-012"]
 relationships:
   depends_on: ["ota-premade-tickets", "ota-reservation-management"]
-  data_dependencies: ["OtaOrder", "PreGeneratedTicket"]
+  data_dependencies: ["OtaOrder", "Ticket"]
   integration_points:
     data_stores: ["ota.repository.ts"]
     external_apis: ["OTA Partner Platforms"]
@@ -219,7 +219,7 @@ paths:
 ## 6) Data Impact & Transactions
 **Read Operations:**
 - ota_orders: Customer details, order status, amounts
-- pre_generated_tickets: QR codes, entitlements, status
+- tickets (channel='ota'): QR codes, entitlements, status
 - Join operations: Order → Tickets relationships
 
 **Access Patterns:**
