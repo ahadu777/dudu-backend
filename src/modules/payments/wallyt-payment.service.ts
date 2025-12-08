@@ -5,6 +5,7 @@
 
 import { Repository, EntityManager } from 'typeorm';
 import { AppDataSource } from '../../config/database';
+import { env } from '../../config/env';
 import { OrderEntity, OrderStatus } from '../../models/order.entity';
 import { OrderPaymentEntity, PaymentStatus, PaymentMethod } from '../../models/order-payment.entity';
 import { ProductInventoryEntity } from '../ota/domain/product-inventory.entity';
@@ -140,8 +141,8 @@ export class WallytPaymentService {
       // 或者可以考虑存储 pay_info
     }
 
-    // 4. 生成商户订单号 (Wallyt 要求唯一)
-    const outTradeNo = `MP${order.id}_${Date.now()}`;
+    // 4. 使用订单号作为商户订单号
+    const outTradeNo = order.order_no;
 
     // 5. 调用 Wallyt API
     const client = getWallytClient();
@@ -242,8 +243,8 @@ export class WallytPaymentService {
     });
 
     // 1. 验证签名
-    const secretKey = process.env.WALLYT_SECRET_KEY || '';
-    const signType = (process.env.WALLYT_SIGN_TYPE as 'MD5' | 'SHA256') || 'MD5';
+    const secretKey = env.WALLYT_SECRET_KEY;
+    const signType = env.WALLYT_SIGN_TYPE as 'MD5' | 'SHA256';
 
     if (!verifySign(notification, secretKey, signType)) {
       logger.warn('wallyt.notify.invalid_signature', { out_trade_no: outTradeNo });
@@ -268,31 +269,17 @@ export class WallytPaymentService {
       return { success: false, message: 'Payment failed' };
     }
 
-    // 3. 解析附加数据获取订单 ID
-    let orderId: number;
-    let userId: number;
+    // 3. 通过 order_no (out_trade_no) 查找订单
+    const order = await this.orderRepo.findOne({
+      where: { order_no: outTradeNo }
+    });
 
-    try {
-      const attach = notification.attach ? JSON.parse(notification.attach) : {};
-      orderId = attach.orderId;
-      userId = attach.userId;
-
-      if (!orderId) {
-        // 从 out_trade_no 解析 (格式: MP{orderId}_{timestamp})
-        const match = outTradeNo?.match(/^MP(\d+)_/);
-        if (match) {
-          orderId = parseInt(match[1], 10);
-        }
-      }
-    } catch {
-      logger.error('wallyt.notify.parse_attach_failed', { out_trade_no: outTradeNo });
-      return { success: false, message: 'Failed to parse attach data' };
+    if (!order) {
+      logger.error('wallyt.notify.order_not_found', { out_trade_no: outTradeNo });
+      return { success: false, message: 'Order not found' };
     }
 
-    if (!orderId) {
-      logger.error('wallyt.notify.missing_order_id', { out_trade_no: outTradeNo });
-      return { success: false, message: 'Missing order ID' };
-    }
+    const orderId = order.id;
 
     // 4. 在事务中处理支付成功
     try {
@@ -571,13 +558,8 @@ export class WallytPaymentService {
       throw { code: 'PAYMENT_NOT_FOUND', message: '未找到成功的支付记录' };
     }
 
-    // 4. 获取原支付的商户订单号
-    const outTradeNo = payment.callback_raw?.out_trade_no ||
-      payment.callback_raw?.notification?.out_trade_no;
-
-    if (!outTradeNo) {
-      throw { code: 'OUT_TRADE_NO_NOT_FOUND', message: '未找到原支付商户订单号' };
-    }
+    // 4. 使用订单号作为商户订单号
+    const outTradeNo = order.order_no;
 
     // 5. 计算退款金额
     const totalPaid = Number(payment.amount);
@@ -597,7 +579,7 @@ export class WallytPaymentService {
     }
 
     // 6. 生成商户退款单号
-    const outRefundNo = `RF${orderId}_${Date.now()}`;
+    const outRefundNo = `RF_${order.order_no}_${Date.now()}`;
 
     // 7. 调用 Wallyt 退款 API
     const client = getWallytClient();

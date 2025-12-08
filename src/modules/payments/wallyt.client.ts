@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
 import {
   generateSign,
@@ -416,12 +417,12 @@ let wallytClientInstance: WallytClient | null = null;
 export function getWallytClient(): WallytClient {
   if (!wallytClientInstance) {
     const config: WallytConfig = {
-      apiUrl: process.env.WALLYT_API_URL || 'https://payuat.wepayez.com/pay/gateway',
-      mchId: process.env.WALLYT_MCH_ID || '',
-      secretKey: process.env.WALLYT_SECRET_KEY || '',
-      signType: (process.env.WALLYT_SIGN_TYPE as 'MD5' | 'SHA256') || 'MD5',
-      subAppId: process.env.WECHAT_MINI_APPID || '',
-      notifyUrl: process.env.WALLYT_NOTIFY_URL || ''
+      apiUrl: env.WALLYT_API_URL,
+      mchId: env.WALLYT_MCH_ID,
+      secretKey: env.WALLYT_SECRET_KEY,
+      signType: env.WALLYT_SIGN_TYPE as 'MD5' | 'SHA256',
+      subAppId: env.WECHAT_APPID,
+      notifyUrl: env.WALLYT_NOTIFY_URL
     };
 
     // 验证必要配置
@@ -432,7 +433,7 @@ export function getWallytClient(): WallytClient {
       logger.warn('wallyt.config.missing', { field: 'WALLYT_SECRET_KEY' });
     }
     if (!config.subAppId) {
-      logger.warn('wallyt.config.missing', { field: 'WECHAT_MINI_APPID' });
+      logger.warn('wallyt.config.missing', { field: 'WECHAT_APPID' });
     }
     if (!config.notifyUrl) {
       logger.warn('wallyt.config.missing', { field: 'WALLYT_NOTIFY_URL' });
@@ -456,9 +457,9 @@ export function resetWallytClient(): void {
  */
 export function isWallytConfigured(): boolean {
   return !!(
-    process.env.WALLYT_MCH_ID &&
-    process.env.WALLYT_SECRET_KEY &&
-    process.env.WECHAT_MINI_APPID &&
-    process.env.WALLYT_NOTIFY_URL
+    env.WALLYT_MCH_ID &&
+    env.WALLYT_SECRET_KEY &&
+    env.WECHAT_APPID &&
+    env.WALLYT_NOTIFY_URL
   );
 }
