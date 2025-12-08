@@ -971,6 +971,7 @@ export class OTAService {
           batch_id: request.batch_id,
           partner_id: partnerId,
           status: 'PRE_GENERATED' as const,
+          channel: 'ota',  // OTA渠道票券
           entitlements,
           qr_code: qrResult.qr_image, // Store QR image for printing/PDF generation
           raw: rawMetadata,
@@ -1076,6 +1077,7 @@ export class OTAService {
         batch_id: request.batch_id,
         partner_id: partnerId,
         status: 'PRE_GENERATED',
+        channel: 'ota',  // OTA渠道票券
         entitlements: product.functions.map(func => ({
           function_code: func.function_code,
           remaining_uses: 1
