@@ -1,8 +1,6 @@
 import { Repository, DataSource, QueryRunner, In } from 'typeorm';
-import { ProductEntity } from './product.entity';
-import { ProductInventoryEntity } from './product-inventory.entity';
+import { ProductEntity, ProductInventoryEntity, TicketEntity, TicketStatus } from '../../../models';
 import { ChannelReservationEntity, ReservationStatus } from './channel-reservation.entity';
-import { TicketEntity, TicketStatus } from '../../ticket-reservation/domain/ticket.entity';
 import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
 import { OTATicketBatchWithStatsDTO } from './ota-ticket-batch.dto';

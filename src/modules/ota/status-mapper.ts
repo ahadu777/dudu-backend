@@ -6,7 +6,7 @@
  * 用于确保 OTA API 响应格式不变，保持向后兼容
  */
 
-import { TicketStatus } from '../ticket-reservation/domain/ticket.entity';
+import { TicketStatus } from '../../models';
 
 /**
  * OTA API 对外暴露的状态（保持不变）

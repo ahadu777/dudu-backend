@@ -13,20 +13,16 @@ import {
 } from './types';
 import { logger } from '../../utils/logger';
 import { AppDataSource } from '../../config/database';
-import { TicketEntity } from '../ticket-reservation/domain/ticket.entity';
-import { PreGeneratedTicketEntity } from '../ota/domain/pre-generated-ticket.entity';
-import { TicketReservationEntity } from '../ticket-reservation/domain/ticket-reservation.entity';
-import { ReservationSlotEntity } from '../ticket-reservation/domain/reservation-slot.entity';
+import { TicketEntity, TicketReservationEntity, ReservationSlotEntity } from '../../models';
 import { Repository, Not } from 'typeorm';
 
 /**
  * CustomerReservationServiceDirectus
- * Dual-source lookup: tickets (mini-program) + pre_generated_tickets (OTA)
+ * Unified ticket lookup from tickets table (supports both mini-program and OTA)
  * Uses TypeORM for all database queries
  */
 export class CustomerReservationServiceDirectus {
   private ticketRepo!: Repository<TicketEntity>;
-  private otaTicketRepo!: Repository<PreGeneratedTicketEntity>;
   private reservationRepo!: Repository<TicketReservationEntity>;
   private slotRepo!: Repository<ReservationSlotEntity>;
   private initialized = false;
@@ -39,14 +35,13 @@ export class CustomerReservationServiceDirectus {
     }
 
     this.ticketRepo = AppDataSource.getRepository(TicketEntity);
-    this.otaTicketRepo = AppDataSource.getRepository(PreGeneratedTicketEntity);
     this.reservationRepo = AppDataSource.getRepository(TicketReservationEntity);
     this.slotRepo = AppDataSource.getRepository(ReservationSlotEntity);
     this.initialized = true;
   }
   /**
    * Validate ticket eligibility for reservation
-   * Dual-source lookup: tickets (mini-program) → pre_generated_tickets (OTA)
+   * Unified lookup from tickets table (supports both mini-program and OTA)
    */
   async validateTicket(request: TicketValidationRequest): Promise<TicketValidationResponse> {
     await this.ensureInitialized();
@@ -54,31 +49,26 @@ export class CustomerReservationServiceDirectus {
 
     logger.info('reservation.validate_ticket.start', { ticket_code, orq });
 
-    // 1. First try mini-program tickets table
-    const directTicket = await this.ticketRepo.findOne({
+    // Unified lookup from tickets table
+    const ticket = await this.ticketRepo.findOne({
       where: { ticket_code }
     });
 
-    if (directTicket) {
-      return this.validateDirectTicket(directTicket);
+    if (!ticket) {
+      logger.warn('reservation.validate_ticket.not_found', { ticket_code });
+      return {
+        valid: false,
+        error: 'Ticket not found'
+      };
     }
 
-    // 2. Then try OTA tickets table
-    logger.info('reservation.validate_ticket.try_ota', { ticket_code });
-    const otaTicket = await this.otaTicketRepo.findOne({
-      where: { ticket_code }
-    });
-
-    if (otaTicket) {
-      return this.validateOtaTicket(otaTicket);
+    // Determine source based on channel field
+    const isOTA = ticket.channel === 'ota';
+    if (isOTA) {
+      return this.validateOtaTicket(ticket);
+    } else {
+      return this.validateDirectTicket(ticket);
     }
-
-    // 3. Not found in either source
-    logger.warn('reservation.validate_ticket.not_found', { ticket_code });
-    return {
-      valid: false,
-      error: 'Ticket not found'
-    };
   }
 
   /**
@@ -140,20 +130,20 @@ export class CustomerReservationServiceDirectus {
   }
 
   /**
-   * Validate OTA ticket from pre_generated_tickets table
+   * Validate OTA ticket from unified tickets table
    */
   private async validateOtaTicket(
-    otaTicket: PreGeneratedTicketEntity
+    ticket: TicketEntity
   ): Promise<TicketValidationResponse> {
-    const ticket_code = otaTicket.ticket_code;
+    const ticket_code = ticket.ticket_code;
 
     // Check OTA ticket status
-    switch (otaTicket.status) {
+    switch (ticket.status) {
       case 'PRE_GENERATED':
         logger.warn('reservation.validate_ticket.ota_not_activated', { ticket_code });
         return { valid: false, error: 'OTA ticket is not activated yet' };
 
-      case 'USED':
+      case 'VERIFIED':
         logger.warn('reservation.validate_ticket.ota_used', { ticket_code });
         return { valid: false, error: 'Ticket has already been used' };
 
@@ -165,7 +155,8 @@ export class CustomerReservationServiceDirectus {
         logger.warn('reservation.validate_ticket.ota_cancelled', { ticket_code });
         return { valid: false, error: 'Ticket has been cancelled' };
 
-      case 'ACTIVATED':  // 统一状态：ACTIVE → ACTIVATED
+      case 'ACTIVATED':
+      case 'RESERVED':
         // Check if OTA ticket already has a reservation
         const existingReservation = await this.reservationRepo.findOne({
           where: {
@@ -185,21 +176,21 @@ export class CustomerReservationServiceDirectus {
         return {
           valid: true,
           ticket: {
-            ticket_code: otaTicket.ticket_code,
-            product_id: otaTicket.product_id,
+            ticket_code: ticket.ticket_code,
+            product_id: ticket.product_id,
             product_name: 'OTA Product', // TODO: join with products table
-            status: 'ACTIVATED',  // 统一状态
-            expires_at: null,
-            customer_name: otaTicket.customer_name,
-            customer_email: otaTicket.customer_email,
-            customer_phone: otaTicket.customer_phone,
+            status: 'ACTIVATED',
+            expires_at: ticket.expires_at ? ticket.expires_at.toISOString() : null,
+            customer_name: ticket.customer_name,
+            customer_email: ticket.customer_email,
+            customer_phone: ticket.customer_phone,
             // OTA tickets: orq will be determined from slot during reservation
             source: 'ota' as ReservationSource
           }
         };
 
       default:
-        logger.warn('reservation.validate_ticket.ota_invalid_status', { ticket_code, status: otaTicket.status });
+        logger.warn('reservation.validate_ticket.ota_invalid_status', { ticket_code, status: ticket.status });
         return { valid: false, error: 'Invalid ticket status' };
     }
   }

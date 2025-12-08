@@ -1,6 +1,4 @@
-import { TicketEntity } from '../domain/ticket.entity';
-import { ReservationSlotEntity } from '../domain/reservation-slot.entity';
-import { TicketReservationEntity } from '../domain/ticket-reservation.entity';
+import { TicketEntity, ReservationSlotEntity, TicketReservationEntity } from '../../../models';
 
 // Mock Tickets (for testing reservation flow)
 export const mockTickets: TicketEntity[] = [

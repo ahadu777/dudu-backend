@@ -6,9 +6,7 @@
 import { Repository, EntityManager } from 'typeorm';
 import { AppDataSource } from '../../config/database';
 import { OrderEntity, OrderStatus, OrderType, PricingContext } from '../../models/order.entity';
-import { ProductEntity } from '../ota/domain/product.entity';
-import { ProductInventoryEntity } from '../ota/domain/product-inventory.entity';
-import { TicketEntity } from '../ticket-reservation/domain/ticket.entity';
+import { ProductEntity, ProductInventoryEntity, TicketEntity } from '../../models';
 import { logger } from '../../utils/logger';
 import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
 import { generateSecureQR, EncryptedQRResult } from '../../utils/qr-crypto';

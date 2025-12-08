@@ -5,8 +5,7 @@
 
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../config/database';
-import { ProductEntity } from '../ota/domain/product.entity';
-import { ProductInventoryEntity } from '../ota/domain/product-inventory.entity';
+import { ProductEntity, ProductInventoryEntity } from '../../models';
 import { mockDataStore } from '../../core/mock/data';
 import { dataSourceConfig } from '../../config/data-source';
 import { logger } from '../../utils/logger';

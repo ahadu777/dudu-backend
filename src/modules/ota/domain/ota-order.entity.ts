@@ -1,5 +1,5 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from 'typeorm';
-import { PreGeneratedTicketEntity } from './pre-generated-ticket.entity';
+import { TicketEntity } from '../../../models';
 
 export type OrderStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'refunded';
 
@@ -52,8 +52,8 @@ export class OTAOrderEntity {
   special_requests?: string;
 
   // Relationship to tickets (for future queries)
-  @OneToMany(() => PreGeneratedTicketEntity, ticket => ticket.order_id)
-  tickets?: PreGeneratedTicketEntity[];
+  @OneToMany(() => TicketEntity, ticket => ticket.ota_order_id)
+  tickets?: TicketEntity[];
 
   @CreateDateColumn()
   created_at!: Date;

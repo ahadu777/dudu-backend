@@ -6,7 +6,7 @@ import { getAuthContext } from '../../middlewares/unified-auth';
 import { AppDataSource } from '../../config/database';
 import { dataSourceConfig } from '../../config/data-source';
 import { OTARepository } from '../ota/domain/ota.repository';
-import { ProductEntity } from '../ota/domain/product.entity';
+import { ProductEntity } from '../../models';
 
 /**
  * Ticket type detection result

@@ -7,7 +7,7 @@ import { mockDataStore } from '../../core/mock/data';
 import { AppDataSource } from '../../config/database';
 import { VenueRepository } from '../venue/domain/venue.repository';
 import { dataSourceConfig } from '../../config/data-source';
-import { ProductEntity } from '../ota/domain/product.entity';
+import { ProductEntity } from '../../models';
 
 const router = Router();
 

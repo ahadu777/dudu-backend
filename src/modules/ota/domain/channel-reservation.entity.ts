@@ -9,7 +9,7 @@ import {
   Index,
   BeforeInsert
 } from 'typeorm';
-import { ProductInventoryEntity } from './product-inventory.entity';
+import { ProductInventoryEntity } from '../../../models/product-inventory.entity';
 
 export type ReservationStatus = 'active' | 'expired' | 'activated' | 'cancelled';
 

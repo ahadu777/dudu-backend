@@ -10,7 +10,7 @@ import { generateSecureQR } from '../../utils/qr-crypto';
 import { TicketRawMetadata } from '../../types/domain';
 import { directusService } from '../../utils/directus';
 import { ticketCodeGenerator } from '../../utils/ticket-code-generator';
-import { ProductEntity } from './domain/product.entity';
+import { ProductEntity } from '../../models';
 import { toOTAAPIStatus, fromOTAAPIStatus } from './status-mapper';
 
 export interface OTAInventoryResponse {

@@ -10,7 +10,7 @@ import {
   Index
 } from 'typeorm';
 import { ProductEntity } from './product.entity';
-import { ChannelReservationEntity } from './channel-reservation.entity';
+import { ChannelReservationEntity } from '../modules/ota/domain/channel-reservation.entity';
 
 export interface ChannelAllocation {
   allocated: number;

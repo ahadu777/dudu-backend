@@ -1,8 +1,5 @@
 import { DataSource, Repository } from 'typeorm';
-import { TicketEntity } from './domain/ticket.entity';
-import { ReservationSlotEntity } from './domain/reservation-slot.entity';
-import { TicketReservationEntity } from './domain/ticket-reservation.entity';
-import { PreGeneratedTicketEntity } from '../ota/domain/pre-generated-ticket.entity';
+import { TicketEntity, ReservationSlotEntity, TicketReservationEntity } from '../../models';
 import {
   TicketValidationRequest,
   TicketValidationResponse,
@@ -35,7 +32,6 @@ export class TicketReservationService {
   private ticketRepo?: Repository<TicketEntity>;
   private slotRepo?: Repository<ReservationSlotEntity>;
   private reservationRepo?: Repository<TicketReservationEntity>;
-  private otaTicketRepo?: Repository<PreGeneratedTicketEntity>;
   private useMock: boolean = true;
 
   constructor(private dataSource?: DataSource) {
@@ -43,7 +39,6 @@ export class TicketReservationService {
       this.ticketRepo = dataSource.getRepository(TicketEntity);
       this.slotRepo = dataSource.getRepository(ReservationSlotEntity);
       this.reservationRepo = dataSource.getRepository(TicketReservationEntity);
-      this.otaTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
       this.useMock = false;
     }
   }

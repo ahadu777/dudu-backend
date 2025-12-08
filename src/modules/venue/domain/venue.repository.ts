@@ -2,11 +2,8 @@ import { DataSource, Repository } from 'typeorm';
 import { Venue } from './venue.entity';
 import { VenueSession } from './venue-session.entity';
 import { RedemptionEvent } from './redemption-event.entity';
-import { TicketEntity, TicketStatus } from '../../ticket-reservation/domain/ticket.entity';
+import { TicketEntity, TicketStatus, TicketReservationEntity, ReservationSlotEntity, ProductEntity, ReservationSource } from '../../../models';
 import { OTAOrderEntity } from '../../ota/domain/ota-order.entity';
-import { TicketReservationEntity } from '../../ticket-reservation/domain/ticket-reservation.entity';
-import { ReservationSlotEntity } from '../../ticket-reservation/domain/reservation-slot.entity';
-import { ProductEntity } from '../../ota/domain/product.entity';
 
 export class VenueRepository {
   private venueRepo: Repository<Venue>;
@@ -43,7 +40,7 @@ export class VenueRepository {
     // 根据 channel 判断来源
     const isOTA = ticket.channel === 'ota';
     const source = isOTA ? 'OTA' : 'MINIPROGRAM';
-    const reservationSource = isOTA ? 'ota' : 'direct';
+    const reservationSource: ReservationSource = isOTA ? 'ota' : 'direct';
 
     // Cascading lookup: reservation (优先) → ticket (兜底)
     let customer_name = ticket.customer_name;
