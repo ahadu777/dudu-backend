@@ -596,7 +596,7 @@ export class OTARepository {
 
       // Create the order
       const order = queryRunner.manager.create(OrderEntity, {
-        order_no: (orderData as any).order_id || `OTA-${Date.now()}`,
+        order_no: (orderData as any).order_no || (orderData as any).order_id || `OTA-${Date.now()}`,
         channel: OrderChannel.OTA,
         partner_id: partnerId,
         contact_name: customerData.customer_name,
@@ -605,7 +605,7 @@ export class OTARepository {
         payment_reference: customerData.payment_reference,
         product_id: ticket.product_id,
         quantity: 1,
-        total: (orderData as any).total_amount || 0,
+        total: (orderData as any).total || (orderData as any).total_amount || 0,
         status: OrderStatus.CONFIRMED,
         confirmation_code: (orderData as any).confirmation_code
       });
