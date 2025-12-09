@@ -11,14 +11,21 @@ import { TicketEntity } from '../../../models/ticket.entity';
 export class ResellerService extends BaseOTAService {
 
   /**
-   * 获取分销商列表
+   * 获取分销商列表（支持分页）
    */
-  async listResellers(partnerId: string): Promise<any> {
+  async listResellers(partnerId: string, pagination?: { page?: number; limit?: number }): Promise<any> {
     if (await this.isDatabaseAvailable()) {
       const resellerRepo = this.getRepository(OTAResellerEntity);
-      const resellers = await resellerRepo.find({
+
+      const page = pagination?.page || 1;
+      const limit = pagination?.limit || 20;
+      const offset = (page - 1) * limit;
+
+      const [resellers, total] = await resellerRepo.findAndCount({
         where: { partner_id: partnerId },
-        order: { created_at: 'DESC' }
+        order: { created_at: 'DESC' },
+        skip: offset,
+        take: limit
       });
 
       return {
@@ -34,7 +41,7 @@ export class ResellerService extends BaseOTAService {
           region: r.region,
           created_at: r.created_at.toISOString()
         })),
-        total: resellers.length
+        total
       };
     }
 
@@ -179,10 +186,22 @@ export class ResellerService extends BaseOTAService {
       const batchRepo = this.getRepository(OTATicketBatchEntity);
       const ticketRepo = this.getRepository(TicketEntity);
 
-      // 1. 获取所有分销商
+      // 分页参数
+      const page = filters.page || 1;
+      const limit = filters.limit || 20;
+      const offset = (page - 1) * limit;
+
+      // 1. 获取分销商总数（用于分页）
+      const totalCount = await resellerRepo.count({
+        where: { partner_id: partnerId }
+      });
+
+      // 2. 获取当前页的分销商
       const resellers = await resellerRepo.find({
         where: { partner_id: partnerId },
-        order: { created_at: 'DESC' }
+        order: { created_at: 'DESC' },
+        skip: offset,
+        take: limit
       });
 
       // 2. 获取批次统计（按分销商分组）
@@ -290,11 +309,11 @@ export class ResellerService extends BaseOTAService {
 
       return {
         resellers: resellerSummaries,
-        total: resellers.length,
-        // 聚合统计
+        total: totalCount,  // 使用总数而非当前页数量
+        // 聚合统计（基于全部数据）
         summary: {
-          total_resellers: resellers.length,
-          active_resellers: resellers.filter(r => r.status === 'active').length,
+          total_resellers: totalCount,
+          active_resellers: batchStats.length,  // 有批次的分销商数量
           total_batches: batchStats.reduce((sum, s) => sum + (parseInt(s.total_batches) || 0), 0),
           total_tickets_generated: batchStats.reduce((sum, s) => sum + (parseInt(s.total_tickets_generated) || 0), 0)
         }

@@ -30,11 +30,19 @@ export interface PaginationParams {
   offset?: number;
 }
 
-// Extend Express Request to include pagination
+// Extend Express Request and Response to include pagination
 declare global {
   namespace Express {
     interface Request {
       pagination: PaginationParams;
+    }
+    interface Response {
+      /**
+       * Send a paginated JSON response
+       * @param items - Array of items for current page
+       * @param total - Total count of all items
+       */
+      paginated: <T>(items: T[], total: number) => void;
     }
   }
 }
@@ -133,6 +141,11 @@ export function paginationMiddleware(options: PaginationOptions = {}) {
 
         req.pagination.offset = parsedOffset;
       }
+
+      // 添加 res.paginated 方法
+      res.paginated = <T>(items: T[], total: number) => {
+        res.json(formatPaginatedResponse(items, total, req.pagination));
+      };
 
       logger.debug('pagination.parsed', {
         style,

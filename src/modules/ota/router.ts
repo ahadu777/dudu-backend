@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { otaAuthMiddleware, adminAuthMiddleware } from '../../middlewares/otaAuth';
+import { paginationMiddleware } from '../../middlewares/pagination';
 import { otaService } from './service';
 import { logger } from '../../utils/logger';
 
@@ -86,15 +87,15 @@ router.get('/inventory', otaAuthMiddleware('inventory:read'), async (req: Authen
 });
 
 // GET /api/ota/orders - List confirmed orders for OTA
-router.get('/orders', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/orders', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const partnerId = getPartnerIdWithFallback(req);
-    const orders = await otaService.getOrders(partnerId);
-
-    res.json({
-      orders,
-      total_count: orders.length
+    const result = await otaService.getOrders(partnerId, {
+      page: req.pagination.page,
+      limit: req.pagination.limit
     });
+
+    res.paginated(result.orders, result.total);
 
   } catch (error: any) {
     logger.error('OTA orders list failed', {
@@ -137,12 +138,15 @@ router.get('/orders/:id/tickets', async (req: AuthenticatedRequest, res: Respons
 });
 
 // GET /api/ota/tickets - List tickets with optional filters
-router.get('/tickets', otaAuthMiddleware('inventory:read'), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/tickets', otaAuthMiddleware('inventory:read'), paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { status, batch_id, created_after, created_before, page, limit } = req.query;
+    const { status, batch_id, created_after, created_before } = req.query;
 
-    // Parse and validate query parameters
-    const filters: any = {};
+    // 使用中间件解析的分页参数
+    const filters: any = {
+      page: req.pagination.page,
+      page_size: req.pagination.limit
+    };
 
     if (status) {
       filters.status = status as string;
@@ -160,32 +164,10 @@ router.get('/tickets', otaAuthMiddleware('inventory:read'), async (req: Authenti
       filters.created_before = created_before as string;
     }
 
-    if (page) {
-      const pageNum = parseInt(page as string, 10);
-      if (isNaN(pageNum) || pageNum < 1) {
-        return res.status(422).json({
-          error: 'INVALID_PARAMETER',
-          message: 'page must be a positive integer'
-        });
-      }
-      filters.page = pageNum;
-    }
-
-    if (limit) {
-      const limitNum = parseInt(limit as string, 10);
-      if (isNaN(limitNum) || limitNum < 1) {
-        return res.status(422).json({
-          error: 'INVALID_PARAMETER',
-          message: 'limit must be a positive integer'
-        });
-      }
-      filters.limit = limitNum;
-    }
-
     const partnerId = getPartnerIdWithFallback(req);
     const result = await otaService.getTickets(partnerId, filters);
 
-    res.json(result);
+    res.paginated(result.tickets, result.pagination.total_count);
 
   } catch (error: any) {
     logger.error('OTA tickets list failed', {
@@ -541,37 +523,17 @@ router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedR
 // ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
 
 // GET /api/ota/resellers/summary - Aggregate reseller info from batches (JSON-based with pagination)
-router.get('/resellers/summary', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/resellers/summary', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { status = 'active', date_range, page, limit, batches_per_reseller } = req.query;
+    const { status = 'active', date_range, batches_per_reseller } = req.query;
 
-    // 验证分页参数
+    // 使用中间件解析的分页参数
     const filters: any = {
       status: status as string,
-      date_range: date_range as string
+      date_range: date_range as string,
+      page: req.pagination.page,
+      limit: req.pagination.limit
     };
-
-    if (page) {
-      const pageNum = parseInt(page as string, 10);
-      if (isNaN(pageNum) || pageNum < 1) {
-        return res.status(422).json({
-          error: 'INVALID_PARAMETER',
-          message: 'page must be a positive integer'
-        });
-      }
-      filters.page = pageNum;
-    }
-
-    if (limit) {
-      const limitNum = parseInt(limit as string, 10);
-      if (isNaN(limitNum) || limitNum < 1) {
-        return res.status(422).json({
-          error: 'INVALID_PARAMETER',
-          message: 'limit must be a positive integer'
-        });
-      }
-      filters.limit = limitNum;
-    }
 
     if (batches_per_reseller) {
       const batchesNum = parseInt(batches_per_reseller as string, 10);
@@ -585,9 +547,17 @@ router.get('/resellers/summary', async (req: AuthenticatedRequest, res: Response
     }
 
     const partnerId = getPartnerIdWithFallback(req);
-    const summary = await otaService.getResellersSummary(partnerId, filters);
+    const result = await otaService.getResellersSummary(partnerId, filters);
 
-    res.json(summary);
+    // 分页响应 + 额外的 summary 字段
+    res.json({
+      items: result.resellers,
+      total: result.total,
+      page: req.pagination.page,
+      page_size: req.pagination.limit,
+      has_more: req.pagination.page! * req.pagination.limit < result.total,
+      summary: result.summary
+    });
   } catch (error: any) {
     logger.error('OTA reseller summary failed', {
       partner: req.ota_partner?.name,
@@ -603,12 +573,15 @@ router.get('/resellers/summary', async (req: AuthenticatedRequest, res: Response
 });
 
 // GET /api/ota/resellers - List all resellers for current OTA partner
-router.get('/resellers', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/resellers', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const partnerId = getPartnerIdWithFallback(req);
-    const result = await otaService.listResellers(partnerId);
+    const result = await otaService.listResellers(partnerId, {
+      page: req.pagination.page,
+      limit: req.pagination.limit
+    });
 
-    res.json(result);
+    res.paginated(result.resellers, result.total);
   } catch (error: any) {
     logger.error('OTA list resellers failed', {
       partner: req.ota_partner?.name,

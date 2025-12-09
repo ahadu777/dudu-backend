@@ -10,13 +10,13 @@ import { toOTAAPIStatus } from '../status-mapper';
 export class OrderService extends BaseOTAService {
 
   /**
-   * 获取订单列表
+   * 获取订单列表（支持分页）
    */
-  async getOrders(partnerId?: string): Promise<any[]> {
+  async getOrders(partnerId?: string, pagination?: { page?: number; limit?: number }): Promise<{ orders: any[]; total: number }> {
     if (await this.isDatabaseAvailable()) {
-      return this.getOrdersFromDatabase(partnerId);
+      return this.getOrdersFromDatabase(partnerId, pagination);
     } else {
-      return this.getOrdersFromMock(partnerId);
+      return this.getOrdersFromMock(partnerId, pagination);
     }
   }
 
@@ -33,20 +33,41 @@ export class OrderService extends BaseOTAService {
 
   // ============== Database 实现 ==============
 
-  private async getOrdersFromDatabase(partnerId?: string): Promise<any[]> {
-    const repo = await this.getOTARepository();
-    const orders = await repo.findOTAOrdersByChannel(partnerId);
+  private async getOrdersFromDatabase(partnerId?: string, pagination?: { page?: number; limit?: number }): Promise<{ orders: any[]; total: number }> {
+    const { OrderEntity } = await import('../../../models');
+    const orderRepo = this.getRepository(OrderEntity);
 
-    return orders.map((order: any) => ({
-      order_id: order.order_no,
-      product_id: order.product_id,
-      customer_name: order.contact_name,
-      customer_email: order.contact_email,
-      total_amount: order.total,
-      status: order.status,
-      created_at: order.created_at.toISOString(),
-      confirmation_code: order.confirmation_code
-    }));
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 20;
+    const offset = (page - 1) * limit;
+
+    // 构建查询
+    const whereClause: any = { channel: 'ota' };
+    if (partnerId) {
+      whereClause.partner_id = partnerId;
+    }
+
+    // 获取总数和分页数据
+    const [orders, total] = await orderRepo.findAndCount({
+      where: whereClause,
+      order: { created_at: 'DESC' },
+      skip: offset,
+      take: limit
+    });
+
+    return {
+      orders: orders.map((order: any) => ({
+        order_id: order.order_no,
+        product_id: order.product_id,
+        customer_name: order.contact_name,
+        customer_email: order.contact_email,
+        total_amount: order.total,
+        status: order.status,
+        created_at: order.created_at.toISOString(),
+        confirmation_code: order.confirmation_code
+      })),
+      total
+    };
   }
 
   private async getOrderTicketsFromDatabase(orderId: string): Promise<any[]> {
@@ -71,20 +92,29 @@ export class OrderService extends BaseOTAService {
 
   // ============== Mock 实现 ==============
 
-  private async getOrdersFromMock(partnerId?: string): Promise<any[]> {
+  private async getOrdersFromMock(partnerId?: string, pagination?: { page?: number; limit?: number }): Promise<{ orders: any[]; total: number }> {
     const channelId = partnerId || 'ota';
-    const orders = mockDataStore.getOrdersByChannel(channelId);
+    const allOrders = mockDataStore.getOrdersByChannel(channelId);
 
-    return orders.map((order: any) => ({
-      order_id: order.order_id,
-      product_id: order.product_id,
-      customer_name: order.customer_name,
-      customer_email: order.customer_email,
-      total_amount: order.total_amount,
-      status: order.status,
-      created_at: order.created_at.toISOString(),
-      confirmation_code: order.confirmation_code
-    }));
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 20;
+    const offset = (page - 1) * limit;
+
+    const paginatedOrders = allOrders.slice(offset, offset + limit);
+
+    return {
+      orders: paginatedOrders.map((order: any) => ({
+        order_id: order.order_id,
+        product_id: order.product_id,
+        customer_name: order.customer_name,
+        customer_email: order.customer_email,
+        total_amount: order.total_amount,
+        status: order.status,
+        created_at: order.created_at.toISOString(),
+        confirmation_code: order.confirmation_code
+      })),
+      total: allOrders.length
+    };
   }
 
   private async getOrderTicketsFromMock(orderId: string): Promise<any[]> {

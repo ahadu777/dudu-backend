@@ -83,8 +83,8 @@ export class OTAService {
 
   // ============== 订单 ==============
 
-  async getOrders(partnerId?: string): Promise<any[]> {
-    return this.orderService.getOrders(partnerId);
+  async getOrders(partnerId?: string, pagination?: { page?: number; limit?: number }): Promise<{ orders: any[]; total: number }> {
+    return this.orderService.getOrders(partnerId, pagination);
   }
 
   async getOrderTickets(orderId: string): Promise<any[]> {
@@ -93,8 +93,8 @@ export class OTAService {
 
   // ============== 分销商 ==============
 
-  async listResellers(partnerId: string) {
-    return this.resellerService.listResellers(partnerId);
+  async listResellers(partnerId: string, pagination?: { page?: number; limit?: number }) {
+    return this.resellerService.listResellers(partnerId, pagination);
   }
 
   async getResellerById(resellerId: number, partnerId: string) {
