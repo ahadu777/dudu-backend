@@ -4,7 +4,7 @@ slug: ticket-lifecycle-daemon
 team: "B - Fulfillment"
 oas_paths: []
 migrations: ["db/migrations/0013_ticket_status_audit.sql"]
-status: "Ready"
+status: "deprecated"
 readiness: "mvp"
 branch: ""
 pr: ""
@@ -14,8 +14,19 @@ related_stories: ["US-010", "US-010B", "US-016"]
 ---
 
 ## Status & Telemetry
-- Status: Ready
+- Status: **Deprecated** (2025-12-09)
 - Readiness: mvp（首次提供票券状态机 & 定时任务）
+
+### 弃用原因
+核心功能已通过运行时检查实现，无需独立 daemon：
+- **票券过期检查**：核销时实时校验 `expires_at`（见 `customerReservation/service.directus.ts:106`）
+- **订单超时清理**：懒惰式清理已实现（见 `miniprogram/order.service.ts:354`）
+- **审计日志**：通过 logger 记录，当前无合规要求需要专用审计表
+
+如未来出现以下需求可重新激活：
+- 合规审计要求独立审计表
+- 报表需要精确统计过期票券数
+- 系统规模扩大需要异步事件处理
 - Spec Paths: 内部 cron/worker
 - Migrations: db/migrations/0013_ticket_status_audit.sql
 - Newman: 待实现 • reports/newman/ticket-lifecycle-daemon.json

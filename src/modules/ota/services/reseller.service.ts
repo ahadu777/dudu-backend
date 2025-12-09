@@ -178,83 +178,97 @@ export class ResellerService extends BaseOTAService {
 
   /**
    * 获取分销商汇总
+   * 从 ota_ticket_batches 表聚合出实际有批次数据的经销商
    * 返回完整的 statistics, revenue_metrics, batches 数据
    */
   async getResellersSummary(partnerId: string, filters: any): Promise<any> {
     if (await this.isDatabaseAvailable()) {
-      const resellerRepo = this.getRepository(OTAResellerEntity);
       const batchRepo = this.getRepository(OTATicketBatchEntity);
       const ticketRepo = this.getRepository(TicketEntity);
+      const resellerRepo = this.getRepository(OTAResellerEntity);
 
       // 分页参数
       const page = filters.page || 1;
       const limit = filters.limit || 20;
       const offset = (page - 1) * limit;
 
-      // 1. 获取分销商总数（用于分页）
-      const totalCount = await resellerRepo.count({
-        where: { partner_id: partnerId }
-      });
-
-      // 2. 获取当前页的分销商
-      const resellers = await resellerRepo.find({
-        where: { partner_id: partnerId },
-        order: { created_at: 'DESC' },
-        skip: offset,
-        take: limit
-      });
-
-      // 2. 获取批次统计（按分销商分组）
-      const batchStats = await batchRepo
+      // 1. 从批次表聚合出所有经销商（基于 reseller_metadata.intended_reseller）
+      const resellerAggregation = await batchRepo
         .createQueryBuilder('batch')
-        .select('batch.reseller_id', 'reseller_id')
+        .select("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller'))", 'reseller_name')
+        .addSelect('batch.reseller_id', 'reseller_id')
+        .addSelect("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.contact_email'))", 'contact_email')
+        .addSelect("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.contact_phone'))", 'contact_phone')
         .addSelect('COUNT(*)', 'total_batches')
         .addSelect('SUM(batch.total_quantity)', 'total_tickets_generated')
+        .addSelect('MIN(batch.created_at)', 'first_batch_at')
         .where('batch.partner_id = :partnerId', { partnerId })
-        .andWhere('batch.reseller_id IS NOT NULL')
-        .groupBy('batch.reseller_id')
+        .andWhere("JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller') IS NOT NULL")
+        .groupBy("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller'))")
+        .addGroupBy('batch.reseller_id')
+        .orderBy('total_batches', 'DESC')
         .getRawMany();
 
-      // 3. 获取票券状态统计（按分销商分组）
+      // 2. 获取总数和分页
+      const totalCount = resellerAggregation.length;
+      const pagedResellers = resellerAggregation.slice(offset, offset + limit);
+
+      // 3. 获取关联的 ota_resellers 详细信息（如果有 reseller_id）
+      const resellerIds = pagedResellers
+        .map(r => r.reseller_id)
+        .filter((id): id is number => id !== null && id !== undefined);
+
+      let resellerDetailsMap = new Map<number, OTAResellerEntity>();
+      if (resellerIds.length > 0) {
+        const resellerDetails = await resellerRepo.find({
+          where: resellerIds.map(id => ({ id }))
+        });
+        resellerDetailsMap = new Map(resellerDetails.map(r => [r.id, r]));
+      }
+
+      // 4. 获取票券状态统计（按 intended_reseller 分组）
       const ticketStats = await ticketRepo
         .createQueryBuilder('ticket')
         .innerJoin(OTATicketBatchEntity, 'batch', 'ticket.batch_id = batch.batch_id')
-        .select('batch.reseller_id', 'reseller_id')
-        .addSelect('COUNT(CASE WHEN ticket.status IN (\'ACTIVATED\', \'RESERVED\', \'VERIFIED\') THEN 1 END)', 'total_tickets_activated')
-        .addSelect('COUNT(CASE WHEN ticket.status = \'VERIFIED\' THEN 1 END)', 'total_tickets_used')
-        .addSelect('SUM(CASE WHEN ticket.status = \'VERIFIED\' THEN COALESCE(ticket.ticket_price, 0) ELSE 0 END)', 'total_revenue')
+        .select("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller'))", 'reseller_name')
+        .addSelect("COUNT(CASE WHEN ticket.status IN ('ACTIVATED', 'RESERVED', 'VERIFIED') THEN 1 END)", 'total_tickets_activated')
+        .addSelect("COUNT(CASE WHEN ticket.status = 'VERIFIED' THEN 1 END)", 'total_tickets_used')
+        .addSelect("SUM(CASE WHEN ticket.status = 'VERIFIED' THEN COALESCE(ticket.ticket_price, 0) ELSE 0 END)", 'total_revenue')
         .where('batch.partner_id = :partnerId', { partnerId })
-        .andWhere('batch.reseller_id IS NOT NULL')
-        .groupBy('batch.reseller_id')
+        .andWhere("JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller') IS NOT NULL")
+        .groupBy("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller'))")
         .getRawMany();
 
-      // 4. 获取每个分销商的批次列表
-      const allBatches = await batchRepo.find({
-        where: { partner_id: partnerId },
-        order: { created_at: 'DESC' }
-      });
+      const ticketStatsMap = new Map(ticketStats.map(s => [s.reseller_name, s]));
 
-      // 5. 构建分销商统计 Map
-      const batchStatsMap = new Map(batchStats.map(s => [s.reseller_id, s]));
-      const ticketStatsMap = new Map(ticketStats.map(s => [s.reseller_id, s]));
-      const batchesByReseller = new Map<number, OTATicketBatchEntity[]>();
+      // 5. 获取每个经销商的批次列表
+      const resellerNames = pagedResellers.map(r => r.reseller_name);
+      const allBatches = await batchRepo
+        .createQueryBuilder('batch')
+        .where('batch.partner_id = :partnerId', { partnerId })
+        .andWhere("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller')) IN (:...resellerNames)", { resellerNames: resellerNames.length > 0 ? resellerNames : [''] })
+        .orderBy('batch.created_at', 'DESC')
+        .getMany();
 
+      const batchesByReseller = new Map<string, OTATicketBatchEntity[]>();
       for (const batch of allBatches) {
-        if (batch.reseller_id) {
-          if (!batchesByReseller.has(batch.reseller_id)) {
-            batchesByReseller.set(batch.reseller_id, []);
+        const name = batch.reseller_metadata?.intended_reseller;
+        if (name) {
+          if (!batchesByReseller.has(name)) {
+            batchesByReseller.set(name, []);
           }
-          batchesByReseller.get(batch.reseller_id)!.push(batch);
+          batchesByReseller.get(name)!.push(batch);
         }
       }
 
       // 6. 组装完整响应
-      const resellerSummaries = resellers.map(reseller => {
-        const batchStat = batchStatsMap.get(reseller.id) || {};
-        const ticketStat = ticketStatsMap.get(reseller.id) || {};
-        const resellerBatches = batchesByReseller.get(reseller.id) || [];
+      const resellerSummaries = pagedResellers.map(reseller => {
+        const resellerName = reseller.reseller_name;
+        const ticketStat = ticketStatsMap.get(resellerName) || {};
+        const resellerBatches = batchesByReseller.get(resellerName) || [];
+        const resellerDetail = reseller.reseller_id ? resellerDetailsMap.get(reseller.reseller_id) : null;
 
-        const totalGenerated = parseInt(batchStat.total_tickets_generated) || 0;
+        const totalGenerated = parseInt(reseller.total_tickets_generated) || 0;
         const totalActivated = parseInt(ticketStat.total_tickets_activated) || 0;
         const totalUsed = parseInt(ticketStat.total_tickets_used) || 0;
         const totalRevenue = parseFloat(ticketStat.total_revenue) || 0;
@@ -264,24 +278,29 @@ export class ResellerService extends BaseOTAService {
         const redemptionRate = totalActivated > 0 ? totalUsed / totalActivated : 0;
         const overallUtilization = totalGenerated > 0 ? totalUsed / totalGenerated : 0;
 
-        return {
-          reseller_id: reseller.id,
-          reseller_code: reseller.reseller_code,
-          reseller_name: reseller.reseller_name,
-          contact_email: reseller.contact_email,
-          contact_phone: reseller.contact_phone,
-          status: reseller.status,
-          tier: reseller.tier,
-          region: reseller.region,
-          commission_rate: reseller.commission_rate,
+        // 佣金率：优先从 ota_resellers 表获取，否则从批次 metadata 获取
+        const commissionRate = resellerDetail?.commission_rate
+          || resellerBatches[0]?.reseller_metadata?.commission_config?.rate
+          || 0;
 
-          // 统计数据 - 始终返回完整对象，避免 undefined
+        return {
+          reseller_id: reseller.reseller_id || null,
+          reseller_code: resellerDetail?.reseller_code || null,
+          reseller_name: resellerName,
+          contact_email: resellerDetail?.contact_email || reseller.contact_email || null,
+          contact_phone: resellerDetail?.contact_phone || reseller.contact_phone || null,
+          status: resellerDetail?.status || 'active',
+          tier: resellerDetail?.tier || null,
+          region: resellerDetail?.region || null,
+          commission_rate: commissionRate,
+
+          // 统计数据
           statistics: {
-            total_batches: parseInt(batchStat.total_batches) || 0,
+            total_batches: parseInt(reseller.total_batches) || 0,
             total_tickets_generated: totalGenerated,
             total_tickets_activated: totalActivated,
             total_tickets_used: totalUsed,
-            activation_rate: Math.round(activationRate * 10000) / 100, // 百分比，保留2位小数
+            activation_rate: Math.round(activationRate * 10000) / 100,
             redemption_rate: Math.round(redemptionRate * 10000) / 100,
             overall_utilization: Math.round(overallUtilization * 10000) / 100
           },
@@ -289,7 +308,7 @@ export class ResellerService extends BaseOTAService {
           // 收入指标
           revenue_metrics: {
             total_revenue: totalRevenue,
-            commission_earned: totalRevenue * (reseller.commission_rate || 0),
+            commission_earned: totalRevenue * commissionRate,
             currency: 'HKD'
           },
 
@@ -307,15 +326,18 @@ export class ResellerService extends BaseOTAService {
         };
       });
 
+      // 聚合统计
+      const totalBatches = resellerAggregation.reduce((sum, s) => sum + (parseInt(s.total_batches) || 0), 0);
+      const totalTicketsGenerated = resellerAggregation.reduce((sum, s) => sum + (parseInt(s.total_tickets_generated) || 0), 0);
+
       return {
         resellers: resellerSummaries,
-        total: totalCount,  // 使用总数而非当前页数量
-        // 聚合统计（基于全部数据）
+        total: totalCount,
         summary: {
           total_resellers: totalCount,
-          active_resellers: batchStats.length,  // 有批次的分销商数量
-          total_batches: batchStats.reduce((sum, s) => sum + (parseInt(s.total_batches) || 0), 0),
-          total_tickets_generated: batchStats.reduce((sum, s) => sum + (parseInt(s.total_tickets_generated) || 0), 0)
+          active_resellers: totalCount,  // 所有聚合出的经销商都是有数据的
+          total_batches: totalBatches,
+          total_tickets_generated: totalTicketsGenerated
         }
       };
     }
