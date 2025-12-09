@@ -196,11 +196,11 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
       special_pricing
     } = req.body;
 
-    // Validate required fields
-    if (typeof product_id !== 'number' || typeof quantity !== 'number' || !batch_id) {
+    // Validate required fields (batch_id is optional - will be auto-generated if not provided)
+    if (typeof product_id !== 'number' || typeof quantity !== 'number') {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'product_id (number), quantity (number), and batch_id are required'
+        message: 'product_id (number) and quantity (number) are required'
       });
     }
 
