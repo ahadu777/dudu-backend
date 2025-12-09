@@ -55,14 +55,11 @@ export class AnalyticsService extends BaseOTAService {
         tickets_redeemed,
         status_breakdown: statusCounts,
         conversion_rates: {
-          activation_rate: tickets_generated > 0 ? tickets_activated / tickets_generated : 0,
-          redemption_rate: tickets_activated > 0 ? tickets_redeemed / tickets_activated : 0,
-          overall_utilization: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
+          activation_rate: tickets_generated > 0 ? tickets_activated / tickets_generated : 0
         },
         revenue_metrics: {
           potential_revenue: tickets_generated * basePrice,
-          realized_revenue: tickets_redeemed * basePrice,
-          realization_rate: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
+          realized_revenue: tickets_redeemed * basePrice
         },
         wholesale_rate: basePrice,
         amount_due: (tickets_redeemed * basePrice).toFixed(2),
@@ -77,8 +74,8 @@ export class AnalyticsService extends BaseOTAService {
       tickets_activated: 0,
       tickets_redeemed: 0,
       status_breakdown: {},
-      conversion_rates: { activation_rate: 0, redemption_rate: 0, overall_utilization: 0 },
-      revenue_metrics: { potential_revenue: 0, realized_revenue: 0, realization_rate: 0 }
+      conversion_rates: { activation_rate: 0 },
+      revenue_metrics: { potential_revenue: 0, realized_revenue: 0 }
     };
   }
 
@@ -200,7 +197,6 @@ export class AnalyticsService extends BaseOTAService {
               total_batches: filteredBatches.length,
               total_tickets_generated: totalGenerated,
               total_tickets_redeemed: totalRedeemed,
-              average_conversion_rate: totalGenerated > 0 ? totalRedeemed / totalGenerated : 0,
               top_performing_resellers: []
             }
           ]
@@ -227,7 +223,6 @@ export class AnalyticsService extends BaseOTAService {
             total_batches: batches.length,
             total_tickets_generated: totalGenerated,
             total_tickets_redeemed: totalRedeemed,
-            average_conversion_rate: totalGenerated > 0 ? totalRedeemed / totalGenerated : 0,
             top_performing_resellers: []
           };
         });
@@ -244,7 +239,6 @@ export class AnalyticsService extends BaseOTAService {
           total_batches: 5,
           total_tickets_generated: 500,
           total_tickets_redeemed: 225,
-          average_conversion_rate: 0.45,
           top_performing_resellers: ['Travel Agency ABC', 'Resort Partners Ltd']
         }
       ]

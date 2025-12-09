@@ -273,10 +273,8 @@ export class ResellerService extends BaseOTAService {
         const totalUsed = parseInt(ticketStat.total_tickets_used) || 0;
         const totalRevenue = parseFloat(ticketStat.total_revenue) || 0;
 
-        // 计算比率
+        // 计算比率（仅保留无法直接从绝对值推导的比率）
         const activationRate = totalGenerated > 0 ? totalActivated / totalGenerated : 0;
-        const redemptionRate = totalActivated > 0 ? totalUsed / totalActivated : 0;
-        const overallUtilization = totalGenerated > 0 ? totalUsed / totalGenerated : 0;
 
         // 佣金率：优先从 ota_resellers 表获取，否则从批次中找最新设置的佣金配置，最后用默认值
         const DEFAULT_COMMISSION_RATE = 0.10; // 默认 10% 佣金
@@ -312,9 +310,7 @@ export class ResellerService extends BaseOTAService {
             total_tickets_generated: totalGenerated,
             total_tickets_activated: totalActivated,
             total_tickets_used: totalUsed,
-            activation_rate: Math.round(activationRate * 10000) / 100,
-            redemption_rate: Math.round(redemptionRate * 10000) / 100,
-            overall_utilization: Math.round(overallUtilization * 10000) / 100
+            activation_rate: Math.round(activationRate * 10000) / 100
           },
 
           // 收入指标
