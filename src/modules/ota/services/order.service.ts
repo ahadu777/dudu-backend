@@ -1,5 +1,4 @@
 import { BaseOTAService } from './base.service';
-import { OrderEntity, TicketEntity } from '../../../models';
 import { mockDataStore } from '../../../core/mock/data';
 import { toOTAAPIStatus } from '../status-mapper';
 
@@ -35,13 +34,8 @@ export class OrderService extends BaseOTAService {
   // ============== Database 实现 ==============
 
   private async getOrdersFromDatabase(partnerId?: string): Promise<any[]> {
-    const orderRepo = this.getRepository(OrderEntity);
-    const channelId = partnerId || 'ota';
-
-    const orders = await orderRepo.find({
-      where: { channel: channelId as any },
-      order: { created_at: 'DESC' }
-    });
+    const repo = await this.getOTARepository();
+    const orders = await repo.findOTAOrdersByChannel(partnerId);
 
     return orders.map((order: any) => ({
       order_id: order.order_no,
@@ -56,11 +50,8 @@ export class OrderService extends BaseOTAService {
   }
 
   private async getOrderTicketsFromDatabase(orderId: string): Promise<any[]> {
-    const ticketRepo = this.getRepository(TicketEntity);
-
-    const tickets = await ticketRepo.find({
-      where: { order_no: orderId }
-    });
+    const repo = await this.getOTARepository();
+    const tickets = await repo.findTicketsByOrderId(orderId);
 
     if (tickets.length === 0) {
       throw {

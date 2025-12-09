@@ -144,22 +144,20 @@ export class AnalyticsService extends BaseOTAService {
    */
   async getBatchRedemptions(batchId: string): Promise<any> {
     if (await this.isDatabaseAvailable()) {
-      const ticketRepo = this.getRepository(TicketEntity);
-
-      const tickets = await ticketRepo.find({
-        where: { batch_id: batchId, status: 'used' as any },
-        order: { updated_at: 'DESC' },
-        take: 100
-      });
+      const repo = await this.getOTARepository();
+      const redemptions = await repo.getBatchRedemptions(batchId);
 
       return {
         batch_id: batchId,
-        redemptions: tickets.map(t => ({
-          ticket_code: t.ticket_code,
-          redeemed_at: t.updated_at?.toISOString(),
-          customer_type: t.customer_type
+        redemptions: redemptions.map((r: any) => ({
+          ticket_code: r.ticket_code,
+          function_code: r.function_code,
+          redeemed_at: r.redeemed_at,
+          venue_name: r.venue_name,
+          wholesale_price: r.wholesale_price,
+          customer_type: r.customer_type
         })),
-        total: tickets.length
+        total: redemptions.length
       };
     }
 
@@ -261,9 +259,9 @@ export class AnalyticsService extends BaseOTAService {
    */
   async getAllPartners(): Promise<any[]> {
     // 从 API_KEYS 配置获取
-    return Array.from(API_KEYS.entries()).map(([key, value]) => ({
+    return Array.from(API_KEYS.entries()).map(([_, value]) => ({
       id: value.partner_id,
-      name: value.partner_name,  // 修复：使用正确的字段名
+      name: value.partner_name,
       permissions: value.permissions
     }));
   }
