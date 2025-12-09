@@ -141,18 +141,35 @@ export interface OTATicketFilters {
   customer_type?: string;
   page?: number;
   page_size?: number;
+  limit?: number;  // 兼容旧参数
   created_after?: string;
   created_before?: string;
 }
 
 export interface OTATicketListResponse {
-  tickets: any[];
+  tickets: Array<{
+    ticket_code: string;
+    status: string;
+    batch_id: string | null;
+    product_id: number;
+    qr_code: string | null;
+    created_at: string;
+    activated_at: string | null;
+    order_id: string | null;
+    customer_name: string | null;
+    customer_email: string | null;
+    customer_type: string | null;
+  }>;
   pagination: {
     page: number;
     page_size: number;
     total_count: number;
     total_pages: number;
   };
+  // 兼容旧格式
+  total_count?: number;
+  page?: number;
+  page_size?: number;
 }
 
 // ============== 分销商相关 ==============

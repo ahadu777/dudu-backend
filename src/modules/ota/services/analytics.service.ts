@@ -1,6 +1,6 @@
 import { BaseOTAService } from './base.service';
 import { OTATicketBatchEntity } from '../domain/ota-ticket-batch.entity';
-import { TicketEntity, OrderEntity } from '../../../models';
+import { TicketEntity } from '../../../models';
 import { API_KEYS } from '../../../middlewares/otaAuth';
 
 /**
@@ -35,16 +35,51 @@ export class AnalyticsService extends BaseOTAService {
       const statusCounts: Record<string, number> = {};
       stats.forEach(s => { statusCounts[s.status] = parseInt(s.count); });
 
+      // 计算各状态数量
+      const tickets_generated = batch.total_quantity;
+      const tickets_activated = (statusCounts['ACTIVATED'] || 0) + (statusCounts['RESERVED'] || 0) + (statusCounts['VERIFIED'] || 0);
+      const tickets_redeemed = statusCounts['VERIFIED'] || 0;
+
+      // 获取价格信息
+      const basePrice = batch.pricing_snapshot?.base_price || 0;
+
       return {
         batch_id: batchId,
         product_id: batch.product_id,
-        total_generated: batch.total_quantity,
+        reseller_name: batch.reseller_metadata?.intended_reseller || 'Direct Sale',
+        campaign_type: batch.batch_metadata?.campaign_type || 'standard',
+        campaign_name: batch.batch_metadata?.campaign_name || 'Standard Batch',
+        generated_at: batch.created_at.toISOString(),
+        tickets_generated,
+        tickets_activated,
+        tickets_redeemed,
         status_breakdown: statusCounts,
+        conversion_rates: {
+          activation_rate: tickets_generated > 0 ? tickets_activated / tickets_generated : 0,
+          redemption_rate: tickets_activated > 0 ? tickets_redeemed / tickets_activated : 0,
+          overall_utilization: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
+        },
+        revenue_metrics: {
+          potential_revenue: tickets_generated * basePrice,
+          realized_revenue: tickets_redeemed * basePrice,
+          realization_rate: tickets_generated > 0 ? tickets_redeemed / tickets_generated : 0
+        },
+        wholesale_rate: basePrice,
+        amount_due: (tickets_redeemed * basePrice).toFixed(2),
+        batch_metadata: batch.batch_metadata || {},
         created_at: batch.created_at.toISOString()
       };
     }
 
-    return { batch_id: batchId, total_generated: 0, status_breakdown: {} };
+    return {
+      batch_id: batchId,
+      tickets_generated: 0,
+      tickets_activated: 0,
+      tickets_redeemed: 0,
+      status_breakdown: {},
+      conversion_rates: { activation_rate: 0, redemption_rate: 0, overall_utilization: 0 },
+      revenue_metrics: { potential_revenue: 0, realized_revenue: 0, realization_rate: 0 }
+    };
   }
 
   /**
@@ -236,30 +271,62 @@ export class AnalyticsService extends BaseOTAService {
   /**
    * 获取合作伙伴统计
    */
-  async getPartnerStatistics(partnerId: string, period: any): Promise<any> {
-    if (await this.isDatabaseAvailable()) {
-      const orderRepo = this.getRepository(OrderEntity);
-      const batchRepo = this.getRepository(OTATicketBatchEntity);
-
-      // 订单统计
-      const orderCount = await orderRepo.count({
-        where: { channel: partnerId as any }
-      });
-
-      // 批次统计
-      const batchCount = await batchRepo.count({
-        where: { partner_id: partnerId }
-      });
-
-      return {
-        partner_id: partnerId,
-        period,
-        orders: { total: orderCount },
-        batches: { total: batchCount }
+  async getPartnerStatistics(partnerId: string, dateRange?: { start_date?: string; end_date?: string }): Promise<any> {
+    // 查找合作伙伴信息
+    const partnerEntry = Array.from(API_KEYS.entries()).find(([_, data]) => data.partner_id === partnerId);
+    if (!partnerEntry) {
+      throw {
+        code: 'VALIDATION_ERROR',
+        message: `Partner ${partnerId} not found`
       };
     }
 
-    return { partner_id: partnerId, orders: { total: 0 }, batches: { total: 0 } };
+    const [, partnerData] = partnerEntry;
+
+    if (await this.isDatabaseAvailable()) {
+      const repo = await this.getOTARepository();
+
+      // 获取聚合统计
+      const [ordersSummary, reservationsSummary, ticketsSummary, inventoryUsage] = await Promise.all([
+        repo.getPartnerOrdersSummary(partnerId, dateRange),
+        repo.getPartnerReservationsSummary(partnerId, dateRange),
+        repo.getPartnerTicketsSummary(partnerId),
+        repo.getPartnerInventoryUsage(partnerId)
+      ]);
+
+      return {
+        partner_id: partnerId,
+        partner_name: partnerData.partner_name,
+        date_range: dateRange || { start_date: null, end_date: null },
+        orders: ordersSummary,
+        reservations: reservationsSummary,
+        tickets: ticketsSummary,
+        inventory_usage: inventoryUsage
+      };
+    }
+
+    // Mock 模式返回空统计
+    return {
+      partner_id: partnerId,
+      partner_name: partnerData.partner_name,
+      date_range: dateRange || { start_date: null, end_date: null },
+      orders: {
+        total_count: 0,
+        total_revenue: 0,
+        avg_order_value: 0,
+        by_status: {}
+      },
+      reservations: {
+        total_count: 0,
+        total_quantity: 0,
+        by_status: {}
+      },
+      tickets: {
+        total_generated: 0,
+        by_status: {}
+      },
+      inventory_usage: {}
+    };
   }
 }
 

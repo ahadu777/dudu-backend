@@ -1,8 +1,6 @@
 import { BaseOTAService } from './base.service';
-import { OrderEntity, TicketEntity, ProductInventoryEntity } from '../../../models';
-import { OTATicketBatchEntity } from '../domain/ota-ticket-batch.entity';
-import { ChannelReservationEntity } from '../domain/channel-reservation.entity';
 import { OTADashboardOptions } from '../types';
+import { API_KEYS } from '../../../middlewares/otaAuth';
 
 /**
  * 仪表板服务
@@ -23,96 +21,58 @@ export class DashboardService extends BaseOTAService {
   }
 
   private async getDashboardFromDatabase(options: OTADashboardOptions): Promise<any> {
-    const orderRepo = this.getRepository(OrderEntity);
-    const ticketRepo = this.getRepository(TicketEntity);
-    const batchRepo = this.getRepository(OTATicketBatchEntity);
-    const reservationRepo = this.getRepository(ChannelReservationEntity);
-    const inventoryRepo = this.getRepository(ProductInventoryEntity);
+    const totalPartners = API_KEYS.size;
+    const activePartners = totalPartners;
 
-    // 订单统计
-    const orderStats = await orderRepo
-      .createQueryBuilder('order')
-      .select('order.status', 'status')
-      .addSelect('COUNT(*)', 'count')
-      .addSelect('SUM(order.total)', 'total')
-      .groupBy('order.status')
-      .getRawMany();
+    const repo = await this.getOTARepository();
 
-    // 票务统计
-    const ticketStats = await ticketRepo
-      .createQueryBuilder('ticket')
-      .select('ticket.status', 'status')
-      .addSelect('COUNT(*)', 'count')
-      .groupBy('ticket.status')
-      .getRawMany();
+    // 获取平台汇总统计
+    const [platformSummary, topPartnersRaw, inventoryOverview] = await Promise.all([
+      repo.getPlatformSummary(options),
+      repo.getTopPartners(5, options),
+      repo.getInventoryOverview()
+    ]);
 
-    // 批次统计
-    const batchCount = await batchRepo.count();
+    // 过滤掉不存在的合作伙伴
+    const validPartnerIds = new Set(
+      Array.from(API_KEYS.values()).map(data => data.partner_id)
+    );
 
-    // 活跃预订数
-    const activeReservations = await reservationRepo.count({
-      where: { status: 'active' as any }
-    });
-
-    // 库存概览
-    const inventories = await inventoryRepo.find({ relations: ['product'] });
-    const totalInventory = inventories.reduce((sum, inv) => sum + inv.sellable_cap, 0);
-    const totalSold = inventories.reduce((sum, inv) => sum + inv.sold_count, 0);
-    // 计算总预留数（从所有渠道分配中汇总）
-    const totalReserved = inventories.reduce((sum, inv) => {
-      const allocations = inv.channel_allocations || {};
-      return sum + Object.values(allocations).reduce((s, a) => s + (a.reserved || 0), 0);
-    }, 0);
-
-    // 格式化结果
-    const ordersByStatus: Record<string, any> = {};
-    orderStats.forEach(s => {
-      ordersByStatus[s.status] = {
-        count: parseInt(s.count),
-        total: parseFloat(s.total) || 0
-      };
-    });
-
-    const ticketsByStatus: Record<string, number> = {};
-    ticketStats.forEach(s => {
-      ticketsByStatus[s.status] = parseInt(s.count);
-    });
+    const topPartners = topPartnersRaw.filter((partner: any) =>
+      validPartnerIds.has(partner.partner_id)
+    );
 
     return {
       summary: {
-        orders: {
-          by_status: ordersByStatus,
-          total: orderStats.reduce((sum, s) => sum + parseInt(s.count), 0)
-        },
-        tickets: {
-          by_status: ticketsByStatus,
-          total: ticketStats.reduce((sum, s) => sum + parseInt(s.count), 0)
-        },
-        batches: {
-          total: batchCount
-        },
-        reservations: {
-          active: activeReservations
-        },
-        inventory: {
-          total: totalInventory,
-          reserved: totalReserved,
-          sold: totalSold,
-          available: totalInventory - totalReserved - totalSold
-        }
+        total_partners: totalPartners,
+        active_partners: activePartners,
+        ...platformSummary
       },
+      top_partners: topPartners,
+      inventory_overview: inventoryOverview,
       generated_at: new Date().toISOString()
     };
   }
 
   private async getDashboardFromMock(options: OTADashboardOptions): Promise<any> {
+    const totalPartners = API_KEYS.size;
+    const activePartners = totalPartners;
+
     return {
       summary: {
-        orders: { by_status: {}, total: 0 },
-        tickets: { by_status: {}, total: 0 },
-        batches: { total: 0 },
-        reservations: { active: 0 },
-        inventory: { total: 0, reserved: 0, sold: 0, available: 0 }
+        total_partners: totalPartners,
+        active_partners: activePartners,
+        total_orders: 0,
+        total_revenue: 0,
+        total_tickets_generated: 0,
+        total_tickets_activated: 0
+      },
+      top_partners: [],
+      inventory_overview: {
+        total_allocated: 0,
+        total_reserved: 0,
+        total_sold: 0,
+        overall_utilization: '0%'
       },
       generated_at: new Date().toISOString()
     };

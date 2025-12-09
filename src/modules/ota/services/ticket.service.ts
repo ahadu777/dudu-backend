@@ -466,7 +466,7 @@ export class TicketService extends BaseOTAService {
   private async getTicketsFromDatabase(partnerId: string, filters: OTATicketFilters): Promise<OTATicketListResponse> {
     const ticketRepo = this.getRepository(TicketEntity);
     const page = filters.page || 1;
-    const pageSize = filters.page_size || 20;
+    const pageSize = filters.page_size || filters.limit || 100;
 
     // 构建查询
     const queryBuilder = ticketRepo.createQueryBuilder('ticket')
@@ -480,10 +480,18 @@ export class TicketService extends BaseOTAService {
       queryBuilder.andWhere('ticket.batch_id = :batchId', { batchId: filters.batch_id });
     }
 
+    if (filters.created_after) {
+      queryBuilder.andWhere('ticket.created_at >= :createdAfter', { createdAfter: new Date(filters.created_after) });
+    }
+
+    if (filters.created_before) {
+      queryBuilder.andWhere('ticket.created_at <= :createdBefore', { createdBefore: new Date(filters.created_before) });
+    }
+
     // 分页
     const [tickets, total] = await queryBuilder
       .skip((page - 1) * pageSize)
-      .take(pageSize)
+      .take(Math.min(pageSize, 1000)) // Max 1000 per page
       .orderBy('ticket.created_at', 'DESC')
       .getManyAndCount();
 
@@ -491,15 +499,26 @@ export class TicketService extends BaseOTAService {
       tickets: tickets.map(t => ({
         ticket_code: t.ticket_code,
         status: toOTAAPIStatus(t.status),
-        customer_type: t.customer_type,
-        created_at: t.created_at.toISOString()
+        batch_id: t.batch_id || null,
+        product_id: t.product_id,
+        qr_code: t.qr_code || null,
+        created_at: t.created_at.toISOString(),
+        activated_at: t.activated_at ? t.activated_at.toISOString() : null,
+        order_id: t.order_no || null,
+        customer_name: t.customer_name || null,
+        customer_email: t.customer_email || null,
+        customer_type: t.customer_type || null
       })),
       pagination: {
         page,
         page_size: pageSize,
         total_count: total,
         total_pages: Math.ceil(total / pageSize)
-      }
+      },
+      // 兼容旧格式
+      total_count: total,
+      page,
+      page_size: pageSize
     };
   }
 
