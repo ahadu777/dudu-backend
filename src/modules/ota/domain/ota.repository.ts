@@ -731,29 +731,117 @@ export class OTARepository {
 
   /**
    * Get platform-wide summary
+   * 返回三组数据：全局总览 + 今日数据 + 时间筛选区间数据
    */
   async getPlatformSummary(dateRange?: { start_date?: string; end_date?: string }) {
-    const orderQuery = this.orderRepo.createQueryBuilder('order')
-      .where('order.channel = :channel', { channel: OrderChannel.OTA });
+    // 1. 全局票券统计
+    const globalStats = await this.dataSource.query(`
+      SELECT
+        COUNT(*) as total_tickets,
+        SUM(CASE WHEN status = 'PRE_GENERATED' THEN 1 ELSE 0 END) as pre_generated,
+        SUM(CASE WHEN status = 'ACTIVATED' THEN 1 ELSE 0 END) as activated,
+        SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END) as verified
+      FROM tickets
+      WHERE channel = 'ota'
+    `);
 
-    if (dateRange?.start_date) {
-      orderQuery.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
+    // 2. 今日票券统计
+    const todayStats = await this.dataSource.query(`
+      SELECT
+        SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) as created,
+        SUM(CASE WHEN DATE(activated_at) = CURDATE() THEN 1 ELSE 0 END) as activated,
+        SUM(CASE WHEN DATE(verified_at) = CURDATE() THEN 1 ELSE 0 END) as verified
+      FROM tickets
+      WHERE channel = 'ota'
+    `);
+
+    // 3. 全局订单统计
+    const globalOrderStats = await this.dataSource.query(`
+      SELECT COUNT(*) as total_orders, COALESCE(SUM(total), 0) as total_revenue
+      FROM orders
+      WHERE channel = 'ota'
+    `);
+
+    // 4. 今日订单统计
+    const todayOrderStats = await this.dataSource.query(`
+      SELECT COUNT(*) as orders, COALESCE(SUM(total), 0) as revenue
+      FROM orders
+      WHERE channel = 'ota' AND DATE(created_at) = CURDATE()
+    `);
+
+    const global = globalStats[0] || {};
+    const today = todayStats[0] || {};
+    const globalOrders = globalOrderStats[0] || {};
+    const todayOrders = todayOrderStats[0] || {};
+
+    // 5. 时间筛选区间统计（如果提供了时间参数）
+    let filtered = null;
+    if (dateRange?.start_date || dateRange?.end_date) {
+      let ticketWhereClause = "channel = 'ota'";
+      let orderWhereClause = "channel = 'ota'";
+      const params: any[] = [];
+
+      if (dateRange.start_date) {
+        ticketWhereClause += " AND created_at >= ?";
+        orderWhereClause += " AND created_at >= ?";
+        params.push(dateRange.start_date);
+      }
+      if (dateRange.end_date) {
+        ticketWhereClause += " AND created_at <= ?";
+        orderWhereClause += " AND created_at <= ?";
+        params.push(dateRange.end_date);
+      }
+
+      const [filteredTickets, filteredOrders] = await Promise.all([
+        this.dataSource.query(`
+          SELECT
+            COUNT(*) as total_tickets,
+            SUM(CASE WHEN status = 'PRE_GENERATED' THEN 1 ELSE 0 END) as pre_generated,
+            SUM(CASE WHEN status = 'ACTIVATED' THEN 1 ELSE 0 END) as activated,
+            SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END) as verified
+          FROM tickets
+          WHERE ${ticketWhereClause}
+        `, params),
+        this.dataSource.query(`
+          SELECT COUNT(*) as orders, COALESCE(SUM(total), 0) as revenue
+          FROM orders
+          WHERE ${orderWhereClause}
+        `, params)
+      ]);
+
+      const ft = filteredTickets[0] || {};
+      const fo = filteredOrders[0] || {};
+
+      filtered = {
+        start_date: dateRange.start_date || null,
+        end_date: dateRange.end_date || null,
+        orders: parseInt(fo.orders) || 0,
+        revenue: parseFloat(fo.revenue) || 0,
+        total_tickets: parseInt(ft.total_tickets) || 0,
+        pre_generated_tickets: parseInt(ft.pre_generated) || 0,
+        activated_tickets: parseInt(ft.activated) || 0,
+        verified_tickets: parseInt(ft.verified) || 0
+      };
     }
-    if (dateRange?.end_date) {
-      orderQuery.andWhere('order.created_at <= :endDate', { endDate: dateRange.end_date });
-    }
-
-    const orders = await orderQuery.getMany();
-    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total), 0);
-
-    const totalTickets = await this.ticketRepo.count();
-    const activeTickets = await this.ticketRepo.count({ where: { status: 'ACTIVATED', channel: 'ota' } });
 
     return {
-      total_orders: orders.length,
-      total_revenue: totalRevenue,
-      total_tickets_generated: totalTickets,
-      total_tickets_activated: activeTickets
+      // 全局总览
+      total_orders: parseInt(globalOrders.total_orders) || 0,
+      total_revenue: parseFloat(globalOrders.total_revenue) || 0,
+      total_tickets: parseInt(global.total_tickets) || 0,
+      pre_generated_tickets: parseInt(global.pre_generated) || 0,
+      activated_tickets: parseInt(global.activated) || 0,
+      verified_tickets: parseInt(global.verified) || 0,
+      // 今日统计
+      today: {
+        orders: parseInt(todayOrders.orders) || 0,
+        revenue: parseFloat(todayOrders.revenue) || 0,
+        created_tickets: parseInt(today.created) || 0,
+        activated_tickets: parseInt(today.activated) || 0,
+        verified_tickets: parseInt(today.verified) || 0
+      },
+      // 时间筛选区间（如果有）
+      filtered
     };
   }
 

@@ -2,7 +2,8 @@
 card: "Wallyt WeChat Mini-Program Payment"
 slug: wallyt-payment
 team: "A - Commerce"
-oas_paths: ["/payments/wechat/prepay", "/payments/wallyt/notify", "/payments/status/:orderId", "/payments/refund"]
+oas_paths: ["/payments/wechat/prepay", "/payments/wallyt/notify", "/payments/status/:orderId"]
+# Note: /payments/refund is documented in refund-processing.md card
 migrations: []
 status: "Done"
 readiness: "mvp"

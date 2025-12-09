@@ -22,7 +22,7 @@ related_stories: ["US-010", "US-010A"]
 - Last Update: 2025-10-24T18:28:44+08:00
 
 ## 0) Prerequisites
-- order-create-idempotent 已记录 `passengerSnapshot` 与 `ticketBundleSnapshot`。
+- order-create 已记录 `passengerSnapshot` 与 `ticketBundleSnapshot`。
 - 套票模板（admin-package-config）提供权益定义、实名需求、有效期策略。
 - wechat-payment-session + payment-webhook 确保订单状态准确。
 - QR token 加密密钥与 tickets-issuance 现有实现可复用。

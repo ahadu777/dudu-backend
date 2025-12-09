@@ -13,8 +13,6 @@ stories:
       - venue-enhanced-scanning
       - operators-login
       - reports-redemptions
-      - qr-token           # deprecated - replaced by qr-generation-api
-      - tickets-scan       # deprecated - replaced by venue-enhanced-scanning
     # Sequence dependencies for temporal relationships
     sequence:
       - catalog-endpoint → order-create
@@ -34,8 +32,6 @@ stories:
     cards:
       - operators-login
       - venue-enhanced-scanning
-      - tickets-scan         # deprecated - replaced by venue-enhanced-scanning
-      - validators-sessions  # deprecated - removed, use operator JWT token
     sequence:
       - operators-login → venue-enhanced-scanning
       - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
@@ -49,7 +45,6 @@ stories:
     cards:
       - my-tickets
       - qr-generation-api
-      - qr-token  # deprecated - replaced by qr-generation-api
     sequence:
       - tickets-issuance → my-tickets
       - my-tickets → qr-generation-api
@@ -87,7 +82,6 @@ stories:
     status: Done
     cards:
       - operators-login
-      - validators-sessions  # deprecated - removed, use operator JWT token
     sequence:
       - operators-login → venue-enhanced-scanning
     enhances: [US-002]
@@ -269,7 +263,6 @@ stories:
       - venue-management-crud
       - venue-enhanced-scanning
       - venue-analytics-reporting
-      - venue-session-management  # deprecated - removed, use operator JWT token
     # Sequence dependencies
     sequence:
       - operators-login → venue-enhanced-scanning

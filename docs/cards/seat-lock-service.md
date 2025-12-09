@@ -24,7 +24,7 @@ deprecation_note: "reservations module removed - not in use (seat locking for tr
 
 ## 0) Prerequisites
 - travel-search-hub 提供的班次、库存、座位等级信息。
-- order-create-idempotent 需集成锁座创建。
+- order-create 需集成锁座创建。
 - 分布式锁或数据库行锁策略明确，避免重复锁定。
 - 任务调度器可每分钟扫描过期锁。
 

@@ -24,7 +24,7 @@ deprecation_note: "此卡片为 Mock 实现，已被 wallyt-payment 替代。端
 - Last Update: 2025-10-24T18:28:44+08:00
 
 ## 0) Prerequisites
-- order-create-idempotent 已生成待支付订单。
+- order-create 已生成待支付订单。
 - 微信支付商户号与 API v3 密钥配置在 `src/config/env.ts`。
 - payment-webhook 卡片负责签名验证与最终状态写回。
 - Redis/DB 中存在支付轮询去重表。

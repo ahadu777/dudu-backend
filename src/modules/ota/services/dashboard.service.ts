@@ -21,9 +21,6 @@ export class DashboardService extends BaseOTAService {
   }
 
   private async getDashboardFromDatabase(options: OTADashboardOptions): Promise<any> {
-    const totalPartners = API_KEYS.size;
-    const activePartners = totalPartners;
-
     const repo = await this.getOTARepository();
 
     // 获取平台汇总统计
@@ -43,11 +40,7 @@ export class DashboardService extends BaseOTAService {
     );
 
     return {
-      summary: {
-        total_partners: totalPartners,
-        active_partners: activePartners,
-        ...platformSummary
-      },
+      summary: platformSummary,
       top_partners: topPartners,
       inventory_overview: inventoryOverview,
       generated_at: new Date().toISOString()
@@ -55,17 +48,25 @@ export class DashboardService extends BaseOTAService {
   }
 
   private async getDashboardFromMock(options: OTADashboardOptions): Promise<any> {
-    const totalPartners = API_KEYS.size;
-    const activePartners = totalPartners;
-
     return {
       summary: {
-        total_partners: totalPartners,
-        active_partners: activePartners,
+        // 全局总览
         total_orders: 0,
         total_revenue: 0,
-        total_tickets_generated: 0,
-        total_tickets_activated: 0
+        total_tickets: 0,
+        pre_generated_tickets: 0,
+        activated_tickets: 0,
+        verified_tickets: 0,
+        // 今日统计
+        today: {
+          orders: 0,
+          revenue: 0,
+          created_tickets: 0,
+          activated_tickets: 0,
+          verified_tickets: 0
+        },
+        // 时间筛选区间
+        filtered: null
       },
       top_partners: [],
       inventory_overview: {

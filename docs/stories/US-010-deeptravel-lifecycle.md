@@ -82,7 +82,7 @@ cards:
 - 子故事：
   - [US-010A — DeepTravel 旅客闭环体验](US-010A-traveler-loop.md)
   - [US-010B — DeepTravel 运营支撑体系](US-010B-operations-backbone.md)
-- 复用能力：catalog-endpoint、order-create-idempotent、payment-webhook、tickets-issuance、tickets-scan、ticket-cancellation、refund-processing
+- 复用能力：catalog-endpoint、order-create、payment-webhook、tickets-issuance、tickets-scan、ticket-cancellation、refund-processing
 - 运行验证（见子故事 Runbook 与 Newman 场景）
 
 ## Decomposition & Cards
