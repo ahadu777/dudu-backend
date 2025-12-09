@@ -495,12 +495,14 @@ router.get('/admin/partners/:partnerId/statistics', adminAuthMiddleware(), async
   }
 });
 
-// GET /api/ota/admin/dashboard - Get platform dashboard summary
-router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+// GET /api/ota/dashboard - Get partner dashboard summary (returns data for current API key's partner)
+router.get('/dashboard', otaAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { start_date, end_date } = req.query;
+    const partnerId = req.ota_partner!.id;
 
     const summary = await otaService.getDashboardSummary({
+      partner_id: partnerId,
       start_date: start_date as string,
       end_date: end_date as string
     });
@@ -508,8 +510,8 @@ router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedR
     res.json(summary);
 
   } catch (error: any) {
-    logger.error('OTA admin get dashboard failed', {
-      admin: req.ota_partner?.name,
+    logger.error('OTA get dashboard failed', {
+      partner: req.ota_partner?.name,
       error: error.message
     });
 

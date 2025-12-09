@@ -730,115 +730,120 @@ export class OTARepository {
   }
 
   /**
-   * Get platform-wide summary
+   * Get partner summary
    * 返回三组数据：全局总览 + 今日数据 + 时间筛选区间数据
+   * 按 partner_id 筛选
    */
-  async getPlatformSummary(dateRange?: { start_date?: string; end_date?: string }) {
-    // 1. 全局票券统计
-    const globalStats = await this.dataSource.query(`
-      SELECT
-        COUNT(*) as total_tickets,
-        SUM(CASE WHEN status = 'PRE_GENERATED' THEN 1 ELSE 0 END) as pre_generated,
-        SUM(CASE WHEN status = 'ACTIVATED' THEN 1 ELSE 0 END) as activated,
-        SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END) as verified
-      FROM tickets
-      WHERE channel = 'ota'
-    `);
+  async getPartnerSummary(options: { partner_id: string; start_date?: string; end_date?: string }) {
+    const { partner_id, start_date, end_date } = options;
+
+    // 今天的日期范围
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // 1. 全局票券统计（使用 TypeORM QueryBuilder）
+    const ticketStatsQuery = this.ticketRepo.createQueryBuilder('t')
+      .select('COUNT(*)', 'total')
+      .addSelect('SUM(CASE WHEN t.status = :preGen THEN 1 ELSE 0 END)', 'pre_generated')
+      .addSelect('SUM(CASE WHEN t.status = :activated THEN 1 ELSE 0 END)', 'activated')
+      .addSelect('SUM(CASE WHEN t.status = :verified THEN 1 ELSE 0 END)', 'verified')
+      .where('t.channel = :channel', { channel: 'ota' })
+      .andWhere('t.partner_id = :partnerId', { partnerId: partner_id })
+      .setParameters({ preGen: 'PRE_GENERATED', activated: 'ACTIVATED', verified: 'VERIFIED' });
 
     // 2. 今日票券统计
-    const todayStats = await this.dataSource.query(`
-      SELECT
-        SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) as created,
-        SUM(CASE WHEN DATE(activated_at) = CURDATE() THEN 1 ELSE 0 END) as activated,
-        SUM(CASE WHEN DATE(verified_at) = CURDATE() THEN 1 ELSE 0 END) as verified
-      FROM tickets
-      WHERE channel = 'ota'
-    `);
+    const todayTicketStatsQuery = this.ticketRepo.createQueryBuilder('t')
+      .select('SUM(CASE WHEN t.created_at >= :todayStart THEN 1 ELSE 0 END)', 'created')
+      .addSelect('SUM(CASE WHEN t.activated_at >= :todayStart THEN 1 ELSE 0 END)', 'activated')
+      .addSelect('SUM(CASE WHEN t.verified_at >= :todayStart THEN 1 ELSE 0 END)', 'verified')
+      .where('t.channel = :channel', { channel: 'ota' })
+      .andWhere('t.partner_id = :partnerId', { partnerId: partner_id })
+      .setParameters({ todayStart });
 
     // 3. 全局订单统计
-    const globalOrderStats = await this.dataSource.query(`
-      SELECT COUNT(*) as total_orders, COALESCE(SUM(total), 0) as total_revenue
-      FROM orders
-      WHERE channel = 'ota'
-    `);
+    const orderStatsQuery = this.orderRepo.createQueryBuilder('o')
+      .select('COUNT(*)', 'total_orders')
+      .addSelect('COALESCE(SUM(o.total), 0)', 'total_revenue')
+      .where('o.channel = :channel', { channel: OrderChannel.OTA })
+      .andWhere('o.partner_id = :partnerId', { partnerId: partner_id });
 
     // 4. 今日订单统计
-    const todayOrderStats = await this.dataSource.query(`
-      SELECT COUNT(*) as orders, COALESCE(SUM(total), 0) as revenue
-      FROM orders
-      WHERE channel = 'ota' AND DATE(created_at) = CURDATE()
-    `);
+    const todayOrderStatsQuery = this.orderRepo.createQueryBuilder('o')
+      .select('COUNT(*)', 'orders')
+      .addSelect('COALESCE(SUM(o.total), 0)', 'revenue')
+      .where('o.channel = :channel', { channel: OrderChannel.OTA })
+      .andWhere('o.partner_id = :partnerId', { partnerId: partner_id })
+      .andWhere('o.created_at >= :todayStart', { todayStart });
 
-    const global = globalStats[0] || {};
-    const today = todayStats[0] || {};
-    const globalOrders = globalOrderStats[0] || {};
-    const todayOrders = todayOrderStats[0] || {};
+    // 并行执行查询
+    const [ticketStats, todayTicketStats, orderStats, todayOrderStats] = await Promise.all([
+      ticketStatsQuery.getRawOne(),
+      todayTicketStatsQuery.getRawOne(),
+      orderStatsQuery.getRawOne(),
+      todayOrderStatsQuery.getRawOne()
+    ]);
 
     // 5. 时间筛选区间统计（如果提供了时间参数）
     let filtered = null;
-    if (dateRange?.start_date || dateRange?.end_date) {
-      let ticketWhereClause = "channel = 'ota'";
-      let orderWhereClause = "channel = 'ota'";
-      const params: any[] = [];
+    if (start_date || end_date) {
+      const filteredTicketQuery = this.ticketRepo.createQueryBuilder('t')
+        .select('COUNT(*)', 'total')
+        .addSelect('SUM(CASE WHEN t.status = :preGen THEN 1 ELSE 0 END)', 'pre_generated')
+        .addSelect('SUM(CASE WHEN t.status = :activated THEN 1 ELSE 0 END)', 'activated')
+        .addSelect('SUM(CASE WHEN t.status = :verified THEN 1 ELSE 0 END)', 'verified')
+        .where('t.channel = :channel', { channel: 'ota' })
+        .andWhere('t.partner_id = :partnerId', { partnerId: partner_id })
+        .setParameters({ preGen: 'PRE_GENERATED', activated: 'ACTIVATED', verified: 'VERIFIED' });
 
-      if (dateRange.start_date) {
-        ticketWhereClause += " AND created_at >= ?";
-        orderWhereClause += " AND created_at >= ?";
-        params.push(dateRange.start_date);
+      const filteredOrderQuery = this.orderRepo.createQueryBuilder('o')
+        .select('COUNT(*)', 'orders')
+        .addSelect('COALESCE(SUM(o.total), 0)', 'revenue')
+        .where('o.channel = :channel', { channel: OrderChannel.OTA })
+        .andWhere('o.partner_id = :partnerId', { partnerId: partner_id });
+
+      if (start_date) {
+        filteredTicketQuery.andWhere('t.created_at >= :startDate', { startDate: start_date });
+        filteredOrderQuery.andWhere('o.created_at >= :startDate', { startDate: start_date });
       }
-      if (dateRange.end_date) {
-        ticketWhereClause += " AND created_at <= ?";
-        orderWhereClause += " AND created_at <= ?";
-        params.push(dateRange.end_date);
+      if (end_date) {
+        filteredTicketQuery.andWhere('t.created_at <= :endDate', { endDate: end_date });
+        filteredOrderQuery.andWhere('o.created_at <= :endDate', { endDate: end_date });
       }
 
-      const [filteredTickets, filteredOrders] = await Promise.all([
-        this.dataSource.query(`
-          SELECT
-            COUNT(*) as total_tickets,
-            SUM(CASE WHEN status = 'PRE_GENERATED' THEN 1 ELSE 0 END) as pre_generated,
-            SUM(CASE WHEN status = 'ACTIVATED' THEN 1 ELSE 0 END) as activated,
-            SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END) as verified
-          FROM tickets
-          WHERE ${ticketWhereClause}
-        `, params),
-        this.dataSource.query(`
-          SELECT COUNT(*) as orders, COALESCE(SUM(total), 0) as revenue
-          FROM orders
-          WHERE ${orderWhereClause}
-        `, params)
+      const [ft, fo] = await Promise.all([
+        filteredTicketQuery.getRawOne(),
+        filteredOrderQuery.getRawOne()
       ]);
 
-      const ft = filteredTickets[0] || {};
-      const fo = filteredOrders[0] || {};
-
       filtered = {
-        start_date: dateRange.start_date || null,
-        end_date: dateRange.end_date || null,
-        orders: parseInt(fo.orders) || 0,
-        revenue: parseFloat(fo.revenue) || 0,
-        total_tickets: parseInt(ft.total_tickets) || 0,
-        pre_generated_tickets: parseInt(ft.pre_generated) || 0,
-        activated_tickets: parseInt(ft.activated) || 0,
-        verified_tickets: parseInt(ft.verified) || 0
+        start_date: start_date || null,
+        end_date: end_date || null,
+        orders: parseInt(fo?.orders) || 0,
+        revenue: parseFloat(fo?.revenue) || 0,
+        total_tickets: parseInt(ft?.total) || 0,
+        pre_generated_tickets: parseInt(ft?.pre_generated) || 0,
+        activated_tickets: parseInt(ft?.activated) || 0,
+        verified_tickets: parseInt(ft?.verified) || 0
       };
     }
 
     return {
       // 全局总览
-      total_orders: parseInt(globalOrders.total_orders) || 0,
-      total_revenue: parseFloat(globalOrders.total_revenue) || 0,
-      total_tickets: parseInt(global.total_tickets) || 0,
-      pre_generated_tickets: parseInt(global.pre_generated) || 0,
-      activated_tickets: parseInt(global.activated) || 0,
-      verified_tickets: parseInt(global.verified) || 0,
+      total_orders: parseInt(orderStats?.total_orders) || 0,
+      total_revenue: parseFloat(orderStats?.total_revenue) || 0,
+      total_tickets: parseInt(ticketStats?.total) || 0,
+      pre_generated_tickets: parseInt(ticketStats?.pre_generated) || 0,
+      activated_tickets: parseInt(ticketStats?.activated) || 0,
+      verified_tickets: parseInt(ticketStats?.verified) || 0,
       // 今日统计
       today: {
-        orders: parseInt(todayOrders.orders) || 0,
-        revenue: parseFloat(todayOrders.revenue) || 0,
-        created_tickets: parseInt(today.created) || 0,
-        activated_tickets: parseInt(today.activated) || 0,
-        verified_tickets: parseInt(today.verified) || 0
+        orders: parseInt(todayOrderStats?.orders) || 0,
+        revenue: parseFloat(todayOrderStats?.revenue) || 0,
+        created_tickets: parseInt(todayTicketStats?.created) || 0,
+        activated_tickets: parseInt(todayTicketStats?.activated) || 0,
+        verified_tickets: parseInt(todayTicketStats?.verified) || 0
       },
       // 时间筛选区间（如果有）
       filtered
