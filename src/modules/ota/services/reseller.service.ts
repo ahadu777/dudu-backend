@@ -278,10 +278,22 @@ export class ResellerService extends BaseOTAService {
         const redemptionRate = totalActivated > 0 ? totalUsed / totalActivated : 0;
         const overallUtilization = totalGenerated > 0 ? totalUsed / totalGenerated : 0;
 
-        // 佣金率：优先从 ota_resellers 表获取，否则从批次 metadata 获取
-        const commissionRate = resellerDetail?.commission_rate
-          || resellerBatches[0]?.reseller_metadata?.commission_config?.rate
-          || 0;
+        // 佣金率：优先从 ota_resellers 表获取，否则从批次中找最新设置的佣金配置，最后用默认值
+        const DEFAULT_COMMISSION_RATE = 0.10; // 默认 10% 佣金
+        let commissionRate = resellerDetail?.commission_rate || 0;
+        if (!commissionRate) {
+          // 从批次中找最新一个有佣金配置的
+          for (const batch of resellerBatches) {
+            if (batch.reseller_metadata?.commission_config?.rate) {
+              commissionRate = batch.reseller_metadata.commission_config.rate;
+              break;
+            }
+          }
+        }
+        // 如果还是没有，使用默认佣金率
+        if (!commissionRate) {
+          commissionRate = DEFAULT_COMMISSION_RATE;
+        }
 
         return {
           reseller_id: reseller.reseller_id || null,
