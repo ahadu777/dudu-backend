@@ -72,7 +72,7 @@ export interface OTAActivateResponse {
 export interface OTABulkGenerateRequest {
   product_id: number;
   quantity: number;
-  batch_id: string;
+  batch_id?: string;  // 可选：前端可传入自定义批次ID，不传则由后端自动生成
   distribution_mode?: 'direct_sale' | 'reseller_batch';
   special_pricing?: {
     base_price: number;

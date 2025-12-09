@@ -6,13 +6,13 @@ import ticketsRouter from './tickets/router';
 import operatorsRouter from './operators/router';
 // reports module removed - redemptions endpoint moved to venue module
 // refunds module removed - refund functionality moved to payments module
+// travel module removed - not in use
+// reservations module removed - not in use (seat locking for travel routes)
 import policiesRouter from './policies/router';
 import profileRouter from './profile/router';
 import usersRouter from './users/router';
 import wechatAuthRouter from './auth/wechat.router';
 import adminRouter from './admin/router';
-import travelRouter from './travel/router';
-import reservationsRouter from './reservations/router';
 import otaRouter from './ota/router';
 import venueRouter from './venue/router';
 import qrGenerationRouter from './qr-generation/router';
@@ -28,8 +28,6 @@ export const registerModuleRouters = (app: Application): void => {
 
   app.use('/miniprogram', miniprogramRouter); // WeChat Mini Program endpoints
   app.use('/catalog', catalogRouter);
-  app.use('/travel', travelRouter);
-  app.use('/reservations', reservationsRouter);
   app.use('/admin', adminRouter);
   app.use('/orders', ordersRouter);
   app.use('/payments', paymentsRouter);

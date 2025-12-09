@@ -7,8 +7,8 @@ priority: High
 last_update: 2025-10-24T18:28:44+08:00
 business_requirement: "PRD-008"
 cards:
-  - travel-search-hub
-  - seat-lock-service
+  # - travel-search-hub           # DEPRECATED - 模块已删除
+  # - seat-lock-service           # DEPRECATED - 模块已删除
   - miniprogram-order
   - miniprogram-product-catalog
   - wallyt-payment

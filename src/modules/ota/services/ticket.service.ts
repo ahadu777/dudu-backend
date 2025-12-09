@@ -27,13 +27,30 @@ export class TicketService extends BaseOTAService {
 
   /**
    * 批量生成票务
+   *
+   * batch_id 处理逻辑（混合模式）：
+   * - 如果前端传入 batch_id：检查是否已存在，存在则报错
+   * - 如果前端未传入 batch_id：由后端自动生成
    */
   async bulkGenerateTickets(partnerId: string, request: OTABulkGenerateRequest): Promise<OTABulkGenerateResponse> {
+    // 生成或验证 batch_id
+    let batchId: string;
+    if (request.batch_id) {
+      // 前端传入了 batch_id，需要检查是否已存在
+      batchId = request.batch_id;
+    } else {
+      // 前端未传入，由后端生成
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+      batchId = `BATCH-${date}-${partnerId}-${random}`;
+    }
+
     this.log('ota.tickets.bulk_generate.requested', {
       partner_id: partnerId,
       product_id: request.product_id,
       quantity: request.quantity,
-      batch_id: request.batch_id
+      batch_id: batchId,
+      batch_id_source: request.batch_id ? 'client' : 'server'
     });
 
     // 验证数量
@@ -44,10 +61,13 @@ export class TicketService extends BaseOTAService {
       };
     }
 
+    // 将生成的或验证过的 batch_id 设置回 request
+    const requestWithBatchId = { ...request, batch_id: batchId };
+
     if (await this.isDatabaseAvailable()) {
-      return this.bulkGenerateInDatabase(partnerId, request);
+      return this.bulkGenerateInDatabase(partnerId, requestWithBatchId);
     } else {
-      return this.bulkGenerateInMock(partnerId, request);
+      return this.bulkGenerateInMock(partnerId, requestWithBatchId);
     }
   }
 
@@ -93,6 +113,21 @@ export class TicketService extends BaseOTAService {
     });
 
     const repo = await this.getOTARepository();
+
+    // 检查 batch_id 是否已存在（防止重复创建）
+    const existingBatch = await repo.findBatchById(request.batch_id!);
+    if (existingBatch) {
+      this.log('ota.tickets.bulk_generate.duplicate_batch_id', {
+        batch_id: request.batch_id,
+        partner_id: partnerId,
+        existing_partner_id: existingBatch.partner_id
+      }, 'warn');
+
+      throw {
+        code: ERR.VALIDATION_ERROR,
+        message: `Batch ID '${request.batch_id}' already exists. Please use a different batch_id or omit it to auto-generate.`
+      };
+    }
 
     // Get product from database first (needed for pricing and inventory)
     const product = await repo.findProductById(request.product_id);
@@ -270,7 +305,7 @@ export class TicketService extends BaseOTAService {
     });
 
     return {
-      batch_id: request.batch_id,
+      batch_id: request.batch_id!,  // 已在 bulkGenerateTickets 中确保有值
       distribution_mode: batch.distribution_mode,
       pricing_snapshot: batch.pricing_snapshot,
       reseller_metadata: batch.reseller_metadata,
@@ -544,7 +579,7 @@ export class TicketService extends BaseOTAService {
     }
 
     return {
-      batch_id: request.batch_id,
+      batch_id: request.batch_id!,  // 已在 bulkGenerateTickets 中确保有值
       distribution_mode: request.distribution_mode || 'direct_sale',
       tickets,
       total_generated: tickets.length

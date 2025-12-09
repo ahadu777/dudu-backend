@@ -17,8 +17,8 @@ cards:
   - miniprogram-product-catalog    # Done - 商品列表/详情/库存
   - miniprogram-order              # Done - 订单创建/列表/详情
   # Phase 2 - 待实现
-  - travel-search-hub              # Pending - 线路/套票搜索
-  - seat-lock-service              # Pending - 锁座服务
+  # - travel-search-hub            # DEPRECATED - 线路/套票搜索 (模块已删除)
+  # - seat-lock-service            # DEPRECATED - 锁座服务 (模块已删除)
   - wechat-payment-session         # Pending - 微信支付
   - bundle-ticket-engine           # Done - 票券生成（已在 miniprogram/order.service.ts 实现）
 related_features:

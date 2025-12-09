@@ -4,13 +4,14 @@ slug: seat-lock-service
 team: "A - Commerce"
 oas_paths: ["/reservations", "/reservations/{reservationId}"]
 migrations: ["db/migrations/0011_reservations_table.sql"]
-status: "Done"
+status: "deprecated"
 readiness: "mvp"
 branch: ""
 pr: ""
 newman_report: "reports/collections/us-010a-traveler-loop.json"
-last_update: "2025-10-28T19:15:00+08:00"
+last_update: "2025-12-09T11:00:00+08:00"
 related_stories: ["US-010", "US-010A"]
+deprecation_note: "reservations module removed - not in use (seat locking for travel routes)"
 ---
 
 ## Status & Telemetry
