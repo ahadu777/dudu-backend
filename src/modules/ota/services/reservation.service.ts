@@ -425,7 +425,7 @@ export class ReservationService extends BaseOTAService {
           { customer_type: 'child', unit_price: Math.round(product.unit_price * 0.5), discount_applied: 50 },
           { customer_type: 'elderly', unit_price: Math.round(product.unit_price * 0.7), discount_applied: 30 }
         ],
-        currency: 'CNY',
+        currency: 'HKD',
         captured_at: new Date().toISOString()
       }
     };

@@ -542,7 +542,7 @@ export class TicketService extends BaseOTAService {
       customer_name: request.customer_details.name,
       customer_type: request.customer_type,
       ticket_price: 100,
-      currency: 'CNY',
+      currency: 'HKD',
       status: 'activated',
       activated_at: new Date().toISOString()
     };

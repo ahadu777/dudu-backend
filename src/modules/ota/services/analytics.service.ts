@@ -226,9 +226,9 @@ export class AnalyticsService extends BaseOTAService {
    */
   async getAllPartners(): Promise<any[]> {
     // 从 API_KEYS 配置获取
-    return Object.entries(API_KEYS).map(([key, value]) => ({
+    return Array.from(API_KEYS.entries()).map(([key, value]) => ({
       id: value.partner_id,
-      name: value.name,
+      name: value.partner_name,  // 修复：使用正确的字段名
       permissions: value.permissions
     }));
   }
