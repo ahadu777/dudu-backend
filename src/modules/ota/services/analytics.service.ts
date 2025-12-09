@@ -141,27 +141,24 @@ export class AnalyticsService extends BaseOTAService {
 
   /**
    * 获取批次核销记录
+   * 返回数组，由 router 层包装响应格式
    */
-  async getBatchRedemptions(batchId: string): Promise<any> {
+  async getBatchRedemptions(batchId: string): Promise<any[]> {
     if (await this.isDatabaseAvailable()) {
       const repo = await this.getOTARepository();
       const redemptions = await repo.getBatchRedemptions(batchId);
 
-      return {
-        batch_id: batchId,
-        redemptions: redemptions.map((r: any) => ({
-          ticket_code: r.ticket_code,
-          function_code: r.function_code,
-          redeemed_at: r.redeemed_at,
-          venue_name: r.venue_name,
-          wholesale_price: r.wholesale_price,
-          customer_type: r.customer_type
-        })),
-        total: redemptions.length
-      };
+      return redemptions.map((r: any) => ({
+        ticket_code: r.ticket_code,
+        function_code: r.function_code,
+        redeemed_at: r.redeemed_at,
+        venue_name: r.venue_name,
+        wholesale_price: r.wholesale_price,
+        customer_type: r.customer_type
+      }));
     }
 
-    return { batch_id: batchId, redemptions: [], total: 0 };
+    return [];
   }
 
   /**
