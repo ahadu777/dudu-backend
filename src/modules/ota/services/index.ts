@@ -6,7 +6,6 @@
 
 export * from './base.service';
 export * from './inventory.service';
-export * from './reservation.service';
 export * from './ticket.service';
 export * from './order.service';
 export * from './reseller.service';

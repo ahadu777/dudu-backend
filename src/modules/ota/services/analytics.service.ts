@@ -285,9 +285,8 @@ export class AnalyticsService extends BaseOTAService {
       const repo = await this.getOTARepository();
 
       // 获取聚合统计
-      const [ordersSummary, reservationsSummary, ticketsSummary, inventoryUsage] = await Promise.all([
+      const [ordersSummary, ticketsSummary, inventoryUsage] = await Promise.all([
         repo.getPartnerOrdersSummary(partnerId, dateRange),
-        repo.getPartnerReservationsSummary(partnerId, dateRange),
         repo.getPartnerTicketsSummary(partnerId),
         repo.getPartnerInventoryUsage(partnerId)
       ]);
@@ -297,7 +296,6 @@ export class AnalyticsService extends BaseOTAService {
         partner_name: partnerData.partner_name,
         date_range: dateRange || { start_date: null, end_date: null },
         orders: ordersSummary,
-        reservations: reservationsSummary,
         tickets: ticketsSummary,
         inventory_usage: inventoryUsage
       };

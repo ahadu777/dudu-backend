@@ -6,11 +6,9 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  OneToMany,
   Index
 } from 'typeorm';
 import { ProductEntity } from './product.entity';
-import { ChannelReservationEntity } from '../modules/ota/domain/channel-reservation.entity';
 
 export interface ChannelAllocation {
   allocated: number;
@@ -39,9 +37,6 @@ export class ProductInventoryEntity {
   @ManyToOne(() => ProductEntity, product => product.inventory)
   @JoinColumn({ name: 'product_id' })
   product!: ProductEntity;
-
-  @OneToMany(() => ChannelReservationEntity, reservation => reservation.product_inventory)
-  reservations!: ChannelReservationEntity[];
 
   @CreateDateColumn()
   created_at!: Date;

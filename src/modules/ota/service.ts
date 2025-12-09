@@ -14,7 +14,6 @@ export * from './types';
 
 // 导入子服务
 import { InventoryService } from './services/inventory.service';
-import { ReservationService } from './services/reservation.service';
 import { TicketService } from './services/ticket.service';
 import { OrderService } from './services/order.service';
 import { ResellerService } from './services/reseller.service';
@@ -25,10 +24,6 @@ import { QRConfigService } from './services/qr-config.service';
 // 类型导入
 import {
   OTAInventoryResponse,
-  OTAReserveRequest,
-  OTAReserveResponse,
-  OTAActivateRequest,
-  OTAActivateResponse,
   OTABulkGenerateRequest,
   OTABulkGenerateResponse,
   OTATicketActivateRequest,
@@ -45,7 +40,6 @@ import {
  */
 export class OTAService {
   private inventoryService: InventoryService;
-  private reservationService: ReservationService;
   private ticketService: TicketService;
   private orderService: OrderService;
   private resellerService: ResellerService;
@@ -55,7 +49,6 @@ export class OTAService {
 
   constructor() {
     this.inventoryService = new InventoryService();
-    this.reservationService = new ReservationService();
     this.ticketService = new TicketService();
     this.orderService = new OrderService();
     this.resellerService = new ResellerService();
@@ -68,32 +61,6 @@ export class OTAService {
 
   async getInventory(productIds?: number[], partnerId?: string): Promise<OTAInventoryResponse> {
     return this.inventoryService.getInventory(productIds, partnerId);
-  }
-
-  // ============== 预订 ==============
-
-  async createReservation(request: OTAReserveRequest, partnerId?: string): Promise<OTAReserveResponse> {
-    return this.reservationService.createReservation(request, partnerId);
-  }
-
-  async getReservation(reservationId: string) {
-    return this.reservationService.getReservation(reservationId);
-  }
-
-  async getActiveReservations(partnerId?: string) {
-    return this.reservationService.getActiveReservations(partnerId);
-  }
-
-  async activateReservation(reservationId: string, request: OTAActivateRequest): Promise<OTAActivateResponse> {
-    return this.reservationService.activateReservation(reservationId, request);
-  }
-
-  async cancelReservation(reservationId: string): Promise<void> {
-    return this.reservationService.cancelReservation(reservationId);
-  }
-
-  async expireOldReservations(): Promise<number> {
-    return this.reservationService.expireOldReservations();
   }
 
   // ============== 票务 ==============
@@ -221,10 +188,3 @@ export const otaService = new Proxy({} as OTAService, {
   }
 });
 
-// ============== 定时任务（保持原有行为）==============
-
-setInterval(() => {
-  getOTAService().expireOldReservations().catch(error => {
-    logger.error('Failed to expire reservations', error);
-  });
-}, 5 * 60 * 1000); // Every 5 minutes
