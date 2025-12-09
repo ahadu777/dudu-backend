@@ -470,7 +470,7 @@ export class TicketService extends BaseOTAService {
 
     // 构建查询
     const queryBuilder = ticketRepo.createQueryBuilder('ticket')
-      .where('ticket.channel_id = :channelId', { channelId: partnerId });
+      .where('ticket.partner_id = :partnerId', { partnerId });
 
     if (filters.status) {
       queryBuilder.andWhere('ticket.status = :status', { status: filters.status });
