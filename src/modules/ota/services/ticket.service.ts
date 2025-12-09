@@ -6,7 +6,7 @@ import { ERR } from '../../../core/errors/codes';
 import { generateSecureQR } from '../../../utils/qr-crypto';
 import { ticketCodeGenerator } from '../../../utils/ticket-code-generator';
 import { directusService } from '../../../utils/directus';
-import { toOTAAPIStatus } from '../status-mapper';
+import { toOTAAPIStatus, fromOTAAPIStatus } from '../status-mapper';
 import { TicketRawMetadata } from '../../../types/domain';
 import {
   OTABulkGenerateRequest,
@@ -473,7 +473,9 @@ export class TicketService extends BaseOTAService {
       .where('ticket.partner_id = :partnerId', { partnerId });
 
     if (filters.status) {
-      queryBuilder.andWhere('ticket.status = :status', { status: filters.status });
+      // 将 OTA API 状态转换为内部状态进行查询
+      const internalStatus = fromOTAAPIStatus(filters.status as any);
+      queryBuilder.andWhere('ticket.status = :status', { status: internalStatus });
     }
 
     if (filters.batch_id) {
