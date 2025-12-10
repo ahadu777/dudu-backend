@@ -46,7 +46,8 @@ export class AnalyticsService extends BaseOTAService {
       return {
         batch_id: batchId,
         product_id: batch.product_id,
-        reseller_name: batch.reseller_metadata?.intended_reseller || 'Direct Sale',
+        distribution_mode: batch.distribution_mode,
+        reseller_name: batch.reseller_metadata?.intended_reseller || null,
         campaign_type: batch.batch_metadata?.campaign_type || 'standard',
         campaign_name: batch.batch_metadata?.campaign_name || 'Standard Batch',
         generated_at: batch.created_at.toISOString(),
@@ -70,6 +71,8 @@ export class AnalyticsService extends BaseOTAService {
 
     return {
       batch_id: batchId,
+      distribution_mode: null,
+      reseller_name: null,
       tickets_generated: 0,
       tickets_activated: 0,
       tickets_redeemed: 0,

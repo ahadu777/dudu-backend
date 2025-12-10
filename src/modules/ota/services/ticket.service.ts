@@ -647,7 +647,9 @@ export class TicketService extends BaseOTAService {
         order_id: t.order_no || null,
         customer_name: t.customer_name || null,
         customer_email: t.customer_email || null,
-        customer_type: t.customer_type || null
+        customer_type: t.customer_type || null,
+        reseller_name: t.reseller_name || null,
+        distribution_mode: t.distribution_mode || null
       })),
       pagination: {
         page,
@@ -709,7 +711,7 @@ export class TicketService extends BaseOTAService {
 
   private async getTicketsFromMock(partnerId: string, filters: OTATicketFilters): Promise<OTATicketListResponse> {
     return {
-      tickets: [],
+      tickets: [],  // Mock returns empty array, but type now includes reseller_name
       pagination: {
         page: filters.page || 1,
         page_size: filters.page_size || 20,

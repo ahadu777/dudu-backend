@@ -159,6 +159,8 @@ export interface OTATicketListResponse {
     customer_name: string | null;
     customer_email: string | null;
     customer_type: string | null;
+    reseller_name: string | null;
+    distribution_mode: string | null;
   }>;
   pagination: {
     page: number;
