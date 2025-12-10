@@ -395,24 +395,20 @@ export class OTARepository {
         }
       }
 
-      // Step 3: 批量插入票券（分块处理）
-      const BATCH_SIZE = 100;
-      const savedTickets: PreGeneratedTicketEntity[] = [];
+      // Step 3: 批量插入票券（直接使用 manager.insert，移除实体追踪开销）
+      // 批次大小 500 是经测试的最优值（减少网络往返，避免单条SQL过大）
+      const BATCH_SIZE = 500;
+      let insertedCount = 0;
 
       for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
         const chunk = tickets.slice(i, i + BATCH_SIZE);
         await queryRunner.manager.insert(TicketEntity, chunk);
-
-        for (const ticket of chunk) {
-          const entity = new TicketEntity();
-          Object.assign(entity, ticket);
-          savedTickets.push(entity);
-        }
+        insertedCount += chunk.length;
       }
 
       logger.info('ota.tickets.inserted_in_transaction', {
         batch_id: savedBatch.batch_id,
-        tickets_count: savedTickets.length
+        tickets_count: insertedCount
       });
 
       // Step 4: 提交事务
@@ -420,10 +416,11 @@ export class OTARepository {
 
       logger.info('ota.batch_with_tickets.transaction_committed', {
         batch_id: savedBatch.batch_id,
-        tickets_count: savedTickets.length
+        tickets_count: insertedCount
       });
 
-      return { batch: savedBatch, tickets: savedTickets };
+      // 返回原始 tickets 数组（已包含所有数据，无需重新构造实体）
+      return { batch: savedBatch, tickets: tickets as unknown as PreGeneratedTicketEntity[] };
 
     } catch (error) {
       // 回滚事务：批次、库存、票券全部回滚
@@ -497,12 +494,12 @@ export class OTARepository {
           WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           ELSE 0
         END) as total_revenue_realized
@@ -537,12 +534,12 @@ export class OTARepository {
           WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           ELSE 0
         END) as total_revenue_realized
@@ -645,12 +642,12 @@ export class OTARepository {
           WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           ELSE 0
         END) as total_revenue_realized
@@ -765,12 +762,12 @@ export class OTARepository {
           WHEN t.status IN ('ACTIVATED', 'VERIFIED') AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           WHEN t.status IN ('ACTIVATED', 'VERIFIED') AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           ELSE 0
         END) as total_revenue_realized

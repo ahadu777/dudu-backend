@@ -282,6 +282,8 @@ async function generateQRImage(
       }
 
       // Overlay logo onto QR code with PNG compression
+      // Using compressionLevel: 6 for better performance (9 is too slow for bulk generation)
+      // For 180x180 QR codes, the file size difference is minimal (~5-10%)
       const qrWithLogo = await sharp(qrBuffer).composite([
         {
           input: processedLogo,
@@ -290,7 +292,7 @@ async function generateQRImage(
           blend: 'over'
         }
       ])
-      .png({ compressionLevel: 9, quality: 90 })
+      .png({ compressionLevel: 6, quality: 90 })
       .toBuffer();
 
       // Convert to base64 data URI

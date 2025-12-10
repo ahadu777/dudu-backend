@@ -233,27 +233,24 @@ export class TicketService extends BaseOTAService {
       const weekendPremium = Number(product.weekend_premium || 30);
       const currency = 'HKD';
 
-      // Get customer type pricing from product or calculate defaults
-      const customerTypePricing = product.customer_discounts ? [
+      // Get customer type pricing from product
+      const discounts = product.customer_discounts || {};
+      const customerTypePricing = [
         {
           customer_type: 'adult' as const,
-          unit_price: Math.round(basePrice - (product.customer_discounts.adult || 0)),
-          discount_applied: Math.round(product.customer_discounts.adult || 0)
+          unit_price: Math.round(basePrice - (discounts.adult || 0)),
+          discount_applied: Math.round(discounts.adult || 0)
         },
         {
           customer_type: 'child' as const,
-          unit_price: Math.round(basePrice - (product.customer_discounts.child || Math.round(basePrice * 0.35))),
-          discount_applied: Math.round(product.customer_discounts.child || Math.round(basePrice * 0.35))
+          unit_price: Math.round(basePrice - (discounts.child || 0)),
+          discount_applied: Math.round(discounts.child || 0)
         },
         {
           customer_type: 'elderly' as const,
-          unit_price: Math.round(basePrice - (product.customer_discounts.elderly || Math.round(basePrice * 0.17))),
-          discount_applied: Math.round(product.customer_discounts.elderly || Math.round(basePrice * 0.17))
+          unit_price: Math.round(basePrice - (discounts.elderly || 0)),
+          discount_applied: Math.round(discounts.elderly || 0)
         }
-      ] : [
-        { customer_type: 'adult' as const, unit_price: basePrice, discount_applied: 0 },
-        { customer_type: 'child' as const, unit_price: Math.round(basePrice * 0.65), discount_applied: Math.round(basePrice * 0.35) },
-        { customer_type: 'elderly' as const, unit_price: Math.round(basePrice * 0.83), discount_applied: Math.round(basePrice * 0.17) }
       ];
 
       pricingSnapshot = {

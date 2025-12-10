@@ -306,17 +306,17 @@ export class ResellerService extends BaseOTAService {
 
           // 统计数据
           statistics: {
-            total_batches: parseInt(reseller.total_batches) || 0,
-            total_tickets_generated: totalGenerated,
-            total_tickets_activated: totalActivated,
-            total_tickets_used: totalUsed,
-            activation_rate: Math.round(activationRate * 10000) / 100
+            total_batches: parseInt(reseller.total_batches) || 0, // 总批次
+            total_tickets_generated: totalGenerated, // 总票券生成
+            total_tickets_activated: totalActivated, // 已激活
+            total_tickets_used: totalUsed, // 已使用
+            activation_rate: Math.round(activationRate * 10000) / 100 // 激活率
           },
 
           // 收入指标
           revenue_metrics: {
-            total_revenue: totalRevenue,
-            commission_earned: totalRevenue * commissionRate,
+            total_revenue: totalRevenue, // 总收入
+            commission_earned: totalRevenue * commissionRate, // 佣金收入
             currency: 'HKD'
           },
 
