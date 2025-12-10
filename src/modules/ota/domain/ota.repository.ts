@@ -80,10 +80,7 @@ export class OTARepository {
     await queryRunner.startTransaction();
 
     try {
-      // Bulk insert tickets
-      const savedTickets = await queryRunner.manager.save(TicketEntity, tickets);
-
-      // Update inventory (reserve units for the batch)
+      // Update inventory FIRST (reserve units for the batch)
       if (tickets.length > 0) {
         const productId = tickets[0].product_id;
         const quantity = tickets.length;
@@ -98,6 +95,27 @@ export class OTARepository {
             throw new Error('Insufficient inventory for reservation');
           }
           await queryRunner.manager.save(ProductInventoryEntity, inventory);
+        }
+      }
+
+      // Optimized batch insert using insert() for large batches
+      // insert() is more efficient than save() for bulk operations
+      // We split into chunks of 100 to avoid MySQL max_allowed_packet issues
+      const BATCH_SIZE = 100;
+      const savedTickets: PreGeneratedTicketEntity[] = [];
+
+      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
+        const chunk = tickets.slice(i, i + BATCH_SIZE);
+
+        // Use insert() for bulk insert - returns InsertResult, not entities
+        await queryRunner.manager.insert(TicketEntity, chunk);
+
+        // Convert partial tickets to full entities for return
+        // The insert was successful, so we can construct the entities
+        for (const ticket of chunk) {
+          const entity = new TicketEntity();
+          Object.assign(entity, ticket);
+          savedTickets.push(entity);
         }
       }
 
@@ -328,6 +346,98 @@ export class OTARepository {
   async createTicketBatch(batchData: Partial<OTATicketBatchEntity>): Promise<OTATicketBatchEntity> {
     const batch = this.batchRepo.create(batchData);
     return this.batchRepo.save(batch);
+  }
+
+  /**
+   * 创建批次和票券在同一个事务中
+   * 确保批次创建、库存扣减、票券插入的原子性
+   * 任何步骤失败都会完全回滚
+   */
+  async createBatchWithTickets(
+    batchData: Partial<OTATicketBatchEntity>,
+    tickets: Partial<PreGeneratedTicketEntity>[],
+    channelId: string = 'ota'
+  ): Promise<{ batch: OTATicketBatchEntity; tickets: PreGeneratedTicketEntity[] }> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Step 1: 创建批次记录
+      const batch = queryRunner.manager.create(OTATicketBatchEntity, batchData);
+      const savedBatch = await queryRunner.manager.save(OTATicketBatchEntity, batch);
+
+      logger.info('ota.batch.created_in_transaction', {
+        batch_id: savedBatch.batch_id,
+        total_quantity: savedBatch.total_quantity
+      });
+
+      // Step 2: 更新库存（先扣减，失败则整体回滚）
+      if (tickets.length > 0) {
+        const productId = tickets[0].product_id;
+        const quantity = tickets.length;
+
+        const inventory = await queryRunner.manager.findOne(ProductInventoryEntity, {
+          where: { product_id: productId }
+        });
+
+        if (inventory) {
+          if (!inventory.reserveInventory(channelId, quantity)) {
+            throw new Error('Insufficient inventory for reservation');
+          }
+          await queryRunner.manager.save(ProductInventoryEntity, inventory);
+
+          logger.info('ota.inventory.reserved_in_transaction', {
+            batch_id: savedBatch.batch_id,
+            product_id: productId,
+            quantity
+          });
+        }
+      }
+
+      // Step 3: 批量插入票券（分块处理）
+      const BATCH_SIZE = 100;
+      const savedTickets: PreGeneratedTicketEntity[] = [];
+
+      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
+        const chunk = tickets.slice(i, i + BATCH_SIZE);
+        await queryRunner.manager.insert(TicketEntity, chunk);
+
+        for (const ticket of chunk) {
+          const entity = new TicketEntity();
+          Object.assign(entity, ticket);
+          savedTickets.push(entity);
+        }
+      }
+
+      logger.info('ota.tickets.inserted_in_transaction', {
+        batch_id: savedBatch.batch_id,
+        tickets_count: savedTickets.length
+      });
+
+      // Step 4: 提交事务
+      await queryRunner.commitTransaction();
+
+      logger.info('ota.batch_with_tickets.transaction_committed', {
+        batch_id: savedBatch.batch_id,
+        tickets_count: savedTickets.length
+      });
+
+      return { batch: savedBatch, tickets: savedTickets };
+
+    } catch (error) {
+      // 回滚事务：批次、库存、票券全部回滚
+      await queryRunner.rollbackTransaction();
+
+      logger.error('ota.batch_with_tickets.transaction_rolled_back', {
+        batch_id: batchData.batch_id,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async findBatchById(batchId: string): Promise<OTATicketBatchEntity | null> {

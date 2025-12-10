@@ -3,7 +3,7 @@ import { TicketEntity, ProductEntity, ProductInventoryEntity } from '../../../mo
 import { OTATicketBatchEntity } from '../domain/ota-ticket-batch.entity';
 import { mockDataStore } from '../../../core/mock/data';
 import { ERR } from '../../../core/errors/codes';
-import { generateSecureQR } from '../../../utils/qr-crypto';
+import { generateSecureQR, preprocessLogoForBulk } from '../../../utils/qr-crypto';
 import { ticketCodeGenerator } from '../../../utils/ticket-code-generator';
 import { directusService } from '../../../utils/directus';
 import { toOTAAPIStatus, fromOTAAPIStatus } from '../status-mapper';
@@ -105,7 +105,78 @@ export class TicketService extends BaseOTAService {
 
   // ============== Database 实现 ==============
 
+  /**
+   * 并行生成单张票券（用于 Promise.all 批量处理）
+   */
+  private async generateSingleTicket(
+    ticketCode: string,
+    product: ProductEntity,
+    batch: OTATicketBatchEntity,
+    partnerId: string,
+    logoBuffer: Buffer | null,
+    qrColorConfig: { dark_color?: string; light_color?: string } | undefined,
+    isLogoPreprocessed: boolean = false
+  ): Promise<any> {
+    // Use entitlements from product or default cruise functions
+    const entitlements = product.entitlements?.map((entitlement: any) => ({
+      function_code: entitlement.type,
+      remaining_uses: 1
+    })) || [
+      { function_code: 'ferry', remaining_uses: 1 },
+      { function_code: 'deck_access', remaining_uses: 1 },
+      { function_code: 'dining', remaining_uses: 1 }
+    ];
+
+    // Generate QR code for bulk pre-generated tickets
+    // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
+    const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined, qrColorConfig, isLogoPreprocessed);
+    const rawMetadata: TicketRawMetadata = {
+      jti: {
+        pre_generated_jti: qrResult.jti,
+        current_jti: qrResult.jti
+      },
+      qr_metadata: {
+        issued_at: new Date().toISOString(),
+        expires_at: qrResult.expires_at
+      }
+    };
+
+    return {
+      ticket_code: ticketCode,
+      product_id: product.id,
+      batch_id: batch.batch_id,
+      partner_id: partnerId,
+      status: 'PRE_GENERATED' as const,
+      channel: 'ota',
+      entitlements,
+      qr_code: qrResult.qr_image,
+      raw: rawMetadata,
+      created_at: new Date(),
+      distribution_mode: batch.distribution_mode,
+      reseller_name: batch.reseller_metadata?.intended_reseller
+    };
+  }
+
+  /**
+   * 分批并行处理，控制并发数量防止内存溢出
+   */
+  private async processInBatches<T, R>(
+    items: T[],
+    processor: (item: T) => Promise<R>,
+    batchSize: number = 50
+  ): Promise<R[]> {
+    const results: R[] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batchItems = items.slice(i, i + batchSize);
+      const batchResults = await Promise.all(batchItems.map(processor));
+      results.push(...batchResults);
+    }
+    return results;
+  }
+
   private async bulkGenerateInDatabase(partnerId: string, request: OTABulkGenerateRequest): Promise<OTABulkGenerateResponse> {
+    const startTime = Date.now();
+
     this.log('ota.tickets.bulk_generation_database_mode', {
       batch_id: request.batch_id,
       quantity: request.quantity,
@@ -213,7 +284,7 @@ export class TicketService extends BaseOTAService {
       };
     }
 
-    // Create batch record AFTER inventory validation passes
+    // Prepare batch data (will be created in transaction with tickets)
     const expiresAt = request.distribution_mode === 'reseller_batch'
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days for reseller
       : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);  // 7 days for direct
@@ -230,7 +301,15 @@ export class TicketService extends BaseOTAService {
       pricing_snapshot: pricingSnapshot
     };
 
-    const batch = await repo.createTicketBatch(batchData);
+    // Note: batch will be created in transaction with tickets later
+    // Create temporary batch object for QR generation (not saved yet)
+    const tempBatch = {
+      batch_id: batchData.batch_id,
+      distribution_mode: batchData.distribution_mode,
+      reseller_metadata: batchData.reseller_metadata,
+      pricing_snapshot: batchData.pricing_snapshot,
+      expires_at: batchData.expires_at
+    } as any;
 
     // Get partner logo from Directus (cached for performance)
     const logoBuffer = await directusService.getPartnerLogo(partnerId);
@@ -242,66 +321,93 @@ export class TicketService extends BaseOTAService {
       });
     }
 
-    // Generate tickets for database
-    const tickets = [];
+    // Pre-process logo ONCE for bulk generation (major optimization)
+    // This avoids re-processing the same logo for each QR code
+    const logoPreprocessStartTime = Date.now();
+    const preprocessedLogo = await preprocessLogoForBulk(logoBuffer);
+    const logoPreprocessDuration = Date.now() - logoPreprocessStartTime;
 
-    for (let i = 0; i < request.quantity; i++) {
-      const ticketCode = ticketCodeGenerator.generate('DT');
-
-      // Use entitlements from product or default cruise functions
-      const entitlements = product.entitlements?.map((entitlement: any) => ({
-        function_code: entitlement.type,
-        remaining_uses: 1
-      })) || [
-        { function_code: 'ferry', remaining_uses: 1 },
-        { function_code: 'deck_access', remaining_uses: 1 },
-        { function_code: 'dining', remaining_uses: 1 }
-      ];
-
-      // Generate QR code for bulk pre-generated tickets
-      // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)
-      const qrColorConfig = product.qr_config ? {
-        dark_color: product.qr_config.dark_color,
-        light_color: product.qr_config.light_color
-      } : undefined;
-      const qrResult = await generateSecureQR(ticketCode, 52560000, logoBuffer || undefined, qrColorConfig);
-      const rawMetadata: TicketRawMetadata = {
-        jti: {
-          pre_generated_jti: qrResult.jti,
-          current_jti: qrResult.jti
-        },
-        qr_metadata: {
-          issued_at: new Date().toISOString(),
-          expires_at: qrResult.expires_at
-        }
-      };
-
-      const ticket = {
-        ticket_code: ticketCode,
-        product_id: product.id,
+    if (preprocessedLogo) {
+      this.log('ota.batch.logo_preprocessed', {
         batch_id: request.batch_id,
-        partner_id: partnerId,
-        status: 'PRE_GENERATED' as const,
-        channel: 'ota',
-        entitlements,
-        qr_code: qrResult.qr_image,
-        raw: rawMetadata,
-        created_at: new Date(),
-        distribution_mode: batch.distribution_mode,
-        reseller_name: batch.reseller_metadata?.intended_reseller
-      };
-
-      tickets.push(ticket);
+        preprocess_ms: logoPreprocessDuration,
+        preprocessed_size_bytes: preprocessedLogo.length
+      });
     }
 
-    // Save to database with inventory update
-    const savedTickets = await repo.createPreGeneratedTickets(tickets, channelId);
+    // Pre-generate all ticket codes first (synchronous, fast)
+    const ticketCodes: string[] = [];
+    for (let i = 0; i < request.quantity; i++) {
+      ticketCodes.push(ticketCodeGenerator.generate('DT'));
+    }
 
+    // QR color config (reused for all tickets)
+    const qrColorConfig = product.qr_config ? {
+      dark_color: product.qr_config.dark_color,
+      light_color: product.qr_config.light_color
+    } : undefined;
+
+    // Determine optimal batch size based on quantity
+    // - Small batches (< 50): process all at once
+    // - Medium batches (50-200): 50 concurrent
+    // - Large batches (> 200): 100 concurrent for better throughput
+    const concurrencyLimit = request.quantity <= 50 ? request.quantity :
+                             request.quantity <= 200 ? 50 : 100;
+
+    this.log('ota.tickets.bulk_generation_parallel_start', {
+      batch_id: request.batch_id,
+      quantity: request.quantity,
+      concurrency_limit: concurrencyLimit,
+      logo_preprocessed: !!preprocessedLogo
+    });
+
+    // Generate tickets in parallel batches (using preprocessed logo)
+    const qrStartTime = Date.now();
+    const tickets = await this.processInBatches(
+      ticketCodes,
+      (ticketCode) => this.generateSingleTicket(
+        ticketCode,
+        product,
+        tempBatch,  // Use temp batch object for QR generation
+        partnerId,
+        preprocessedLogo,  // Use preprocessed logo
+        qrColorConfig,
+        true  // Flag that logo is already preprocessed
+      ),
+      concurrencyLimit
+    );
+    const qrDuration = Date.now() - qrStartTime;
+
+    this.log('ota.tickets.bulk_generation_qr_completed', {
+      batch_id: request.batch_id,
+      quantity: request.quantity,
+      qr_generation_ms: qrDuration,
+      avg_per_ticket_ms: Math.round(qrDuration / request.quantity)
+    });
+
+    // Save batch AND tickets in a single transaction (atomic operation)
+    // If any step fails, everything is rolled back (batch, inventory, tickets)
+    const dbStartTime = Date.now();
+    const { batch, tickets: savedTickets } = await repo.createBatchWithTickets(
+      batchData,
+      tickets,
+      channelId
+    );
+    const dbDuration = Date.now() - dbStartTime;
+
+    const totalDuration = Date.now() - startTime;
     this.log('ota.tickets.bulk_generation_database_completed', {
       batch_id: request.batch_id,
       product_id: request.product_id,
       total_generated: savedTickets.length,
-      distribution_mode: batch.distribution_mode
+      distribution_mode: batch.distribution_mode,
+      transaction_mode: 'unified',  // Indicates atomic batch+tickets creation
+      performance: {
+        total_ms: totalDuration,
+        qr_generation_ms: qrDuration,
+        db_insert_ms: dbDuration,
+        avg_per_ticket_ms: Math.round(totalDuration / request.quantity)
+      }
     });
 
     return {
