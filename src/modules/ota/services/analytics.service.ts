@@ -80,6 +80,44 @@ export class AnalyticsService extends BaseOTAService {
   }
 
   /**
+   * 获取批次列表（带分页和筛选）
+   */
+  async listBatches(partnerId: string, filters: {
+    status?: string;
+    product_id?: number;
+    reseller?: string;
+    created_after?: string;
+    created_before?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ batches: any[]; total: number }> {
+    if (await this.isDatabaseAvailable()) {
+      const repo = await this.getOTARepository();
+      const result = await repo.findBatchesWithFilters(partnerId, filters);
+
+      // 转换为 API 响应格式
+      const batches = result.batches.map(batch => ({
+        batch_id: batch.batch_id,
+        product_id: batch.product_id,
+        distribution_mode: batch.distribution_mode,
+        status: batch.status,
+        total_quantity: batch.total_quantity,
+        tickets_activated: batch.tickets_activated || 0,
+        tickets_redeemed: batch.tickets_redeemed || 0,
+        reseller_name: batch.reseller_metadata?.intended_reseller || null,
+        campaign_type: batch.batch_metadata?.campaign_type || null,
+        expires_at: batch.expires_at ? batch.expires_at.toISOString() : null,
+        created_at: batch.created_at.toISOString()
+      }));
+
+      return { batches, total: result.total };
+    }
+
+    // Mock 模式返回空列表
+    return { batches: [], total: 0 };
+  }
+
+  /**
    * 获取分销商账单汇总
    */
   async getResellerBillingSummary(partnerId: string, reseller: string, period: string): Promise<any> {

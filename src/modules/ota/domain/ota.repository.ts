@@ -462,6 +462,103 @@ export class OTARepository {
   }
 
   /**
+   * Find batches with filters and pagination (for batch list API)
+   * Supports: status, product_id, reseller, date range filters
+   */
+  async findBatchesWithFilters(
+    partnerId: string,
+    filters: {
+      status?: string;
+      product_id?: number;
+      reseller?: string;
+      created_after?: string;
+      created_before?: string;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ batches: OTATicketBatchWithStatsDTO[]; total: number }> {
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 20, 100);
+    const offset = (page - 1) * limit;
+
+    // Build WHERE conditions
+    const conditions: string[] = ['b.partner_id = ?'];
+    const params: any[] = [partnerId];
+
+    if (filters.status) {
+      conditions.push('b.status = ?');
+      params.push(filters.status);
+    }
+
+    if (filters.product_id) {
+      conditions.push('b.product_id = ?');
+      params.push(filters.product_id);
+    }
+
+    if (filters.reseller) {
+      conditions.push("JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?");
+      params.push(filters.reseller);
+    }
+
+    if (filters.created_after) {
+      conditions.push('b.created_at >= ?');
+      params.push(filters.created_after);
+    }
+
+    if (filters.created_before) {
+      conditions.push('b.created_at <= ?');
+      params.push(filters.created_before);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // Count total for pagination
+    const countResult = await this.dataSource.query(
+      `SELECT COUNT(*) as total FROM ota_ticket_batches b WHERE ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult[0]?.total) || 0;
+
+    // Main query with stats
+    const query = `
+      SELECT
+        b.*,
+        COUNT(t.ticket_code) as tickets_generated,
+        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'VERIFIED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'adult' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+            )
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+            )
+          ELSE 0
+        END) as total_revenue_realized
+      FROM ota_ticket_batches b
+      LEFT JOIN tickets t ON t.batch_id = b.batch_id AND t.channel = 'ota'
+      WHERE ${whereClause}
+      GROUP BY b.batch_id
+      ORDER BY b.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const results = await this.dataSource.query(query, [...params, limit, offset]);
+    const batches = results.map((row: any) => this.mapRowToBatchWithStats(row));
+
+    return { batches, total };
+  }
+
+  /**
    * Helper method to map raw SQL row to DTO with stats
    */
   private mapRowToBatchWithStats(row: any): OTATicketBatchWithStatsDTO {

@@ -318,6 +318,62 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
   }
 });
 
+// GET /api/ota/batches - List all batches with pagination and filters
+router.get('/batches', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { status, product_id, reseller, created_after, created_before } = req.query;
+
+    const filters: any = {
+      page: req.pagination.page,
+      limit: req.pagination.limit
+    };
+
+    if (status) {
+      filters.status = status as string;
+    }
+
+    if (product_id) {
+      const productIdNum = parseInt(product_id as string, 10);
+      if (isNaN(productIdNum)) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'product_id must be a valid number'
+        });
+      }
+      filters.product_id = productIdNum;
+    }
+
+    if (reseller) {
+      filters.reseller = reseller as string;
+    }
+
+    if (created_after) {
+      filters.created_after = created_after as string;
+    }
+
+    if (created_before) {
+      filters.created_before = created_before as string;
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const result = await otaService.listBatches(partnerId, filters);
+
+    res.paginated(result.batches, result.total);
+
+  } catch (error: any) {
+    logger.error('OTA batches list failed', {
+      partner: req.ota_partner?.name,
+      error: error.message,
+      query: req.query
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve batches'
+    });
+  }
+});
+
 // GET /api/ota/batches/:id/analytics - Real-time batch performance analytics
 router.get('/batches/:id/analytics', async (req: AuthenticatedRequest, res: Response) => {
   try {

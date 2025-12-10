@@ -49,6 +49,7 @@ coverage_registry:
     runbook: "docs/integration/US-012-runbook.md"
     supplementary_collections:
       - "postman/auto-generated/ota-complete-coverage-extended.postman_collection.json"
+      - "postman/auto-generated/ota-batch-list.postman_collection.json"
     # 核心流程: 预制票券流程 (Pre-made Tickets)，不包含预订流程
     core_workflow: "Pre-made Tickets (批量生成 → 激活 → 核销)"
     new_coverage:
@@ -56,6 +57,7 @@ coverage_registry:
       - "✅ 批量生成票券 POST /api/ota/tickets/bulk-generate"
       - "✅ 激活预制票券 POST /api/ota/tickets/:code/activate"
       - "✅ 票券列表查询 GET /api/ota/tickets"
+      - "✅ 批次列表查询 GET /api/ota/batches (NEW 2025-12-10, 29 assertions)"
       - "✅ 速率限制精确阈值验证 100 req/min"
       - "✅ 审计日志存储与检索"
     coverage_analysis:
@@ -69,6 +71,7 @@ coverage_registry:
         "OTA API Gateway": "100%"
         "Pre-made Tickets Bulk Generate": "100%"
         "Pre-made Tickets Activation": "100%"
+        "Batch List API": "100% (NEW 2025-12-10, 12 tests, 29 assertions)"
         "B2B2C Reseller Batch": "100%"
         "Special Pricing Override": "100%"
         "Ticket Lifecycle (PRE_GENERATED→ACTIVE→USED)": "100%"

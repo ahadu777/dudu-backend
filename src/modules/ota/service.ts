@@ -117,6 +117,20 @@ export class OTAService {
     return this.resellerService.getResellersSummary(partnerId, filters);
   }
 
+  // ============== 批次 ==============
+
+  async listBatches(partnerId: string, filters: {
+    status?: string;
+    product_id?: number;
+    reseller?: string;
+    created_after?: string;
+    created_before?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    return this.analyticsService.listBatches(partnerId, filters);
+  }
+
   // ============== 分析 ==============
 
   async getBatchAnalytics(batchId: string) {
