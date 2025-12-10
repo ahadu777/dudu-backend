@@ -251,7 +251,9 @@ async function generateQRImage(
     // Step 2: If logo provided, overlay it in center
     if (logoBuffer) {
       const logoSize = Math.floor(QR_SIZE * 0.15);
-      const position = Math.floor((QR_SIZE - logoSize) / 2); // Center position
+      // When preprocessed, logo already includes 3px border on each side (total +6px)
+      const actualLogoSize = isPreprocessed ? logoSize + 6 : logoSize;
+      const position = Math.floor((QR_SIZE - actualLogoSize) / 2); // Center position
 
       let processedLogo: Buffer;
 

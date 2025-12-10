@@ -59,7 +59,7 @@ router.post('/wechat/prepay', authenticate, async (req: Request, res: Response) 
     // 获取客户端 IP
     const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
       || req.socket.remoteAddress
-      || '127.0.0.1';
+      || '0.0.0.0';
 
     // 调用支付服务
     const paymentService = getWallytPaymentService();

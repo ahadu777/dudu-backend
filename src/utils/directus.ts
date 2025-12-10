@@ -2,12 +2,13 @@ import axios from 'axios';
 import NodeCache from 'node-cache';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import { LOGO_BASE64 } from './logo-data';
 
 // Logo缓存（内存）- TTL: 1小时（默认）
 const logoCache = new NodeCache({ stdTTL: Number(env.LOGO_CACHE_TTL) || 3600 });
 
-// ✅ 所有partner共用一个logo图片
-const LOGO_FILE_ID = 'd981fda8-3d4f-4426-a946-136d8f3f59dc';
+// ✅ 硬编码的logo Buffer（从base64解码，启动时一次性加载）
+const HARDCODED_LOGO_BUFFER = Buffer.from(LOGO_BASE64, 'base64');
 
 export class DirectusService {
   private baseURL: string;
@@ -30,73 +31,17 @@ export class DirectusService {
   }
 
   /**
-   * 获取logo图片（所有partner共用，带缓存）
+   * 获取logo图片（使用硬编码的本地logo，无需网络请求）
    * @param partnerId - 合作伙伴ID（用于日志）
-   * @returns Logo图片Buffer，失败时返回null
+   * @returns Logo图片Buffer
    */
   async getPartnerLogo(partnerId: string): Promise<Buffer | null> {
-    // 如果Directus未配置，直接返回null
-    if (!this.baseURL) {
-      logger.debug('directus.logo.skipped', {
-        reason: 'directus_not_configured'
-      });
-      return null;
-    }
-
-    const cacheKey = 'logo:shared'; // 所有partner共用一个缓存key
-
-    // 1. 尝试从缓存获取
-    const cached = logoCache.get<Buffer>(cacheKey);
-    if (cached) {
-      logger.info('directus.logo.cache_hit', {
-        partner_id: partnerId,
-        size_kb: Math.round(cached.length / 1024)
-      });
-      return cached;
-    }
-
-    // 2. 从Directus下载
-    try {
-      const url = `${this.baseURL}/assets/${LOGO_FILE_ID}`;
-
-      logger.info('directus.logo.downloading', {
-        partner_id: partnerId,
-        file_id: LOGO_FILE_ID,
-        url
-      });
-
-      const response = await axios.get(url, {
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`
-        },
-        responseType: 'arraybuffer',
-        timeout: 5000 // 5秒超时
-      });
-
-      const buffer = Buffer.from(response.data);
-
-      // 3. 缓存到内存
-      logoCache.set(cacheKey, buffer);
-
-      logger.info('directus.logo.downloaded', {
-        partner_id: partnerId,
-        file_id: LOGO_FILE_ID,
-        size_kb: Math.round(buffer.length / 1024)
-      });
-
-      return buffer;
-    } catch (error) {
-      logger.error('directus.logo.download_failed', {
-        partner_id: partnerId,
-        file_id: LOGO_FILE_ID,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        error_details: axios.isAxiosError(error) ? {
-          status: error.response?.status,
-          statusText: error.response?.statusText
-        } : undefined
-      });
-      return null; // 失败时返回null，生成普通QR码
-    }
+    // 直接返回硬编码的logo，无需网络请求
+    logger.debug('directus.logo.hardcoded', {
+      partner_id: partnerId,
+      size_kb: Math.round(HARDCODED_LOGO_BUFFER.length / 1024)
+    });
+    return HARDCODED_LOGO_BUFFER;
   }
 
   /**
