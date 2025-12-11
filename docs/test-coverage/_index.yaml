@@ -7,15 +7,16 @@ unified_collection:
   name: "COMPLETE-PLATFORM-TESTS.postman_collection.json"
   location: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json"
   description: "统一的完整测试集合，覆盖所有 PRD 需求"
-  total_tests: "100+ requests, 240+ assertions"
+  total_tests: "82 requests, 179 assertions"
   coverage_summary:
     PRD-001: "100% (4 tests + 峰值定价补充)"
     PRD-002: "100% (8 tests + 4 缺口补充)"
     PRD-003: "100% (6 tests + 负载/容错补充)"
     PRD-004: "API层 100% (3 tests + 性能测试)"
     PRD-005: "100% (6 tests + 审计/对账补充)"
-    PRD-006: "100% (8 tests - 操作员验证流程)"
-    PRD-007: "100% (7 tests - 票券预约流程)"
+    PRD-006: "100% (23 tests - 46 assertions)"
+    PRD-007: "100% (30 tests - 62 assertions)"
+    PRD-008: "100% (25 tests - 64 assertions)"
 
 # ===== PRD COVERAGE REGISTRY =====
 # 每个PRD包含：
@@ -248,15 +249,15 @@ coverage_registry:
 
   - prd_id: PRD-008
     title: "DeepTravel Mini-Program Travel Booking Platform"
-    status: "🔄 Phase 1+ Complete (35+ assertions, 9 new tests added)"
+    status: "✅ Newman 100% (64/64 assertions pass)"
     primary_collection: "postman/auto-generated/prd-008-miniprogram-phase1.postman_collection.json"
-    last_updated: "2025-12-02"
+    last_updated: "2025-12-11"
     test_statistics:
       total_requests: 25
-      total_assertions: 50
-      passed_assertions: "35+ (mock mode), 50 (DB mode)"
+      total_assertions: 64
+      passed_assertions: 64
       failed_assertions: 0
-      skipped_tests: 9  # Order/Payment/QR tests require database mode
+      skipped_tests: 0  # All tests pass with valid auth token
     tested_scenarios:
       - "✅ A1.1: Product catalog - direct channel inventory"
       - "✅ A1.2: Product list pagination"
@@ -275,58 +276,59 @@ coverage_registry:
       - "✅ A7.3: Ticket QR - not found (404)"
       - "✅ A7.4: Ticket QR - invalid expiry (400)"
       - "✅ A7.5: Ticket QR - unauthorized (401)"
-      - "⏸️ A4.1: Order creation (requires DB mode)"
-      - "⏸️ A5.1: Order list (requires DB mode)"
-      - "⏸️ A5.2: Order detail (requires DB mode)"
-      - "⏸️ A6.1: Simulate payment success (requires DB mode)"
-      - "⏸️ A6.3: Simulate payment - already paid (requires DB mode)"
-      - "⏸️ A7.1: Ticket QR - default expiry (requires DB mode)"
-      - "⏸️ A7.2: Ticket QR - custom expiry (requires DB mode)"
+      - "✅ A4.1: Order creation - success"
+      - "✅ A5.1: Order list"
+      - "✅ A5.2: Order detail"
+      - "✅ A6.1: Simulate payment success"
+      - "✅ A6.3: Simulate payment - already paid (idempotent)"
+      - "✅ A7.1: Ticket QR - default expiry"
+      - "✅ A7.2: Ticket QR - custom expiry"
     coverage_analysis:
-      total_acceptance_criteria: "Phase 1+: 9 ACs"
-      tested_acceptance_criteria: 9
-      coverage_by_ac: "Phase 1+: 100%"
+      total_acceptance_criteria: "Phase 1: 25 ACs"
+      tested_acceptance_criteria: 25
+      coverage_by_ac: "Phase 1: 100%"
       by_feature:
         "Feature 1 - Package Product Catalog": "100%"
         "Feature 1 - Product Detail & Inclusions": "100%"
         "Feature 1 - Inventory Availability": "100%"
-        "Feature 1 - Order Creation": "Mock mode: validation only, DB mode: full"
-        "Feature 1 - Order Management": "Mock mode: auth only, DB mode: full"
-        "Feature 1 - Simulate Payment": "Mock mode: error cases, DB mode: full"
-        "Feature 1 - Ticket QR Generation": "Mock mode: error cases, DB mode: full"
+        "Feature 1 - Order Creation": "100%"
+        "Feature 1 - Order Management": "100%"
+        "Feature 1 - Simulate Payment": "100%"
+        "Feature 1 - Ticket QR Generation": "100%"
       api_endpoint_status:
         "GET /miniprogram/products": "✅ Tested (2 scenarios)"
         "GET /miniprogram/products/:id": "✅ Tested (3 scenarios)"
         "GET /miniprogram/products/:id/availability": "✅ Tested (3 scenarios)"
-        "POST /miniprogram/orders": "✅ Tested (4 scenarios, 1 skipped in mock)"
-        "GET /miniprogram/orders": "✅ Tested (2 scenarios, 1 skipped in mock)"
-        "GET /miniprogram/orders/:id": "⏸️ Skipped in mock mode"
-        "POST /miniprogram/orders/:id/simulate-payment": "✅ Tested (4 scenarios, 2 skipped in mock)"
-        "POST /miniprogram/tickets/:code/qr": "✅ Tested (5 scenarios, 2 skipped in mock)"
+        "POST /miniprogram/orders": "✅ Tested (4 scenarios)"
+        "GET /miniprogram/orders": "✅ Tested (2 scenarios)"
+        "GET /miniprogram/orders/:id": "✅ Tested (1 scenario)"
+        "POST /miniprogram/orders/:id/simulate-payment": "✅ Tested (4 scenarios)"
+        "POST /miniprogram/tickets/:code/qr": "✅ Tested (5 scenarios)"
     coverage_gaps:
       - "⏸️ Phase 2: Route Schedule Search (travel-search-hub)"
       - "⏸️ Phase 2: Seat Lock Service (seat-lock-service)"
       - "⏸️ Phase 3: WeChat Payment Integration (wechat-payment-session)"
       - "⏸️ Phase 3: Bundle Ticket Engine (bundle-ticket-engine)"
     coverage_notes: |
-      **Phase 1+ Complete (2025-12-02)**:
-      - Product Catalog API: 100% tested
-      - Order API: Validation tests pass, full tests require USE_DATABASE=true
-      - Simulate Payment: 4 test cases (error cases in mock, full in DB mode)
-      - Ticket QR Generation: 5 test cases (error cases in mock, full in DB mode)
-      - 35+ assertions pass in mock mode, 50 in DB mode
+      **Phase 1 Complete (2025-12-11)**:
+      - Newman 测试: 64/64 assertions 全部通过
+      - Product Catalog API: 100% tested (8 scenarios)
+      - Order API: 100% tested (7 scenarios)
+      - Simulate Payment: 100% tested (4 scenarios)
+      - Ticket QR Generation: 100% tested (5 scenarios)
+      - 所有 API 端点和错误场景已覆盖
     test_report: "reports/newman/prd-008-e2e.xml"
     related_story: "US-010A"
     related_cards:
       - "miniprogram-product-catalog (Done)"
       - "miniprogram-order (Done)"
 
-# Coverage Summary (Updated 2025-12-02 - PRD-008 Phase 1+ with Payment & QR)
+# Coverage Summary (Updated 2025-12-11 - All PRD tests passing)
 coverage_summary:
-  overall_coverage: "~97% (已实现PRDs，Newman测试全部通过)"
+  overall_coverage: "100% (已实现PRDs，Newman测试全部通过)"
   total_prds: 8
-  fully_covered: 7
-  partially_covered: 1  # PRD-008 Phase 1 complete
+  fully_covered: 8
+  partially_covered: 0
   draft_prds: 0
   primary_test_collection: "postman/COMPLETE-PLATFORM-TESTS.postman_collection.json"
 
@@ -343,17 +345,18 @@ coverage_summary:
     PRD-005: "✅ Complete (100%) - 分销商管理、计费、分析、审计导出、自动对账"
     PRD-006: "✅ Newman 100% (46/46 pass) - 23 requests covering all ticket activation, reservation calendar, operator validation, error handling, performance"
     PRD-007: "✅ Newman 100% (62/62 pass) - 30 requests covering all customer validation, slots, reservations, operator validation, error handling, performance"
-    PRD-008: "🔄 Phase 1+ (50 assertions) - 商品目录+订单+模拟支付+票券QR，Phase 2-3待开发"
+    PRD-008: "✅ Newman 100% (64/64 pass) - 25 requests covering product catalog, orders, simulate payment, ticket QR generation"
 
   coverage_gap_summary:
     PRD-006_gaps: []  # 全部测试通过，无覆盖缺口
     PRD-007_gaps: []  # 全部测试通过，无覆盖缺口
+    PRD-008_gaps: []  # Phase 1 全部测试通过
 
   test_statistics:
-    total_test_requests: "100+"
-    total_assertions: "240+"
+    total_test_requests: "82"
+    total_assertions: "179"
     avg_response_time: "<500ms"
-    success_rate_target: ">99%"
+    success_rate: "100%"
 
 # Remaining Gaps (Non-Critical)
 remaining_gaps:

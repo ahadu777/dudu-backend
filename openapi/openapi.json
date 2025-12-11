@@ -4367,10 +4367,119 @@
           }
         }
       }
+    },
+    "/miniprogram/profile": {
+      "get": {
+        "tags": ["Miniprogram"],
+        "summary": "获取当前用户资料",
+        "description": "获取已认证微信小程序用户的资料信息",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "用户资料获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MiniprogramUserProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证 - token 无效或缺失"
+          },
+          "404": {
+            "description": "用户不存在"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Miniprogram"],
+        "summary": "更新用户资料",
+        "description": "更新已认证用户的资料（支持部分更新）",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50,
+                    "description": "显示名称"
+                  },
+                  "nickname": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "昵称（存储在 wechat_extra 中）"
+                  }
+                }
+              },
+              "example": {
+                "name": "张三",
+                "nickname": "小明"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "资料更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MiniprogramUserProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求无效 - 未提供要更新的字段"
+          },
+          "401": {
+            "description": "未认证 - token 无效或缺失"
+          },
+          "422": {
+            "description": "参数校验失败"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "MiniprogramUserProfile": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "description": "用户ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "显示名称"
+          },
+          "nickname": {
+            "type": "string",
+            "nullable": true,
+            "description": "昵称（来自 wechat_extra）"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "已绑定的手机号"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "最后更新时间"
+          }
+        },
+        "required": ["user_id", "name", "updated_at"]
+      },
       "WallytPrepayResponse": {
         "type": "object",
         "properties": {
@@ -5871,6 +5980,10 @@
     {
       "name": "Venue Operations",
       "description": "场馆运营：票券核销、分析报告、欺诈检测"
+    },
+    {
+      "name": "Miniprogram",
+      "description": "微信小程序：用户资料、商品、订单管理"
     }
   ]
 }

@@ -8,7 +8,8 @@ description: |
   (4) 重构 - 代码结构变更
   (5) 自然语言需求 - 用户用口语描述需求
   (6) 文档创建/更新 - 创建或更新 PRD/Story/Card
-  触发条件：用户请求实现功能、修改代码、修复 bug、或描述任何开发需求
+  (7) 测试执行 - 运行测试、测试失败排查、测试覆盖率检查、验证 API 契约
+  触发条件：用户请求实现功能、修改代码、修复 bug、运行测试、或描述任何开发需求
 ---
 
 # AI Development Workflow
@@ -28,6 +29,7 @@ Identify task type and load corresponding reference:
 | "PRD or Story?" | Document Layer | `references/document-layer.md` |
 | Modify existing API | API Change | `references/api-change.md` |
 | Error / Stuck / Bug | Troubleshooting | `references/troubleshooting.md` |
+| Run tests / Test failed / Coverage | Testing | `references/testing.md` |
 | Simple fix / typo | Simple Fix | No ref needed → Go to Step 1 |
 
 ### Step 1: Reality Check (Required)
@@ -104,6 +106,19 @@ npm run test:story [N]  # Story test
 | "订单列表需要分页" | Card | Update Card |
 | "修复分页的bug" | Code | Fix code directly |
 
+### Testing Workflow
+
+**Test execution triggers workflow:**
+- Test failed → Load `references/testing.md` + `references/troubleshooting.md`
+- Test passed → Verify if Card status can change to Done
+- Coverage gap → Check if new tests needed
+
+**After tests pass:**
+1. Verify API contract matches Card spec
+2. Check if OpenAPI needs update
+3. Update coverage registry if needed
+4. Determine if business verification required before marking Done
+
 ### Status Updates
 
 - **测试通过 ≠ Done**
@@ -130,3 +145,4 @@ Load these as needed based on task type:
 - `references/document-layer.md` - PRD vs Story vs Card decision
 - `references/api-change.md` - Breaking vs non-breaking changes
 - `references/troubleshooting.md` - Common issues and fixes
+- `references/testing.md` - Test execution, failure handling, coverage

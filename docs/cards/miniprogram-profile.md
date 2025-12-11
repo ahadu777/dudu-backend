@@ -8,7 +8,7 @@ status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""
-newman_report: ""
+newman_report: "postman/auto-generated/miniprogram-profile.postman_collection.json"
 last_update: "2025-12-11T00:00:00+00:00"
 related_stories: ["US-009"]
 ---
