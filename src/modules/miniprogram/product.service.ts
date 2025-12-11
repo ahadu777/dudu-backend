@@ -19,6 +19,7 @@ export interface ProductListItem {
   name: string;
   description: string;
   base_price: number;
+  image_url?: string;
   functions: {
     function_code: string;
     label: string;
@@ -113,6 +114,7 @@ export class MiniprogramProductService {
           name: p.name,
           description: p.description,
           unit_price: Number(p.base_price),
+          image_url: p.image_url,
           functions,
           channel_allocations: inventory ? inventory.channel_allocations : {}
         };
@@ -140,6 +142,7 @@ export class MiniprogramProductService {
         name: product.name,
         description: product.description,
         base_price: product.unit_price,
+        image_url: product.image_url,
         functions: product.functions.map((f: any) => ({
           function_code: f.function_code,
           label: f.function_name,
@@ -193,6 +196,7 @@ export class MiniprogramProductService {
         description: dbProduct.description,
         category: dbProduct.category,
         base_price: Number(dbProduct.base_price),
+        image_url: dbProduct.image_url,
         weekend_premium: dbProduct.weekend_premium ? Number(dbProduct.weekend_premium) : undefined,
         customer_discounts: dbProduct.customer_discounts,
         functions,
@@ -205,7 +209,7 @@ export class MiniprogramProductService {
           status: this.calculateStockStatus(available)
         },
         status: dbProduct.status,
-        images: [],
+        images: dbProduct.image_url ? [dbProduct.image_url] : [],
         terms_and_conditions: null
       };
     } else {

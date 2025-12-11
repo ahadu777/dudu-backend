@@ -34,6 +34,9 @@ export class ProductEntity {
   @Column({ type: 'varchar', length: 50 })
   category!: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  image_url?: string;
+
   @Column({ type: 'json', nullable: true })
   entitlements?: Array<{
     type: string;
