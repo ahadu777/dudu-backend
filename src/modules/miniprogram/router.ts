@@ -4,11 +4,13 @@ import { paginationMiddleware } from '../../middlewares/pagination';
 import { authenticate } from '../../middlewares/auth';
 import { MiniprogramOrderService } from './order.service';
 import { MiniprogramProductService } from './product.service';
+import { MiniprogramProfileService } from './profile.service';
 import { CreateOrderRequest } from './order.types';
 
 const router = Router();
 const orderService = new MiniprogramOrderService();
 const productService = new MiniprogramProductService();
+const profileService = new MiniprogramProfileService();
 
 /**
  * GET /miniprogram/products
@@ -523,6 +525,110 @@ router.post('/orders/:id/simulate-payment', authenticate, async (req: any, res) 
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: '模拟支付失败'
+    });
+  }
+});
+
+// ========== 用户资料 API ==========
+
+/**
+ * GET /miniprogram/profile
+ * 获取当前用户资料
+ */
+router.get('/profile', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const profile = await profileService.getProfile(userId);
+
+    if (!profile) {
+      logger.info('miniprogram.profile.not_found', { user_id: userId });
+      return res.status(404).json({
+        code: 'NOT_FOUND',
+        message: '用户不存在'
+      });
+    }
+
+    logger.info('miniprogram.profile.get.success', { user_id: userId });
+
+    res.status(200).json(profile);
+
+  } catch (error: any) {
+    logger.error('miniprogram.profile.get.error', {
+      error: error.message || String(error)
+    });
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '获取用户资料失败'
+    });
+  }
+});
+
+/**
+ * POST /miniprogram/profile
+ * 更新用户资料（部分更新）
+ *
+ * Body:
+ * - name?: string - 显示名称
+ * - nickname?: string - 昵称（存储在 wechat_extra 中）
+ */
+router.post('/profile', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const { name, nickname } = req.body;
+
+    // 至少需要一个字段
+    if (name === undefined && nickname === undefined) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '请提供要更新的字段'
+      });
+    }
+
+    const profile = await profileService.updateProfile(userId, { name, nickname });
+
+    logger.info('miniprogram.profile.update.success', {
+      user_id: userId,
+      updated_fields: Object.keys(req.body)
+    });
+
+    res.status(200).json(profile);
+
+  } catch (error: any) {
+    logger.error('miniprogram.profile.update.error', {
+      error: error.message || String(error),
+      code: error.code
+    });
+
+    if (error.code) {
+      const statusMap: Record<string, number> = {
+        'USER_NOT_FOUND': 404,
+        'INVALID_NAME': 422,
+        'INVALID_NICKNAME': 422
+      };
+      const status = statusMap[error.code] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '更新用户资料失败'
     });
   }
 });

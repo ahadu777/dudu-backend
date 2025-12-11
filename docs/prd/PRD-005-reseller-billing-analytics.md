@@ -5,14 +5,62 @@
 prd_id: "PRD-005"
 product_area: "Finance & Analytics"
 owner: "Finance Team"
-status: "Draft"
+status: "Partial"
 created_date: "2025-11-15"
-last_updated: "2025-11-15"
+last_updated: "2025-12-11"
 related_stories: []
 implementation_cards: ["reseller-master-data", "usage-billing-engine", "audit-retention", "billing-reconciliation"]
 depends_on: "PRD-002"
 deadline: "2026-02-28"
+phase_status:
+  phase_1_reseller_master_data: "Done"      # 分销商主数据管理 - 已完成
+  phase_2_usage_billing_engine: "Deferred"  # 自动账单生成 - 暂缓
+  phase_3_audit_compliance: "Deferred"      # 审计合规系统 - 暂缓
 ```
+
+## Implementation Status (2025-12-11)
+
+| Phase | 功能 | 状态 | 说明 |
+|-------|------|------|------|
+| **Phase 1** | 分销商数据管理 | ✅ Done | 通过批次元数据管理，非独立表 |
+| **Phase 2** | 自动账单生成 | ⏸️ Deferred | 当前手动查询 API 足够，暂不需要自动化 |
+| **Phase 3** | 7年审计系统 | ⏸️ Deferred | 无合规强制要求，暂缓 |
+| **Phase 3** | 争议管理 | ⏸️ Deferred | 线下处理即可，暂缓 |
+
+### 实际实现方式
+
+**分销商数据存储在批次元数据中**（非独立 `ota_resellers` 表）：
+
+```
+创建批次时传入分销商信息:
+POST /api/ota/tickets/bulk-generate
+{
+  "distribution_mode": "reseller_batch",
+  "reseller_metadata": {
+    "intended_reseller": "旅行社A",
+    "contact_email": "a@travel.com",
+    "contact_phone": "12345678",
+    "commission_config": { "rate": 0.10 },
+    "settlement_cycle": "monthly"
+  }
+}
+```
+
+**数据流**:
+```
+批次创建 → reseller_metadata 存入 ota_ticket_batches 表
+         → 账单查询时从批次 JSON 字段聚合分销商数据
+```
+
+**已实现功能**:
+- `GET /api/ota/billing/summary?period=YYYY-MM` - 账单查询（从批次聚合）
+- `GET /api/ota/resellers/summary` - 分销商统计（从批次聚合）
+- 佣金率从 `reseller_metadata.commission_config.rate` 读取
+- 结算周期从 `reseller_metadata.settlement_cycle` 读取
+
+**注意**: `ota_resellers` 表已创建但**当前未使用**，分销商数据直接嵌入批次元数据。
+
+**暂缓原因**: 当前业务规模下，手动查询 API 数据足以满足对账需求，高级自动化功能待业务增长后再开发。
 
 ## Executive Summary
 **Problem Statement**: OTA partners distributing tickets through reseller networks need sophisticated billing reconciliation based on actual ticket redemption, not purchase events, with full audit trail compliance for B2B2C revenue recognition.

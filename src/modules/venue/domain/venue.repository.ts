@@ -446,57 +446,125 @@ export class VenueRepository {
   }
 
   // Analytics queries for PRD-003 success metrics
-  async getVenueAnalytics(venueId: number, startDate: Date, endDate: Date) {
+  // Supports all function types and package-level aggregation
+  async getVenueAnalytics(
+    venueId: number,
+    startDate: Date,
+    endDate: Date,
+    options?: { includeTerminalBreakdown?: boolean }
+  ) {
     const query = this.redemptionRepo.createQueryBuilder('re')
       .leftJoin('re.venue', 'v')
       .where('re.venue_id = :venueId', { venueId })
       .andWhere('re.redeemed_at BETWEEN :startDate AND :endDate', { startDate, endDate });
 
+    // All supported function codes (aligned with product entitlements)
+    const functionCodes = ['ferry', 'gift', 'tokens', 'park_admission', 'pet_area', 'vip', 'exclusive'];
+
+    // Build function count queries
+    const functionCountPromises = functionCodes.map(func =>
+      query.clone().andWhere('re.function_code = :func AND re.result = :result', {
+        func, result: 'success'
+      }).getCount()
+    );
+
     const [
       totalScans,
       successfulScans,
       fraudAttempts,
-      ferryCount,
-      giftCount,
-      tokensCount,
-      parkAdmissionCount
+      ...functionCounts
     ] = await Promise.all([
       query.clone().getCount(),
       query.clone().andWhere('re.result = :result', { result: 'success' }).getCount(),
       query.clone().andWhere('re.reason IN (:...fraudReasons)', {
-        fraudReasons: ['ALREADY_REDEEMED', 'DUPLICATE_JTI']
+        fraudReasons: ['ALREADY_REDEEMED', 'DUPLICATE_JTI', 'QR_SUPERSEDED']
       }).getCount(),
-      query.clone().andWhere('re.function_code = :func AND re.result = :result', {
-        func: 'ferry', result: 'success'
-      }).getCount(),
-      query.clone().andWhere('re.function_code = :func AND re.result = :result', {
-        func: 'gift', result: 'success'
-      }).getCount(),
-      query.clone().andWhere('re.function_code = :func AND re.result = :result', {
-        func: 'tokens', result: 'success'
-      }).getCount(),
-      query.clone().andWhere('re.function_code = :func AND re.result = :result', {
-        func: 'park_admission', result: 'success'
-      }).getCount()
+      ...functionCountPromises
     ]);
 
-    return {
+    // Build function breakdown object
+    const functionBreakdown: Record<string, number> = {};
+    functionCodes.forEach((code, index) => {
+      functionBreakdown[code] = functionCounts[index];
+    });
+
+    // Package-level aggregation (PRD-003 requirement)
+    // Premium Plan: ferry + gift + tokens
+    // Pet Package: park_admission + pet_area
+    // Deluxe: all functions combined
+    const packageBreakdown = {
+      premium_plan: functionBreakdown.ferry + functionBreakdown.gift + functionBreakdown.tokens,
+      pet_package: functionBreakdown.park_admission + functionBreakdown.pet_area,
+      deluxe: Object.values(functionBreakdown).reduce((sum, val) => sum + val, 0)
+    };
+
+    // Base analytics result
+    const result: any = {
       venue_id: venueId,
       period: { start: startDate, end: endDate },
       metrics: {
         total_scans: totalScans,
         successful_scans: successfulScans,
         fraud_attempts: fraudAttempts,
-        success_rate: totalScans > 0 ? (successfulScans / totalScans) * 100 : 0,
-        fraud_rate: totalScans > 0 ? (fraudAttempts / totalScans) * 100 : 0,
-        function_breakdown: {
-          ferry: ferryCount,
-          gift: giftCount,
-          tokens: tokensCount,
-          park_admission: parkAdmissionCount
-        }
+        success_rate: totalScans > 0 ? Math.round((successfulScans / totalScans) * 10000) / 100 : 0,
+        fraud_rate: totalScans > 0 ? Math.round((fraudAttempts / totalScans) * 10000) / 100 : 0,
+        function_breakdown: functionBreakdown,
+        package_breakdown: packageBreakdown
       }
     };
+
+    // Optional terminal breakdown for granular analysis
+    if (options?.includeTerminalBreakdown) {
+      const terminalBreakdown = await this.getTerminalBreakdown(venueId, startDate, endDate);
+      result.metrics.terminal_breakdown = terminalBreakdown;
+    }
+
+    return result;
+  }
+
+  // Terminal-level breakdown for cross-terminal fraud detection and device monitoring
+  private async getTerminalBreakdown(
+    venueId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<Array<{
+    terminal_id: string | null;
+    total_scans: number;
+    successful_scans: number;
+    fraud_attempts: number;
+    success_rate: number;
+    fraud_rate: number;
+  }>> {
+    const rawResults = await this.redemptionRepo
+      .createQueryBuilder('re')
+      .select('re.terminal_device_id', 'terminal_id')
+      .addSelect('COUNT(*)', 'total_scans')
+      .addSelect('SUM(CASE WHEN re.result = :success THEN 1 ELSE 0 END)', 'successful_scans')
+      .addSelect('SUM(CASE WHEN re.reason IN (:...fraudReasons) THEN 1 ELSE 0 END)', 'fraud_attempts')
+      .where('re.venue_id = :venueId', { venueId })
+      .andWhere('re.redeemed_at BETWEEN :startDate AND :endDate', { startDate, endDate })
+      .setParameters({
+        success: 'success',
+        fraudReasons: ['ALREADY_REDEEMED', 'DUPLICATE_JTI', 'QR_SUPERSEDED']
+      })
+      .groupBy('re.terminal_device_id')
+      .orderBy('total_scans', 'DESC')
+      .getRawMany();
+
+    return rawResults.map(row => {
+      const totalScans = parseInt(row.total_scans) || 0;
+      const successfulScans = parseInt(row.successful_scans) || 0;
+      const fraudAttempts = parseInt(row.fraud_attempts) || 0;
+
+      return {
+        terminal_id: row.terminal_id || null,
+        total_scans: totalScans,
+        successful_scans: successfulScans,
+        fraud_attempts: fraudAttempts,
+        success_rate: totalScans > 0 ? Math.round((successfulScans / totalScans) * 10000) / 100 : 0,
+        fraud_rate: totalScans > 0 ? Math.round((fraudAttempts / totalScans) * 10000) / 100 : 0
+      };
+    });
   }
 
   // Performance monitoring for <2 second requirement

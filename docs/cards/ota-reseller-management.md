@@ -4,13 +4,13 @@ slug: ota-reseller-management
 team: "A - Commerce"
 oas_paths: ["/api/ota/resellers", "/api/ota/resellers/:id"]
 migrations: ["src/migrations/011-create-ota-resellers-table.ts"]
-status: "Done"
-readiness: "complete"
+status: "Unused"
+readiness: "deprecated"
 branch: "init-ai"
 pr: ""
 newman_report: ""
 integration_runbook: ""
-last_update: "2025-11-14T15:20:00+08:00"
+last_update: "2025-12-11T18:00:00+08:00"
 related_stories: ["US-012"]
 relationships:
   depends_on: ["ota-channel-management"]
@@ -20,17 +20,39 @@ relationships:
     data_stores: ["ota.repository.ts"]
     external_apis: []
     downstream_services: ["ota-billing-summary"]
+notes: "ota_resellers 表已创建但未使用。实际分销商数据通过批次创建时的 reseller_metadata 传入。"
 ---
 
 # OTA Reseller Management — Dev Notes
 
+## ⚠️ 实际实现说明 (2025-12-11)
+
+**本卡片设计的独立分销商表方案未被采用。**
+
+**实际实现方式**：
+- 分销商数据在**创建批次时**通过 `reseller_metadata` 字段传入
+- 数据存储在 `ota_ticket_batches.reseller_metadata` JSON 字段
+- 账单查询从批次表聚合分销商数据
+- `ota_resellers` 表已创建但**当前未使用**
+
+**为什么未采用独立表**：
+- OTA 客户对接时直接在批次请求中传入分销商信息
+- 无需预先注册分销商，更灵活
+- 当前业务规模下 JSON 方案足够
+
+**如需启用独立表方案**：
+- 需要数据迁移（从批次 JSON 提取到独立表）
+- 需要修改批次创建 API 逻辑
+
+---
+
 ## Status & Telemetry
-- Status: Done
-- Readiness: complete
-- Spec Paths: /api/ota/resellers, /api/ota/resellers/:id
+- Status: Unused (表已创建但未使用)
+- Readiness: deprecated
+- Spec Paths: /api/ota/resellers, /api/ota/resellers/:id (API 存在但未被调用)
 - Migrations: src/migrations/011-create-ota-resellers-table.ts
 - Newman: TBD
-- Last Update: 2025-11-14T15:20:00+08:00
+- Last Update: 2025-12-11T18:00:00+08:00
 
 ## 0) Prerequisites
 - ota-channel-management card implemented (OTA partner authentication)

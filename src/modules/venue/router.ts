@@ -531,7 +531,12 @@ router.get('/redemptions', paginationMiddleware({ defaultLimit: 100, maxLimit: 1
  * /venue/{venue_code}/analytics:
  *   get:
  *     summary: Get venue performance analytics (PRD-003 metrics)
- *     description: Returns real-time analytics for venue operations including fraud detection and success rates
+ *     description: |
+ *       Returns real-time analytics for venue operations including:
+ *       - Total scans, success rate, fraud rate
+ *       - Function breakdown (ferry, gift, tokens, park_admission, pet_area, vip, exclusive)
+ *       - Package breakdown (premium_plan, pet_package, deluxe)
+ *       - Optional per-terminal breakdown for cross-terminal fraud detection
  *     tags: [Venue Operations]
  *     parameters:
  *       - in: path
@@ -547,9 +552,76 @@ router.get('/redemptions', paginationMiddleware({ defaultLimit: 100, maxLimit: 1
  *           type: integer
  *           default: 24
  *         description: Analytics time window in hours (1-168)
+ *       - in: query
+ *         name: include_terminals
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Include per-terminal breakdown for granular analysis
  *     responses:
  *       200:
  *         description: Venue analytics data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 venue_id:
+ *                   type: integer
+ *                 period:
+ *                   type: object
+ *                   properties:
+ *                     start:
+ *                       type: string
+ *                       format: date-time
+ *                     end:
+ *                       type: string
+ *                       format: date-time
+ *                 metrics:
+ *                   type: object
+ *                   properties:
+ *                     total_scans:
+ *                       type: integer
+ *                     successful_scans:
+ *                       type: integer
+ *                     fraud_attempts:
+ *                       type: integer
+ *                     success_rate:
+ *                       type: number
+ *                       description: Percentage (0-100)
+ *                     fraud_rate:
+ *                       type: number
+ *                       description: Percentage (0-100)
+ *                     function_breakdown:
+ *                       type: object
+ *                       description: Redemptions by function type
+ *                     package_breakdown:
+ *                       type: object
+ *                       properties:
+ *                         premium_plan:
+ *                           type: integer
+ *                           description: ferry + gift + tokens
+ *                         pet_package:
+ *                           type: integer
+ *                           description: park_admission + pet_area
+ *                         deluxe:
+ *                           type: integer
+ *                           description: All functions combined
+ *                     terminal_breakdown:
+ *                       type: array
+ *                       description: Per-terminal metrics (only if include_terminals=true)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           terminal_id:
+ *                             type: string
+ *                             nullable: true
+ *                           total_scans:
+ *                             type: integer
+ *                           success_rate:
+ *                             type: number
+ *                           fraud_rate:
+ *                             type: number
  *       400:
  *         description: Invalid hours parameter
  *       404:
@@ -558,6 +630,7 @@ router.get('/redemptions', paginationMiddleware({ defaultLimit: 100, maxLimit: 1
 router.get('/:venue_code/analytics', async (req, res) => {
   const { venue_code } = req.params;
   const hours = parseInt(req.query.hours as string) || 24;
+  const includeTerminals = req.query.include_terminals === 'true';
 
   if (hours < 1 || hours > 24 * 7) {
     return res.status(400).json({
@@ -567,13 +640,16 @@ router.get('/:venue_code/analytics', async (req, res) => {
   }
 
   try {
-    const analytics = await venueOperationsService.getVenueAnalytics(venue_code, hours);
+    const analytics = await venueOperationsService.getVenueAnalytics(venue_code, hours, {
+      includeTerminalBreakdown: includeTerminals
+    });
     res.json(analytics);
 
   } catch (error) {
     logger.error('venue.analytics.error', {
       venue_code,
       hours,
+      include_terminals: includeTerminals,
       error: (error as Error).message
     });
 

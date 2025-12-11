@@ -662,10 +662,22 @@ export class VenueOperationsService {
   }
 
   // ============================================================================
-  // Analytics
+  // Analytics (PRD-003)
   // ============================================================================
 
-  async getVenueAnalytics(venueCode: string, hours: number = 24) {
+  /**
+   * Get venue analytics with optional terminal breakdown
+   *
+   * @param venueCode - Venue identifier
+   * @param hours - Time window in hours (default: 24)
+   * @param options - Analytics options
+   * @param options.includeTerminalBreakdown - Include per-terminal metrics for cross-terminal fraud detection
+   */
+  async getVenueAnalytics(
+    venueCode: string,
+    hours: number = 24,
+    options?: { includeTerminalBreakdown?: boolean }
+  ) {
     const venue = await this.repository.findVenueByCode(venueCode);
 
     if (!venue) {
@@ -675,7 +687,7 @@ export class VenueOperationsService {
     const endDate = new Date();
     const startDate = new Date(endDate.getTime() - hours * 60 * 60 * 1000);
 
-    return this.repository.getVenueAnalytics(venue.venue_id, startDate, endDate);
+    return this.repository.getVenueAnalytics(venue.venue_id, startDate, endDate, options);
   }
 
   /**
