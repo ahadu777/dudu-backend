@@ -144,6 +144,11 @@ export interface OTATicketFilters {
   limit?: number;  // 兼容旧参数
   created_after?: string;
   created_before?: string;
+  // 新增筛选字段
+  ticket_code?: string;      // 票券码 (前缀匹配)
+  customer_name?: string;    // 客户名称 (模糊匹配)
+  reseller_name?: string;    // 经销商名称 (精确匹配)
+  product_id?: number;       // 产品ID (精确匹配)
 }
 
 export interface OTATicketListResponse {

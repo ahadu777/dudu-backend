@@ -628,6 +628,27 @@ export class TicketService extends BaseOTAService {
       queryBuilder.andWhere('ticket.created_at <= :createdBefore', { createdBefore: new Date(filters.created_before) });
     }
 
+    // 新增筛选条件
+    if (filters.ticket_code) {
+      // 票券码前缀匹配
+      queryBuilder.andWhere('ticket.ticket_code LIKE :ticketCode', { ticketCode: `${filters.ticket_code}%` });
+    }
+
+    if (filters.customer_name) {
+      // 客户名称模糊匹配
+      queryBuilder.andWhere('ticket.customer_name LIKE :customerName', { customerName: `%${filters.customer_name}%` });
+    }
+
+    if (filters.reseller_name) {
+      // 经销商名称精确匹配
+      queryBuilder.andWhere('ticket.reseller_name = :resellerName', { resellerName: filters.reseller_name });
+    }
+
+    if (filters.product_id) {
+      // 产品ID精确匹配
+      queryBuilder.andWhere('ticket.product_id = :productId', { productId: filters.product_id });
+    }
+
     // 分页
     const [tickets, total] = await queryBuilder
       .skip((page - 1) * pageSize)

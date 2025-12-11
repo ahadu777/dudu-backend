@@ -140,7 +140,11 @@ router.get('/orders/:id/tickets', async (req: AuthenticatedRequest, res: Respons
 // GET /api/ota/tickets - List tickets with optional filters
 router.get('/tickets', otaAuthMiddleware('inventory:read'), paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { status, batch_id, created_after, created_before } = req.query;
+    const {
+      status, batch_id, created_after, created_before,
+      // 新增筛选参数
+      ticket_code, customer_name, reseller_name, product_id
+    } = req.query;
 
     // 使用中间件解析的分页参数
     const filters: any = {
@@ -162,6 +166,26 @@ router.get('/tickets', otaAuthMiddleware('inventory:read'), paginationMiddleware
 
     if (created_before) {
       filters.created_before = created_before as string;
+    }
+
+    // 新增筛选条件
+    if (ticket_code) {
+      filters.ticket_code = ticket_code as string;
+    }
+
+    if (customer_name) {
+      filters.customer_name = customer_name as string;
+    }
+
+    if (reseller_name) {
+      filters.reseller_name = reseller_name as string;
+    }
+
+    if (product_id) {
+      const productIdNum = parseInt(product_id as string, 10);
+      if (!isNaN(productIdNum)) {
+        filters.product_id = productIdNum;
+      }
     }
 
     const partnerId = getPartnerIdWithFallback(req);
