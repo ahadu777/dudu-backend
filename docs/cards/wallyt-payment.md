@@ -2,15 +2,14 @@
 card: "Wallyt WeChat Mini-Program Payment"
 slug: wallyt-payment
 team: "A - Commerce"
-oas_paths: ["/payments/wechat/prepay", "/payments/wallyt/notify", "/payments/status/:orderId"]
-# Note: /payments/refund is documented in refund-processing.md card
+oas_paths: ["/payments/wechat/prepay", "/payments/wallyt/notify", "/payments/status/:orderId", "/payments/refund"]
 migrations: []
 status: "Done"
 readiness: "mvp"
 branch: "init-ai"
 pr: ""
 newman_report: ""
-last_update: "2025-12-06"
+last_update: "2025-12-11"
 related_stories: ["US-010", "US-010A"]
 related_prd: ["PRD-008"]
 deprecates: ["wechat-payment-session"]
@@ -21,9 +20,9 @@ deprecates: ["wechat-payment-session"]
 ## Status & Telemetry
 - Status: Done
 - Readiness: mvp（小程序调起微信支付 - Wallyt 集成）
-- Spec Paths: `/payments/wechat/prepay`, `/payments/wallyt/notify`, `/payments/status/:orderId`
+- Spec Paths: `/payments/wechat/prepay`, `/payments/wallyt/notify`, `/payments/status/:orderId`, `/payments/refund`
 - Migrations: 无（复用 order_payments 表）
-- Last Update: 2025-12-06
+- Last Update: 2025-12-11
 
 ## 0) Prerequisites
 - 用户已通过微信授权登录（PRD-004 wechat-auth-login）
@@ -375,3 +374,21 @@ WALLYT_NOTIFY_URL=https://your-domain.com/payments/wallyt/notify
 
 此卡片替代原有的 `wechat-payment-session` 卡片（Mock 实现）。
 原有 Mock 端点 `/payments/wechat/session` 和 `/payments/notify` 保留向后兼容，但新代码应使用 Wallyt 集成端点。
+
+## Changelog
+
+### 2025-12-11
+**Bug Fixes (xml.util.ts & wallyt.client.ts)**
+
+1. **XML 解析修复** - `xmlToObject()` 正则表达式重写
+   - 原正则 `/<(\w+)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/\1>/g` 存在缺陷
+   - 会先匹配 `<xml>` 外层标签，导致内部元素如 `<pay_info>` 无法解析
+   - 修复：分别匹配 CDATA 和纯文本内容
+
+2. **JSPay 响应格式兼容** - Wallyt 成功响应可能省略 `status`、`result_code`、`sign` 字段
+   - 原代码假设这些字段存在且为 `'0'`
+   - 修复：检查字段是否为 `undefined` 后再比较值
+
+**影响范围**：
+- `src/modules/payments/xml.util.ts` - XML 解析
+- `src/modules/payments/wallyt.client.ts` - 状态检查逻辑

@@ -7,9 +7,13 @@ product_area: "B2C Direct Sales"
 owner: "Product Manager"
 status: "In Progress"
 created_date: "2025-11-21"
-last_updated: "2025-12-06"
+last_updated: "2025-12-11"
 related_stories: ["US-010", "US-010A", "US-010B"]
 business_channel: "WeChat Mini-Program (direct)"
+phase_status:
+  phase_1_package_booking: "Done"      # 套票预订 - 已完成
+  phase_2_route_booking: "Draft"       # 线路预订 - 待开发
+  phase_3_advanced_features: "Draft"   # 高级功能 - 待开发
 related_cards:
   - miniprogram-product-catalog (Done)
   - miniprogram-order (Done)

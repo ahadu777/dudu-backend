@@ -48,7 +48,7 @@ export const env = cleanEnv(process.env, {
   WALLYT_API_URL: str({ default: 'https://gateway.wepayez.com/pay/gateway' }), // Payment API endpoint
   WALLYT_MCH_ID: str({ default: '' }), // Merchant ID (商户号)
   WALLYT_SECRET_KEY: str({ default: '' }), // API Secret Key (支付密钥)
-  WALLYT_SIGN_TYPE: str({ choices: ['MD5', 'SHA256'], default: 'MD5' }), // Signature type
+  WALLYT_SIGN_TYPE: str({ choices: ['MD5', 'SHA256', 'RSA_1_256'], default: 'MD5' }), // Signature type
   WALLYT_NOTIFY_URL: str({ default: '' }), // Payment callback URL
 
   // Directus CMS Configuration (for QR Code logo images + Ticket Reservations)

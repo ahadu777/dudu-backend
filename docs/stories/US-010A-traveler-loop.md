@@ -2,9 +2,9 @@
 id: US-010A
 title: DeepTravel 旅客闭环体验
 owner: Product
-status: "In Progress"
+status: "Done"
 priority: High
-last_update: 2025-12-04T15:00:00+08:00
+last_update: 2025-12-11T15:00:00+08:00
 business_requirement: "PRD-008"
 enhances:
   - US-001
@@ -16,11 +16,13 @@ cards:
   # Phase 1 - 已完成
   - miniprogram-product-catalog    # Done - 商品列表/详情/库存
   - miniprogram-order              # Done - 订单创建/列表/详情
-  # Phase 2 - 待实现
-  # - travel-search-hub            # DEPRECATED - 线路/套票搜索 (模块已删除)
-  # - seat-lock-service            # DEPRECATED - 锁座服务 (模块已删除)
-  - wechat-payment-session         # Pending - 微信支付
+  # 支付 - 已完成
+  - wallyt-payment                 # Done - 微信支付（替代 wechat-payment-session）
   - bundle-ticket-engine           # Done - 票券生成（已在 miniprogram/order.service.ts 实现）
+  # DEPRECATED
+  # - travel-search-hub            # DEPRECATED - 线路/套票搜索 (模块已删除，功能整合到 miniprogram-product-catalog)
+  # - seat-lock-service            # DEPRECATED - 锁座服务 (模块已删除，功能整合到 miniprogram-order)
+  # - wechat-payment-session       # DEPRECATED - 被 wallyt-payment 替代
 related_features:
   - tickets-issuance
   - my-tickets
@@ -92,14 +94,16 @@ related_features:
 - `order_payments` - 支付记录表
 - `tickets` (extended) - 票券表扩展
 
-### Phase 2: 搜索与锁座 🔲
+### Phase 2: 搜索与锁座 ⏭️ (DEPRECATED)
 | Card | Status | Description |
 |------|--------|-------------|
-| travel-search-hub | Pending | 线路/套票搜索、热门缓存 |
-| seat-lock-service | Pending | 锁座服务、库存预留 |
+| travel-search-hub | DEPRECATED | 功能整合到 miniprogram-product-catalog |
+| seat-lock-service | DEPRECATED | 功能整合到 miniprogram-order（订单超时自动释放库存） |
 
-### Phase 3: 支付与票券 🔲
+> **Note**: 搜索与锁座功能已简化并整合到 Phase 1 的 API 中，无需单独模块。
+
+### Phase 3: 支付与票券 ✅
 | Card | Status | Description |
 |------|--------|-------------|
-| wechat-payment-session | Pending | 微信支付集成 |
+| wallyt-payment | Done | 微信支付集成 (替代 wechat-payment-session) |
 | bundle-ticket-engine | Done | 多乘客票券批量生成（已在 miniprogram/order.service.ts 实现） |

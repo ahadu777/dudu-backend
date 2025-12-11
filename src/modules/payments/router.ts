@@ -3,7 +3,7 @@
  * 支持 Wallyt 微信小程序支付
  */
 
-import { Router, Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import { logger } from '../../utils/logger';
 import { authenticate } from '../../middlewares/auth';
 import { getWallytPaymentService } from './wallyt-payment.service';
@@ -89,10 +89,11 @@ router.post('/wechat/prepay', authenticate, async (req: Request, res: Response) 
  * POST /payments/wallyt/notify
  *
  * Wallyt 服务器调用，XML 格式
+ * 使用 express.text() 中间件接收原始 XML 字符串
  */
-router.post('/wallyt/notify', async (req: Request, res: Response) => {
+router.post('/wallyt/notify', express.text({ type: ['application/xml', 'text/xml'] }), async (req: Request, res: Response) => {
   try {
-    // 解析请求体 (可能是 XML 字符串或已解析的对象)
+    // 解析请求体 (XML 字符串)
     const notification = parseRequestBody<WallytNotification>(req.body);
 
     logger.info('payment.wallyt.notify.received', {

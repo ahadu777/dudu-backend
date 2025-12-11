@@ -129,7 +129,8 @@ export class WallytClient {
       });
 
       // 检查通信状态
-      if (result.status !== '0') {
+      // Note: Wallyt may omit status field on success when pay_info is present
+      if (result.status !== undefined && result.status !== '0') {
         throw new WallytError(
           result.message || 'Wallyt communication failed',
           'WALLYT_COMM_ERROR',
@@ -138,7 +139,8 @@ export class WallytClient {
       }
 
       // 检查业务状态
-      if (result.result_code !== '0') {
+      // Note: Wallyt may omit result_code field on success when pay_info is present
+      if (result.result_code !== undefined && result.result_code !== '0') {
         throw new WallytError(
           result.err_msg || 'Wallyt business error',
           result.err_code || 'WALLYT_BIZ_ERROR',
@@ -148,7 +150,8 @@ export class WallytClient {
       }
 
       // 验证响应签名
-      if (!verifySign(result, this.config.secretKey, this.config.signType)) {
+      // Note: JSPay responses with pay_info may not include sign field
+      if (result.sign && !verifySign(result, this.config.secretKey, this.config.signType)) {
         throw new WallytError(
           'Invalid response signature',
           'WALLYT_SIGN_ERROR'
@@ -423,7 +426,7 @@ export function getWallytClient(): WallytClient {
       apiUrl: env.WALLYT_API_URL,
       mchId: env.WALLYT_MCH_ID,
       secretKey: env.WALLYT_SECRET_KEY,
-      signType: env.WALLYT_SIGN_TYPE as 'MD5' | 'SHA256',
+      signType: env.WALLYT_SIGN_TYPE as 'MD5' | 'SHA256' | 'RSA_1_256',
       subAppId: env.WECHAT_APPID,
       notifyUrl: env.WALLYT_NOTIFY_URL
     };

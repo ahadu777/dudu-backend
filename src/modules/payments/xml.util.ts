@@ -43,14 +43,20 @@ export function objectToXml(obj: Record<string, any>): string {
 export function xmlToObject<T = Record<string, any>>(xml: string): T {
   const result: Record<string, string> = {};
 
-  // 匹配 <tag>content</tag> 或 <tag><![CDATA[content]]></tag>
-  const tagRegex = /<(\w+)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/\1>/g;
-
+  // Match CDATA wrapped content: <tag><![CDATA[content]]></tag>
+  const cdataRegex = /<(\w+)><!\[CDATA\[([\s\S]*?)\]\]><\/\1>/g;
   let match: RegExpExecArray | null;
-  while ((match = tagRegex.exec(xml)) !== null) {
-    const [, tag, content] = match;
-    if (tag !== 'xml') {
-      result[tag] = content.trim();
+  while ((match = cdataRegex.exec(xml)) !== null) {
+    if (match[1] !== 'xml') {
+      result[match[1]] = match[2].trim();
+    }
+  }
+
+  // Match plain content: <tag>content</tag> (no CDATA, no nested tags)
+  const plainRegex = /<(\w+)>([^<]*)<\/\1>/g;
+  while ((match = plainRegex.exec(xml)) !== null) {
+    if (match[1] !== 'xml' && !result[match[1]]) {
+      result[match[1]] = match[2].trim();
     }
   }
 

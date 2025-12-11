@@ -7,14 +7,14 @@ oas_paths: [
   "/miniprogram/products/{productId}",
   "/miniprogram/products/{productId}/availability"
 ]
-migrations: []
+migrations: ["025-add-image-url-to-products"]
 status: "Done"
 readiness: "mvp"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/miniprogram-product-catalog-manual-test-results.md"
 postman_collection: "postman/auto-generated/miniprogram-product-catalog.postman_collection.json"
-last_update: "2025-11-22T13:15:00+08:00"
+last_update: "2025-12-11T15:00:00+08:00"
 related_stories: ["US-010A"]
 ---
 
@@ -22,9 +22,9 @@ related_stories: ["US-010A"]
 - Status: Ready for implementation
 - Readiness: mvp（小程序商品展示）
 - Spec Paths: /miniprogram/products, /miniprogram/products/:id
-- Migrations: None（复用现有 products 和 product_inventory 表）
+- Migrations: 025-add-image-url-to-products（添加商品图片URL字段）
 - Newman: 待实现 • reports/newman/miniprogram-product-catalog.json
-- Last Update: 2025-11-21T17:00:00+08:00
+- Last Update: 2025-12-11T15:00:00+08:00
 
 ## 0) Prerequisites
 - catalog-endpoint 已实现（提供商品数据）
@@ -116,6 +116,11 @@ paths:
                         base_price:
                           type: number
                           example: 288.00
+                        image_url:
+                          type: string
+                          format: uri
+                          description: "商品展示图片URL"
+                          example: "https://example.com/images/product-101.jpg"
                         weekend_premium:
                           type: number
                           example: 30.00
@@ -197,6 +202,10 @@ paths:
                     type: string
                   base_price:
                     type: number
+                  image_url:
+                    type: string
+                    format: uri
+                    description: "商品展示图片URL"
                   weekend_premium:
                     type: number
                   customer_discounts:

@@ -242,7 +242,7 @@ export class WallytPaymentService {
 
     // 1. 验证签名
     const secretKey = env.WALLYT_SECRET_KEY;
-    const signType = env.WALLYT_SIGN_TYPE as 'MD5' | 'SHA256';
+    const signType = env.WALLYT_SIGN_TYPE as 'MD5' | 'SHA256' | 'RSA_1_256';
 
     if (!verifySign(notification, secretKey, signType)) {
       logger.warn('wallyt.notify.invalid_signature', { out_trade_no: outTradeNo });
