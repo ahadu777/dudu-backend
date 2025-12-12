@@ -90,7 +90,7 @@ class App {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:", "https:"],
           connectSrc: ["'self'"],
@@ -966,6 +966,12 @@ class App {
         <h2>🔧 API Documentation</h2>
         <p>Swagger UI with OpenAPI 3.0 specification</p>
         <div class="stats">Interactive API explorer</div>
+      </a>
+
+      <a href="/architecture" class="nav-card">
+        <h2>🏗️ Product Architecture</h2>
+        <p>Multi-platform product flowcharts: Mini-Program, OTA, Web Reservation, Venue Scanner</p>
+        <div class="stats">Complete system overview</div>
       </a>
     </div>
 
@@ -2935,6 +2941,360 @@ class App {
       } catch (error) {
         logger.error('Error generating compliance report:', error);
         res.status(500).json({ error: 'Failed to generate compliance report' });
+      }
+    });
+
+    // Product Architecture Flowchart View
+    this.app.get('/architecture', (_req, res) => {
+      try {
+        const filePath = path.join(process.cwd(), 'docs', 'product-architecture-flowchart.md');
+
+        if (!fs.existsSync(filePath)) {
+          return res.status(404).json({ error: 'Architecture document not found' });
+        }
+
+        const content = fs.readFileSync(filePath, 'utf-8');
+
+        // Extract title from first H1
+        const titleMatch = content.match(/^# (.+)$/m);
+        const title = titleMatch ? titleMatch[1] : 'Product Architecture';
+
+        // Convert markdown to HTML with Mermaid support
+        let htmlContent = content;
+
+        // Extract and preserve code blocks first
+        const codeBlocks: string[] = [];
+        let mermaidBlockCount = 0;
+        htmlContent = htmlContent.replace(/```(\w+)?\n([\s\S]*?)```/g, (_match, lang, code) => {
+          const index = codeBlocks.length;
+          if (lang === 'mermaid') {
+            mermaidBlockCount++;
+            const mermaidCode = code.trim();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/73d11adb-3f0a-41a0-938a-bc91c91fadce',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.ts:2970',message:'Mermaid block extracted',data:{blockIndex:index,mermaidBlockCount,codeLength:mermaidCode.length,codePreview:mermaidCode.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            codeBlocks.push(`<div class="mermaid">\n${mermaidCode}\n</div>`);
+          } else {
+            codeBlocks.push(`<pre><code class="language-${lang || 'text'}">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`);
+          }
+          return `\n__CODE_BLOCK_${index}__\n`;
+        });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/73d11adb-3f0a-41a0-938a-bc91c91fadce',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.ts:2976',message:'Total mermaid blocks found',data:{totalMermaidBlocks:mermaidBlockCount,totalCodeBlocks:codeBlocks.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+
+        // Escape remaining HTML
+        htmlContent = htmlContent
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+        // Headers
+        htmlContent = htmlContent.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+        htmlContent = htmlContent.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+        htmlContent = htmlContent.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+        htmlContent = htmlContent.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+        // Bold and Italic
+        htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        htmlContent = htmlContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+        // Inline code
+        htmlContent = htmlContent.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // Links
+        htmlContent = htmlContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+        // Blockquotes
+        htmlContent = htmlContent.replace(/^&gt; (.*$)/gim, '<blockquote>$1</blockquote>');
+
+        // Horizontal rules
+        htmlContent = htmlContent.replace(/^---$/gim, '<hr>');
+
+        // Tables
+        htmlContent = htmlContent.replace(/^\|(.+)\|$/gim, (match) => {
+          const cells = match.split('|').filter(c => c.trim());
+          if (cells.every(c => /^[-:]+$/.test(c.trim()))) {
+            return ''; // Skip separator row
+          }
+          const row = cells.map(c => `<td>${c.trim()}</td>`).join('');
+          return `<tr>${row}</tr>`;
+        });
+        htmlContent = htmlContent.replace(/(<tr>.*<\/tr>\n?)+/g, '<table class="data-table">$&</table>');
+
+        // Paragraphs - but not around code block placeholders
+        htmlContent = htmlContent.replace(/\n\n(?!__CODE_BLOCK)/g, '</p>\n<p>');
+        htmlContent = '<p>' + htmlContent + '</p>';
+        htmlContent = htmlContent.replace(/<p>\s*<(h[1-4]|table|blockquote|hr)/g, '<$1');
+        htmlContent = htmlContent.replace(/<\/(h[1-4]|table|blockquote)>\s*<\/p>/g, '</$1>');
+        htmlContent = htmlContent.replace(/<p>\s*__CODE_BLOCK_/g, '__CODE_BLOCK_');
+        htmlContent = htmlContent.replace(/__CODE_BLOCK_(\d+)__\s*<\/p>/g, '__CODE_BLOCK_$1__');
+        htmlContent = htmlContent.replace(/<p>\s*<\/p>/g, '');
+
+        // Restore code blocks AFTER all other processing
+        codeBlocks.forEach((block, index) => {
+          htmlContent = htmlContent.replace(`__CODE_BLOCK_${index}__`, block);
+          // #region agent log
+          if (block.includes('class="mermaid"')) {
+            const blockPreview = block.substring(0, 200).replace(/\n/g, '\\n');
+            const hasNewlines = block.includes('\n');
+            fetch('http://127.0.0.1:7242/ingest/73d11adb-3f0a-41a0-938a-bc91c91fadce',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.ts:3036',message:'Mermaid block restored to HTML',data:{blockIndex:index,blockLength:block.length,hasMermaidClass:block.includes('class="mermaid"'),hasNewlines,blockPreview},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          }
+          // #endregion
+        });
+
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js" onload="window.mermaidScriptLoaded = true;"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .nav-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .nav-links a {
+      color: #3498db;
+      text-decoration: none;
+      margin-left: 15px;
+    }
+    .nav-links a:hover { text-decoration: underline; }
+    h1 { color: #2c3e50; margin-bottom: 20px; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+    h2 { color: #34495e; margin: 30px 0 15px; padding-top: 20px; border-top: 1px solid #eee; }
+    h3 { color: #7f8c8d; margin: 20px 0 10px; }
+    h4 { color: #95a5a6; margin: 15px 0 10px; }
+    p { margin: 10px 0; }
+    .mermaid {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+    code {
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    :not(pre) > code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #c7254e;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    .data-table td, .data-table th {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    .data-table tr:nth-child(1) {
+      background: #3498db;
+      color: white;
+      font-weight: bold;
+    }
+    .data-table tr:nth-child(even) { background: #f9f9f9; }
+    blockquote {
+      border-left: 4px solid #3498db;
+      padding-left: 15px;
+      margin: 15px 0;
+      color: #666;
+      background: #f8f9fa;
+      padding: 10px 15px;
+      border-radius: 0 4px 4px 0;
+    }
+    hr { border: none; border-top: 1px solid #eee; margin: 30px 0; }
+    a { color: #3498db; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav-bar">
+      <div></div>
+      <div class="nav-links">
+        <a href="/project-docs">← Project Docs</a>
+        <a href="/prd">PRDs</a>
+        <a href="/stories">Stories</a>
+        <a href="/cards">Cards</a>
+        <a href="/sitemap">Sitemap</a>
+      </div>
+    </div>
+
+    ${htmlContent}
+  </div>
+
+  <script>
+    // #region agent log
+    console.log('[DEBUG] Script execution started');
+    console.log('[DEBUG] Document ready state:', document.readyState);
+    console.log('[DEBUG] Mermaid divs found:', document.querySelectorAll('.mermaid').length);
+    // #endregion
+    
+    function initMermaid() {
+      // #region agent log
+      console.log('[DEBUG] initMermaid called');
+      console.log('[DEBUG] typeof mermaid:', typeof mermaid);
+      console.log('[DEBUG] window.mermaidScriptLoaded:', window.mermaidScriptLoaded);
+      const mermaidDivs = document.querySelectorAll('.mermaid');
+      console.log('[DEBUG] Mermaid divs found:', mermaidDivs.length);
+      if (mermaidDivs.length > 0) {
+        console.log('[DEBUG] First mermaid div content preview:', mermaidDivs[0].textContent.substring(0, 100));
+      }
+      // #endregion
+      
+      if (typeof mermaid !== 'undefined') {
+        try {
+          // #region agent log
+          console.log('[DEBUG] Initializing Mermaid...');
+          // #endregion
+          // Initialize without startOnLoad since we'll manually run
+          mermaid.initialize({ startOnLoad: false, theme: 'default' });
+          // #region agent log
+          console.log('[DEBUG] Mermaid initialized, now running render...');
+          // #endregion
+          
+          // Manually run to render all diagrams
+          mermaid.run({
+            querySelector: '.mermaid',
+            postRenderCallback: function(id) {
+              // #region agent log
+              console.log('[DEBUG] Mermaid diagram rendered:', id);
+              // #endregion
+            }
+          }).then(function() {
+            // #region agent log
+            const rendered = document.querySelectorAll('.mermaid svg').length;
+            console.log('[DEBUG] Mermaid.run() completed. Rendered diagrams:', rendered);
+            // #endregion
+          }).catch(function(error) {
+            // #region agent log
+            console.error('[DEBUG] Mermaid.run() error:', error);
+            // #endregion
+          });
+          
+          return true;
+        } catch (error) {
+          // #region agent log
+          console.error('[DEBUG] Mermaid initialization error:', error);
+          // #endregion
+          return false;
+        }
+      } else {
+        // #region agent log
+        console.error('[DEBUG] Mermaid library not loaded yet');
+        // #endregion
+        return false;
+      }
+    }
+    
+    function waitForMermaidAndInit() {
+      // #region agent log
+      console.log('[DEBUG] waitForMermaidAndInit called');
+      console.log('[DEBUG] typeof mermaid:', typeof mermaid);
+      console.log('[DEBUG] window.mermaidScriptLoaded:', window.mermaidScriptLoaded);
+      // #endregion
+      
+      if (typeof mermaid !== 'undefined' || window.mermaidScriptLoaded) {
+        if (initMermaid()) {
+          // #region agent log
+          console.log('[DEBUG] Mermaid initialized successfully');
+          // #endregion
+          return;
+        }
+      }
+      
+      // Poll until Mermaid is loaded
+      const maxAttempts = 50;
+      let attempts = 0;
+      const pollInterval = setInterval(function() {
+        attempts++;
+        // #region agent log
+        if (attempts % 10 === 0) {
+          console.log('[DEBUG] Polling attempt', attempts, 'typeof mermaid:', typeof mermaid);
+        }
+        // #endregion
+        
+        if (typeof mermaid !== 'undefined') {
+          clearInterval(pollInterval);
+          initMermaid();
+        } else if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          // #region agent log
+          console.error('[DEBUG] Mermaid failed to load after', maxAttempts, 'attempts');
+          // #endregion
+        }
+      }, 100);
+    }
+    
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        // #region agent log
+        console.log('[DEBUG] DOMContentLoaded fired');
+        // #endregion
+        waitForMermaidAndInit();
+      });
+    } else {
+      // DOM already loaded
+      // #region agent log
+      console.log('[DEBUG] DOM already loaded');
+      // #endregion
+      waitForMermaidAndInit();
+    }
+    
+    // Also listen for script load event as backup
+    window.addEventListener('load', function() {
+      // #region agent log
+      console.log('[DEBUG] window.load event fired');
+      // #endregion
+      if (typeof mermaid !== 'undefined' && document.querySelectorAll('.mermaid svg').length === 0) {
+        // #region agent log
+        console.log('[DEBUG] Window loaded but diagrams not rendered, retrying');
+        // #endregion
+        initMermaid();
+      }
+    });
+  </script>
+</body>
+</html>`;
+
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      } catch (error) {
+        logger.error('Error loading architecture document:', error);
+        res.status(500).json({ error: 'Failed to load architecture document' });
       }
     });
 

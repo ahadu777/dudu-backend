@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../config/database';
 import { UserEntity } from '../../models';
+import { AppError } from '../../middlewares/errorHandler';
 import { logger } from '../../utils/logger';
 
 export interface UpdateProfileRequest {
@@ -14,6 +15,18 @@ export interface ProfileResponse {
   nickname: string | null;
   phone: string | null;
   updated_at: string;
+}
+
+/**
+ * 业务错误 - 扩展 AppError 添加 code 属性
+ */
+class ProfileError extends AppError {
+  public code: string;
+
+  constructor(message: string, code: string, statusCode: number) {
+    super(message, statusCode);
+    this.code = code;
+  }
 }
 
 export class MiniprogramProfileService {
@@ -47,9 +60,7 @@ export class MiniprogramProfileService {
     });
 
     if (!user) {
-      const error: any = new Error('用户不存在');
-      error.code = 'USER_NOT_FOUND';
-      throw error;
+      throw new ProfileError('用户不存在', 'USER_NOT_FOUND', 404);
     }
 
     const fieldsChanged: string[] = [];
@@ -58,14 +69,10 @@ export class MiniprogramProfileService {
     if (data.name !== undefined) {
       const trimmedName = data.name.trim();
       if (trimmedName.length === 0) {
-        const error: any = new Error('名称不能为空');
-        error.code = 'INVALID_NAME';
-        throw error;
+        throw new ProfileError('名称不能为空', 'INVALID_NAME', 422);
       }
       if (trimmedName.length > 50) {
-        const error: any = new Error('名称不能超过50个字符');
-        error.code = 'INVALID_NAME';
-        throw error;
+        throw new ProfileError('名称不能超过50个字符', 'INVALID_NAME', 422);
       }
       user.name = trimmedName;
       fieldsChanged.push('name');
@@ -75,16 +82,15 @@ export class MiniprogramProfileService {
     if (data.nickname !== undefined) {
       const trimmedNickname = data.nickname.trim();
       if (trimmedNickname.length > 50) {
-        const error: any = new Error('昵称不能超过50个字符');
-        error.code = 'INVALID_NICKNAME';
-        throw error;
+        throw new ProfileError('昵称不能超过50个字符', 'INVALID_NICKNAME', 422);
       }
 
       // 确保 wechat_extra 存在
       if (!user.wechat_extra) {
         user.wechat_extra = {};
       }
-      user.wechat_extra.nickname = trimmedNickname || undefined;
+      // 空字符串时设置为 null，表示用户显式清空昵称
+      user.wechat_extra.nickname = trimmedNickname.length > 0 ? trimmedNickname : undefined;
       fieldsChanged.push('nickname');
     }
 

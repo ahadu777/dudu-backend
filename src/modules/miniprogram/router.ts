@@ -535,7 +535,7 @@ router.post('/orders/:id/simulate-payment', authenticate, async (req: any, res) 
  * GET /miniprogram/profile
  * 获取当前用户资料
  */
-router.get('/profile', authenticate, async (req: any, res) => {
+router.get('/profile', authenticate, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -554,8 +554,6 @@ router.get('/profile', authenticate, async (req: any, res) => {
         message: '用户不存在'
       });
     }
-
-    logger.info('miniprogram.profile.get.success', { user_id: userId });
 
     res.status(200).json(profile);
 
@@ -578,7 +576,7 @@ router.get('/profile', authenticate, async (req: any, res) => {
  * - name?: string - 显示名称
  * - nickname?: string - 昵称（存储在 wechat_extra 中）
  */
-router.post('/profile', authenticate, async (req: any, res) => {
+router.post('/profile', authenticate, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -600,10 +598,7 @@ router.post('/profile', authenticate, async (req: any, res) => {
 
     const profile = await profileService.updateProfile(userId, { name, nickname });
 
-    logger.info('miniprogram.profile.update.success', {
-      user_id: userId,
-      updated_fields: Object.keys(req.body)
-    });
+    // 日志已在 service 层记录，此处不重复
 
     res.status(200).json(profile);
 
@@ -613,14 +608,9 @@ router.post('/profile', authenticate, async (req: any, res) => {
       code: error.code
     });
 
-    if (error.code) {
-      const statusMap: Record<string, number> = {
-        'USER_NOT_FOUND': 404,
-        'INVALID_NAME': 422,
-        'INVALID_NICKNAME': 422
-      };
-      const status = statusMap[error.code] || 500;
-      return res.status(status).json({
+    // 使用 ProfileError 的 statusCode 和 code
+    if (error.statusCode && error.code) {
+      return res.status(error.statusCode).json({
         code: error.code,
         message: error.message
       });
