@@ -21,6 +21,7 @@ import reservationSlotsRouter from './reservation-slots/router';
 import customerReservationRouter from './customerReservation/router';
 import pricingRouter from './pricing/router';
 import miniprogramRouter from './miniprogram/router';
+import docsRouter from './docs/router';
 
 export const registerModuleRouters = (app: Application): void => {
   app.use('/users', usersRouter);
@@ -46,6 +47,9 @@ export const registerModuleRouters = (app: Application): void => {
   // app.use('/', ticketReservationRouter);
   app.use('/api', reservationSlotsRouter); // Operator slot management + customer availability
   app.use('/api', customerReservationRouter); // Enhanced customer reservation with activation checks + Directus
+
+  // Documentation portal (PRDs, Stories, Cards, Visualizations)
+  app.use('/', docsRouter);
 
   // These have catch-all routes, so register them LAST
   app.use('/', policiesRouter);
