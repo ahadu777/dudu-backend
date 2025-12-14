@@ -24,6 +24,7 @@ export interface CoverageEntry {
     coverage_by_ac?: string;
     by_feature?: Record<string, string>;
     by_category?: Record<string, string>;
+    api_endpoint_status?: Record<string, string>;
   };
   tested_scenarios?: string[];
   coverage_gaps?: string[];
@@ -39,6 +40,12 @@ export interface CoverageSummary {
   draft_prds: number;
   primary_test_collection: string;
   by_prd?: Record<string, string>;
+  test_statistics?: {
+    total_test_requests?: string;
+    total_assertions?: string;
+    avg_response_time?: string;
+    success_rate?: string;
+  };
 }
 
 export interface TestCoverageData {

@@ -4,7 +4,7 @@ slug: ota-reseller-management
 team: "A - Commerce"
 oas_paths: ["/api/ota/resellers", "/api/ota/resellers/:id"]
 migrations: ["src/migrations/011-create-ota-resellers-table.ts"]
-status: "Unused"
+status: "deprecated"
 readiness: "deprecated"
 branch: "init-ai"
 pr: ""

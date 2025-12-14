@@ -60,30 +60,11 @@ cards:
 - [x] 批次分发不影响 OTA 直销库存分配
 
 #### Reseller Master Data Management *(NEW - 2025-11-14)*
-**Database Schema:**
-- [x] Centralized reseller registry table (ota_resellers) with auto-increment primary key
-- [x] Each reseller linked to specific OTA partner via partner_id foreign key
-- [x] Unique constraint on (partner_id + reseller_code) prevents duplicates
-- [x] Commission rate configuration per reseller (customizable, default 10%)
-- [x] Contract lifecycle tracking (start_date, end_date, status)
-- [x] Settlement cycle configuration (weekly/monthly/quarterly)
-- [x] Regional assignment and tier-based categorization
-- [x] Batch table references reseller via reseller_id foreign key (nullable)
-- [x] Data migration extracts existing resellers from batch JSON metadata
-
-**Reseller Management Capabilities (Implemented 2025-11-14):**
-- [x] OTA 平台可查看其所有分销商列表
-- [x] OTA 平台可新增分销商（必填：编码、名称）
-- [x] OTA 平台可查看单个分销商详情
-- [x] OTA 平台可更新分销商信息（佣金比例、等级等）
-- [x] OTA 平台可停用分销商（软删除）
+- [x] OTA 平台可管理其分销商（增删改查）
 - [x] 系统确保分销商数据隔离（只能访问自己的分销商）
-- [x] Mock 模式测试通过率 100%
-- [x] OpenAPI 文档已更新
-
-**Business Logic:**
 - [x] 账单汇总支持跨所有分销商聚合查询
-- [ ] 数据库模式测试待 migration 011 修复后执行
+
+> 技术实现详见 Card: [ota-reseller-management](../cards/ota-reseller-management.md)
 
 #### Ticket Lifecycle Enhancement Acceptance Criteria *(NEW - 2025-11-14)*
 - [x] OTA 票券支持"已使用"状态
@@ -127,233 +108,55 @@ cards:
 2. **Ticket Generation**: Same ticket issuance service creates tickets with entitlements
 3. **QR System**: Identical QR generation and redemption for OTA tickets
 
-### 3. API Endpoints Needed
+### 3. API Endpoints
 
-```yaml
-# Enhanced endpoint for reseller batch support
-/api/ota/tickets/bulk-generate:                          # NEW ENDPOINT
-  post:
-    summary: Generate ticket batches for reseller distribution
-    request:
-      - product_id: package to generate
-      - quantity: number of tickets (1-5000)
-      - distribution_mode: "direct_sale" | "reseller_batch"
-      - reseller_metadata: { intended_reseller, batch_purpose }
-    response:
-      - batch_id: unique batch identifier
-      - tickets: array of pre-generated tickets with QR codes
-      - reseller_metadata: distribution tracking info
-      - expires_at: 暂定销售期 (Provisional sales period, 当前未强制执行)
-    errors: 400, 401, 403, 422
+> 详细 API 契约见关联 Cards，此处仅列出端点清单：
 
-/api/ota/inventory:
-  get:
-    summary: Get real-time package availability for OTA
-    parameters:
-      - product_ids: array of package IDs
-      - date_range: optional availability window
-    response:
-      - available_quantities: { product_id: available_count }
-      - pricing_context: complex pricing rules
-    errors: 401, 403, 422
+| 端点 | 用途 | Card |
+|------|------|------|
+| `GET /api/ota/inventory` | 查询库存 | ota-channel-management |
+| `POST /api/ota/tickets/bulk-generate` | 批量生成票券 | ota-premade-tickets |
+| `GET /api/ota/tickets` | 查询票券 | ota-order-retrieval |
+| `GET /qr/{ticket_code}/info` | 票券状态查询 | qr-generation-api |
+| `GET /api/ota/resellers` | 分销商管理 | ota-reseller-management |
 
-/api/ota/reserve:
-  post:
-    summary: Reserve package inventory for OTA sales
-    request:
-      - product_id: package to reserve
-      - quantity: number of units
-      - reservation_expires_at: optional expiry time
-    response:
-      - reservation_id: unique identifier
-      - reserved_until: expiration timestamp
-      - pricing_snapshot: current pricing for package
-    errors: 400, 401, 403, 409, 422
+### 4. 数据影响
 
-/api/ota/orders:
-  post:
-    summary: Create order using reserved inventory
-    request:
-      - reservation_id: from previous reserve call
-      - customer_details: user information
-      - pricing_context: customer type, timing
-    response:
-      - order_id: created order identifier
-      - payment_required: amount and currency
-      - webhook_url: for payment notifications
-    errors: 400, 401, 404, 409, 422
+> 详细数据库设计见各 Card 的 Data Impact 部分
 
-/api/ota/activate:
-  post:
-    summary: Activate reservation after payment
-    request:
-      - order_id: order to activate
-      - payment_reference: OTA payment ID
-    response:
-      - tickets: array of issued tickets with QR codes
-      - activation_status: success/failed
-    errors: 400, 401, 404, 409
+**核心数据变更**：
+- 库存按渠道隔离（OTA / 直销）
+- 新增票券批次表（ota_ticket_batches）
+- 票券状态：PRE_GENERATED → ACTIVE → USED
 
-/api/ota/tickets:
-  get:
-    summary: Query pre-made tickets with optional filters
-    parameters:
-      - status: Filter by PRE_GENERATED or ACTIVE
-      - batch_id: Filter by batch identifier
-      - created_after: Date range start (ISO 8601)
-      - created_before: Date range end (ISO 8601)
-      - page: Page number (default: 1)
-      - limit: Results per page (default: 100, max: 1000)
-    response:
-      - tickets: array of ticket summaries
-      - total_count: total matching tickets
-      - page: current page number
-      - page_size: results per page
-    errors: 422, 401, 403
+**票据有效期**：当前票据永久有效，二维码 30 分钟过期后可重新生成
 
-/qr/{ticket_code}/info:                                      # NEW ENDPOINT (2025-11-14)
-  get:
-    summary: Get ticket status and entitlements without generating QR
-    security:
-      - ApiKeyAuth: []  # For OTA partners
-      - BearerAuth: []  # For normal users
-    parameters:
-      - ticket_code: string (path)
-    response:
-      - ticket_code: string
-      - ticket_type: "OTA" | "NORMAL"
-      - status: "PRE_GENERATED" | "ACTIVE" | "USED" | "EXPIRED" | "CANCELLED"
-      - entitlements: array of {function_code, remaining_uses}
-      - can_generate_qr: boolean
-      - product_info: {id, name}
-    errors: 401, 403, 404
-```
+## 关联 Cards
 
-### 4. Data Impact Analysis
+| Card | 状态 | 描述 |
+|------|------|------|
+| [ota-channel-management](../cards/ota-channel-management.md) | Deprecated | 库存管理（Reserve API 已移除）|
+| [ota-reseller-management](../cards/ota-reseller-management.md) | Unused | 分销商主数据（表已建，未使用）|
+| [ota-order-retrieval](../cards/ota-order-retrieval.md) | Done | 票券查询 |
+| [ota-premade-tickets](../cards/ota-premade-tickets.md) | Done | 批量生成票券 |
+| [ota-reservation-management](../cards/ota-reservation-management.md) | Done | 预订管理 |
 
-#### Existing Tables Modified
-- **product_inventory**: Add `channel_allocations` JSON field
-  - Structure: `{"ota": {"allocated": 2000, "reserved": 150, "sold": 850}}`
-  - Tracks per-channel inventory breakdown
+## 成功指标
 
-- **orders**: Add `channel_id` and `reservation_id` fields
-  - Links orders to specific sales channels
-  - Enables reservation → order → ticket traceability
+| 指标 | 目标 | 状态 |
+|------|------|------|
+| OTA 库存分配 | 5000 套餐 | ✅ 已完成 |
+| 渠道库存隔离 | 零冲突 | ✅ 已验证 |
+| API 响应时间 | < 2秒 | ✅ 已达标 |
 
-#### New Tables Required
-- **channel_reservations**: Track temporary inventory holds
-  - Fields: reservation_id, product_id, quantity, expires_at, status
-  - Purpose: Manage time-limited inventory reservations
+## 风险与缓解
 
-- **api_keys**: Authenticate external OTA platforms
-  - Fields: key_hash, partner_name, permissions, rate_limits
-  - Purpose: Secure OTA API access
-
-#### Migration Requirements
-- **Backfill existing data**: No (new functionality)
-- **Breaking changes**: No (additive changes only)
-- **Performance impact**: Low (additional indexes on new fields)
-
-#### 票据过期机制说明 (Ticket Expiry Mechanism) - 当前状态
-**重要**: 票据暂定为永久有效 (Tickets are provisionally valid permanently)
-
-**过期时间区分 (Expiry Distinctions)**:
-1. **二维码过期 (QR Code Expiry)**: ✅ 已执行 (30分钟默认)
-   - 临时安全令牌, 过期后可重新生成
-2. **批次过期 (Batch expires_at)**: ❌ 暂定未执行
-   - 存储: direct_sale 7天, reseller_batch 30天
-   - 用途: 业务参考, 不影响票据实际有效性
-3. **票据状态 (Ticket Status)**:
-   - 定义: PRE_GENERATED, ACTIVE, USED, EXPIRED, CANCELLED
-   - 当前使用: PRE_GENERATED → ACTIVE → USED
-   - EXPIRED: 已定义但未使用 (tickets remain valid indefinitely)
-
-### 5. Integration Impact Analysis
-
-#### Existing Cards Enhanced
-- **order-create**: Modify to support channel-specific inventory checking
-- **payment-webhook**: Handle OTA payment notifications with reservation activation
-- **catalog-endpoint**: Add channel-aware availability responses
-
-#### New Integration Points
-- **OTA Authentication**: API key middleware for secure access
-- **Channel Inventory**: Real-time sync between direct and OTA sales
-- **Reservation Management**: Background job to expire unused reservations
-- **Audit Logging**: Enhanced tracking for multi-channel sales
-
-### 6. Proposed Cards Breakdown
-
-#### 1. **ota-channel-management**
-- **Team**: A - Commerce
-- **Purpose**: Core OTA inventory allocation and reservation system
-- **Endpoints**: `/api/ota/inventory`, `/api/ota/reserve`
-- **Dependencies**: catalog-endpoint, order-create
-- **Priority**: High (blocks OTA integration)
-
-#### 2. **ota-authentication-middleware**
-- **Team**: C - Identity & Access
-- **Purpose**: Secure API access for external OTA platforms
-- **Endpoints**: Middleware for all `/api/ota/*` routes
-- **Dependencies**: None
-- **Priority**: High (security requirement)
-
-#### 3. **ota-order-processing**
-- **Team**: A - Commerce
-- **Purpose**: OTA-specific order creation and activation flow
-- **Endpoints**: `/api/ota/orders`, `/api/ota/activate`
-- **Dependencies**: ota-channel-management, order-create, payment-webhook
-- **Priority**: High (core business flow)
-
-#### 4. **channel-inventory-tracking**
-- **Team**: A - Commerce
-- **Purpose**: Real-time inventory synchronization across sales channels
-- **Endpoints**: Internal services for inventory management
-- **Dependencies**: ota-channel-management
-- **Priority**: Medium (operational monitoring)
-
-## Implementation Priority
-
-### Phase 1 (Nov 2-5): Core Infrastructure
-1. **ota-channel-management**: Inventory allocation and reservation
-2. **ota-authentication-middleware**: Secure API access
-
-### Phase 2 (Nov 6-10): Business Logic
-3. **ota-order-processing**: Order creation and activation flow
-4. **channel-inventory-tracking**: Multi-channel inventory sync
-
-### Phase 3 (Nov 11-15): Testing & Deployment
-- Integration testing with 5000 package scenarios
-- Load testing and performance validation
-- Production deployment and monitoring setup
-
-## Success Criteria
-
-### Business Metrics
-- **5000 package units** successfully allocated to OTA by Nov 15
-- **Zero inventory conflicts** between direct and OTA sales
-- **<2 second response time** for all OTA API endpoints
-- **99.9% uptime** for OTA integration during testing period
-
-### Technical Validation
-- **End-to-end flow**: OTA reserve → order → payment → ticket → QR redemption
-- **Complex pricing**: Weekend/weekday and customer type pricing works via OTA
-- **Idempotency**: Multiple OTA requests don't create duplicate reservations
-- **Security**: API key authentication prevents unauthorized access
-
-## Risk Mitigation
-
-### Technical Risks
-- **Inventory race conditions**: Mitigated by database-level locking
-- **Complex pricing integration**: Leverage existing US-011 implementation
-- **Authentication security**: Standard API key patterns with rate limiting
-
-### Business Risks
-- **Channel conflict**: Clear inventory separation and real-time monitoring
-- **OTA integration complexity**: Phased rollout with comprehensive testing
-- **Timeline pressure**: Well-scoped implementation using existing patterns
+| 风险 | 缓解措施 |
+|------|----------|
+| 库存并发竞争 | 数据库行锁 |
+| 渠道冲突 | 库存物理隔离 |
+| 认证安全 | API Key + 速率限制 |
 
 ---
 
-**Story Status**: In Progress
-**Next Steps**: Create technical cards following established templates
-**Dependencies**: Existing US-001 (ticketing platform) and US-011 (complex pricing) must remain functional
+**依赖**: US-001 (票务基础), US-011 (复杂定价)

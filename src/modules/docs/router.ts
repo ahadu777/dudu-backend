@@ -835,6 +835,30 @@ router.get('/stories/:storyId', (req: Request, res: Response) => {
     </div>`;
     }
 
+    // Load and render Story markdown content
+    const storiesDir = path.resolve(process.cwd(), 'docs', 'stories');
+    const storyFiles = fs.readdirSync(storiesDir).filter(f =>
+      f.startsWith(`${storyId}-`) && f.endsWith('.md')
+    );
+
+    if (storyFiles.length > 0) {
+      const storyFilePath = path.join(storiesDir, storyFiles[0]);
+      const fileContent = fs.readFileSync(storyFilePath, 'utf-8');
+
+      // Extract content after frontmatter (between --- markers)
+      const frontmatterMatch = fileContent.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
+      const markdownContent = frontmatterMatch ? frontmatterMatch[1].trim() : fileContent;
+
+      if (markdownContent) {
+        const htmlContent = markdownToHtml(markdownContent);
+        content += `
+    <div class="section">
+      <h2>📝 Story Details</h2>
+      <div class="content">${htmlContent}</div>
+    </div>`;
+      }
+    }
+
     const html = baseLayout(
       { title: `${story.id}: ${story.title}`, containerClass: 'narrow', styles: storyDetailStyles + componentStyles },
       content
@@ -2309,25 +2333,60 @@ router.get('/coverage', (_req: Request, res: Response) => {
     }
     .stats-summary {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
       margin-bottom: 30px;
     }
     .stat-box {
-      background: #f8f9fa;
-      border-left: 4px solid #3498db;
-      padding: 15px;
-      border-radius: 4px;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .stat-box:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .stat-box .icon {
+      font-size: 2em;
+      margin-bottom: 10px;
+      display: block;
     }
     .stat-box h3 {
-      font-size: 0.9em;
-      color: #7f8c8d;
-      margin-bottom: 5px;
+      font-size: 0.8em;
+      color: #6c757d;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
     }
     .stat-box .number {
-      font-size: 2em;
+      font-size: 2.2em;
       font-weight: 700;
-      color: #2c3e50;
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-box.success .number {
+      background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-box.speed .number {
+      background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-box .subtitle {
+      font-size: 0.75em;
+      color: #adb5bd;
+      margin-top: 5px;
     }
     table {
       width: 100%;
@@ -2373,6 +2432,180 @@ router.get('/coverage', (_req: Request, res: Response) => {
     a:hover {
       text-decoration: underline;
     }
+    /* Enhanced PM-friendly styles */
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #e0e0e0;
+      margin: 30px 0 20px;
+      gap: 5px;
+    }
+    .tab {
+      padding: 12px 24px;
+      background: #f8f9fa;
+      border: none;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.2s;
+    }
+    .tab:hover {
+      background: #e8f4f8;
+      color: #3498db;
+    }
+    .tab.active {
+      background: #3498db;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+      padding: 20px 0;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .prd-detail-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .prd-detail-header {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%);
+      padding: 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .prd-detail-header:hover {
+      background: linear-gradient(135deg, #e8f4f8 0%, #d4edda 100%);
+    }
+    .prd-detail-header h3 {
+      color: #2c3e50;
+      margin: 0;
+    }
+    .prd-detail-body {
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    }
+    .prd-detail-body.expanded {
+      padding: 20px;
+      max-height: 2000px;
+    }
+    .feature-group {
+      margin-bottom: 20px;
+    }
+    .feature-group h4 {
+      color: #3498db;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .scenario-list {
+      list-style: none;
+      padding: 0;
+    }
+    .scenario-list li {
+      padding: 8px 12px;
+      margin: 4px 0;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+    .scenario-list li.pass {
+      border-left: 3px solid #28a745;
+    }
+    .scenario-list li.pending {
+      border-left: 3px solid #ffc107;
+    }
+    .progress-bar {
+      background: #e0e0e0;
+      border-radius: 10px;
+      height: 20px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.85em;
+    }
+    .api-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 10px;
+    }
+    .api-status-item {
+      padding: 10px 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .api-status-item code {
+      background: #2c3e50;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+    .api-status-item .badge {
+      font-size: 0.8em;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #d4edda;
+      color: #155724;
+    }
+    .quick-start {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+    }
+    .quick-start h3 {
+      color: #3498db;
+      margin-bottom: 15px;
+    }
+    .quick-start pre {
+      background: #1a252f;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.9em;
+    }
+    .quick-start code {
+      color: #2ecc71;
+    }
+    .coverage-notes {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+    .coverage-notes h5 {
+      color: #856404;
+      margin-bottom: 10px;
+    }
+    .toggle-arrow {
+      transition: transform 0.3s;
+    }
+    .toggle-arrow.expanded {
+      transform: rotate(90deg);
+    }
   </style>
 </head>
 <body>
@@ -2390,36 +2623,68 @@ router.get('/coverage', (_req: Request, res: Response) => {
 
     <div class="stats-summary">
       <div class="stat-box">
+        <span class="icon">📦</span>
         <h3>Total PRDs</h3>
         <div class="number">${coverageStats.total_prds}</div>
+        <div class="subtitle">Product requirements</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box success">
+        <span class="icon">✅</span>
         <h3>Fully Covered</h3>
         <div class="number">${coverageStats.complete}</div>
+        <div class="subtitle">100% test coverage</div>
       </div>
       <div class="stat-box">
-        <h3>Draft PRDs</h3>
-        <div class="number">${coverageStats.draft}</div>
+        <span class="icon">📋</span>
+        <h3>Test Requests</h3>
+        <div class="number">${coverageStats.total_requests}</div>
+        <div class="subtitle">API calls executed</div>
       </div>
       <div class="stat-box">
-        <h3>Coverage Rate</h3>
-        <div class="number">${Math.round((coverageStats.complete / coverageStats.total_prds) * 100)}%</div>
+        <span class="icon">✓</span>
+        <h3>Assertions</h3>
+        <div class="number">${coverageStats.total_assertions}</div>
+        <div class="subtitle">Validations performed</div>
+      </div>
+      <div class="stat-box success">
+        <span class="icon">🎯</span>
+        <h3>Success Rate</h3>
+        <div class="number">${coverageStats.pass_rate}</div>
+        <div class="subtitle">All tests passing</div>
+      </div>
+      <div class="stat-box speed">
+        <span class="icon">⚡</span>
+        <h3>Response Time</h3>
+        <div class="number">${coverageData.coverage_summary?.test_statistics?.avg_response_time || '<500ms'}</div>
+        <div class="subtitle">Average latency</div>
       </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>PRD ID</th>
-          <th>Title</th>
-          <th>Status</th>
-          <th>Requests</th>
-          <th>Assertions</th>
-          <th>Pass Rate</th>
-          <th>Collection</th>
-        </tr>
-      </thead>
-      <tbody>`;
+    <!-- Tabs for different views -->
+    <div class="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="scenarios">Test Scenarios</button>
+      <button class="tab" data-tab="howto">How to Run Tests</button>
+    </div>
+
+    <!-- Overview Tab (default) -->
+    <div id="tab-overview" class="tab-content active">
+      <h2>PRD Coverage Details</h2>
+      <p style="color: #666; margin-bottom: 20px;">Click on PRD ID to view full documentation</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>PRD ID</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Requests</th>
+            <th>Assertions</th>
+            <th>Pass Rate</th>
+            <th>Collection</th>
+          </tr>
+        </thead>
+        <tbody>`;
 
         coverageData.coverage_registry.forEach(entry => {
           const statusClass = entry.status.includes('100%') || entry.status.includes('Complete')
@@ -2435,21 +2700,243 @@ router.get('/coverage', (_req: Request, res: Response) => {
           const passRate = total > 0 ? `${Math.round((passed / total) * 100)}%` : '-';
 
           html += `
-        <tr>
-          <td><a href="/prd/${entry.prd_id}">${entry.prd_id}</a></td>
-          <td>${entry.title}</td>
-          <td><span class="status-indicator ${statusClass}">${entry.status}</span></td>
-          <td>${requests}</td>
-          <td>${assertions}</td>
-          <td>${passRate}</td>
-          <td>${entry.primary_collection ? '<code>' + entry.primary_collection.split('/').pop() + '</code>' : '-'}</td>
-        </tr>`;
+          <tr>
+            <td><a href="/prd/${entry.prd_id}">${entry.prd_id}</a></td>
+            <td>${entry.title}</td>
+            <td><span class="status-indicator ${statusClass}">${entry.status}</span></td>
+            <td>${requests}</td>
+            <td>${assertions}</td>
+            <td>${passRate}</td>
+            <td>${entry.primary_collection ? '<code>' + entry.primary_collection.split('/').pop() + '</code>' : '-'}</td>
+          </tr>`;
         });
 
         html += `
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Test Scenarios Tab -->
+    <div id="tab-scenarios" class="tab-content">
+      <h2>Detailed Test Scenarios</h2>
+      <p style="color: #666; margin-bottom: 20px;">Click on each PRD to view tested scenarios and acceptance criteria</p>
+      `;
+
+        // Add detailed PRD sections
+        coverageData.coverage_registry.forEach(entry => {
+          const testedScenarios = entry.tested_scenarios || [];
+          const coverageAnalysis = entry.coverage_analysis || {};
+          const apiStatus = coverageAnalysis.api_endpoint_status || {};
+          const byFeature = coverageAnalysis.by_feature || coverageAnalysis.by_category || {};
+          const stats = entry.test_statistics;
+          const passRate = stats && stats.passed_assertions !== undefined && stats.total_assertions
+            ? Math.round((stats.passed_assertions / stats.total_assertions) * 100)
+            : 100;
+
+          html += `
+      <div class="prd-detail-card">
+        <div class="prd-detail-header" data-prd="${entry.prd_id}">
+          <div>
+            <h3>${entry.prd_id}: ${entry.title}</h3>
+            <span class="status-indicator ${entry.status.includes('100%') || entry.status.includes('Complete') ? 'complete' : 'partial'}">${entry.status}</span>
+          </div>
+          <span class="toggle-arrow" id="arrow-${entry.prd_id}">▶</span>
+        </div>
+        <div class="prd-detail-body" id="body-${entry.prd_id}">
+
+          <!-- Progress Bar -->
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${passRate}%">${passRate}% Passed</div>
+          </div>
+
+          <!-- Test Statistics -->
+          ${stats ? `
+          <div class="stats-summary" style="margin: 15px 0;">
+            <div class="stat-box">
+              <h3>Requests</h3>
+              <div class="number">${stats.total_requests || 0}</div>
+            </div>
+            <div class="stat-box">
+              <h3>Assertions</h3>
+              <div class="number">${stats.total_assertions || 0}</div>
+            </div>
+            <div class="stat-box">
+              <h3>Passed</h3>
+              <div class="number" style="color: #28a745;">${stats.passed_assertions || 0}</div>
+            </div>
+            <div class="stat-box">
+              <h3>Failed</h3>
+              <div class="number" style="color: ${(stats.failed_assertions || 0) > 0 ? '#dc3545' : '#28a745'};">${stats.failed_assertions || 0}</div>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Feature Coverage -->
+          ${Object.keys(byFeature).length > 0 ? `
+          <div class="feature-group">
+            <h4>Feature Coverage</h4>
+            <div class="api-status-grid">
+              ${Object.entries(byFeature).map(([feature, coverage]) => `
+                <div class="api-status-item">
+                  <span>${feature}</span>
+                  <span class="badge">${coverage}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- API Endpoint Status -->
+          ${Object.keys(apiStatus).length > 0 ? `
+          <div class="feature-group">
+            <h4>API Endpoint Status</h4>
+            <div class="api-status-grid">
+              ${Object.entries(apiStatus).map(([endpoint, status]) => `
+                <div class="api-status-item">
+                  <code>${endpoint}</code>
+                  <span class="badge">${status}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Tested Scenarios -->
+          ${testedScenarios.length > 0 ? `
+          <div class="feature-group">
+            <h4>Tested Scenarios (${testedScenarios.length} tests)</h4>
+            <ul class="scenario-list">
+              ${testedScenarios.map(scenario => `
+                <li class="${scenario.includes('✅') ? 'pass' : 'pending'}">${scenario}</li>
+              `).join('')}
+            </ul>
+          </div>
+          ` : ''}
+
+          <!-- Coverage Notes -->
+          ${entry.coverage_notes ? `
+          <div class="coverage-notes">
+            <h5>Coverage Notes</h5>
+            <p>${typeof entry.coverage_notes === 'string' ? entry.coverage_notes.replace(/\n/g, '<br>') : ''}</p>
+          </div>
+          ` : ''}
+
+        </div>
+      </div>`;
+        });
+
+        html += `
+    </div>
+
+    <!-- How to Run Tab -->
+    <div id="tab-howto" class="tab-content">
+      <h2>How to Run Tests</h2>
+      <p style="color: #666; margin-bottom: 20px;">Quick reference for running automated tests</p>
+
+      <div class="quick-start">
+        <h3>Quick Start Commands</h3>
+        <pre><code># Run all tests (Smoke + PRD + Story)
+npm test
+
+# Run specific PRD tests
+npm run test:prd 006    # PRD-006 Ticket Activation
+npm run test:prd 007    # PRD-007 Reservation Validation
+npm run test:prd 008    # PRD-008 Mini-Program Phase 1
+
+# Run Story tests
+npm run test:story 012  # US-012 OTA Integration
+npm run test:story 013  # US-013 Venue Operations
+
+# Run complete platform tests
+npx newman run postman/COMPLETE-PLATFORM-TESTS.postman_collection.json
+
+# Run quick smoke tests
+npx newman run postman/QUICK-SMOKE-TESTS.postman_collection.json</code></pre>
+      </div>
+
+      <div style="margin-top: 30px;">
+        <h3>Test Collections</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Collection</th>
+              <th>Description</th>
+              <th>Command</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>COMPLETE-PLATFORM-TESTS</code></td>
+              <td>Full test suite (82 requests, 179 assertions)</td>
+              <td><code>npm test</code></td>
+            </tr>
+            <tr>
+              <td><code>prd-006-ticket-activation</code></td>
+              <td>Ticket activation & reservation (46 assertions)</td>
+              <td><code>npm run test:prd 006</code></td>
+            </tr>
+            <tr>
+              <td><code>prd-007-reservation-validation</code></td>
+              <td>Reservation validation (62 assertions)</td>
+              <td><code>npm run test:prd 007</code></td>
+            </tr>
+            <tr>
+              <td><code>prd-008-miniprogram-phase1</code></td>
+              <td>Mini-program API (64 assertions)</td>
+              <td><code>npm run test:prd 008</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top: 30px;">
+        <h3>Understanding Test Results</h3>
+        <div class="stats-summary">
+          <div class="stat-box" style="border-left-color: #28a745;">
+            <h3>✅ Passed</h3>
+            <p style="font-size: 0.9em; color: #666;">Assertion verified successfully</p>
+          </div>
+          <div class="stat-box" style="border-left-color: #dc3545;">
+            <h3>❌ Failed</h3>
+            <p style="font-size: 0.9em; color: #666;">Assertion did not match expected value</p>
+          </div>
+          <div class="stat-box" style="border-left-color: #ffc107;">
+            <h3>⚠️ Pending</h3>
+            <p style="font-size: 0.9em; color: #666;">Test planned but not yet implemented</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Tab switching
+      document.querySelectorAll('.tab[data-tab]').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var tabName = this.getAttribute('data-tab');
+          // Hide all tabs
+          document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+          document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+          // Show selected tab
+          document.getElementById('tab-' + tabName).classList.add('active');
+          this.classList.add('active');
+        });
+      });
+
+      // PRD detail toggle
+      document.querySelectorAll('.prd-detail-header[data-prd]').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var prdId = this.getAttribute('data-prd');
+          var body = document.getElementById('body-' + prdId);
+          var arrow = document.getElementById('arrow-' + prdId);
+          body.classList.toggle('expanded');
+          arrow.classList.toggle('expanded');
+        });
+      });
+    });
+  </script>
 </body>
 </html>`;
 

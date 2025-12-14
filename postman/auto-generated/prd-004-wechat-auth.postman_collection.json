@@ -1,0 +1,259 @@
+{
+  "info": {
+    "_postman_id": "prd-004-wechat-auth-collection",
+    "name": "PRD-004 WeChat Authentication Tests",
+    "description": "Tests for PRD-004 - WeChat Mini-Program Authentication. Tests validation, error handling, and security controls.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "4.1 WeChat Login - Empty Code (Validation)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/wechat/login",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "wechat", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (Bad Request)', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Returns validation error', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('code');",
+              "    pm.expect(data.code).to.equal('VALIDATION_ERROR');",
+              "});",
+              "",
+              "pm.test('Has error details', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('message');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.2 WeChat Login - Missing Code",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/wechat/login",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "wechat", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (Bad Request)', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Returns validation error for missing code', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('code');",
+              "    pm.expect(data.code).to.equal('VALIDATION_ERROR');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.3 WeChat Login - Invalid Code (WeChat Rejects)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"INVALID_CODE_12345\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/wechat/login",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "wechat", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 or 422 (WeChat rejects invalid code)', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([401, 422]);",
+              "});",
+              "",
+              "pm.test('Returns auth failed error', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('code');",
+              "    pm.expect(['WECHAT_AUTH_FAILED', 'INVALID_CODE']).to.include(data.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.4 Phone Binding - No JWT Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"PHONE_AUTH_CODE\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/wechat/phone",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "wechat", "phone"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 (Unauthorized)', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Returns unauthorized error', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('code');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.5 Phone Binding - Invalid JWT Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer invalid.jwt.token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"PHONE_AUTH_CODE\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/wechat/phone",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "wechat", "phone"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 (Unauthorized)', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Returns unauthorized error for invalid token', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('code');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.6 Login Response Time (<500ms)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"PERF_TEST_CODE\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/wechat/login",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "wechat", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Login response time <500ms', function () {",
+              "    pm.expect(pm.response.responseTime).to.be.lessThan(500);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "event": []
+}

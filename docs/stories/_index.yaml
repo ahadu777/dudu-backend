@@ -37,7 +37,7 @@ stories:
       - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
     enhances: [US-001]
     # Business requirements
-    business_requirement: "PRD-001"
+    business_requirement: "PRD-003"
 
   - id: US-003
     title: Buyer views tickets & QR
@@ -75,7 +75,7 @@ stories:
       - refund-processing → reports-redemptions
     enhances: [US-001, US-002, US-007]
     # Business requirements
-    business_requirement: "PRD-001"
+    business_requirement: "PRD-003"
 
   - id: US-006
     title: Operator auth & session lifecycle
@@ -86,7 +86,7 @@ stories:
       - operators-login → venue-enhanced-scanning
     enhances: [US-002]
     # Business requirements
-    business_requirement: "PRD-001"
+    business_requirement: "PRD-003"
 
   - id: US-007
     title: Ticket cancellation and refund
@@ -121,6 +121,7 @@ stories:
       - user-profile-endpoint
       - user-settings-endpoint
       - user-activity-endpoint
+      - miniprogram-profile
     sequence:
       - user-profile-endpoint → user-settings-endpoint
       - user-settings-endpoint → user-activity-endpoint
