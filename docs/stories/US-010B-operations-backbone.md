@@ -19,6 +19,7 @@ cards:
   - ticket-lifecycle-daemon
   - notification-orchestrator
   - merchant-redemption-console
+  - route-schedule-management    # 线路班次管理（PRD-008 Phase 2）
 related_features:
   - ticket-cancellation
   - refund-processing

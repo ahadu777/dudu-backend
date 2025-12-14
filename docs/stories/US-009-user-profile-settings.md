@@ -9,6 +9,7 @@ cards:
   - user-profile-endpoint
   - user-activity-endpoint
   - user-settings-endpoint
+  - miniprogram-profile        # 小程序用户资料管理
 ---
 
 # Story Analysis: User Profile and Settings

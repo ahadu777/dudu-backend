@@ -4,7 +4,7 @@ slug: wechat-payment-session
 team: "A - Commerce"
 oas_paths: ["/payments/wechat/session"]
 migrations: []
-status: "Done"
+status: "Deprecated"
 readiness: "mvp"
 branch: ""
 pr: ""

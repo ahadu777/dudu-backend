@@ -7,11 +7,15 @@
  * 2. 弃用引用检测 (引用了 status: Deprecated 的卡片)
  * 3. PRD → Stories → Cards 引用链检查
  * 4. Card 状态与代码一致性检查
+ * 5. Story → PRD 反向引用检查 (business_requirement 字段)
+ * 6. Card → Story 反向引用检查 (related_stories 字段)
+ * 7. PRD ↔ Story 双向一致性检查
+ * 8. 孤儿文档检测 (未被引用的 Cards/Stories)
+ * 9. Stories _index.yaml 一致性检查
  *
  * 使用方式：
  *   npm run validate:docs
  *   node scripts/validate-docs.js
- *   node scripts/validate-docs.js --fix  # 尝试自动修复部分问题
  */
 
 const fs = require('fs');
@@ -67,6 +71,35 @@ function parseFrontmatter(content) {
 }
 
 /**
+ * 解析 PRD 文件中的 YAML 代码块（PRD 使用不同的格式）
+ */
+function parsePrdMetadata(content) {
+  // 尝试标准 frontmatter
+  const frontmatter = parseFrontmatter(content);
+  if (frontmatter?.id || frontmatter?.prd_id) {
+    return frontmatter;
+  }
+
+  // 尝试解析 YAML 代码块 (```yaml ... ```)
+  const yamlBlockMatch = content.match(/```yaml\n([\s\S]*?)\n```/);
+  if (yamlBlockMatch) {
+    try {
+      const metadata = yaml.load(yamlBlockMatch[1]);
+      // 规范化字段名
+      if (metadata?.prd_id && !metadata?.id) {
+        metadata.id = metadata.prd_id;
+      }
+      return metadata;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 尝试从文件名提取 PRD ID (如 PRD-001-xxx.md → PRD-001)
+  return null;
+}
+
+/**
  * 从文件名中提取 Story ID (如 US-001-buy-3in1-pass.md → US-001)
  */
 function extractStoryIdFromFilename(filename) {
@@ -101,15 +134,30 @@ function readMarkdownFiles(dir) {
     if (file.endsWith('.md') && !file.startsWith('_')) {
       const filePath = path.join(dir, file);
       const content = fs.readFileSync(filePath, 'utf-8');
-      const frontmatter = parseFrontmatter(content);
+
+      // PRD 文件使用特殊解析
+      const isPrd = dir.includes('prd');
+      const frontmatter = isPrd ? parsePrdMetadata(content) : parseFrontmatter(content);
 
       // 对于 Stories，尝试多种方式提取 ID
       const storyId = dir.includes('stories') ? extractStoryId(content, file) : null;
 
+      // 对于 PRD，如果没有解析到 id，从文件名提取
+      let prdId = null;
+      if (isPrd && !frontmatter?.id) {
+        const prdMatch = file.match(/^(PRD-\d+)/i);
+        if (prdMatch) {
+          prdId = prdMatch[1].toUpperCase();
+          if (frontmatter) {
+            frontmatter.id = prdId;
+          }
+        }
+      }
+
       files[file] = {
         path: filePath,
         content,
-        frontmatter,
+        frontmatter: frontmatter || (prdId ? { id: prdId } : null),
         slug: frontmatter?.slug || file.replace('.md', ''),
         storyId: storyId || frontmatter?.id
       };
@@ -174,7 +222,7 @@ function checkDeprecatedReferences(cards, stories, prds) {
   Object.entries(cards).forEach(([filename, card]) => {
     const status = card.frontmatter?.status;
     const deprecated = card.frontmatter?.deprecated;
-    if (status === 'Deprecated' || deprecated === true) {
+    if (status?.toLowerCase() === 'deprecated' || deprecated === true) {
       deprecatedCards.add(card.slug);
     }
   });
@@ -325,7 +373,7 @@ function checkCardCodeConsistency(cards) {
     const oasPaths = card.frontmatter?.oas_paths || [];
     const slug = card.slug;
 
-    if (status === 'Deprecated') return; // 跳过弃用卡片
+    if (status?.toLowerCase() === 'deprecated') return; // 跳过弃用卡片
 
     // 检查 API 路径是否在代码中实现
     oasPaths.forEach(oasPath => {
@@ -404,7 +452,219 @@ function isRouteImplemented(oasPath, moduleRouters) {
 }
 
 /**
- * 检查 5: Stories _index.yaml 与独立 Story 文件一致性
+ * 检查 5: Story → PRD 反向引用检查 (business_requirement 字段)
+ */
+function checkStoryToPrdBacklinks(stories, prds) {
+  log.header('检查 Story → PRD 反向引用');
+
+  const prdIds = new Set(Object.values(prds).map(p => p.frontmatter?.id).filter(Boolean));
+  let hasIssue = false;
+
+  Object.entries(stories).forEach(([filename, story]) => {
+    const businessReq = story.frontmatter?.business_requirement;
+
+    if (!businessReq) {
+      log.warn(`Story ${filename} 缺少 business_requirement 字段`);
+      results.warnings.push(`${filename} 缺少 business_requirement`);
+      hasIssue = true;
+    } else if (!prdIds.has(businessReq)) {
+      log.error(`Story ${filename} 的 business_requirement "${businessReq}" 指向不存在的 PRD`);
+      results.errors.push(`${filename} 引用不存在的 PRD ${businessReq}`);
+      hasIssue = true;
+    }
+  });
+
+  if (!hasIssue) {
+    log.success('所有 Story 都正确关联到 PRD');
+    results.passed.push('Story → PRD 引用完整');
+  }
+
+  return !hasIssue;
+}
+
+/**
+ * 检查 6: Card → Story 反向引用检查 (related_stories 字段)
+ */
+function checkCardToStoryBacklinks(cards, stories) {
+  log.header('检查 Card → Story 反向引用');
+
+  const storyIds = new Set();
+  Object.values(stories).forEach(story => {
+    const id = story.storyId || story.frontmatter?.id;
+    if (id) storyIds.add(id.toUpperCase());
+  });
+
+  let hasIssue = false;
+  let cardsWithoutStory = 0;
+
+  Object.entries(cards).forEach(([filename, card]) => {
+    const status = card.frontmatter?.status;
+    if (status?.toLowerCase() === 'deprecated') return; // 跳过弃用卡片
+
+    const relatedStories = card.frontmatter?.related_stories || [];
+
+    if (relatedStories.length === 0) {
+      // 检查是否在某个 Story 的 cards 列表中被引用
+      let isReferencedByStory = false;
+      Object.values(stories).forEach(story => {
+        const storyCards = story.frontmatter?.cards || [];
+        if (storyCards.includes(card.slug)) {
+          isReferencedByStory = true;
+        }
+      });
+
+      if (!isReferencedByStory) {
+        log.warn(`Card ${card.slug} 未关联任何 Story（既没有 related_stories 也未被任何 Story 引用）`);
+        results.warnings.push(`${card.slug} 未关联 Story`);
+        cardsWithoutStory++;
+        hasIssue = true;
+      }
+    } else {
+      // 检查 related_stories 中的 ID 是否存在
+      relatedStories.forEach(storyRef => {
+        if (!storyIds.has(storyRef.toUpperCase())) {
+          log.error(`Card ${card.slug} 的 related_stories "${storyRef}" 指向不存在的 Story`);
+          results.errors.push(`${card.slug} 引用不存在的 Story ${storyRef}`);
+          hasIssue = true;
+        }
+      });
+    }
+  });
+
+  if (!hasIssue) {
+    log.success('所有 Card 都正确关联到 Story');
+    results.passed.push('Card → Story 引用完整');
+  } else if (cardsWithoutStory > 0) {
+    log.info(`${cardsWithoutStory} 个 Card 未关联任何 Story`);
+  }
+
+  return !hasIssue;
+}
+
+/**
+ * 检查 7: PRD ↔ Story 双向一致性
+ */
+function checkBidirectionalConsistency(stories, prds) {
+  log.header('检查 PRD ↔ Story 双向一致性');
+
+  let hasIssue = false;
+
+  // 建立 PRD → Stories 映射
+  const prdToStories = {};
+  Object.entries(prds).forEach(([filename, prd]) => {
+    const prdId = prd.frontmatter?.id;
+    if (prdId) {
+      prdToStories[prdId] = prd.frontmatter?.related_stories || [];
+    }
+  });
+
+  // 建立 Story → PRD 映射
+  const storyToPrd = {};
+  Object.entries(stories).forEach(([filename, story]) => {
+    const storyId = story.storyId || story.frontmatter?.id;
+    const businessReq = story.frontmatter?.business_requirement;
+    if (storyId && businessReq) {
+      storyToPrd[storyId.toUpperCase()] = businessReq;
+    }
+  });
+
+  // 检查双向一致性
+  Object.entries(prdToStories).forEach(([prdId, relatedStories]) => {
+    relatedStories.forEach(storyId => {
+      const storyIdUpper = storyId.toUpperCase();
+      if (storyToPrd[storyIdUpper] && storyToPrd[storyIdUpper] !== prdId) {
+        log.error(`不一致: PRD ${prdId} 引用 ${storyId}，但该 Story 的 business_requirement 是 ${storyToPrd[storyIdUpper]}`);
+        results.errors.push(`双向不一致: ${prdId} ↔ ${storyId}`);
+        hasIssue = true;
+      }
+    });
+  });
+
+  // 检查 Story 指向的 PRD 是否在 related_stories 中列出该 Story
+  Object.entries(storyToPrd).forEach(([storyId, prdId]) => {
+    if (prdToStories[prdId]) {
+      const relatedStoriesUpper = prdToStories[prdId].map(s => s.toUpperCase());
+      if (!relatedStoriesUpper.includes(storyId)) {
+        log.warn(`PRD ${prdId} 的 related_stories 中未列出 ${storyId}（但该 Story 的 business_requirement 指向此 PRD）`);
+        results.warnings.push(`${prdId} 未列出关联的 ${storyId}`);
+        hasIssue = true;
+      }
+    }
+  });
+
+  if (!hasIssue) {
+    log.success('PRD ↔ Story 双向引用一致');
+    results.passed.push('PRD ↔ Story 双向一致');
+  }
+
+  return !hasIssue;
+}
+
+/**
+ * 检查 8: 孤儿检测
+ */
+function checkOrphans(cards, stories, prds) {
+  log.header('检查孤儿文档');
+
+  let hasIssue = false;
+
+  // 收集所有被引用的 Card slugs
+  const referencedCards = new Set();
+
+  // 从 Stories 收集
+  Object.values(stories).forEach(story => {
+    const storyCards = story.frontmatter?.cards || [];
+    storyCards.forEach(c => referencedCards.add(c));
+  });
+
+  // 从 PRDs 收集
+  Object.values(prds).forEach(prd => {
+    const implCards = prd.frontmatter?.implementation_cards || [];
+    implCards.forEach(c => referencedCards.add(c));
+  });
+
+  // 检查未被引用的 Cards（排除 Deprecated）
+  Object.entries(cards).forEach(([filename, card]) => {
+    const status = card.frontmatter?.status;
+    if (status?.toLowerCase() === 'deprecated') return;
+
+    if (!referencedCards.has(card.slug)) {
+      log.warn(`孤儿 Card: ${card.slug} 未被任何 Story 或 PRD 引用`);
+      results.warnings.push(`孤儿 Card: ${card.slug}`);
+      hasIssue = true;
+    }
+  });
+
+  // 收集所有被引用的 Story IDs
+  const referencedStories = new Set();
+  Object.values(prds).forEach(prd => {
+    const relatedStories = prd.frontmatter?.related_stories || [];
+    relatedStories.forEach(s => referencedStories.add(s.toUpperCase()));
+  });
+
+  // 检查未被 PRD 引用的 Stories
+  Object.entries(stories).forEach(([filename, story]) => {
+    const storyId = story.storyId || story.frontmatter?.id;
+    if (storyId && !referencedStories.has(storyId.toUpperCase())) {
+      const businessReq = story.frontmatter?.business_requirement;
+      if (businessReq) {
+        log.warn(`Story ${storyId} 未被其关联的 PRD (${businessReq}) 的 related_stories 列出`);
+        results.warnings.push(`孤儿 Story: ${storyId}`);
+        hasIssue = true;
+      }
+    }
+  });
+
+  if (!hasIssue) {
+    log.success('无孤儿文档');
+    results.passed.push('无孤儿文档');
+  }
+
+  return !hasIssue;
+}
+
+/**
+ * 检查 9: Stories _index.yaml 与独立 Story 文件一致性
  */
 function checkStoriesConsistency(stories) {
   log.header('检查 Stories 一致性');
@@ -510,6 +770,10 @@ function main() {
   checkDeprecatedReferences(cards, stories, prds);
   checkReferenceChain(cards, stories, prds);
   checkCardCodeConsistency(cards);
+  checkStoryToPrdBacklinks(stories, prds);
+  checkCardToStoryBacklinks(cards, stories);
+  checkBidirectionalConsistency(stories, prds);
+  checkOrphans(cards, stories, prds);
   checkStoriesConsistency(stories);
 
   // 生成摘要

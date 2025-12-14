@@ -6,6 +6,8 @@ status: "Done"
 priority: Medium
 last_update: 2025-10-19T23:44:00+0800
 business_requirement: "PRD-001"
+depends_on:
+  - US-001  # Must have purchased ticket first
 cards:
   - my-tickets
   - qr-generation-api

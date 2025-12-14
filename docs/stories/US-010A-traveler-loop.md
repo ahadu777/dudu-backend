@@ -46,23 +46,23 @@ related_features:
 ## Acceptance (Given / When / Then)
 **A. 查询与缓存**
 - Given 管理后台已发布可售线路与套票
-- When 旅客调用 `/travel/search`
-- Then 返回包含余票、阶梯定价与退改摘要的组合结果，并命中 24h 热门缓存或年度黑名单缓存策略
+- When 旅客搜索线路与套票
+- Then 系统展示余票数量、阶梯定价与退改摘要，热门搜索结果优先加载
 
 **B. 锁座成功**
 - Given 旅客选择具体班次与人数
-- When 调用 `POST /reservations`
-- Then 生成锁座记录并获得 `lockExpireAt`（默认 10 分钟），同时返回库存快照供订单用
+- When 旅客提交锁座请求
+- Then 系统显示锁定成功并显示 10 分钟倒计时，所选席位被保留
 
 **C. 订单建单与支付前置**
-- Given 已存在锁座记录
-- When 调用 `POST /orders`
-- Then 订单进入 `PENDING_PAYMENT`，并触发微信支付参数生成接口返回预支付信息
+- Given 旅客已完成锁座
+- When 旅客确认订单并选择微信支付
+- Then 系统生成待支付订单，并跳转至微信支付界面
 
 **D. 支付回调与票券生成**
 - Given 订单仍在锁座有效期内
-- When 收到微信支付成功通知
-- Then 更新订单为 `PAID`，调用票券引擎创建多乘客票券，并将快照同步至 `my-tickets`/`qr-token`
+- When 旅客完成微信支付
+- Then 系统显示支付成功，自动生成所有乘客的电子票券，旅客可在"我的票券"中查看
 
 ## Business rules
 1. 锁座默认保留 10 分钟，可按线路配置；过期必须释放库存。

@@ -7,6 +7,10 @@ priority: High
 created_date: "2025-11-03"
 completed_date: "2025-11-06"
 business_requirement: "PRD-002"
+enhances:
+  - US-001  # Extends ticket system to OTA channel
+depends_on:
+  - US-001  # Core ticketing foundation required
 cards:
   - ota-channel-management
   - ota-reseller-management
@@ -38,22 +42,22 @@ cards:
 - **Timeline Constraint**: Nov 15, 2025 deadline for 5000 ticket availability
 
 #### Acceptance Criteria
-- [x] OTA platform can reserve specific quantities of package inventory (Products 106-108)
-- [x] Reserved inventory is protected from direct sales until activated or expired
-- [x] Real-time availability API allows OTA to check current inventory status
-- [x] Payment notifications from OTA trigger automatic ticket issuance using existing flow
-- [x] QR redemption system works identically for OTA-sourced tickets
-- [x] API authentication prevents unauthorized access to OTA endpoints
-- [x] Channel-specific inventory tracking maintains separation between sales channels
-- [x] OTA platform can query generated tickets with filters (status, batch, date range, pagination)
-- [x] Partner isolation ensures tickets are filtered by ownership
+- [x] OTA 平台可预订指定数量的套餐库存（产品 106-108）
+- [x] 预订的库存在激活或过期前不会被直销渠道售出
+- [x] OTA 平台可实时查询库存可用状态
+- [x] OTA 支付通知触发自动出票
+- [x] OTA 渠道票券的二维码核销流程与直销票券一致
+- [x] 系统确保 OTA 接口需要身份验证才能访问
+- [x] 系统分渠道追踪库存，确保销售渠道之间相互隔离
+- [x] OTA 平台可按条件查询已生成票券（状态、批次、日期范围、分页）
+- [x] 系统确保 OTA 合作伙伴只能访问自己的票券
 
 #### B2B2C Enhancement Acceptance Criteria *(NEW)*
-- [x] OTA can generate batches of 100+ tickets with reseller metadata tracking
-- [x] Batch tickets include intended reseller information for audit trails
-- [x] Reseller batches have extended provisional sales periods (暂定: direct_sale 7天, reseller_batch 30天, 当前未强制执行)
-- [x] Ticket activation includes reseller-to-customer chain tracking
-- [x] Batch distribution doesn't affect direct OTA sales inventory allocation
+- [x] OTA 可批量生成 100+ 张票券，并追踪分销商元数据
+- [x] 批次票券包含目标分销商信息以便审计追溯
+- [x] 分销商批次有延长的暂定销售期（直销 7 天，分销批次 30 天，当前未强制执行）
+- [x] 票券激活时记录分销商到客户的链路追踪
+- [x] 批次分发不影响 OTA 直销库存分配
 
 #### Reseller Master Data Management *(NEW - 2025-11-14)*
 **Database Schema:**
@@ -67,28 +71,27 @@ cards:
 - [x] Batch table references reseller via reseller_id foreign key (nullable)
 - [x] Data migration extracts existing resellers from batch JSON metadata
 
-**Reseller CRUD APIs (Implemented 2025-11-14):**
-- [x] GET /api/ota/resellers - List all resellers for authenticated partner
-- [x] POST /api/ota/resellers - Create new reseller with required fields (code, name)
-- [x] GET /api/ota/resellers/:id - Get detailed reseller information
-- [x] PUT /api/ota/resellers/:id - Update reseller fields (commission, tier, etc.)
-- [x] DELETE /api/ota/resellers/:id - Soft delete (sets status to 'terminated')
-- [x] All endpoints enforce partner isolation (only access own resellers)
-- [x] Tested in mock mode with 100% success rate
-- [x] OpenAPI documentation updated with complete endpoint specifications
+**Reseller Management Capabilities (Implemented 2025-11-14):**
+- [x] OTA 平台可查看其所有分销商列表
+- [x] OTA 平台可新增分销商（必填：编码、名称）
+- [x] OTA 平台可查看单个分销商详情
+- [x] OTA 平台可更新分销商信息（佣金比例、等级等）
+- [x] OTA 平台可停用分销商（软删除）
+- [x] 系统确保分销商数据隔离（只能访问自己的分销商）
+- [x] Mock 模式测试通过率 100%
+- [x] OpenAPI 文档已更新
 
 **Business Logic:**
-- [x] Billing summary API supports 'all' parameter to aggregate across all resellers
-- [ ] Database mode testing with migration 011 (requires migration fixes)
+- [x] 账单汇总支持跨所有分销商聚合查询
+- [ ] 数据库模式测试待 migration 011 修复后执行
 
 #### Ticket Lifecycle Enhancement Acceptance Criteria *(NEW - 2025-11-14)*
-- [x] OTA tickets support USED status in addition to existing statuses
-- [x] Tickets automatically transition from ACTIVE to USED when all entitlements fully consumed
-- [x] GET /qr/:code/info endpoint returns ticket status and entitlements without generating QR
-- [x] Info endpoint supports both API Key (OTA) and JWT (normal user) authentication
-- [x] Venue scanning workflow supports optional session_code (no longer required)
-- [x] All entitlements.remaining_uses = 0 triggers automatic USED status update
-- [x] USED tickets properly reflected in inventory reconciliation and billing
+- [x] OTA 票券支持"已使用"状态
+- [x] 当票券所有权益全部核销后，系统自动将票券标记为"已使用"
+- [x] OTA 平台和普通用户均可查询票券状态和剩余权益（无需生成二维码）
+- [x] 场馆核销流程中 session_code 为可选参数
+- [x] 权益全部使用完毕时自动触发状态更新
+- [x] "已使用"票券正确反映在库存对账和结算报表中
 
 ### 2. Business Rules Extraction
 

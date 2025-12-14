@@ -9,7 +9,7 @@ status: "Partial"
 created_date: "2025-11-15"
 last_updated: "2025-12-11"
 related_stories: []
-implementation_cards: ["reseller-master-data", "usage-billing-engine", "audit-retention", "billing-reconciliation"]
+implementation_cards: ["ota-reseller-management"]  # Phase 2/3 cards deferred, not yet created
 depends_on: "PRD-002"
 deadline: "2026-02-28"
 phase_status:

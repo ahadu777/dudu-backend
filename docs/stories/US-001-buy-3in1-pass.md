@@ -10,6 +10,7 @@ status: "Done"
 priority: High
 business_requirement: "PRD-001"
 cards:
+  - db-baseline               # 数据库基础架构
   - catalog-endpoint
   - order-create
   - payment-webhook

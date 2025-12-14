@@ -9,7 +9,7 @@ status: "Draft"
 created_date: "2025-11-14"
 last_updated: "2025-11-14"
 related_stories: ["US-016"]
-implementation_cards: ["ticket-activation", "time-slot-reservation", "reservation-validation-scanning"]
+implementation_cards: ["ticket-lifecycle-daemon", "reservation-slot-management", "operator-validation-scanner", "customer-reservation-portal"]
 ```
 
 ## Executive Summary
