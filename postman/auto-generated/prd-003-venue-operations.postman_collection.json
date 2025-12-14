@@ -1,0 +1,373 @@
+{
+  "info": {
+    "_postman_id": "prd-003-venue-operations-collection",
+    "name": "PRD-003 Event Venue Operations Tests",
+    "description": "Tests for PRD-003 - Event Venue Operations. Tests QR generation, venue scan, and entitlement redemption.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "ota_api_key",
+      "value": "ota_full_access_key_99999",
+      "type": "string"
+    },
+    {
+      "key": "operator_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "qr_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "3.1 Operator Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"secret123\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/operators/login",
+          "host": ["{{base_url}}"],
+          "path": ["operators", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns operator token', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('operator_token');",
+              "    pm.collectionVariables.set('operator_token', data.operator_token);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.2 Generate Ticket (OTA)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{ota_api_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 1,\n  \"distribution_mode\": \"direct_sale\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "bulk-generate"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Ticket generated', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data.tickets).to.be.an('array');",
+              "    pm.expect(data.tickets.length).to.equal(1);",
+              "    pm.collectionVariables.set('ticket_code', data.tickets[0].ticket_code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.3 Activate Ticket",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{ota_api_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_details\": {\n    \"name\": \"Test Guest\",\n    \"email\": \"guest@test.com\"\n  },\n  \"customer_type\": \"adult\",\n  \"visit_date\": \"2025-12-20\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ota/tickets/{{ticket_code}}/activate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "tickets", "{{ticket_code}}", "activate"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Ticket activated', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data.status).to.equal('ACTIVE');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.4 Generate QR Code",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expiry_minutes\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/qr/public/{{ticket_code}}",
+          "host": ["{{base_url}}"],
+          "path": ["qr", "public", "{{ticket_code}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('QR code generated', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data.success).to.equal(true);",
+              "    pm.expect(data).to.have.property('encrypted_data');",
+              "    pm.expect(data).to.have.property('jti');",
+              "    pm.collectionVariables.set('qr_token', data.encrypted_data);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.5 Decrypt QR Code (View Info)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"encrypted_data\": \"{{qr_token}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/qr/decrypt",
+          "host": ["{{base_url}}"],
+          "path": ["qr", "decrypt"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('QR decrypted with ticket info', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('ticket_code');",
+              "    pm.expect(data).to.have.property('jti');",
+              "    pm.expect(data).to.have.property('ticket_info');",
+              "});",
+              "",
+              "pm.test('Has entitlements', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data.ticket_info.entitlements).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.6 Venue Scan (Redeem Ferry)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{operator_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/venue/scan",
+          "host": ["{{base_url}}"],
+          "path": ["venue", "scan"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Redemption successful', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data.result).to.equal('success');",
+              "    pm.expect(data).to.have.property('entitlements');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.7 Duplicate Redemption (Fraud Detection)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{operator_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"function_code\": \"ferry\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/venue/scan",
+          "host": ["{{base_url}}"],
+          "path": ["venue", "scan"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 422 (Rejected)', function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "",
+              "pm.test('Fraud detection triggered', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data.result).to.equal('reject');",
+              "    pm.expect(['ALREADY_REDEEMED', 'NO_REMAINING']).to.include(data.reason);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.8 List Venues",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/venue",
+          "host": ["{{base_url}}"],
+          "path": ["venue"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns venues list', function () {",
+              "    const data = pm.response.json();",
+              "    pm.expect(data).to.have.property('venues');",
+              "    pm.expect(data.venues).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "event": []
+}

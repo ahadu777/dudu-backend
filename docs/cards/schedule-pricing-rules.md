@@ -8,13 +8,13 @@ oas_paths: [
   "/pricing/schedules/calculate"
 ]
 migrations: ["db/migrations/0021_schedule_pricing_rules.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""
 newman_report: "reports/newman/schedule-pricing-rules.json"
 last_update: "2025-11-21T10:00:00+08:00"
-related_stories: ["US-010", "US-010A"]
+related_stories: ["US-010", "US-010A", "US-010B"]
 ---
 
 ## Status & Telemetry

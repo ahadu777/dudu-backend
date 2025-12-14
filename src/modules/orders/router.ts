@@ -1,20 +1,85 @@
 import { Router } from 'express';
-import { OrderController } from './controller';
 import { authenticate } from '../../middlewares/auth';
 import { AppDataSource } from '../../config/database';
 import { dataSourceConfig } from '../../config/data-source';
 import { mockStore } from '../../core/mock/store';
 import { logger } from '../../utils/logger';
+import { OrderService } from './service';
+import { ERR, ERROR_STATUS_MAP } from '../../core/errors/codes';
 
 const router = Router();
-const orderController = new OrderController();
+const orderService = new OrderService();
 
 // POST /orders - Create order with idempotency (requires authentication)
-router.post('/', authenticate, orderController.createOrder);
+router.post('/', authenticate, async (req: any, res) => {
+  try {
+    const { items, channel_id, out_trade_no, coupon_code } = req.body;
+
+    // Validation
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(422).json({
+        code: ERR.VALIDATION_ERROR,
+        message: 'Items array is required and cannot be empty'
+      });
+    }
+
+    if (!channel_id || !out_trade_no) {
+      return res.status(422).json({
+        code: ERR.VALIDATION_ERROR,
+        message: 'channel_id and out_trade_no are required'
+      });
+    }
+
+    for (const item of items) {
+      if (!item.product_id || !item.qty) {
+        return res.status(422).json({
+          code: ERR.VALIDATION_ERROR,
+          message: 'Each item must have product_id and qty'
+        });
+      }
+      if (item.qty < 1) {
+        return res.status(422).json({
+          code: ERR.VALIDATION_ERROR,
+          message: 'Quantity must be at least 1'
+        });
+      }
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: ERR.UNAUTHORIZED,
+        message: 'Authentication required'
+      });
+    }
+
+    const response = await orderService.createOrder(userId, {
+      items,
+      channel_id,
+      out_trade_no,
+      coupon_code
+    });
+
+    res.status(200).json(response);
+  } catch (error: any) {
+    if (error.code) {
+      const status = ERROR_STATUS_MAP[error.code as keyof typeof ERROR_STATUS_MAP] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    logger.error('orders.create.error', { error: String(error) });
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred'
+    });
+  }
+});
 
 // GET /orders - List user's orders (requires authentication)
 router.get('/', authenticate, async (req: any, res) => {
-  const startTime = Date.now();
   const userId = req.user.id;
 
   try {

@@ -14,16 +14,13 @@
    ├─ bcrypt.compare → JWT sign (OPERATOR_JWT_SECRET)
    └─ Return {operator_token}
 
-2. validators-sessions ⚡ (15 min)
-   ├─ POST /validators/sessions (Bearer operator token)
-   ├─ Create session {session_id, operator_id, device_id, expires_at}
-   └─ Return {session_id, expires_in}
-
-3. tickets-scan ⚡ (20 min)
-   ├─ POST /tickets/scan
-   ├─ Verify QR → check jti uniqueness → 409 on replay
+2. venue-enhanced-scanning ⚡ (20 min)
+   ├─ POST /venue/scan (replaces deprecated /tickets/scan)
+   ├─ Verify QR (encrypted or JWT) → check jti uniqueness → 409 on replay
    ├─ Atomic: lock entitlement, decrement, insert redemption
-   └─ Return {result: success/reject, ticket_status}
+   └─ Return {result: success/reject, ticket_status, venue_info}
+
+> **Note**: `/validators/sessions` deprecated. Use operator JWT auth instead.
 ```
 
 ### **Team B - Tickets (Parallel)**
@@ -55,8 +52,9 @@ node scripts/success-dashboard.js  # Progress tracking
 # Complete US-001 flow:
 curl /catalog
 curl -H "Authorization: Bearer user123" /my/tickets
-curl -X POST /tickets/TKT-123-001/qr-token
-curl -X POST /tickets/scan -d '{"qr_token":"...", "function_code":"bus"}'
+curl -X POST /qr/TKT-123-001              # Generate encrypted QR
+curl -X POST /qr/decrypt -d '{"encrypted_data":"..."}' # Decrypt to display
+curl -X POST /venue/scan -d '{"qr_token":"...", "function_code":"ferry_boarding"}'
 ```
 
 ## Target Metrics (After 4 Remaining Cards Done)

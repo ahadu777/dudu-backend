@@ -4,13 +4,13 @@ slug: venue-session-management
 team: "C - Gate"
 oas_paths: ["/venue/sessions"]
 migrations: ["db/migrations/venue_sessions.sql", "db/migrations/venues.sql"]
-status: "Deprecated"
+status: "deprecated"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-session-management-result.json"
 last_update: "2025-11-14T20:30:00+08:00"
-related_stories: ["US-013"]
+related_stories: []
 deprecated: true
 deprecated_date: "2025-11-14"
 replacement: "Removed - Venue sessions are no longer needed. Operator JWT token is sufficient."

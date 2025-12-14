@@ -2,6 +2,10 @@ import { Router } from 'express';
 import { venueOperationsService } from './service';
 import { logger } from '../../utils/logger';
 import { authenticateOperator } from '../../middlewares/auth';
+import { API_KEYS } from '../../middlewares/otaAuth';
+import { AppDataSource } from '../../config/database';
+import { VenueRepository } from './domain/venue.repository';
+import { paginationMiddleware } from '../../middlewares/pagination';
 
 const router = Router();
 
@@ -46,8 +50,16 @@ const router = Router();
  */
 router.get('/', async (req, res) => {
   try {
+    const apiKey = req.headers['x-api-key'] as string | undefined;
+    const partner = apiKey ? API_KEYS.get(apiKey) : undefined;
     const includeInactive = req.query.include_inactive === 'true';
-    const result = await venueOperationsService.getAllVenues(includeInactive);
+
+    // OTA partner → only their venues; miniprogram → all venues
+    const result = await venueOperationsService.getAllVenues({
+      includeInactive,
+      partnerId: partner?.partner_id
+    });
+
     res.json(result);
   } catch (error) {
     logger.error('venues.list.error', {
@@ -101,8 +113,9 @@ router.get('/', async (req, res) => {
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: 支持的功能列表
- *                 example: ["ferry_boarding", "gift_redemption"]
+ *                   enum: [ferry, gift, tokens, park_admission, pet_area, vip, exclusive]
+ *                 description: 支持的权益类型（与产品权益一致）
+ *                 example: ["ferry", "gift"]
  *               is_active:
  *                 type: boolean
  *                 description: 是否启用
@@ -130,6 +143,10 @@ router.post('/', async (req, res) => {
     });
   }
 
+  // Get partner_id from api-key
+  const apiKey = req.headers['x-api-key'] as string | undefined;
+  const partner = apiKey ? API_KEYS.get(apiKey) : undefined;
+
   try {
     const venue = await venueOperationsService.createVenue({
       venue_code,
@@ -137,7 +154,8 @@ router.post('/', async (req, res) => {
       venue_type,
       location_address,
       supported_functions,
-      is_active
+      is_active,
+      partner_id: partner?.partner_id || null
     });
 
     res.status(201).json(venue);
@@ -193,9 +211,9 @@ router.post('/', async (req, res) => {
  *                 example: "a1b2c3d4:e5f6g7h8:i9j0k1l2:m3n4o5p6"
  *               function_code:
  *                 type: string
- *                 description: 要核销的权益类型
- *                 enum: [ferry_boarding, gift_redemption, playground_token]
- *                 example: "ferry_boarding"
+ *                 description: 要核销的权益类型（与产品权益一致）
+ *                 enum: [ferry, gift, tokens, park_admission, pet_area, vip, exclusive]
+ *                 example: "ferry"
  *               venue_code:
  *                 type: string
  *                 description: 场馆代码（可选，用于场馆选择和功能验证）
@@ -251,10 +269,274 @@ router.post('/scan', authenticateOperator, async (req, res) => {
 
 /**
  * @swagger
+ * /venue/redemptions:
+ *   get:
+ *     tags: [Venue Operations]
+ *     summary: 查询核销记录
+ *     description: 查询核销事件记录，支持时间范围、权益类型、场馆等过滤条件
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: 开始时间 (ISO 8601 格式)
+ *         example: "2025-11-01T00:00:00Z"
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: 结束时间 (ISO 8601 格式)
+ *         example: "2025-11-28T23:59:59Z"
+ *       - in: query
+ *         name: function
+ *         schema:
+ *           type: string
+ *           enum: [ferry, gift, tokens, park_admission, pet_area, vip, exclusive]
+ *         description: 按权益类型过滤（与产品权益一致）
+ *       - in: query
+ *         name: venue_id
+ *         schema:
+ *           type: integer
+ *         description: 按场馆ID过滤
+ *       - in: query
+ *         name: result
+ *         schema:
+ *           type: string
+ *           enum: [success, reject]
+ *         description: 按核销结果过滤
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *         description: 返回数量上限 (最大 1000)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: 分页偏移量
+ *     responses:
+ *       200:
+ *         description: 核销记录列表
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 events:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       event_id:
+ *                         type: integer
+ *                       ticket_code:
+ *                         type: string
+ *                       function_code:
+ *                         type: string
+ *                       venue_id:
+ *                         type: integer
+ *                       venue_name:
+ *                         type: string
+ *                       operator_id:
+ *                         type: integer
+ *                       result:
+ *                         type: string
+ *                         enum: [success, reject]
+ *                       reason:
+ *                         type: string
+ *                         nullable: true
+ *                       ts:
+ *                         type: string
+ *                         format: date-time
+ *                 total:
+ *                   type: integer
+ *                   description: 匹配的总记录数
+ *                 limit:
+ *                   type: integer
+ *                 offset:
+ *                   type: integer
+ *       400:
+ *         description: 请求参数无效
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.get('/redemptions', paginationMiddleware({ defaultLimit: 100, maxLimit: 1000, style: 'offset' }), async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Parse query parameters
+    const fromStr = req.query.from as string | undefined;
+    const toStr = req.query.to as string | undefined;
+    const functionCode = req.query.function as string | undefined;
+    const venueIdStr = req.query.venue_id as string | undefined;
+    const result = req.query.result as 'success' | 'reject' | undefined;
+
+    // Get pagination from middleware
+    const { limit, offset } = req.pagination;
+
+    // Parse and validate dates
+    let from: Date | undefined;
+    let to: Date | undefined;
+
+    if (fromStr) {
+      from = new Date(fromStr);
+      if (isNaN(from.getTime())) {
+        return res.status(400).json({
+          error: 'INVALID_DATE',
+          message: 'Invalid "from" date format. Use ISO 8601 format.'
+        });
+      }
+    }
+
+    if (toStr) {
+      to = new Date(toStr);
+      if (isNaN(to.getTime())) {
+        return res.status(400).json({
+          error: 'INVALID_DATE',
+          message: 'Invalid "to" date format. Use ISO 8601 format.'
+        });
+      }
+    }
+
+    // Validate from < to
+    if (from && to && from > to) {
+      return res.status(400).json({
+        error: 'INVALID_DATE_RANGE',
+        message: '"from" date must be before "to" date'
+      });
+    }
+
+    // Default to last 24 hours if no dates provided
+    if (!from && !to) {
+      to = new Date();
+      from = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    }
+
+    // Parse venue_id
+    let venueId: number | undefined;
+    if (venueIdStr) {
+      venueId = parseInt(venueIdStr, 10);
+      if (isNaN(venueId)) {
+        return res.status(400).json({
+          error: 'INVALID_VENUE_ID',
+          message: 'venue_id must be a valid integer'
+        });
+      }
+    }
+
+    // Validate result parameter
+    if (result && !['success', 'reject'].includes(result)) {
+      return res.status(400).json({
+        error: 'INVALID_RESULT',
+        message: 'result must be "success" or "reject"'
+      });
+    }
+
+    logger.info('venue.redemptions.query', {
+      from: from?.toISOString(),
+      to: to?.toISOString(),
+      function: functionCode,
+      venue_id: venueId,
+      result,
+      limit,
+      offset
+    });
+
+    // Check if database is initialized
+    if (!AppDataSource.isInitialized) {
+      // Return empty results in mock mode
+      logger.info('venue.redemptions.mock_mode', { message: 'Database not initialized, returning empty results' });
+      return res.status(200).json({
+        events: [],
+        total: 0,
+        limit,
+        offset
+      });
+    }
+
+    // Query redemption events
+    const repository = new VenueRepository(AppDataSource);
+    const { events, total } = await repository.queryRedemptionEvents({
+      from,
+      to,
+      functionCode,
+      venueId,
+      result,
+      limit,
+      offset
+    });
+
+    // Transform events to response format
+    const responseEvents = events.map(event => {
+      const additionalData = event.additional_data || {};
+      return {
+        event_id: event.event_id,
+        ticket_code: event.ticket_code,
+        function_code: event.function_code,
+        // 场馆信息
+        venue_id: event.venue_id,
+        venue_code: additionalData.venue_code || null,
+        venue_name: additionalData.venue_name || event.venue?.venue_name || null,
+        // 操作员信息
+        operator_id: event.operator_id,
+        operator_name: additionalData.operator_name || null,
+        // 票券信息
+        ticket_type: additionalData.ticket_type || null,
+        product_id: additionalData.product_id || null,
+        product_name: additionalData.product_name || null,
+        customer_name: additionalData.customer_name || null,
+        customer_type: additionalData.customer_type || null,
+        // 核销结果
+        session_code: event.session_code,
+        result: event.result,
+        reason: event.reason || null,
+        remaining_uses_after: event.remaining_uses_after,
+        ts: event.redeemed_at.toISOString()
+      };
+    });
+
+    logger.info('venue.redemptions.success', {
+      count: responseEvents.length,
+      total,
+      duration_ms: Date.now() - startTime
+    });
+
+    res.status(200).json({
+      events: responseEvents,
+      total,
+      limit,
+      offset
+    });
+
+  } catch (error) {
+    logger.error('venue.redemptions.error', {
+      error: (error as Error).message,
+      stack: (error as Error).stack,
+      duration_ms: Date.now() - startTime
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to query redemption events'
+    });
+  }
+});
+
+/**
+ * @swagger
  * /venue/{venue_code}/analytics:
  *   get:
  *     summary: Get venue performance analytics (PRD-003 metrics)
- *     description: Returns real-time analytics for venue operations including fraud detection and success rates
+ *     description: |
+ *       Returns real-time analytics for venue operations including:
+ *       - Total scans, success rate, fraud rate
+ *       - Function breakdown (ferry, gift, tokens, park_admission, pet_area, vip, exclusive)
+ *       - Package breakdown (premium_plan, pet_package, deluxe)
+ *       - Optional per-terminal breakdown for cross-terminal fraud detection
  *     tags: [Venue Operations]
  *     parameters:
  *       - in: path
@@ -270,9 +552,76 @@ router.post('/scan', authenticateOperator, async (req, res) => {
  *           type: integer
  *           default: 24
  *         description: Analytics time window in hours (1-168)
+ *       - in: query
+ *         name: include_terminals
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Include per-terminal breakdown for granular analysis
  *     responses:
  *       200:
  *         description: Venue analytics data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 venue_id:
+ *                   type: integer
+ *                 period:
+ *                   type: object
+ *                   properties:
+ *                     start:
+ *                       type: string
+ *                       format: date-time
+ *                     end:
+ *                       type: string
+ *                       format: date-time
+ *                 metrics:
+ *                   type: object
+ *                   properties:
+ *                     total_scans:
+ *                       type: integer
+ *                     successful_scans:
+ *                       type: integer
+ *                     fraud_attempts:
+ *                       type: integer
+ *                     success_rate:
+ *                       type: number
+ *                       description: Percentage (0-100)
+ *                     fraud_rate:
+ *                       type: number
+ *                       description: Percentage (0-100)
+ *                     function_breakdown:
+ *                       type: object
+ *                       description: Redemptions by function type
+ *                     package_breakdown:
+ *                       type: object
+ *                       properties:
+ *                         premium_plan:
+ *                           type: integer
+ *                           description: ferry + gift + tokens
+ *                         pet_package:
+ *                           type: integer
+ *                           description: park_admission + pet_area
+ *                         deluxe:
+ *                           type: integer
+ *                           description: All functions combined
+ *                     terminal_breakdown:
+ *                       type: array
+ *                       description: Per-terminal metrics (only if include_terminals=true)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           terminal_id:
+ *                             type: string
+ *                             nullable: true
+ *                           total_scans:
+ *                             type: integer
+ *                           success_rate:
+ *                             type: number
+ *                           fraud_rate:
+ *                             type: number
  *       400:
  *         description: Invalid hours parameter
  *       404:
@@ -281,6 +630,7 @@ router.post('/scan', authenticateOperator, async (req, res) => {
 router.get('/:venue_code/analytics', async (req, res) => {
   const { venue_code } = req.params;
   const hours = parseInt(req.query.hours as string) || 24;
+  const includeTerminals = req.query.include_terminals === 'true';
 
   if (hours < 1 || hours > 24 * 7) {
     return res.status(400).json({
@@ -290,13 +640,16 @@ router.get('/:venue_code/analytics', async (req, res) => {
   }
 
   try {
-    const analytics = await venueOperationsService.getVenueAnalytics(venue_code, hours);
+    const analytics = await venueOperationsService.getVenueAnalytics(venue_code, hours, {
+      includeTerminalBreakdown: includeTerminals
+    });
     res.json(analytics);
 
   } catch (error) {
     logger.error('venue.analytics.error', {
       venue_code,
       hours,
+      include_terminals: includeTerminals,
       error: (error as Error).message
     });
 
@@ -487,7 +840,7 @@ router.put('/:venue_id', async (req, res) => {
  * /venue/{venue_id}:
  *   delete:
  *     summary: 删除场馆
- *     description: 删除指定场馆（默认软删除，设置is_active=false）
+ *     description: 软删除指定场馆（设置 deleted_at 时间戳）
  *     tags: [Venue Management]
  *     parameters:
  *       - in: path
@@ -496,12 +849,6 @@ router.put('/:venue_id', async (req, res) => {
  *         schema:
  *           type: integer
  *         description: 场馆ID
- *       - in: query
- *         name: hard_delete
- *         schema:
- *           type: boolean
- *           default: false
- *         description: 是否物理删除（慎用）
  *     responses:
  *       200:
  *         description: Venue deleted successfully
@@ -531,10 +878,8 @@ router.delete('/:venue_id', async (req, res) => {
     });
   }
 
-  const hardDelete = req.query.hard_delete === 'true';
-
   try {
-    const success = await venueOperationsService.deleteVenue(venueId, hardDelete);
+    const success = await venueOperationsService.deleteVenue(venueId);
 
     if (!success) {
       return res.status(404).json({
@@ -545,12 +890,11 @@ router.delete('/:venue_id', async (req, res) => {
 
     res.json({
       success: true,
-      message: hardDelete ? 'Venue permanently deleted' : 'Venue deactivated successfully'
+      message: 'Venue deleted successfully'
     });
   } catch (error) {
     logger.error('venue.delete.error', {
       venue_id: venueId,
-      hard_delete: hardDelete,
       error: (error as Error).message,
       stack: (error as Error).stack
     });

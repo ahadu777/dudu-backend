@@ -1,6 +1,6 @@
 ---
 card: "DB Baseline and Seed"
-slug: db-baseline-seed
+slug: db-baseline
 team: "Infra"
 oas_paths: []
 migrations: ["migrations/0001_baseline.sql"]
@@ -9,6 +9,7 @@ branch: "feat/infra-baseline"
 pr: ""
 newman_report: ""
 last_update: "2025-10-19T18:00:00+08:00"
+related_stories: []
 ---
 
 # Purpose

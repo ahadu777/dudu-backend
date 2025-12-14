@@ -28,6 +28,7 @@ export interface StoryInfo {
   title: string;
   status: string;
   business_requirement?: string;
+  cards?: string[];
 }
 
 /**
@@ -134,7 +135,8 @@ export function loadStoriesIndex(): StoryInfo[] {
       id: story.id || '',
       title: story.title || '',
       status: story.status || 'Unknown',
-      business_requirement: story.business_requirement
+      business_requirement: story.business_requirement,
+      cards: story.cards || []
     }));
   } catch (error) {
     console.error('Error loading stories index:', error);

@@ -5,7 +5,7 @@ import { Venue } from './venue.entity';
 @Index('idx_redemption_jti', ['jti']) // Fast JTI lookup
 @Index('idx_redemption_venue_time', ['venue_id', 'redeemed_at'])
 @Index('idx_redemption_ticket', ['ticket_code', 'function_code'])
-@Index('idx_redemption_jti_function', ['jti', 'function_code'], { unique: true }) // CRITICAL: Prevent replay per function
+@Index('idx_redemption_success_unique', ['success_unique_key'], { unique: true }) // Only success records have unique constraint
 export class RedemptionEvent {
   @PrimaryGeneratedColumn()
   event_id!: number;
@@ -14,7 +14,7 @@ export class RedemptionEvent {
   ticket_code!: string; // e.g., 'TIK-USR123-106'
 
   @Column({ type: 'varchar', length: 50 })
-  function_code!: string; // 'ferry_boarding', 'gift_redemption', 'playground_token'
+  function_code!: string; // 与产品权益类型一致: 'ferry', 'gift', 'tokens', 'park_admission', 'pet_area', 'vip', 'exclusive'
 
   @Column({ type: 'int' })
   venue_id!: number;
@@ -29,7 +29,10 @@ export class RedemptionEvent {
   terminal_device_id!: string;
 
   @Column({ type: 'varchar', length: 36 })
-  jti!: string; // JWT Token ID - uniqueness enforced with function_code
+  jti!: string; // JWT Token ID
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  success_unique_key!: string | null; // Only set for success: `${jti}_${function_code}`, NULL for reject (allows duplicates)
 
   @Column({ type: 'varchar', length: 20 })
   result!: string; // 'success', 'reject'
@@ -64,6 +67,6 @@ export class RedemptionEvent {
 
   isMultiFunction(): boolean {
     // Check if this ticket has multiple function types in same session
-    return ['ferry_boarding', 'gift_redemption', 'playground_token'].includes(this.function_code);
+    return ['ferry', 'gift', 'tokens', 'park_admission', 'pet_area', 'vip', 'exclusive'].includes(this.function_code);
   }
 }

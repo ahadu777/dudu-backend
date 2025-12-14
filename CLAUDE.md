@@ -1,361 +1,151 @@
 # AI Development Guide
 
-## Quick Navigation
+## ⚠️ MANDATORY WORKFLOW (每次任务必须执行)
 
-| Task | Action |
-|------|--------|
-| **Start here** | [Reality Check](#reality-check) |
-| **Natural language request** | [NL Optimization](#natural-language-optimization) → [📖 Details](docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md) |
-| **New story?** | [Duplicate Prevention](#duplicate-prevention) → [📖 Details](docs/reference/DUPLICATE-PREVENTION.md) |
-| **PRD vs Story vs Card?** | [Document Layers](#document-layer-decision) → [📖 Details](docs/reference/DOCUMENT-LAYER-DECISION.md) |
-| **API changing?** | [API Changes](#api-change-management) → [📖 Details](docs/reference/API-CHANGE-MANAGEMENT.md) |
-| **New API?** | [RESTful Design](#restful-api-design) → [📖 Details](docs/reference/RESTFUL-API-DESIGN.md) |
-| **Generate tests?** | [Test Generation](#testing) → [📖 Details](docs/reference/AI-TEST-GENERATION.md) |
-| **Newman reports?** | [Newman Reports](#newman-reports) → [📖 Details](docs/reference/NEWMAN-REPORT-STANDARD.md) |
-| **Troubleshooting?** | [📖 Troubleshooting Guide](docs/reference/TROUBLESHOOTING.md) |
-| **Complex scenario?** | [📖 Knowledge Graph](docs/reference/KNOWLEDGE-GRAPH.md) |
-| **Case studies** | [📖 docs/cases/](docs/cases/) |
+### Step 0: Task Classification / 任务分类
 
----
+Identify task type and load corresponding spec document:
 
-## AI Instructions: Reference Loading
+| Request Pattern | Task Type | Must Read First |
+|-----------------|-----------|-----------------|
+| "我想做..." / "I want to..." / "Help me implement..." | Natural Language Requirement | `@docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md` |
+| New feature / New Story / 新功能 | New Feature Development | `@docs/reference/DUPLICATE-PREVENTION.md` |
+| "PRD or Story?" / "这应该是 PRD 还是 Story？" | Document Layer Decision | `@docs/reference/DOCUMENT-LAYER-DECISION.md` |
+| Create PRD / Story / Card / 写文档 | Document Creation | `@docs/reference/DOCUMENT-SPEC.md` |
+| Deprecate feature / 废弃功能 | Document Lifecycle | `@docs/reference/DOCUMENT-SPEC.md` (Section 4-5) |
+| Modify existing API / Change fields / 改 API | API Change | `@docs/reference/API-CHANGE-MANAGEMENT.md` |
+| Design new API / New endpoint / 新端点 | New API Design | `@docs/reference/RESTFUL-API-DESIGN.md` |
+| Write tests / Generate tests / 写测试 | Test Generation | `@docs/reference/AI-TEST-GENERATION.md` |
+| Newman report / 测试报告 | Test Report | `@docs/reference/NEWMAN-REPORT-STANDARD.md` |
+| Refactor / Change architecture / 重构 | Refactoring | `@docs/reference/REFACTORING-IMPACT.md` |
+| Cross-module / Complex dependencies / 跨模块 | Complex Scenario | `@docs/reference/KNOWLEDGE-GRAPH.md` |
+| Error / Stuck / Not working / 报错 | Troubleshooting | `@docs/reference/TROUBLESHOOTING.md` |
+| Fix bug / Simple change / 简单改动 | Simple Fix | No doc needed → Go to Step 1 |
 
-**IMPORTANT: Before working on these tasks, READ the reference document first using the Read tool.**
+### Step 1: Reality Check (Required / 必须执行)
 
-| Task Type | Must Read First |
-|-----------|-----------------|
-| Natural language requirements | `docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md` |
-| Creating new story | `docs/reference/DUPLICATE-PREVENTION.md` |
-| Deciding PRD/Story/Card | `docs/reference/DOCUMENT-LAYER-DECISION.md` |
-| Modifying existing API | `docs/reference/API-CHANGE-MANAGEMENT.md` |
-| Implementing new API | `docs/reference/RESTFUL-API-DESIGN.md` |
-| Generating/analyzing tests | `docs/reference/AI-TEST-GENERATION.md` |
-| Running Newman tests | `docs/reference/NEWMAN-REPORT-STANDARD.md` |
-| Debugging issues | `docs/reference/TROUBLESHOOTING.md` |
-| Cross-story dependencies | `docs/reference/KNOWLEDGE-GRAPH.md` |
-| Refactoring code | `docs/reference/REFACTORING-IMPACT.md` |
-
-**Why:** Reference docs contain detailed workflows, examples, and lessons learned that are not included in this summary file.
-
----
-
-## Core Pattern (Read First)
-
-### Request Classification
-```
-"I want users to..." → Story → Cards → Code (check duplicates first)
-"Implement card XYZ" → Work with existing card
-```
-
-### The Working Pattern
-```
-0. LAYER DECISION: PRD? Story? Card?
-1. DUPLICATE CHECK: grep -ri "keywords" docs/prd/ docs/stories/ docs/cards/
-2. REALITY CHECK: curl endpoints, grep imports
-3. STATUS: "Ready" → "In Progress" → "Done"
-4. CODE: src/modules/[name]/ following existing patterns
-5. TEST: curl http://localhost:8080/endpoint
-6. MODE: USE_DATABASE=false (default, faster)
-```
-
----
-
-## Reality Check
-
-**Always verify before implementing:**
 ```bash
-# What's running?
+# Service status / 服务状态
 curl http://localhost:8080/healthz
-curl http://localhost:8080/[endpoint]
 
-# What's imported?
-grep -r "import.*Service" src/modules/[name]/
+# Document status / 相关文档状态
+grep -ri "keywords" docs/cards/ docs/stories/
+grep "status:" docs/cards/related-card.md
 
-# What exists?
-ls src/modules/[name]/
+# Code status / 代码现状
+ls src/modules/related-module/
+grep -r "related-function" src/modules/
 ```
 
 **5-Minute Rule**: If basic commands don't clarify state, complex analysis won't help.
 
----
+### Step 2: Execute Development / 执行开发
 
-## Natural Language Optimization
-
-**When user provides requirements in natural language:**
-1. Parse & extract core intent
-2. Convert to structured specification
-3. Present for user confirmation
-4. Wait for approval before implementing
-
-**📖 Full examples**: [docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md](docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md)
-
----
-
-## Duplicate Prevention
-
-**Before creating any new story:**
-```bash
-grep -ri "keywords" docs/prd/ docs/stories/ docs/cards/
-find docs/ -name "*domain*"
+```
+1. Update Card status: "Ready" → "In Progress"
+2. Follow spec document loaded in Step 0
+3. Follow existing patterns in src/modules/
+4. Ensure TypeScript compiles
 ```
 
-**Decision**: If similarity >70%, ask user: "Merge? Extend? Separate?"
-
-**📖 Full workflow**: [docs/reference/DUPLICATE-PREVENTION.md](docs/reference/DUPLICATE-PREVENTION.md)
-
----
-
-## Document Layer Decision
-
-| User Request | Layer | Action |
-|-------------|-------|--------|
-| "我想做会员积分系统" | **PRD** | Create PRD |
-| "用户能查看订单历史" | **Story** | Create Story |
-| "订单列表需要分页" | **Card** | Update Card |
-| "修复分页的bug" | **Code** | Fix code only |
-
-**📖 Full guide**: [docs/reference/DOCUMENT-LAYER-DECISION.md](docs/reference/DOCUMENT-LAYER-DECISION.md)
-
----
-
-## API Change Management
-
-| Change Type | Breaking? | Updates |
-|------------|-----------|---------|
-| Add optional field | ✅ Safe | Card only |
-| Add required field | ❌ Breaking | Card + Version |
-| Remove/rename field | ❌ Breaking | Card + Version |
-| New endpoint | ✅ Safe | Card |
-
-**📖 Full workflow**: [docs/reference/API-CHANGE-MANAGEMENT.md](docs/reference/API-CHANGE-MANAGEMENT.md)
-
----
-
-## RESTful API Design
-
-**Quick check before implementing:**
-- [ ] Plural nouns: `/venues` not `/venue`
-- [ ] No redundancy: not `/venue/venues`
-- [ ] Actions: `/:id/action` not `/action/:id`
-
-**📖 Full standards**: [docs/reference/RESTFUL-API-DESIGN.md](docs/reference/RESTFUL-API-DESIGN.md)
-
----
-
-## Project Foundations
-
-### Technical Stack
-- **Runtime**: Node.js 18+ / TypeScript
-- **Framework**: Express 5.1
-- **Database**: MySQL (TypeORM)
-- **Docs**: OpenAPI 3.0.3 + Swagger UI
-
-### Project Structure
-```
-docs/
-  stories/        # Business requirements
-  cards/          # Technical specs
-  integration/    # Consumer runbooks
-  reference/      # Detailed guides
-  cases/          # Case studies
-src/
-  modules/        # Implementation
-  types/domain.ts # Type definitions
-  core/mock/      # Mock data
-```
-
-### Mock-First Philosophy
-```bash
-npm start                     # Mock mode (default, 1-3ms)
-USE_DATABASE=true npm start   # Database mode
-```
-
----
-
-## Key Commands
+### Step 3: Verify Completion / 验证完成
 
 ```bash
-# Development
+# Endpoint test / 端点测试
+curl http://localhost:8080/[endpoint]
+
+# Run related tests / 运行相关测试
+npm run test:prd [N]    # PRD test
+npm run test:story [N]  # Story test
+
+# Document consistency / 文档一致性校验
+npm run validate:docs   # 检查 PRD→Stories→Cards→Code 一致性
+
+# Update status / 更新状态
+# Card: "In Progress" → "Done"
+```
+
+---
+
+## Core Modules (Auto-loaded via @import)
+
+### Tech Stack & TypeORM Rules
+@docs/claude/tech-stack.md
+
+### Testing Guidelines
+@docs/claude/testing.md
+
+### Development Standards (DoR/DoD)
+@docs/claude/standards.md
+
+---
+
+## Quick Reference
+
+### 文档层级决策
+
+| 用户说的 | 层级 | 动作 | 视角 |
+|---------|------|------|------|
+| "我想做会员积分系统" | **PRD** | 创建 PRD | 产品/商业 |
+| "用户能查看订单历史" | **Story** | 创建 Story | 用户（黑盒） |
+| "订单列表需要分页" | **Card** | 更新 Card | 技术（白盒） |
+| "修复分页的bug" | **Code** | 直接修代码 | - |
+
+### 三层职责边界
+
+| 层级 | 应该包含 | 不应该包含 |
+|------|----------|------------|
+| PRD | 为什么做、成功指标、功能列表 | API路径、验收标准、实现细节 |
+| Story | 用户能力、业务验收标准 | API路径、字段名、错误码 |
+| Card | API契约、技术验收标准、数据影响 | 业务目标、成功指标 |
+
+> 详细规范见 `docs/reference/DOCUMENT-SPEC.md`
+
+### 常用命令
+
+```bash
+# 开发
 npm run build && npm start
 curl http://localhost:8080/healthz
 
-# Status
+# 状态查询
 grep "status:" docs/cards/*.md
 grep "status: In Progress" docs/cards/*.md
 
-# Testing (Auto-discovery - no need to update package.json)
-npm test                      # Smoke + All PRD + US-014
-npm run test:smoke            # Quick health check
-npm run test:prd              # All PRD tests (auto-discovered)
-npm run test:prd 006          # Specific PRD test
-npm run test:story            # All Story tests (auto-discovered)
-npm run test:story 014        # Specific Story test
-npm run test:all              # Everything
+# 测试 (自动发现)
+npm test                      # Smoke + PRD + Story
+npm run test:prd 006          # 指定 PRD
+npm run test:story 014        # 指定 Story
 
-# Search
-grep -ri "keywords" docs/
+# 文档校验
+npm run validate:docs         # 检查 PRD→Stories→Cards→Code 一致性
+
+# 搜索
+grep -ri "关键词" docs/
 ```
+
+### Single Source of Truth
+
+1. **Cards** (`docs/cards/`) = API 契约
+2. **domain.ts** = 类型定义
+3. **OpenAPI** = 外部工具
+4. **Tests** = 必须与以上对齐
 
 ---
 
-## Testing
+## 状态评估原则
 
-**Test Pyramid**:
-```
-PRD Tests (业务规则) → Newman + PRD Acceptance Criteria
-    ↓
-Story Tests (E2E流程) → Runbook + Newman Collection
-    ↓
-Card Tests (端点级) → curl + Newman
-```
+**测试通过 ≠ Done**
 
-### Auto-Discovery Test System
+| 测试通过能证明 | 测试通过不能证明 |
+|--------------|----------------|
+| ✅ 已实现的代码逻辑正确 | ❌ 所有功能都已实现 |
+| ✅ API 端点可用 | ❌ 业务目标已达成 |
+| | ❌ 生产环境就绪 |
 
-测试系统会**自动发现**新增的测试集合，无需修改 `package.json`。
-
-**命名规范** (必须遵守):
-```
-postman/auto-generated/
-├── prd-{NNN}-{description}.postman_collection.json   # PRD 测试
-├── us-{NNN}-{description}.postman_collection.json    # Story 测试
-└── _archived/                                         # 过时测试存档
-```
-
-**测试命令**:
-| 命令 | 作用 | 示例 |
-|------|------|------|
-| `npm test` | 主测试套件 | Smoke + PRD + Story |
-| `npm run test:prd` | 所有 PRD 测试 | 自动发现 prd-*.json |
-| `npm run test:prd {N}` | 指定 PRD | `npm run test:prd 008` |
-| `npm run test:story` | 所有 Story 测试 | 自动发现 us-*.json |
-| `npm run test:story {N}` | 指定 Story | `npm run test:story 015` |
-| `npm run test:all` | 全部测试 | Smoke + PRD + Story |
-
-**新增 PRD/Story 测试流程**:
-1. 创建 Postman 集合: `postman/auto-generated/prd-008-xxx.postman_collection.json`
-2. 运行测试: `npm run test:prd 008`
-3. 无需修改任何配置文件
-
-**Testing Workflow**:
-| Step | Tool | Command |
-|------|------|---------|
-| 1. 快速验证 | curl | `curl http://localhost:8080/[endpoint]` |
-| 2. E2E 流程 | Runbook | Execute `docs/integration/US-XXX-runbook.md` |
-| 3. 自动化 | Newman | `npm run test:prd 006` 或 `npm run test:story 014` |
-| 4. 覆盖率 | Registry | Update `docs/test-coverage/_index.yaml` |
-
-**Test Assets**:
-```
-postman/auto-generated/                 # AI 生成的测试 (自动发现)
-postman/auto-generated/_archived/       # 过时测试存档
-postman/QUICK-SMOKE-TESTS.json         # 冒烟测试
-reports/newman/                         # Newman 测试报告输出
-docs/integration/US-XXX-runbook.md     # E2E 可执行流程
-docs/test-coverage/_index.yaml         # 覆盖率追踪
-scripts/run-newman-tests.js            # 测试自动发现脚本
-```
-
-**📖 AI test generation**: [docs/reference/AI-TEST-GENERATION.md](docs/reference/AI-TEST-GENERATION.md)
-
----
-
-## Newman Reports
-
-**Standard format** (AI MUST follow):
-```bash
-npx newman run {collection}.json --reporters cli,junit --reporter-junit-export reports/newman/{id}-e2e.xml
-```
-
-| 报告类型 | 命名格式 | 示例 |
-|---------|---------|------|
-| PRD 测试 | `prd-{id}-e2e.xml` | `prd-006-e2e.xml` |
-| Story 测试 | `us-{id}-e2e.xml` | `us-012-e2e.xml` |
-
-**📖 Full standard**: [docs/reference/NEWMAN-REPORT-STANDARD.md](docs/reference/NEWMAN-REPORT-STANDARD.md)
-
----
-
-## Standards (DoR/DoD)
-
-**Definition of Ready:**
-- [ ] Complete API contract in card
-- [ ] Dependencies identified
-- [ ] Mock data structure agreed
-
-**Definition of Done:**
-- [ ] Matches card spec
-- [ ] TypeScript compiles
-- [ ] Endpoints respond (curl test)
-- [ ] Card status = "Done"
-- [ ] **Testing Complete** (AI MUST run automatically, no user confirmation needed):
-  - [ ] Newman collection created: `postman/auto-generated/{prd|us}-{NNN}-xxx.postman_collection.json`
-  - [ ] Run `npm run test:prd {N}` or `npm run test:story {N}` to verify
-  - [ ] Run `npm test` to ensure no regression
-  - [ ] Runbook created/updated (`docs/integration/US-XXX-runbook.md`)
-  - [ ] Coverage updated (`docs/test-coverage/_index.yaml`)
-
----
-
-## Anti-Script Principle
-
-**Use simple commands, not scripts:**
-```bash
-# ✅ Use
-curl http://localhost:8080/endpoint
-grep "status:" docs/cards/*.md
-npm run test:prd 006
-
-# ❌ Don't create scripts for
-# - One-time checks
-# - Testing endpoints
-# - Progress queries
-```
-
-**Exceptions**:
-- Database migrations
-- `scripts/run-newman-tests.js` (测试自动发现)
-
----
-
-## Code Style
-
-- **Variables/functions**: camelCase
-- **Classes**: PascalCase
-- **Constants**: UPPER_SNAKE_CASE
-- async/await for async code
-- Proper TypeScript types (no `any`)
-- Consistent JSON response formats
-
----
-
-## Security
-
-- Never commit secrets (use .env)
-- Validate all inputs
-- Use parameterized queries
-- Add authentication where needed
-
----
-
-## When Stuck
-
-1. Copy patterns from working modules
-2. Use mock data (faster)
-3. Simple logging: `logger.info('event', data)`
-4. **📖 [Troubleshooting Guide](docs/reference/TROUBLESHOOTING.md)**
-
----
-
-## Reference Links
-
-| Resource | Location |
-|----------|----------|
-| Detailed workflows | [docs/reference/](docs/reference/) |
-| Case studies | [docs/cases/](docs/cases/) |
-| Integration proof | [docs/INTEGRATION_PROOF.md](docs/INTEGRATION_PROOF.md) |
-| PRDs | [docs/prd/](docs/prd/) |
-| Test coverage | [docs/test-coverage/_index.yaml](docs/test-coverage/_index.yaml) |
-| OpenAPI spec | [openapi/openapi.json](openapi/openapi.json) |
+**状态变更原则：**
+- `Draft → In Progress`: 开始实施时
+- `In Progress → Done`: 需要产品/业务验收，不能仅凭测试通过
 
 ---
 
@@ -368,13 +158,19 @@ npm run test:prd 006
 - **US-014**: WeChat mini-program authentication
 - **PRD-006**: Ticket activation system (46 assertions)
 - **PRD-007**: Reservation validation (62 assertions)
-- **Mock store**: Products 101-108
+- **PRD-008**: Miniprogram Phase 1 (35 assertions)
 
 ---
 
-## Single Source of Truth
+## Reference Links
 
-1. **Cards** (`docs/cards/`) = API contracts
-2. **domain.ts** = Type definitions
-3. **OpenAPI** = External tooling
-4. **Tests** = Must align with above
+| 资源 | 位置 | 说明 |
+|------|------|------|
+| **文档规范** | [docs/reference/DOCUMENT-SPEC.md](docs/reference/DOCUMENT-SPEC.md) | PRD/Story/Card 模板、关系、生命周期 |
+| 详细工作流 | [docs/reference/](docs/reference/) | 各类任务的详细指南 |
+| 案例研究 | [docs/cases/](docs/cases/) | 实际案例分析 |
+| PRDs | [docs/prd/](docs/prd/) | 产品需求文档 |
+| Stories | [docs/stories/](docs/stories/) | 用户故事 |
+| Cards | [docs/cards/](docs/cards/) | 技术卡片 |
+| 测试覆盖率 | [docs/test-coverage/_index.yaml](docs/test-coverage/_index.yaml) | 测试状态追踪 |
+| OpenAPI 规范 | [openapi/openapi.json](openapi/openapi.json) | API 文档 |

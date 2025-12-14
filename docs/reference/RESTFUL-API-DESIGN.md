@@ -1,7 +1,7 @@
 # RESTful API Design Guide
 
 ## Overview
-All API endpoints in this project MUST follow RESTful design principles. This guide provides detailed standards, examples, and validation patterns.
+API endpoints should follow RESTful design principles. This guide provides standards, examples, and validation patterns for reference.
 
 ## Core Principles
 

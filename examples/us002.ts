@@ -107,14 +107,17 @@ async function runUS002Example() {
           for (const functionCode of functions) {
             console.log(`🚢 Testing ${functionCode} redemption:`);
 
-            const scanResponse = await fetch(`${OpenAPI.BASE}/tickets/scan`, {
+            const scanResponse = await fetch(`${OpenAPI.BASE}/venue/scan`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${operatorToken}`
+              },
               body: JSON.stringify({
                 qr_token: qr.qr_token,
                 function_code: functionCode,
-                session_id: session.session_id,
-                location_id: 52
+                venue_code: 'central-pier',
+                terminal_device_id: 'gate-01'
               })
             });
 
@@ -129,14 +132,17 @@ async function runUS002Example() {
 
           // Test replay protection
           console.log('\n🔒 Step 5: Test Replay Protection');
-          const replayResponse = await fetch(`${OpenAPI.BASE}/tickets/scan`, {
+          const replayResponse = await fetch(`${OpenAPI.BASE}/venue/scan`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${operatorToken}`
+            },
             body: JSON.stringify({
               qr_token: qr.qr_token,
               function_code: 'ferry',
-              session_id: session.session_id,
-              location_id: 52
+              venue_code: 'central-pier',
+              terminal_device_id: 'gate-01'
             })
           });
 

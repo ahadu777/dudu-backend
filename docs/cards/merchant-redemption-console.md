@@ -4,13 +4,13 @@ slug: merchant-redemption-console
 team: "C - Gate"
 oas_paths: ["/merchant/tickets/scan", "/merchant/orders/{orderId}", "/merchant/redemptions"]
 migrations: ["db/migrations/0014_merchant_redemptions.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""
 newman_report: "reports/newman/merchant-redemption-console.json"
 last_update: "2025-10-24T18:28:44+08:00"
-related_stories: ["US-010"]
+related_stories: ["US-010", "US-010B"]
 ---
 
 ## Status & Telemetry
@@ -22,21 +22,23 @@ related_stories: ["US-010"]
 - Last Update: 2025-10-24T18:28:44+08:00
 
 ## 0) Prerequisites
-- operators-login、validators-sessions 已提供核销员认证与会话。
-- tickets-scan 卡片提供票券验证与状态写入逻辑。
+- operators-login 已提供核销员认证（JWT token）。
+- venue-enhanced-scanning 卡片提供票券验证与状态写入逻辑（替代已废弃的 tickets-scan）。
 - notification-orchestrator 负责核销成功通知。
 - 商家账号、门店数据来自 admin-package-config。
+
+> **Note**: `validators-sessions` 已废弃。核销员认证现在通过 JWT token 直接进行。
 
 ## 1) API Sequence (Context)
 ```mermaid
 sequenceDiagram
   actor MERCHANT as Merchant MiniApp
   participant API as Merchant API
-  participant CORE as Ticket Core
+  participant CORE as Venue Scan Service
   participant LOG as Redemption Log Store
-  MERCHANT->>+API: POST /merchant/tickets/scan { code, session_id }
-  API->>CORE: POST /tickets/scan { code, validator }
-  CORE-->>API: { result, tickets[] }
+  MERCHANT->>+API: POST /merchant/tickets/scan { code, operator_token }
+  API->>CORE: POST /venue/scan { qr_token, function_code, venue_code }
+  CORE-->>API: { result, ticket_status, entitlements[] }
   API->>LOG: insert redemption record
   API-->>-MERCHANT: 200 { result, tickets[] }
 ```
@@ -141,17 +143,17 @@ paths:
 - 核销员仅能操作与自身 `merchant_id` 关联的票券。
 - 每次核销写入 `merchant_redemptions` 日志，包含操作人、地点、时间、entitlement。
 - 支持部分核销：一次扫码只改变所选票券状态。
-- QR token 验证由 tickets-scan 负责，商家 API 不直接解析。
+- QR token 验证由 venue-enhanced-scanning 负责，商家 API 不直接解析。
 
 ## 4) Validations, Idempotency & Concurrency
 - 校验 `session_id`、`location_id` 与商家绑定关系。
-- 防止重复核销：调用 tickets-scan 时若返回重复状态 -> 显示已核销。
+- 防止重复核销：调用 venue/scan 时若返回 ALREADY_REDEEMED 状态 -> 显示已核销。
 - 日志写入使用 (ticket_id, redemption_event_id) 唯一键保证幂等。
 - Redemption 列表分页使用游标，确保对账稳定。
 
 ## 5) Rules & Writes (TX)
-1. 验证商家会话、门店权限。
-2. 调用核心 `/tickets/scan`，传递核销员上下文。
+1. 验证商家 JWT token、门店权限。
+2. 调用核心 `/venue/scan`，传递核销员上下文和 venue_code。
 3. 对返回的每个核销成功的票券写日志（事务内批量插入）。
 4. 触发通知 orchestrator；失败时记录重试队列。
 5. 返回核销结果给前端。

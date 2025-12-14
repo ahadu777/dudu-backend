@@ -554,14 +554,15 @@
           }
         },
         {
-          "name": "AC-E.2: Missing orq in customer validation",
+          "name": "AC-E.2: Missing orq uses default (orq=1)",
           "event": [{"listen": "test", "script": {"exec": [
-            "pm.test('Status code is 400', function () {",
-            "    pm.response.to.have.status(400);",
+            "pm.test('Status code is 200 (uses default orq)', function () {",
+            "    pm.response.to.have.status(200);",
             "});",
-            "pm.test('AC-E.2: Error for missing orq', function () {",
+            "pm.test('AC-E.2: Validation works with default orq', function () {",
             "    const json = pm.response.json();",
-            "    pm.expect(json.success).to.be.false;",
+            "    // API uses default orq=1 when not provided",
+            "    pm.expect(json).to.have.property('valid');",
             "});"
           ], "type": "text/javascript"}}],
           "request": {

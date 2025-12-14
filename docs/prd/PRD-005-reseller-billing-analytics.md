@@ -5,14 +5,40 @@
 prd_id: "PRD-005"
 product_area: "Finance & Analytics"
 owner: "Finance Team"
-status: "Planning"
+status: "Done"
 created_date: "2025-11-15"
-last_updated: "2025-11-15"
-related_stories: ["US-015"]
-implementation_cards: ["reseller-master-data", "usage-billing-engine", "audit-retention", "billing-reconciliation"]
+last_updated: "2025-12-11"
+related_stories: []
+implementation_cards: ["ota-reseller-management"]  # Phase 2/3 cards deferred, not yet created
 depends_on: "PRD-002"
 deadline: "2026-02-28"
+phase_status:
+  phase_1_reseller_master_data: "Done"      # 分销商主数据管理 - 已完成
+  phase_2_usage_billing_engine: "Deferred"  # 自动账单生成 - 暂缓
+  phase_3_audit_compliance: "Deferred"      # 审计合规系统 - 暂缓
 ```
+
+## Implementation Status (2025-12-11)
+
+| Phase | 功能 | 状态 | 说明 |
+|-------|------|------|------|
+| **Phase 1** | 分销商数据管理 | ✅ Done | 通过批次元数据管理，非独立表 |
+| **Phase 2** | 自动账单生成 | ⏸️ Deferred | 当前手动查询 API 足够，暂不需要自动化 |
+| **Phase 3** | 7年审计系统 | ⏸️ Deferred | 无合规强制要求，暂缓 |
+| **Phase 3** | 争议管理 | ⏸️ Deferred | 线下处理即可，暂缓 |
+
+### 实际实现方式
+
+**分销商数据存储在批次元数据中**（非独立 `ota_resellers` 表）：
+- 创建批次时传入分销商信息（reseller_metadata）
+- 账单查询时从批次 JSON 字段聚合分销商数据
+- 佣金率和结算周期从批次元数据读取
+
+**注意**: `ota_resellers` 表已创建但**当前未使用**，分销商数据直接嵌入批次元数据。
+
+**暂缓原因**: 当前业务规模下，手动查询 API 数据足以满足对账需求，高级自动化功能待业务增长后再开发。
+
+> 技术实现细节见 Card: [ota-reseller-management](../cards/ota-reseller-management.md)
 
 ## Executive Summary
 **Problem Statement**: OTA partners distributing tickets through reseller networks need sophisticated billing reconciliation based on actual ticket redemption, not purchase events, with full audit trail compliance for B2B2C revenue recognition.
@@ -162,115 +188,6 @@ deadline: "2026-02-28"
 - **Transaction Lineage**: Complete chain from batch generation → ticket activation → redemption → billing
 - **Retention Policy**: 7 years minimum, with automated archival to cold storage
 - **Access Logging**: All audit data access logged with user authentication
-
-## Complete API Specification
-
-### Reseller Management
-```yaml
-GET /api/ota/resellers:
-  summary: List all resellers for authenticated OTA partner
-  responses:
-    200:
-      resellers: array[ResellerSummary]
-      total: number
-
-POST /api/ota/resellers:
-  summary: Create new reseller
-  requestBody:
-    reseller_code: string (required)
-    reseller_name: string (required)
-    commission_rate: number (default: 0.10)
-    settlement_cycle: "weekly" | "monthly" | "quarterly"
-    region: string
-    tier: "platinum" | "gold" | "silver" | "bronze"
-
-PUT /api/ota/resellers/{id}:
-  summary: Update reseller information
-  requestBody: Partial reseller fields
-
-DELETE /api/ota/resellers/{id}:
-  summary: Deactivate reseller (sets status to terminated)
-```
-
-### Billing & Analytics
-```yaml
-GET /api/billing/events:
-  summary: List billing events for date range
-  parameters:
-    - start_date: ISO 8601 date
-    - end_date: ISO 8601 date
-    - reseller_id: number (optional)
-    - status: "pending" | "billed" | "paid" | "disputed"
-  responses:
-    200:
-      events: array[BillingEvent]
-      summary: BillingSummary
-
-POST /api/billing/cycles/{period}/generate:
-  summary: Generate billing summary for period
-  parameters:
-    - period: "YYYY-MM" format
-  responses:
-    201:
-      billing_cycle_id: string
-      total_resellers: number
-      total_amount: number
-      generation_timestamp: string
-
-GET /api/billing/cycles/{period}:
-  summary: Get billing summary for period
-  responses:
-    200:
-      billing_period: string
-      reseller_summaries: array[ResellerBillingSummary]
-      total_redemptions: number
-      total_commission: number
-
-GET /api/analytics/redemption-trends:
-  summary: Redemption analytics for business intelligence
-  parameters:
-    - period: "YYYY-MM" format
-    - reseller_id: number (optional)
-  responses:
-    200:
-      trends: array[RedemptionTrend]
-      top_performing_batches: array[BatchPerformance]
-      regional_breakdown: array[RegionalAnalytics]
-```
-
-### Audit & Compliance
-```yaml
-GET /api/audit/transaction-lineage/{ticket_code}:
-  summary: Get complete audit trail for specific ticket
-  responses:
-    200:
-      ticket_code: string
-      lineage: array[
-        event_type: string
-        timestamp: string
-        actor: string
-        details: object
-        hash: string (integrity verification)
-      ]
-
-POST /api/audit/export:
-  summary: Generate audit export for compliance
-  requestBody:
-    start_date: string
-    end_date: string
-    format: "csv" | "json" | "pdf"
-    scope: "all" | "reseller_id" | "partner_id"
-  responses:
-    202:
-      export_job_id: string
-      estimated_completion: string
-
-GET /api/audit/exports/{job_id}:
-  summary: Download completed audit export
-  responses:
-    200: Binary file download
-    202: Export still processing
-```
 
 ## Implementation Strategy
 

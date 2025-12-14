@@ -1,0 +1,220 @@
+{
+  "info": {
+    "_postman_id": "prd-001-cruise-ticketing",
+    "name": "PRD-001: Cruise Ticketing Core Tests",
+    "description": "Core tests for PRD-001 - Cruise Ticketing Platform. Tests product catalog, pricing, and order management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "1.1 Get Product Catalog",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/catalog",
+          "host": ["{{base_url}}"],
+          "path": ["catalog"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has products array', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('products');",
+              "    pm.expect(jsonData.products).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Products have required fields', function () {",
+              "    const jsonData = pm.response.json();",
+              "    if (jsonData.products.length > 0) {",
+              "        const product = jsonData.products[0];",
+              "        pm.expect(product).to.have.property('id');",
+              "        pm.expect(product).to.have.property('name');",
+              "        pm.expect(product).to.have.property('sku');",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1.2 Get Product Detail",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/catalog/promotions/1",
+          "host": ["{{base_url}}"],
+          "path": ["catalog", "promotions", "1"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 or 404', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+              "});",
+              "",
+              "pm.test('Response is valid JSON', function () {",
+              "    pm.response.to.be.json;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1.3 Miniprogram Products List",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/miniprogram/products",
+          "host": ["{{base_url}}"],
+          "path": ["miniprogram", "products"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has products array', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('products');",
+              "    pm.expect(jsonData.products).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Has pagination info', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('total');",
+              "    pm.expect(jsonData).to.have.property('page');",
+              "    pm.expect(jsonData).to.have.property('page_size');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1.4 Miniprogram Product Detail",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/miniprogram/products/106",
+          "host": ["{{base_url}}"],
+          "path": ["miniprogram", "products", "106"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Product has required fields', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('id');",
+              "    pm.expect(jsonData).to.have.property('name');",
+              "    pm.expect(jsonData).to.have.property('functions');",
+              "});",
+              "",
+              "pm.test('Product has availability info', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('availability');",
+              "    pm.expect(jsonData.availability).to.have.property('available');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1.5 Product Availability Check",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/miniprogram/products/106/availability",
+          "host": ["{{base_url}}"],
+          "path": ["miniprogram", "products", "106", "availability"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Has availability info', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('is_available');",
+              "    pm.expect(jsonData).to.have.property('available');",
+              "    pm.expect(jsonData).to.have.property('status');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1.6 Product Not Found (404)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/miniprogram/products/99999",
+          "host": ["{{base_url}}"],
+          "path": ["miniprogram", "products", "99999"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Has error response', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('code');",
+              "    pm.expect(jsonData.code).to.equal('NOT_FOUND');",
+              "    pm.expect(jsonData).to.have.property('message');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

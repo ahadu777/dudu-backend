@@ -2,7 +2,7 @@
 card: "Unified QR Code Generation API"
 slug: qr-generation-api
 team: "A - Commerce"
-oas_paths: ["/qr/:code", "/qr/:code/info", "/qr/decrypt", "/qr/verify"]
+oas_paths: ["/qr/:code", "/qr/:code/info", "/qr/decrypt"]
 migrations: ["src/migrations/007-add-raw-field-to-tickets.ts"]
 status: "Done"
 readiness: "mvp"
@@ -15,11 +15,10 @@ related_stories: ["US-012", "US-001", "US-003"]
 relationships:
   depends_on: ["ota-premade-tickets", "tickets-issuance"]
   enhances: ["qr-token"]
-  data_dependencies: ["PreGeneratedTicket", "Ticket"]
+  data_dependencies: ["Ticket"]
   integration_points:
     middlewares: ["unified-auth", "otaAuth"]
     utilities: ["qr-crypto"]
-    external: ["WeChat Browser"]
 ---
 
 # Unified QR Code Generation API — Dev Notes
@@ -27,7 +26,7 @@ relationships:
 ## Status & Telemetry
 - Status: Done
 - Readiness: mvp
-- Spec Paths: /qr/:code, /qr/:code/info, /qr/decrypt, /qr/verify
+- Spec Paths: /qr/:code, /qr/:code/info, /qr/decrypt
 - Migrations: src/migrations/007-add-raw-field-to-tickets.ts
 - Integration Guide: docs/OTA_QR_CODE_GUIDE.md
 - Last Update: 2025-11-14T21:00:00+08:00 (Enhanced /:code/info with Operator JWT support, unified ticket info API)
@@ -56,15 +55,6 @@ sequenceDiagram
   CRYPTO-->>-QR: {qr_image, encrypted_data, expires_at}
   QR-->>-AUTH: QR Response
   AUTH-->>-Client: 200 {qr_image, ticket_code, expires_at}
-
-  Note over Client,CRYPTO: WeChat Verification Flow
-  actor WeChatUser as WeChat User
-  WeChatUser->>+QR: GET /qr/verify?t={encrypted_token}
-  QR->>+CRYPTO: decryptAndVerifyQR(token)
-  CRYPTO-->>-QR: Decrypted ticket data
-  QR->>+STORE: Verify ticket exists and valid
-  STORE-->>-QR: Ticket status
-  QR-->>-WeChatUser: HTML page with verification result
 ```
 
 ## 1.5) Endpoint Purpose Classification
@@ -72,12 +62,6 @@ sequenceDiagram
 ### 查询端点（不消耗权益）Viewing/Query Endpoints (NO Redemption)
 
 这些端点提供票券信息但**不会消耗权益entitlements**：
-
-- **GET /qr/verify** - WeChat HTML 查看页面（仅中文，不用于OTA核销流程）
-  - **用途**: 终端消费者在微信浏览器中查看票券
-  - **使用场景**: 顾客在到访场馆前检查票券状态
-  - **返回**: HTML 页面显示票券详情
-  - **⚠️ 重要**: 此端点**不是**OTA核销流程的一部分
 
 - **POST /qr/decrypt** - 解密二维码并返回完整票券信息（不核销）
   - **用途**: 操作员在核销前预览完整票券信息
@@ -106,9 +90,6 @@ sequenceDiagram
 3. POST /venue/scan → 使用 encrypted_data 作为 qr_token 实际核销
 ```
 
-**❌ 常见错误**: 将 GET /qr/verify（微信查看）误认为核销流程的一部分
-**✅ 正确理解**: GET /qr/verify 仅用于终端消费者在微信中查看票券，不参与OTA核销
-
 ## 2) Contract (OAS 3.0.3)
 ```yaml
 paths:
@@ -118,9 +99,7 @@ paths:
       summary: Generate secure encrypted QR code for ticket
       description: |
         Generates time-limited encrypted QR code for both OTA and normal tickets.
-        Supports two QR types:
-        - encrypted: For redemption system use (default)
-        - url: For WeChat scanning and verification
+        Returns encrypted data for use with venue scanning API.
       security:
         - ApiKeyAuth: []  # For OTA partners
         - BearerAuth: []  # For normal users
@@ -132,14 +111,6 @@ paths:
             type: string
           description: Ticket code
           example: "CRUISE-2025-FERRY-1762330663284"
-        - name: type
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [encrypted, url]
-            default: encrypted
-          description: QR code type (encrypted for redemption, url for WeChat)
       requestBody:
         required: false
         content:
@@ -154,11 +125,6 @@ paths:
                   default: 30
                   description: QR code expiry time in minutes
                   example: 60
-                qr_type:
-                  type: string
-                  enum: [encrypted, url]
-                  default: encrypted
-                  description: Alternative way to specify QR type
       responses:
         200:
           description: QR code generated successfully
@@ -174,10 +140,10 @@ paths:
                     type: string
                     description: Base64 encoded PNG image
                     example: "data:image/png;base64,iVBORw0KGgo..."
-                  qr_type:
+                  encrypted_data:
                     type: string
-                    enum: [encrypted, url]
-                    example: "encrypted"
+                    description: Encrypted data for venue scanning API
+                    example: "iv:ciphertext:authTag:signature"
                   ticket_code:
                     type: string
                     example: "CRUISE-2025-FERRY-1762330663284"
@@ -191,10 +157,6 @@ paths:
                   issued_at:
                     type: string
                     format: date-time
-                  verify_url:
-                    type: string
-                    description: Only present for qr_type=url
-                    example: "https://api.example.com/qr/verify?t=encrypted_token"
                   note:
                     type: string
                     description: Usage instructions
@@ -520,35 +482,6 @@ paths:
                   message:
                     type: string
                     example: "Failed to decrypt QR code"
-
-  /qr/verify:
-    get:
-      tags: ["QR Code Generation"]
-      summary: Verify QR code scanned by WeChat
-      description: Browser-based ticket verification endpoint for WeChat in-app browser
-      parameters:
-        - name: t
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Encrypted token from QR code
-          example: "encrypted_aes_gcm_token"
-      responses:
-        200:
-          description: HTML page with verification result
-          content:
-            text/html:
-              schema:
-                type: string
-                description: Rendered HTML page showing ticket details
-        400:
-          description: Invalid or missing token
-          content:
-            text/html:
-              schema:
-                type: string
-                description: Error page in HTML format
 ```
 
 ## 3) Invariants
@@ -564,7 +497,6 @@ paths:
   - **Ticket validity**: Permanent after activation (no automatic expiry)
   - Expired QR codes can be regenerated on-demand for same ticket
 - Encrypted QR contains: ticket_code, product_id, status, owner_id, expiry
-- URL-based QR redirects to /qr/verify with encrypted token
 - OTA partners can only generate QR for their own tickets
 - Normal users can only generate QR for their purchased tickets
 - Same ticket can generate multiple QR codes (each with unique expiry)
@@ -597,21 +529,8 @@ paths:
    - AES-256-GCM encryption
    - HMAC-SHA256 signature
    - Unique nonce per generation
-7) If qr_type=url, generate verify URL with encrypted token
-8) Return QR response with expiry information
-9) Log generation event for audit
-
-**GET /qr/verify:**
-1) Extract encrypted token from query parameter
-2) Decrypt and verify token using qr-crypto utility
-3) Check token expiry timestamp
-4) Fetch ticket from data store using decrypted ticket_code
-5) Validate ticket exists and status
-6) Render HTML page with:
-   - Ticket details (code, product, status)
-   - Validity indicator (valid/expired/invalid)
-   - Chinese/English bilingual interface
-   - WeChat-optimized styling
+7) Return QR response with expiry information
+8) Log generation event for audit
 
 ## 6) Data Impact & Transactions
 
@@ -627,16 +546,11 @@ paths:
 - Each generation creates ephemeral encrypted token
 
 ## 7) Observability
-- Log `qr.generation.request` with `{ticket_code, auth_type, qr_type, expiry_minutes}`
-- Log `qr.generation.success` with `{ticket_code, qr_type, valid_for_seconds}`
+- Log `qr.generation.request` with `{ticket_code, auth_type, expiry_minutes}`
+- Log `qr.generation.success` with `{ticket_code, valid_for_seconds}`
 - Log `qr.generation.error` with `{ticket_code, error_code, error_message}`
-- Log `qr.verify.request` with `{has_token, user_agent, ip}`
-- Log `qr.verify.success` with `{ticket_code, status}`
-- Log `qr.verify.failure` with `{error_type, reason}`
 - Metric `qr.generation.count` - Total QR codes generated
-- Metric `qr.generation.by_type` - Count by encrypted/url
 - Metric `qr.generation.by_auth` - Count by OTA/User
-- Metric `qr.verify.count` - Total verification requests
 - Alert on high QR generation errors (>5% error rate)
 - Alert on QR decryption failures (possible attack)
 
@@ -657,22 +571,6 @@ paths:
 **Given** user attempts to access OTA ticket
 **When** POST /qr/{ota_ticket_code}
 **Then** returns 403 UNAUTHORIZED
-
-**Given** valid QR code with qr_type=url
-**When** POST /qr/{ticket_code}?type=url
-**Then** returns 200 with verify_url field containing /qr/verify endpoint
-
-**Given** encrypted token from QR code
-**When** GET /qr/verify?t={token}
-**Then** returns HTML page with ticket details (if valid)
-
-**Given** expired token
-**When** GET /qr/verify?t={expired_token}
-**Then** returns HTML page with expiry message
-
-**Given** invalid or tampered token
-**When** GET /qr/verify?t={invalid_token}
-**Then** returns HTML error page
 
 **Given** custom expiry time (60 minutes)
 **When** POST /qr/{ticket_code} with body {expiry_minutes: 60}
@@ -707,14 +605,6 @@ curl -X POST http://localhost:8080/qr/TKT-001-123 \
 # Expected: 200 with qr_image
 ```
 
-**✅ URL-based QR for WeChat:**
-```bash
-curl -X POST "http://localhost:8080/qr/CRUISE-2025-FERRY-123?type=url" \
-  -H "X-API-Key: ota_full_access_key_99999"
-
-# Expected: 200 with verify_url field
-```
-
 **✅ Custom Expiry Time:**
 ```bash
 curl -X POST http://localhost:8080/qr/CRUISE-2025-FERRY-123 \
@@ -746,20 +636,6 @@ curl -X POST http://localhost:8080/qr/TKT-001-123 \
   -H "X-API-Key: ota_full_access_key_99999"
 
 # Expected: 403 TICKET_TYPE_MISMATCH
-```
-
-**✅ WeChat Verification:**
-```bash
-# 1. Generate URL-based QR
-response=$(curl -s -X POST "http://localhost:8080/qr/CRUISE-2025-FERRY-123?type=url" \
-  -H "X-API-Key: ota_full_access_key_99999")
-
-verify_url=$(echo $response | jq -r '.verify_url')
-
-# 2. Access verify URL
-curl "$verify_url"
-
-# Expected: HTML page with ticket details
 ```
 
 ### Database Mode Testing
@@ -836,8 +712,7 @@ if (ticketType === 'OTA') {
 | **Output Format** | JWT string | Base64 PNG image |
 | **Encryption** | HS256 JWT | AES-256-GCM + HMAC |
 | **Expiry** | Fixed 60 seconds | Configurable 1-1440 minutes |
-| **QR Types** | Single type | encrypted + url |
-| **WeChat Support** | No | Yes (/qr/verify) |
+| **QR Types** | Single type | encrypted |
 | **OTA Support** | No | Yes |
 | **Use Case** | Simple token | Production-ready QR |
 
@@ -853,7 +728,6 @@ if (ticketType === 'OTA') {
 - More secure encryption (AES vs JWT)
 - Longer configurable expiry
 - Direct image output (no QR generation needed client-side)
-- WeChat ecosystem support
 - OTA partner integration
 
 ## 14) Future Enhancements

@@ -1,16 +1,20 @@
-# US-013: Event Venue Operations Platform
-
-## Document Metadata
-```yaml
-story_id: "US-013"
-title: "Event Venue Operations Platform"
+---
+id: US-013
+title: Event Venue Operations Platform
+owner: Product
 status: "Done"
+priority: High
 created_date: "2025-11-04"
 completed_date: "2025-11-25"
 business_requirement: "PRD-003"
-deadline: "2025-11-04"
-related_stories: ["US-001", "US-002", "US-012"]
-```
+cards:
+  - venue-management-crud
+  - venue-enhanced-scanning
+  - venue-analytics-reporting
+  - operator-validation-scanner
+---
+
+# US-013: Event Venue Operations Platform
 
 ## Story Analysis
 

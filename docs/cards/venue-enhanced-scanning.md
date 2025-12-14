@@ -2,7 +2,7 @@
 card: "Enhanced venue scanning with cross-terminal fraud detection"
 slug: venue-enhanced-scanning
 team: "C - Gate"
-oas_paths: ["/venue/scan", "/qr/decrypt", "/venue"]
+oas_paths: ["/venue/scan"]
 migrations: ["db/migrations/redemption_events.sql"]
 status: "Done"
 readiness: "production"
@@ -10,12 +10,12 @@ branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-enhanced-scanning-result.json"
 last_update: "2025-11-25T14:00:00+08:00"
-related_stories: ["US-013", "US-012"]
+related_stories: ["US-001", "US-002", "US-012", "US-013"]
 relationships:
   replaces: ["tickets-scan"]
   depends_on: ["qr-generation-api", "ota-premade-tickets"]
   triggers: ["venue-analytics-reporting"]
-  data_dependencies: ["RedemptionEvent", "Ticket", "PreGeneratedTicket", "Venue"]
+  data_dependencies: ["RedemptionEvent", "Ticket", "Venue"]
   integration_points:
     data_stores: ["venue.service.ts", "venue.repository.ts"]
 notes: "Added venue selection feature (2025-11-25). Operators can now select venue during redemption."
@@ -67,12 +67,10 @@ notes: "Added venue selection feature (2025-11-25). Operators can now select ven
 **查询端点（不消耗权益）/ Viewing/Query Endpoints (NO entitlement consumption):**
 - **POST /qr/decrypt** - 解密并显示票券信息供操作员查看（不核销）
 - **GET /qr/:code/info** - 查询票券详情包括 customer_info（不核销）
-- **GET /qr/verify** - 微信HTML查看页面（**不用于OTA核销流程**）
 
 **核销端点（消耗权益）/ Redemption Endpoint (CONSUMES entitlements):**
 - **POST /venue/scan** - 实际核销，减少 remaining_uses
 
-**❌ 常见错误 / Common mistake**: 将 GET /qr/verify（微信查看）误认为核销流程的一部分
 **✅ 正确的OTA流程 / Correct OTA flow**: POST /qr/:code → [可选: POST /qr/decrypt] → POST /venue/scan
 
 ---

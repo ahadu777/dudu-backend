@@ -4,13 +4,13 @@ slug: validators-sessions
 team: "C - Gate"
 oas_paths: ["/validators/sessions"]
 migrations: ["db/migrations/0005_validator_sessions.sql"]
-status: "Deprecated"
+status: "deprecated"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/validators-sessions-result.json"
 last_update: "2025-11-14T20:30:00+08:00"
-related_stories: ["US-002","US-006"]
+related_stories: []
 deprecated: true
 deprecated_date: "2025-11-14"
 replacement: "Removed - Sessions are no longer needed. Use operator JWT token directly."
@@ -88,7 +88,7 @@ paths:
 
 ## 3) Invariants
 - `session_id` belongs to the `operator_id` from the token.
-- Only active (unexpired) sessions are accepted at `/tickets/scan`.
+- Only active (unexpired) sessions are accepted at `/venue/scan` (previously `/tickets/scan`).
 
 ## 4) Validations, Idempotency & Concurrency
 - 401 if bearer token invalid/expired.

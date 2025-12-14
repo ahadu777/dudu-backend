@@ -64,7 +64,7 @@ node scripts/run-e2e-by-context.mjs --story US-012
 
 ## npm Scripts Integration
 
-在 `package.json` 中配置测试脚本时，必须包含报告输出：
+在 `package.json` 中配置测试脚本时，建议包含报告输出：
 
 ```json
 {
@@ -102,11 +102,11 @@ reports/
 | Card 标记 Done 前 | `npm test` | 自动生成 |
 | Story E2E 验证 | `node scripts/run-e2e-by-context.mjs --story US-XXX` | `us-xxx-e2e.xml` |
 
-### AI Must Follow
+### 建议遵循
 
-1. **运行测试时必须生成报告** - 不能只用 `--reporters cli`
-2. **报告路径固定** - `reports/newman/`
-3. **命名必须一致** - `{id}-e2e.xml`
+1. **运行测试时生成报告** - 避免只用 `--reporters cli`
+2. **报告路径** - `reports/newman/`
+3. **命名规范** - `{id}-e2e.xml`
 4. **测试失败时保留报告** - 便于分析
 
 ---

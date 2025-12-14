@@ -8,7 +8,7 @@ import {
   OperatorSession,
   ValidationLog,
 } from './types';
-import { CustomerReservationServiceEnhanced } from '../customerReservation/service.enhanced';
+import { CustomerReservationServiceEnhanced, CustomerInfo } from '../customerReservation/service.enhanced';
 import { ReservationSlotServiceMock } from '../reservation-slots/service.mock';
 import { logger } from '../../utils/logger';
 import { randomBytes } from 'crypto';
@@ -30,7 +30,8 @@ export class OperatorValidationServiceEnhanced {
   private slotsService: ReservationSlotServiceMock;
 
   constructor() {
-    this.customerService = new CustomerReservationServiceEnhanced();
+    // Use singleton to share state with customerReservation module
+    this.customerService = CustomerReservationServiceEnhanced.getInstance();
     this.slotsService = new ReservationSlotServiceMock();
     this.seedMockOperators();
   }
@@ -176,8 +177,13 @@ export class OperatorValidationServiceEnhanced {
       // Validate ticket with activation check
       const ticketValidation = await this.customerService.validateTicket({ ticket_code, orq });
 
-      if (!ticketValidation.valid || !ticketValidation.ticket) {
+      // For operator validation, TICKET_ALREADY_RESERVED is actually a valid state
+      // We should proceed to check the reservation details
+      const isAlreadyReserved = ticketValidation.error === 'TICKET_ALREADY_RESERVED';
+
+      if (!ticketValidation.valid && !isAlreadyReserved) {
         // RED: Invalid ticket (covers OV-R02, OV-R03, OV-R04)
+        // But NOT TICKET_ALREADY_RESERVED - that's valid for operator validation
         const errorCode = ticketValidation.error || 'TICKET_NOT_FOUND';
         this.logValidation(ticket_code, operator_id, terminal_id, 'RED', orq);
 
@@ -189,10 +195,12 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'RED',
             message: this.getErrorMessage(errorCode),
             details: {
+              customer_name: 'N/A',
+              customer_phone: 'N/A',
               customer_email: 'N/A',
               slot_date: 'N/A',
               slot_time: 'N/A',
-              product_name: 'N/A',
+              product_name: ticketValidation.ticket?.product_name || 'N/A',
             },
             allow_entry: false,
           },
@@ -200,9 +208,13 @@ export class OperatorValidationServiceEnhanced {
       }
 
       const ticket = ticketValidation.ticket;
+      const productName = ticket?.product_name || 'Unknown Product';
 
-      // Check if ticket has reservation
-      const reservation = await this.customerService.getReservation(ticket_code);
+      // Get customer info using cascading lookup
+      const customerInfo = await this.customerService.getCustomerInfo(ticket_code);
+
+      // Check if ticket has reservation (by ticket_code, not reservation_id)
+      const reservation = await this.customerService.getReservationByTicketCode(ticket_code);
 
       if (!reservation) {
         // YELLOW: Valid ticket but no reservation (OV-Y01)
@@ -216,10 +228,12 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'YELLOW',
             message: 'Warning: No reservation found for this ticket',
             details: {
-              customer_email: 'N/A',
+              customer_name: customerInfo.customer_name || 'N/A',
+              customer_phone: customerInfo.customer_phone || 'N/A',
+              customer_email: customerInfo.customer_email || 'N/A',
               slot_date: 'N/A',
               slot_time: 'N/A',
-              product_name: ticket.product_name,
+              product_name: productName,
             },
             allow_entry: false, // Requires manual decision
           },
@@ -240,10 +254,12 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'RED',
             message: 'Error: Reservation slot not found',
             details: {
-              customer_email: reservation.visitor_name,
+              customer_name: customerInfo.customer_name || 'N/A',
+              customer_phone: customerInfo.customer_phone || 'N/A',
+              customer_email: customerInfo.customer_email || 'N/A',
               slot_date: 'N/A',
               slot_time: 'N/A',
-              product_name: ticket.product_name,
+              product_name: productName,
             },
             allow_entry: false,
           },
@@ -262,10 +278,12 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'YELLOW',
             message: `Warning: Ticket already verified at ${reservation.verified_at}`,
             details: {
-              customer_email: reservation.visitor_name,
+              customer_name: customerInfo.customer_name || 'N/A',
+              customer_phone: customerInfo.customer_phone || 'N/A',
+              customer_email: customerInfo.customer_email || 'N/A',
               slot_date: slot.date,
               slot_time: `${slot.start_time} - ${slot.end_time}`,
-              product_name: ticket.product_name,
+              product_name: productName,
             },
             allow_entry: false, // Already used - idempotent behavior
           },
@@ -286,10 +304,12 @@ export class OperatorValidationServiceEnhanced {
             color_code: 'RED',
             message: `Wrong date: Reserved for ${slot.date}, today is ${today}`,
             details: {
-              customer_email: reservation.visitor_name,
+              customer_name: customerInfo.customer_name || 'N/A',
+              customer_phone: customerInfo.customer_phone || 'N/A',
+              customer_email: customerInfo.customer_email || 'N/A',
               slot_date: slot.date,
               slot_time: `${slot.start_time} - ${slot.end_time}`,
-              product_name: ticket.product_name,
+              product_name: productName,
             },
             allow_entry: false,
           },
@@ -307,10 +327,12 @@ export class OperatorValidationServiceEnhanced {
           color_code: 'GREEN',
           message: 'Valid reservation - Allow entry',
           details: {
-            customer_email: reservation.visitor_name,
+            customer_name: customerInfo.customer_name || 'N/A',
+            customer_phone: customerInfo.customer_phone || 'N/A',
+            customer_email: customerInfo.customer_email || 'N/A',
             slot_date: slot.date,
             slot_time: `${slot.start_time} - ${slot.end_time}`,
-            product_name: ticket.product_name,
+            product_name: productName,
           },
           allow_entry: true,
         },
@@ -347,7 +369,7 @@ export class OperatorValidationServiceEnhanced {
       }
 
       // ALLOW decision - mark ticket as VERIFIED
-      const reservation = await this.customerService.getReservation(ticket_code);
+      const reservation = await this.customerService.getReservationByTicketCode(ticket_code);
 
       if (!reservation) {
         return {

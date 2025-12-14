@@ -2,9 +2,16 @@
 id: US-010
 title: DeepTravel 小程序全链路购票与核销体验
 owner: Product
-status: Draft
+status: "Draft"
 priority: High
 last_update: 2025-10-24T18:28:44+08:00
+business_requirement: "PRD-008"
+cards:
+  # - travel-search-hub           # DEPRECATED - 模块已删除
+  # - seat-lock-service           # DEPRECATED - 模块已删除
+  - miniprogram-order
+  - miniprogram-product-catalog
+  - wallyt-payment
 ---
 
 ## Business goal
@@ -75,7 +82,7 @@ last_update: 2025-10-24T18:28:44+08:00
 - 子故事：
   - [US-010A — DeepTravel 旅客闭环体验](US-010A-traveler-loop.md)
   - [US-010B — DeepTravel 运营支撑体系](US-010B-operations-backbone.md)
-- 复用能力：catalog-endpoint、order-create-idempotent、payment-webhook、tickets-issuance、tickets-scan、ticket-cancellation、refund-processing
+- 复用能力：catalog-endpoint、order-create、payment-webhook、tickets-issuance、tickets-scan、ticket-cancellation、refund-processing
 - 运行验证（见子故事 Runbook 与 Newman 场景）
 
 ## Decomposition & Cards

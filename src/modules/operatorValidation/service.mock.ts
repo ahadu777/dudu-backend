@@ -162,6 +162,8 @@ export class OperatorValidationServiceMock {
             color_code: 'RED',
             message: ticketValidation.error || 'Invalid ticket',
             details: {
+              customer_name: 'N/A',
+              customer_phone: 'N/A',
               customer_email: 'N/A',
               slot_date: 'N/A',
               slot_time: 'N/A',
@@ -189,6 +191,8 @@ export class OperatorValidationServiceMock {
             color_code: 'YELLOW',
             message: 'Warning: No reservation found for this ticket',
             details: {
+              customer_name: 'N/A',
+              customer_phone: 'N/A',
               customer_email: 'N/A',
               slot_date: 'N/A',
               slot_time: 'N/A',
@@ -212,6 +216,8 @@ export class OperatorValidationServiceMock {
             color_code: 'YELLOW',
             message: 'Warning: Ticket already verified',
             details: {
+              customer_name: 'N/A',
+              customer_phone: 'N/A',
               customer_email: reservation.visitor_name,
               slot_date: 'N/A', // Would need to join with slots
               slot_time: 'N/A',
@@ -233,6 +239,8 @@ export class OperatorValidationServiceMock {
           color_code: 'GREEN',
           message: 'Valid reservation - Allow entry',
           details: {
+            customer_name: 'N/A',
+            customer_phone: 'N/A',
             customer_email: reservation.visitor_name,
             slot_date: 'N/A', // Would need slot service integration
             slot_time: 'N/A',

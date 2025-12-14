@@ -38,6 +38,24 @@ export interface DecryptedQRResult {
   remaining_seconds: number;
 }
 
+/**
+ * QR Color Configuration
+ */
+export interface QRColorConfig {
+  dark_color?: string;   // QR foreground color (default: #CC0000)
+  light_color?: string;  // QR background color (default: #FFFFFF)
+}
+
+// Default QR colors
+const DEFAULT_QR_DARK_COLOR = '#CC0000';
+const DEFAULT_QR_LIGHT_COLOR = '#FFFFFF';
+
+// QR size constant (shared between functions)
+const QR_SIZE = 180;
+
+// Pre-processed logo cache (for bulk generation optimization)
+let cachedProcessedLogo: { buffer: Buffer; sourceHash: string } | null = null;
+
 // Constants
 const IV_LENGTH = 12; // GCM recommends 12 bytes
 const AUTH_TAG_LENGTH = 16; // GCM auth tag is 16 bytes
@@ -137,24 +155,92 @@ function verifySignature(data: string, signature: string): boolean {
 }
 
 /**
+ * Pre-process logo for bulk QR generation (call once before generating many QRs)
+ * This avoids re-processing the same logo for each QR code
+ * @param logoBuffer - Raw logo image buffer
+ * @returns Processed logo buffer ready for compositing, or null if no logo
+ */
+export async function preprocessLogoForBulk(logoBuffer: Buffer | null | undefined): Promise<Buffer | null> {
+  if (!logoBuffer) {
+    return null;
+  }
+
+  // Create hash of source buffer for cache validation
+  const sourceHash = crypto.createHash('md5').update(logoBuffer).digest('hex');
+
+  // Check cache
+  if (cachedProcessedLogo && cachedProcessedLogo.sourceHash === sourceHash) {
+    logger.info('qr.logo.cache_hit', { hash: sourceHash.substring(0, 8) });
+    return cachedProcessedLogo.buffer;
+  }
+
+  const logoSize = Math.floor(QR_SIZE * 0.15); // Logo occupies 15%
+
+  logger.info('qr.logo.preprocessing', {
+    qr_size: QR_SIZE,
+    logo_size: logoSize,
+    source_size_kb: Math.round(logoBuffer.length / 1024)
+  });
+
+  // Process logo once: resize and add white border for contrast
+  const processedLogo = await sharp(logoBuffer)
+    .resize(logoSize, logoSize, {
+      fit: 'contain',
+      background: { r: 255, g: 255, b: 255, alpha: 1 }
+    })
+    .extend({
+      top: 3,
+      bottom: 3,
+      left: 3,
+      right: 3,
+      background: { r: 255, g: 255, b: 255, alpha: 1 }
+    })
+    .toBuffer();
+
+  // Cache the result
+  cachedProcessedLogo = { buffer: processedLogo, sourceHash };
+
+  logger.info('qr.logo.preprocessed', {
+    processed_size_bytes: processedLogo.length,
+    cached: true
+  });
+
+  return processedLogo;
+}
+
+/**
+ * Clear the logo cache (call when logo changes or after bulk operation)
+ */
+export function clearLogoCache(): void {
+  cachedProcessedLogo = null;
+  logger.info('qr.logo.cache_cleared');
+}
+
+/**
  * Generate PNG QR code image from encrypted data with optional logo overlay
  * @param encryptedData - Encrypted data string
- * @param logoBuffer - Optional logo image buffer to overlay in center
+ * @param logoBuffer - Optional logo image buffer to overlay in center (can be pre-processed or raw)
+ * @param colorConfig - Optional color configuration for QR code
+ * @param isPreprocessed - If true, logoBuffer is already processed and won't be resized again
  * @returns Base64-encoded PNG image (data:image/png;base64,...)
  */
 async function generateQRImage(
   encryptedData: string,
-  logoBuffer?: Buffer
+  logoBuffer?: Buffer,
+  colorConfig?: QRColorConfig,
+  isPreprocessed: boolean = false
 ): Promise<string> {
-  const QR_SIZE = 180; // Optimized size: balance between scanning reliability and file size
+  const darkColor = colorConfig?.dark_color || DEFAULT_QR_DARK_COLOR;
+  const lightColor = colorConfig?.light_color || DEFAULT_QR_LIGHT_COLOR;
+
   const options = {
     errorCorrectionLevel: logoBuffer ? ('H' as const) : ('M' as const), // High correction when logo present
     type: 'png' as const,
     margin: 2,
     width: QR_SIZE,
     color: {
-      dark: '#CC0000',  // 红色
-      light: '#FFFFFF'
+      dark: darkColor,
+      light: lightColor
     }
   };
 
@@ -164,31 +250,42 @@ async function generateQRImage(
 
     // Step 2: If logo provided, overlay it in center
     if (logoBuffer) {
-      const logoSize = Math.floor(QR_SIZE * 0.15); // Logo occupies 15% (further optimized for subtlety)
-      const position = Math.floor((QR_SIZE - logoSize) / 2); // Center position
+      const logoSize = Math.floor(QR_SIZE * 0.15);
+      // When preprocessed, logo already includes 3px border on each side (total +6px)
+      const actualLogoSize = isPreprocessed ? logoSize + 6 : logoSize;
+      const position = Math.floor((QR_SIZE - actualLogoSize) / 2); // Center position
 
-      logger.info('qr.generation.logo_processing', {
-        qr_size: QR_SIZE,
-        logo_size: logoSize,
-        coverage_percent: 15
-      });
+      let processedLogo: Buffer;
 
-      // Process logo: resize and add white border for contrast
-      const processedLogo = await sharp(logoBuffer)
-        .resize(logoSize, logoSize, {
-          fit: 'contain',
-          background: { r: 255, g: 255, b: 255, alpha: 1 }
-        })
-        .extend({
-          top: 3,  // Reduced border from 5px to 3px
-          bottom: 3,
-          left: 3,
-          right: 3,
-          background: { r: 255, g: 255, b: 255, alpha: 1 }
-        })
-        .toBuffer();
+      if (isPreprocessed) {
+        // Logo already processed, use directly
+        processedLogo = logoBuffer;
+      } else {
+        // Process logo: resize and add white border for contrast
+        logger.info('qr.generation.logo_processing', {
+          qr_size: QR_SIZE,
+          logo_size: logoSize,
+          coverage_percent: 15
+        });
+
+        processedLogo = await sharp(logoBuffer)
+          .resize(logoSize, logoSize, {
+            fit: 'contain',
+            background: { r: 255, g: 255, b: 255, alpha: 1 }
+          })
+          .extend({
+            top: 3,
+            bottom: 3,
+            left: 3,
+            right: 3,
+            background: { r: 255, g: 255, b: 255, alpha: 1 }
+          })
+          .toBuffer();
+      }
 
       // Overlay logo onto QR code with PNG compression
+      // Using compressionLevel: 6 for better performance (9 is too slow for bulk generation)
+      // For 180x180 QR codes, the file size difference is minimal (~5-10%)
       const qrWithLogo = await sharp(qrBuffer).composite([
         {
           input: processedLogo,
@@ -197,14 +294,16 @@ async function generateQRImage(
           blend: 'over'
         }
       ])
-      .png({ compressionLevel: 9, quality: 90 }) // Add PNG compression
+      .png({ compressionLevel: 6, quality: 90 })
       .toBuffer();
 
       // Convert to base64 data URI
       const base64 = qrWithLogo.toString('base64');
-      logger.info('qr.generation.logo_applied', {
-        final_size_kb: Math.round(qrWithLogo.length / 1024)
-      });
+      if (!isPreprocessed) {
+        logger.info('qr.generation.logo_applied', {
+          final_size_kb: Math.round(qrWithLogo.length / 1024)
+        });
+      }
       return `data:image/png;base64,${base64}`;
     }
 
@@ -247,12 +346,16 @@ export function getRemainingSeconds(data: QRTicketData): number {
  * @param ticketCode - Ticket code (only essential data stored in QR)
  * @param expiryMinutes - QR code expiration time in minutes (default from env)
  * @param logoBuffer - Optional logo image buffer to overlay (for branded QR codes)
+ * @param colorConfig - Optional color configuration for QR code
+ * @param isLogoPreprocessed - If true, logoBuffer is already processed (for bulk generation)
  * @returns Encrypted QR result with image
  */
 export async function generateSecureQR(
   ticketCode: string,
   expiryMinutes?: number,
-  logoBuffer?: Buffer
+  logoBuffer?: Buffer,
+  colorConfig?: QRColorConfig,
+  isLogoPreprocessed: boolean = false
 ): Promise<EncryptedQRResult> {
   const now = new Date();
   const expiryTime = expiryMinutes || Number(env.QR_EXPIRY_MINUTES) || 30;
@@ -269,11 +372,14 @@ export async function generateSecureQR(
     version: 1 // Format version for future compatibility
   };
 
-  logger.info('qr.generation.started', {
-    jti,
-    ticket_code: ticketCode,
-    expires_in_minutes: expiryTime
-  });
+  // Only log for non-bulk operations to reduce log noise
+  if (!isLogoPreprocessed) {
+    logger.info('qr.generation.started', {
+      jti,
+      ticket_code: ticketCode,
+      expires_in_minutes: expiryTime
+    });
+  }
 
   // Step 1: Encrypt minimal data
   const encrypted = encryptData(qrData);
@@ -284,14 +390,16 @@ export async function generateSecureQR(
   // Step 3: Combine: encrypted:signature
   const signedData = `${encrypted}:${signature}`;
 
-  // Step 4: Generate QR image with optional logo
-  const qrImage = await generateQRImage(signedData, logoBuffer);
+  // Step 4: Generate QR image with optional logo and colors
+  const qrImage = await generateQRImage(signedData, logoBuffer, colorConfig, isLogoPreprocessed);
 
-  logger.info('qr.generation.success', {
-    jti,
-    ticket_code: ticketCode,
-    expires_at: expiresAt.toISOString()
-  });
+  if (!isLogoPreprocessed) {
+    logger.info('qr.generation.success', {
+      jti,
+      ticket_code: ticketCode,
+      expires_at: expiresAt.toISOString()
+    });
+  }
 
   return {
     encrypted_data: signedData,

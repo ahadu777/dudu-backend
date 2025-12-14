@@ -4,13 +4,14 @@ slug: travel-search-hub
 team: "A - Commerce"
 oas_paths: ["/travel/search", "/travel/hot-cities", "/travel/blackout-dates"]
 migrations: ["db/migrations/0010_travel_search_cache.sql"]
-status: "Done"
+status: "deprecated"
 readiness: "mvp"
 branch: "feat/a-travel-search-hub"
 pr: ""
 newman_report: "reports/collections/us-010a-traveler-loop.json"
-last_update: "2025-10-24T19:13:07+08:00"
-related_stories: ["US-010"]
+last_update: "2025-12-09T11:00:00+08:00"
+related_stories: ["US-010", "US-010A"]
+deprecation_note: "travel module removed - not in use"
 ---
 
 ## Status & Telemetry

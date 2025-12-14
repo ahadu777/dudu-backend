@@ -163,10 +163,12 @@ For each endpoint:
 ### Priority 3 - Gate Operations (Team C)
 **Cards:** Multiple endpoints needed
 **Endpoints:**
-- POST /operators/login
-- POST /validators/sessions
-- POST /tickets/scan
-- GET /reports/redemptions
+- POST /operators/login - Operator authentication
+- POST /venue/scan - QR scanning and redemption (replaces deprecated /tickets/scan)
+- POST /qr/decrypt - Decrypt QR code for display
+- GET /reports/redemptions - Redemption reporting
+
+> **Note**: `/validators/sessions` deprecated. Use operator JWT auth instead.
 
 ## Command Reference
 

@@ -2,7 +2,7 @@
 card: "OTA Pre-made Ticket Management - Bulk Generation and B2B2C Activation"
 slug: ota-premade-tickets
 team: "A - Commerce"
-oas_paths: ["/api/ota/tickets/bulk-generate", "/api/ota/tickets/:code/activate"]
+oas_paths: ["/api/ota/batches", "/api/ota/tickets/bulk-generate", "/api/ota/tickets/:code/activate"]
 migrations: ["db/migrations/0012_pre_generated_tickets.sql", "src/migrations/006-create-ota-ticket-batches.ts"]
 status: "Done"
 readiness: "mvp"
@@ -10,12 +10,12 @@ branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/ota-b2b2c-billing.xml"
 integration_runbook: "docs/integration/ota-b2b2c-billing-runbook.md"
-last_update: "2025-11-12T13:00:00+08:00"
+last_update: "2025-12-10T12:00:00+08:00"
 related_stories: ["US-012"]
 relationships:
   depends_on: ["ota-channel-management"]
   triggers: ["order-create", "qr-generation-api"]
-  data_dependencies: ["PreGeneratedTicket", "OtaOrder", "ChannelReservation", "OTATicketBatch"]
+  data_dependencies: ["Ticket", "OtaOrder", "ChannelReservation", "OTATicketBatch"]
   integration_points:
     data_stores: ["ota.repository.ts"]
     external_apis: ["OTA Partner Platforms"]
@@ -30,7 +30,7 @@ relationships:
 - Spec Paths: /api/ota/tickets/bulk-generate, /api/ota/tickets/:code/activate
 - Migrations: db/migrations/0012_pre_generated_tickets.sql
 - Newman: Tested • reports/newman/ota-premade-tickets.xml
-- Last Update: 2025-11-12T13:00:00+08:00 (Added: qr_code in tickets list response)
+- Last Update: 2025-12-10T12:00:00+08:00 (Added: GET /api/ota/batches batch list API)
 
 ## 0) Prerequisites
 - ota-channel-management card implemented (inventory management)
@@ -69,6 +69,149 @@ sequenceDiagram
 ## 2) Contract (OAS 3.0.3)
 ```yaml
 paths:
+  /api/ota/batches:
+    get:
+      tags: ["OTA Integration"]
+      summary: List ticket batches with pagination and filters
+      description: |
+        Returns a paginated list of ticket batches for the authenticated OTA partner.
+        Supports filtering by status, product_id, reseller, and date range.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, expired, depleted]
+          description: Filter by batch status
+          example: active
+        - name: product_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Filter by product ID
+          example: 106
+        - name: reseller
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by reseller name (from reseller_metadata.intended_reseller)
+          example: "Travel Agency ABC"
+        - name: created_after
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter batches created after this date (ISO 8601)
+          example: "2025-11-01T00:00:00Z"
+        - name: created_before
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter batches created before this date (ISO 8601)
+          example: "2025-12-31T23:59:59Z"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+          example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Results per page (max 100)
+          example: 20
+      responses:
+        200:
+          description: Batch list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        batch_id:
+                          type: string
+                          example: "BATCH-20251210-test_partner-BK19PI"
+                        product_id:
+                          type: integer
+                          example: 107
+                        distribution_mode:
+                          type: string
+                          enum: [direct_sale, reseller_batch]
+                          example: "direct_sale"
+                        status:
+                          type: string
+                          enum: [active, expired, depleted]
+                          example: "active"
+                        total_quantity:
+                          type: integer
+                          description: Total tickets in batch
+                          example: 1000
+                        tickets_activated:
+                          type: integer
+                          description: Number of activated tickets
+                          example: 150
+                        tickets_redeemed:
+                          type: integer
+                          description: Number of redeemed tickets
+                          example: 45
+                        reseller_name:
+                          type: string
+                          nullable: true
+                          description: Reseller name (if reseller_batch mode)
+                          example: "Travel Agency ABC"
+                        campaign_type:
+                          type: string
+                          nullable: true
+                          description: Campaign type from batch_metadata
+                          example: "flash_sale"
+                        expires_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          example: "2025-12-17T03:36:35.000Z"
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: "2025-12-10T03:36:35.000Z"
+                  total:
+                    type: integer
+                    description: Total count of batches matching filters
+                    example: 154
+                  page:
+                    type: integer
+                    example: 1
+                  page_size:
+                    type: integer
+                    example: 20
+                  has_more:
+                    type: boolean
+                    example: true
+        401:
+          description: Missing or invalid API key
+        500:
+          description: Internal server error
+
   /api/ota/tickets:
     get:
       tags: ["OTA Integration"]
@@ -535,6 +678,29 @@ paths:
 - Alert on high unused ticket counts or low activation rates
 
 ## 8) Acceptance — Given / When / Then
+
+### Batch List API (NEW - 2025-12-10)
+**Given** authenticated OTA partner with valid API key
+**When** GET /api/ota/batches without filters
+**Then** returns paginated list of all batches for that partner with total count
+
+**Given** authenticated OTA partner
+**When** GET /api/ota/batches?status=active&product_id=107
+**Then** returns only active batches for product 107
+
+**Given** authenticated OTA partner
+**When** GET /api/ota/batches?reseller=Travel%20Agency%20ABC
+**Then** returns only batches with that reseller in reseller_metadata
+
+**Given** authenticated OTA partner
+**When** GET /api/ota/batches?created_after=2025-12-01&created_before=2025-12-31
+**Then** returns batches created within that date range
+
+**Given** authenticated OTA partner
+**When** GET /api/ota/batches?page=2&limit=10
+**Then** returns second page with 10 items per page
+
+### Ticket List API
 **Given** authenticated OTA partner with inventory:read permission
 **When** GET /api/ota/tickets with optional filters (status, batch_id, dates, pagination)
 **Then** returns paginated list of tickets matching filters with total count
@@ -581,6 +747,38 @@ paths:
 ```
 
 ### Concrete Test Examples
+
+**✅ Batch List - Basic Request:**
+```bash
+curl -X GET 'http://localhost:8080/api/ota/batches?page=1&limit=5' \
+-H "X-API-Key: ota_test_key_12345"
+
+# Expected Response: 200 with items[], total, page, page_size, has_more
+```
+
+**✅ Batch List - With Filters:**
+```bash
+curl -X GET 'http://localhost:8080/api/ota/batches?status=active&product_id=107&limit=10' \
+-H "X-API-Key: ota_test_key_12345"
+
+# Expected Response: 200 with filtered batches for product 107 with active status
+```
+
+**✅ Batch List - By Reseller:**
+```bash
+curl -X GET 'http://localhost:8080/api/ota/batches?reseller=Travel%20Agency%20ABC' \
+-H "X-API-Key: ota_test_key_12345"
+
+# Expected Response: 200 with batches where reseller_metadata.intended_reseller matches
+```
+
+**✅ Batch List - Date Range Filter:**
+```bash
+curl -X GET 'http://localhost:8080/api/ota/batches?created_after=2025-12-01&created_before=2025-12-31' \
+-H "X-API-Key: ota_test_key_12345"
+
+# Expected Response: 200 with batches created in December 2025
+```
 
 **✅ Valid Bulk Generation Request:**
 ```bash

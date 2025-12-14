@@ -4,13 +4,13 @@ slug: qr-token
 team: "B - Tickets"
 oas_paths: []
 migrations: []
-status: "Deprecated"
+status: "deprecated"
 readiness: "prototype"
 branch: ""
 pr: ""
 newman_report: "reports/newman/qr-token.json"
 last_update: "2025-11-25T16:00:00+08:00"
-related_stories: ["US-001","US-003"]
+related_stories: []
 deprecated: true
 deprecated_date: "2025-11-13"
 replacement: "qr-generation-api.md"

@@ -1,29 +1,30 @@
 import { Repository, DataSource, QueryRunner, In } from 'typeorm';
-import { ProductEntity } from './product.entity';
-import { ProductInventoryEntity } from './product-inventory.entity';
-import { ChannelReservationEntity, ReservationStatus } from './channel-reservation.entity';
-import { PreGeneratedTicketEntity, TicketStatus } from './pre-generated-ticket.entity';
-import { OTAOrderEntity, OrderStatus } from './ota-order.entity';
+import { ProductEntity, ProductInventoryEntity, TicketEntity, TicketStatus, OrderEntity, OrderStatus, OrderChannel } from '../../../models';
 import { OTATicketBatchEntity, BatchStatus } from './ota-ticket-batch.entity';
 import { OTATicketBatchWithStatsDTO } from './ota-ticket-batch.dto';
 import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 import { generateSecureQR } from '../../../utils/qr-crypto';
+import { logger } from '../../../utils/logger';
+
+// 保持向后兼容的类型别名
+type OTAOrderEntity = OrderEntity;
+
+// 类型别名，保持向后兼容
+type PreGeneratedTicketEntity = TicketEntity;
 
 export class OTARepository {
   private productRepo: Repository<ProductEntity>;
   private inventoryRepo: Repository<ProductInventoryEntity>;
-  private reservationRepo: Repository<ChannelReservationEntity>;
-  private preGeneratedTicketRepo: Repository<PreGeneratedTicketEntity>;
-  private otaOrderRepo: Repository<OTAOrderEntity>;
+  private ticketRepo: Repository<TicketEntity>;
+  private orderRepo: Repository<OrderEntity>;
   private batchRepo: Repository<OTATicketBatchEntity>;
   private resellerRepo: Repository<OTAResellerEntity>;
 
   constructor(private dataSource: DataSource) {
     this.productRepo = dataSource.getRepository(ProductEntity);
     this.inventoryRepo = dataSource.getRepository(ProductInventoryEntity);
-    this.reservationRepo = dataSource.getRepository(ChannelReservationEntity);
-    this.preGeneratedTicketRepo = dataSource.getRepository(PreGeneratedTicketEntity);
-    this.otaOrderRepo = dataSource.getRepository(OTAOrderEntity);
+    this.ticketRepo = dataSource.getRepository(TicketEntity);
+    this.orderRepo = dataSource.getRepository(OrderEntity);
     this.batchRepo = dataSource.getRepository(OTATicketBatchEntity);
     this.resellerRepo = dataSource.getRepository(OTAResellerEntity);
   }
@@ -72,436 +73,6 @@ export class OTARepository {
     });
   }
 
-  // Reservation operations with database transactions
-  async createReservation(
-    productId: number,
-    channelId: string,
-    quantity: number,
-    expiresAt: Date,
-    pricingSnapshot?: any
-  ): Promise<ChannelReservationEntity | null> {
-    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // Lock inventory row for update
-      const inventory = await queryRunner.manager
-        .createQueryBuilder(ProductInventoryEntity, 'inventory')
-        .setLock('pessimistic_write')
-        .where('inventory.product_id = :productId', { productId })
-        .getOne();
-
-      if (!inventory) {
-        throw new Error(`Product ${productId} not found`);
-      }
-
-      // Check availability and reserve
-      if (!inventory.reserveInventory(channelId, quantity)) {
-        throw new Error(`Insufficient inventory for product ${productId}`);
-      }
-
-      // Save updated inventory
-      await queryRunner.manager.save(ProductInventoryEntity, inventory);
-
-      // Create reservation
-      const reservation = new ChannelReservationEntity();
-      reservation.product_id = productId;
-      reservation.channel_id = channelId;
-      reservation.quantity = quantity;
-      reservation.expires_at = expiresAt;
-      reservation.pricing_snapshot = pricingSnapshot;
-
-      const savedReservation = await queryRunner.manager.save(ChannelReservationEntity, reservation);
-
-      await queryRunner.commitTransaction();
-      return savedReservation;
-
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  async findReservation(reservationId: string): Promise<ChannelReservationEntity | null> {
-    return this.reservationRepo.findOne({
-      where: { reservation_id: reservationId },
-      relations: ['product_inventory', 'product_inventory.product']
-    });
-  }
-
-  async findActiveReservations(channelId?: string): Promise<ChannelReservationEntity[]> {
-    const query = this.reservationRepo.createQueryBuilder('reservation')
-      .leftJoinAndSelect('reservation.product_inventory', 'inventory')
-      .leftJoinAndSelect('inventory.product', 'product')
-      .where('reservation.status = :status', { status: 'active' });
-
-    if (channelId) {
-      query.andWhere('reservation.channel_id = :channelId', { channelId });
-    }
-
-    return query.getMany();
-  }
-
-  async findReservationsByProduct(productId: number, channelId?: string): Promise<ChannelReservationEntity[]> {
-    const query = this.reservationRepo.createQueryBuilder('reservation')
-      .where('reservation.product_id = :productId', { productId })
-      .andWhere('reservation.status = :status', { status: 'active' });
-
-    if (channelId) {
-      query.andWhere('reservation.channel_id = :channelId', { channelId });
-    }
-
-    return query.getMany();
-  }
-
-  // Expire reservations and release inventory
-  async expireReservations(): Promise<number> {
-    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // Find expired reservations
-      const expiredReservations = await queryRunner.manager
-        .createQueryBuilder(ChannelReservationEntity, 'reservation')
-        .where('reservation.status = :status', { status: 'active' })
-        .andWhere('reservation.expires_at < :now', { now: new Date() })
-        .getMany();
-
-      if (expiredReservations.length === 0) {
-        await queryRunner.commitTransaction();
-        return 0;
-      }
-
-      // Group by product and channel to batch inventory updates
-      const inventoryUpdates = new Map<string, { productId: number; channelId: string; quantity: number }>();
-
-      for (const reservation of expiredReservations) {
-        const key = `${reservation.product_id}_${reservation.channel_id}`;
-        const existing = inventoryUpdates.get(key);
-        if (existing) {
-          existing.quantity += reservation.quantity;
-        } else {
-          inventoryUpdates.set(key, {
-            productId: reservation.product_id,
-            channelId: reservation.channel_id,
-            quantity: reservation.quantity
-          });
-        }
-      }
-
-      // Update inventory for each product/channel combination
-      for (const update of inventoryUpdates.values()) {
-        const inventory = await queryRunner.manager
-          .createQueryBuilder(ProductInventoryEntity, 'inventory')
-          .setLock('pessimistic_write')
-          .where('inventory.product_id = :productId', { productId: update.productId })
-          .getOne();
-
-        if (inventory) {
-          inventory.releaseReservation(update.channelId, update.quantity);
-          await queryRunner.manager.save(ProductInventoryEntity, inventory);
-        }
-      }
-
-      // Mark reservations as expired
-      const reservationIds = expiredReservations.map(r => r.reservation_id);
-      await queryRunner.manager
-        .createQueryBuilder()
-        .update(ChannelReservationEntity)
-        .set({ status: 'expired' })
-        .where('reservation_id IN (:...reservationIds)', { reservationIds })
-        .execute();
-
-      await queryRunner.commitTransaction();
-      return expiredReservations.length;
-
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  // Activate reservation (when order is created)
-  async activateReservation(reservationId: string, orderId: number): Promise<boolean> {
-    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const reservation = await queryRunner.manager
-        .createQueryBuilder(ChannelReservationEntity, 'reservation')
-        .setLock('pessimistic_write')
-        .where('reservation.reservation_id = :reservationId', { reservationId })
-        .getOne();
-
-      if (!reservation || !reservation.canActivate()) {
-        await queryRunner.rollbackTransaction();
-        return false;
-      }
-
-      // Update inventory to move from reserved to sold
-      const inventory = await queryRunner.manager
-        .createQueryBuilder(ProductInventoryEntity, 'inventory')
-        .setLock('pessimistic_write')
-        .where('inventory.product_id = :productId', { productId: reservation.product_id })
-        .getOne();
-
-      if (inventory) {
-        inventory.activateReservation(reservation.channel_id, reservation.quantity);
-        await queryRunner.manager.save(ProductInventoryEntity, inventory);
-      }
-
-      // Activate the reservation
-      reservation.activate(orderId);
-      await queryRunner.manager.save(ChannelReservationEntity, reservation);
-
-      await queryRunner.commitTransaction();
-      return true;
-
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  // Cancel reservation
-  async cancelReservation(reservationId: string): Promise<boolean> {
-    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const reservation = await queryRunner.manager
-        .createQueryBuilder(ChannelReservationEntity, 'reservation')
-        .setLock('pessimistic_write')
-        .where('reservation.reservation_id = :reservationId', { reservationId })
-        .getOne();
-
-      if (!reservation || reservation.status !== 'active') {
-        await queryRunner.rollbackTransaction();
-        return false;
-      }
-
-      // Release inventory
-      const inventory = await queryRunner.manager
-        .createQueryBuilder(ProductInventoryEntity, 'inventory')
-        .setLock('pessimistic_write')
-        .where('inventory.product_id = :productId', { productId: reservation.product_id })
-        .getOne();
-
-      if (inventory) {
-        inventory.releaseReservation(reservation.channel_id, reservation.quantity);
-        await queryRunner.manager.save(ProductInventoryEntity, inventory);
-      }
-
-      // Cancel the reservation
-      reservation.cancel();
-      await queryRunner.manager.save(ChannelReservationEntity, reservation);
-
-      await queryRunner.commitTransaction();
-      return true;
-
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  // Activate reservation with order and ticket generation
-  async activateReservationWithOrder(
-    reservationId: string,
-    customerData: {
-      name: string;
-      email: string;
-      phone: string;
-    },
-    paymentReference: string,
-    specialRequests?: string,
-    customerTypes?: Array<'adult' | 'child' | 'elderly'>
-  ): Promise<{ order: OTAOrderEntity; tickets: PreGeneratedTicketEntity[] }> {
-    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // 1. Lock and validate reservation
-      const reservation = await queryRunner.manager
-        .createQueryBuilder(ChannelReservationEntity, 'reservation')
-        .setLock('pessimistic_write')
-        .leftJoinAndSelect('reservation.product_inventory', 'inventory')
-        .leftJoinAndSelect('inventory.product', 'product')
-        .where('reservation.reservation_id = :reservationId', { reservationId })
-        .getOne();
-
-      if (!reservation) {
-        throw new Error(`Reservation ${reservationId} not found`);
-      }
-
-      if (!reservation.canActivate()) {
-        throw new Error(`Reservation ${reservationId} cannot be activated (status: ${reservation.status})`);
-      }
-
-      const product = reservation.product_inventory?.product;
-      if (!product) {
-        throw new Error(`Product ${reservation.product_id} not found for reservation`);
-      }
-
-      // 2. Update inventory (move from reserved to sold)
-      const inventory = await queryRunner.manager
-        .createQueryBuilder(ProductInventoryEntity, 'inventory')
-        .setLock('pessimistic_write')
-        .where('inventory.product_id = :productId', { productId: reservation.product_id })
-        .getOne();
-
-      if (!inventory) {
-        throw new Error(`Inventory for product ${reservation.product_id} not found`);
-      }
-
-      inventory.activateReservation(reservation.channel_id, reservation.quantity);
-      await queryRunner.manager.save(ProductInventoryEntity, inventory);
-
-      // 3. Create order
-      const orderId = `ORD-${Date.now()}`;
-      const confirmationCode = `CONF-${Date.now()}`;
-
-      // Calculate total amount based on customer types (similar to ticket activation logic)
-      let totalAmount = 0;
-
-      if (customerTypes && customerTypes.length > 0 && reservation.pricing_snapshot?.customer_type_pricing) {
-        // Calculate based on each customer type from pricing snapshot
-        for (const customerType of customerTypes) {
-          const pricing = reservation.pricing_snapshot.customer_type_pricing.find(
-            (p: any) => p.customer_type === customerType
-          );
-
-          if (!pricing) {
-            throw new Error(`Customer type ${customerType} not found in pricing snapshot for reservation ${reservationId}`);
-          }
-
-          totalAmount += pricing.unit_price;
-        }
-
-        // DEBUG: Log price calculation
-        console.log('ota.reservation.activation_price_calculated', {
-          reservation_id: reservationId,
-          customer_types: customerTypes,
-          individual_prices: customerTypes.map(ct => {
-            const p = reservation.pricing_snapshot!.customer_type_pricing!.find((x: any) => x.customer_type === ct);
-            return { type: ct, price: p?.unit_price };
-          }),
-          total_amount: totalAmount
-        });
-      } else {
-        // Fallback: use base price for all tickets
-        const basePrice = reservation.pricing_snapshot?.base_price || Number(product.base_price);
-        totalAmount = basePrice * reservation.quantity;
-
-        console.log('ota.reservation.activation_price_fallback', {
-          reservation_id: reservationId,
-          base_price: basePrice,
-          quantity: reservation.quantity,
-          total_amount: totalAmount,
-          reason: !customerTypes ? 'no_customer_types' : 'no_pricing_snapshot'
-        });
-      }
-
-      const order = queryRunner.manager.create(OTAOrderEntity, {
-        order_id: orderId,
-        product_id: reservation.product_id,
-        channel_id: 2, // OTA channel
-        partner_id: reservation.channel_id,
-        customer_name: customerData.name,
-        customer_email: customerData.email,
-        customer_phone: customerData.phone,
-        payment_reference: paymentReference,
-        total_amount: totalAmount,
-        status: 'confirmed' as OrderStatus,
-        confirmation_code: confirmationCode,
-        special_requests: specialRequests
-      });
-
-      const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
-
-      // 4. Generate tickets
-      const tickets: PreGeneratedTicketEntity[] = [];
-      const entitlements = product.entitlements?.map((e: any) => ({
-        function_code: e.type || e.function_code,
-        remaining_uses: 1
-      })) || [
-        { function_code: 'ferry', remaining_uses: 1 },
-        { function_code: 'deck_access', remaining_uses: 1 },
-        { function_code: 'dining', remaining_uses: 1 }
-      ];
-
-      for (let i = 0; i < reservation.quantity; i++) {
-        const ticketId = Date.now() + (Math.random() * 1000) + i;
-        const ticketCode = `${product.category?.toUpperCase() || 'TICKET'}-${new Date().getFullYear()}-P${product.id}-${Math.floor(ticketId)}`;
-
-        // Get customer_type for this ticket (if provided)
-        const customerType = customerTypes && customerTypes[i] ? customerTypes[i] : undefined;
-
-        // Generate QR code for activated ticket
-        const qrResult = await generateSecureQR(ticketCode);
-        const rawMetadata = {
-          jti: {
-            pre_generated_jti: qrResult.jti,
-            current_jti: qrResult.jti
-          },
-          qr_metadata: {
-            issued_at: new Date().toISOString(),
-            expires_at: qrResult.expires_at
-          }
-        };
-
-        const ticket = queryRunner.manager.create(PreGeneratedTicketEntity, {
-          ticket_code: ticketCode,
-          product_id: reservation.product_id,
-          batch_id: `RESERVATION-${reservationId}`,
-          partner_id: reservation.channel_id,
-          status: 'ACTIVE' as TicketStatus,
-          qr_code: qrResult.qr_image,  // Store QR image for immediate use
-          entitlements: entitlements,
-          customer_name: customerData.name,
-          customer_email: customerData.email,
-          customer_phone: customerData.phone,
-          customer_type: customerType,
-          order_id: orderId,
-          payment_reference: paymentReference,
-          activated_at: new Date(),
-          raw: rawMetadata
-        });
-
-        tickets.push(ticket);
-      }
-
-      const savedTickets = await queryRunner.manager.save(PreGeneratedTicketEntity, tickets);
-
-      // 5. Update reservation status
-      reservation.activate(Number(orderId.split('-')[1])); // Extract numeric part for order_id field
-      reservation.order_id = Number(orderId.split('-')[1]);
-      await queryRunner.manager.save(ChannelReservationEntity, reservation);
-
-      await queryRunner.commitTransaction();
-      return { order: savedOrder, tickets: savedTickets };
-
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
   // Pre-Generated Ticket Operations
   async createPreGeneratedTickets(tickets: Partial<PreGeneratedTicketEntity>[], channelId: string = 'ota'): Promise<PreGeneratedTicketEntity[]> {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
@@ -509,10 +80,7 @@ export class OTARepository {
     await queryRunner.startTransaction();
 
     try {
-      // Bulk insert tickets
-      const savedTickets = await queryRunner.manager.save(PreGeneratedTicketEntity, tickets);
-
-      // Update inventory (reserve units for the batch)
+      // Update inventory FIRST (reserve units for the batch)
       if (tickets.length > 0) {
         const productId = tickets[0].product_id;
         const quantity = tickets.length;
@@ -530,6 +98,27 @@ export class OTARepository {
         }
       }
 
+      // Optimized batch insert using insert() for large batches
+      // insert() is more efficient than save() for bulk operations
+      // We split into chunks of 100 to avoid MySQL max_allowed_packet issues
+      const BATCH_SIZE = 100;
+      const savedTickets: PreGeneratedTicketEntity[] = [];
+
+      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
+        const chunk = tickets.slice(i, i + BATCH_SIZE);
+
+        // Use insert() for bulk insert - returns InsertResult, not entities
+        await queryRunner.manager.insert(TicketEntity, chunk);
+
+        // Convert partial tickets to full entities for return
+        // The insert was successful, so we can construct the entities
+        for (const ticket of chunk) {
+          const entity = new TicketEntity();
+          Object.assign(entity, ticket);
+          savedTickets.push(entity);
+        }
+      }
+
       await queryRunner.commitTransaction();
       return savedTickets;
 
@@ -542,13 +131,13 @@ export class OTARepository {
   }
 
   async findPreGeneratedTicket(ticketCode: string): Promise<PreGeneratedTicketEntity | null> {
-    return this.preGeneratedTicketRepo.findOne({
+    return this.ticketRepo.findOne({
       where: { ticket_code: ticketCode }
     });
   }
 
   async findPreGeneratedTicketsByBatch(batchId: string): Promise<PreGeneratedTicketEntity[]> {
-    return this.preGeneratedTicketRepo.find({
+    return this.ticketRepo.find({
       where: { batch_id: batchId },
       order: { created_at: 'ASC' }
     });
@@ -573,8 +162,8 @@ export class OTARepository {
 
     try {
       // Find the pre-generated ticket (with partner isolation)
-      const ticket = await queryRunner.manager.findOne(PreGeneratedTicketEntity, {
-        where: { ticket_code: ticketCode, status: 'PRE_GENERATED', partner_id: partnerId }
+      const ticket = await queryRunner.manager.findOne(TicketEntity, {
+        where: { ticket_code: ticketCode, status: 'PRE_GENERATED' as TicketStatus, partner_id: partnerId, channel: 'ota' }
       });
 
       if (!ticket) {
@@ -582,16 +171,22 @@ export class OTARepository {
       }
 
       // Create the order
-      const order = queryRunner.manager.create(OTAOrderEntity, {
-        ...orderData,
-        partner_id: partnerId,  // Add partner_id for order isolation
-        customer_name: customerData.customer_name,
-        customer_email: customerData.customer_email,
-        customer_phone: customerData.customer_phone,
-        payment_reference: customerData.payment_reference
+      const order = queryRunner.manager.create(OrderEntity, {
+        order_no: (orderData as any).order_no || (orderData as any).order_id || `OTA-${Date.now()}`,
+        channel: OrderChannel.OTA,
+        partner_id: partnerId,
+        contact_name: customerData.customer_name,
+        contact_email: customerData.customer_email,
+        contact_phone: customerData.customer_phone,
+        payment_reference: customerData.payment_reference,
+        product_id: ticket.product_id,
+        quantity: 1,
+        total: (orderData as any).total || (orderData as any).total_amount || 0,
+        status: OrderStatus.CONFIRMED,
+        confirmation_code: (orderData as any).confirmation_code
       });
 
-      const savedOrder = await queryRunner.manager.save(OTAOrderEntity, order);
+      const savedOrder = await queryRunner.manager.save(OrderEntity, order);
 
       // Fetch batch to get pricing information
       const batch = await queryRunner.manager.findOne(OTATicketBatchEntity, {
@@ -629,8 +224,9 @@ export class OTARepository {
       ticket.customer_phone = customerData.customer_phone;
       ticket.customer_type = customerData.customer_type;
       ticket.payment_reference = customerData.payment_reference;
-      ticket.order_id = savedOrder.order_id;
-      ticket.status = 'ACTIVE';
+      ticket.order_id = Number(savedOrder.id);
+      ticket.order_no = savedOrder.order_no;
+      ticket.status = 'ACTIVATED';
       ticket.activated_at = new Date();
       ticket.ticket_price = ticketPrice;
 
@@ -641,7 +237,7 @@ export class OTARepository {
 
       // QR code removed - will be generated on-demand via POST /qr/{code}
 
-      const savedTicket = await queryRunner.manager.save(PreGeneratedTicketEntity, ticket);
+      const savedTicket = await queryRunner.manager.save(TicketEntity, ticket);
 
       // Update inventory (move from reserved to sold)
       const inventory = await queryRunner.manager.findOne(ProductInventoryEntity, {
@@ -665,32 +261,35 @@ export class OTARepository {
   }
 
   // OTA Order Operations
-  async createOTAOrder(orderData: Partial<OTAOrderEntity>): Promise<OTAOrderEntity> {
-    const order = this.otaOrderRepo.create(orderData);
-    return this.otaOrderRepo.save(order);
+  async createOTAOrder(orderData: Partial<OrderEntity>): Promise<OrderEntity> {
+    const order = this.orderRepo.create({
+      ...orderData,
+      channel: OrderChannel.OTA
+    });
+    return this.orderRepo.save(order);
   }
 
-  async findOTAOrdersByChannel(partnerId?: string): Promise<OTAOrderEntity[]> {
-    const whereClause: any = { channel_id: 2 }; // OTA channel
+  async findOTAOrdersByChannel(partnerId?: string): Promise<OrderEntity[]> {
+    const whereClause: any = { channel: OrderChannel.OTA };
     if (partnerId) {
       whereClause.partner_id = partnerId;
     }
-    return this.otaOrderRepo.find({
+    return this.orderRepo.find({
       where: whereClause,
       order: { created_at: 'DESC' }
     });
   }
 
-  async findOTAOrderById(orderId: string): Promise<OTAOrderEntity | null> {
-    return this.otaOrderRepo.findOne({
-      where: { order_id: orderId }
+  async findOTAOrderById(orderId: string): Promise<OrderEntity | null> {
+    return this.orderRepo.findOne({
+      where: { order_no: orderId, channel: OrderChannel.OTA }
     });
   }
 
-  async findTicketsByOrderId(orderId: string): Promise<PreGeneratedTicketEntity[]> {
-    return this.preGeneratedTicketRepo.find({
-      where: { order_id: orderId }
-      // Removed status: 'ACTIVE' filter - should return tickets in ANY status (ACTIVE, USED, EXPIRED, etc.)
+  async findTicketsByOrderId(orderId: string): Promise<TicketEntity[]> {
+    return this.ticketRepo.find({
+      where: { order_no: orderId, channel: 'ota' }
+      // Removed status: 'ACTIVE' filter - should return tickets in ANY status (ACTIVATED, VERIFIED, EXPIRED, etc.)
       // This allows viewing ticket details for completed orders with redeemed tickets
     });
   }
@@ -707,7 +306,7 @@ export class OTARepository {
       limit?: number;
     }
   ): Promise<{ tickets: PreGeneratedTicketEntity[]; total: number }> {
-    const query = this.preGeneratedTicketRepo.createQueryBuilder('ticket')
+    const query = this.ticketRepo.createQueryBuilder('ticket')
       .where('ticket.partner_id = :partnerId', { partnerId });
 
     // Apply filters
@@ -747,6 +346,95 @@ export class OTARepository {
   async createTicketBatch(batchData: Partial<OTATicketBatchEntity>): Promise<OTATicketBatchEntity> {
     const batch = this.batchRepo.create(batchData);
     return this.batchRepo.save(batch);
+  }
+
+  /**
+   * 创建批次和票券在同一个事务中
+   * 确保批次创建、库存扣减、票券插入的原子性
+   * 任何步骤失败都会完全回滚
+   */
+  async createBatchWithTickets(
+    batchData: Partial<OTATicketBatchEntity>,
+    tickets: Partial<PreGeneratedTicketEntity>[],
+    channelId: string = 'ota'
+  ): Promise<{ batch: OTATicketBatchEntity; tickets: PreGeneratedTicketEntity[] }> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Step 1: 创建批次记录
+      const batch = queryRunner.manager.create(OTATicketBatchEntity, batchData);
+      const savedBatch = await queryRunner.manager.save(OTATicketBatchEntity, batch);
+
+      logger.info('ota.batch.created_in_transaction', {
+        batch_id: savedBatch.batch_id,
+        total_quantity: savedBatch.total_quantity
+      });
+
+      // Step 2: 更新库存（先扣减，失败则整体回滚）
+      if (tickets.length > 0) {
+        const productId = tickets[0].product_id;
+        const quantity = tickets.length;
+
+        const inventory = await queryRunner.manager.findOne(ProductInventoryEntity, {
+          where: { product_id: productId }
+        });
+
+        if (inventory) {
+          if (!inventory.reserveInventory(channelId, quantity)) {
+            throw new Error('Insufficient inventory for reservation');
+          }
+          await queryRunner.manager.save(ProductInventoryEntity, inventory);
+
+          logger.info('ota.inventory.reserved_in_transaction', {
+            batch_id: savedBatch.batch_id,
+            product_id: productId,
+            quantity
+          });
+        }
+      }
+
+      // Step 3: 批量插入票券（直接使用 manager.insert，移除实体追踪开销）
+      // 批次大小 500 是经测试的最优值（减少网络往返，避免单条SQL过大）
+      const BATCH_SIZE = 500;
+      let insertedCount = 0;
+
+      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
+        const chunk = tickets.slice(i, i + BATCH_SIZE);
+        await queryRunner.manager.insert(TicketEntity, chunk);
+        insertedCount += chunk.length;
+      }
+
+      logger.info('ota.tickets.inserted_in_transaction', {
+        batch_id: savedBatch.batch_id,
+        tickets_count: insertedCount
+      });
+
+      // Step 4: 提交事务
+      await queryRunner.commitTransaction();
+
+      logger.info('ota.batch_with_tickets.transaction_committed', {
+        batch_id: savedBatch.batch_id,
+        tickets_count: insertedCount
+      });
+
+      // 返回原始 tickets 数组（已包含所有数据，无需重新构造实体）
+      return { batch: savedBatch, tickets: tickets as unknown as PreGeneratedTicketEntity[] };
+
+    } catch (error) {
+      // 回滚事务：批次、库存、票券全部回滚
+      await queryRunner.rollbackTransaction();
+
+      logger.error('ota.batch_with_tickets.transaction_rolled_back', {
+        batch_id: batchData.batch_id,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async findBatchById(batchId: string): Promise<OTATicketBatchEntity | null> {
@@ -795,28 +483,28 @@ export class OTARepository {
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
-        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'VERIFIED' THEN 1 ELSE 0 END) as tickets_redeemed,
         SUM(CASE
-          WHEN t.status = 'USED' AND t.customer_type = 'adult' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'adult' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status = 'USED' AND t.customer_type = 'child' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status = 'USED' AND t.customer_type = 'elderly' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
-      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+      LEFT JOIN tickets t ON t.batch_id = b.batch_id AND t.channel = 'ota'
       WHERE b.batch_id = ?
       GROUP BY b.batch_id
     `, [batchId]);
@@ -835,28 +523,28 @@ export class OTARepository {
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_activated,
-        SUM(CASE WHEN t.status = 'USED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'VERIFIED' THEN 1 ELSE 0 END) as tickets_redeemed,
         SUM(CASE
-          WHEN t.status = 'USED' AND t.customer_type = 'adult' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'adult' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status = 'USED' AND t.customer_type = 'child' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status = 'USED' AND t.customer_type = 'elderly' THEN
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
-      LEFT JOIN pre_generated_tickets t ON t.batch_id = b.batch_id
+      LEFT JOIN tickets t ON t.batch_id = b.batch_id AND t.channel = 'ota'
     `;
 
     const params: any[] = [];
@@ -878,6 +566,103 @@ export class OTARepository {
 
     const results = await this.dataSource.query(query, params);
     return results.map((row: any) => this.mapRowToBatchWithStats(row));
+  }
+
+  /**
+   * Find batches with filters and pagination (for batch list API)
+   * Supports: status, product_id, reseller, date range filters
+   */
+  async findBatchesWithFilters(
+    partnerId: string,
+    filters: {
+      status?: string;
+      product_id?: number;
+      reseller?: string;
+      created_after?: string;
+      created_before?: string;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ batches: OTATicketBatchWithStatsDTO[]; total: number }> {
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 20, 100);
+    const offset = (page - 1) * limit;
+
+    // Build WHERE conditions
+    const conditions: string[] = ['b.partner_id = ?'];
+    const params: any[] = [partnerId];
+
+    if (filters.status) {
+      conditions.push('b.status = ?');
+      params.push(filters.status);
+    }
+
+    if (filters.product_id) {
+      conditions.push('b.product_id = ?');
+      params.push(filters.product_id);
+    }
+
+    if (filters.reseller) {
+      conditions.push("JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?");
+      params.push(filters.reseller);
+    }
+
+    if (filters.created_after) {
+      conditions.push('b.created_at >= ?');
+      params.push(filters.created_after);
+    }
+
+    if (filters.created_before) {
+      conditions.push('b.created_at <= ?');
+      params.push(filters.created_before);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // Count total for pagination
+    const countResult = await this.dataSource.query(
+      `SELECT COUNT(*) as total FROM ota_ticket_batches b WHERE ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult[0]?.total) || 0;
+
+    // Main query with stats
+    const query = `
+      SELECT
+        b.*,
+        COUNT(t.ticket_code) as tickets_generated,
+        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_activated,
+        SUM(CASE WHEN t.status = 'VERIFIED' THEN 1 ELSE 0 END) as tickets_redeemed,
+        SUM(CASE
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'adult' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
+            COALESCE(
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
+            )
+          ELSE 0
+        END) as total_revenue_realized
+      FROM ota_ticket_batches b
+      LEFT JOIN tickets t ON t.batch_id = b.batch_id AND t.channel = 'ota'
+      WHERE ${whereClause}
+      GROUP BY b.batch_id
+      ORDER BY b.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const results = await this.dataSource.query(query, [...params, limit, offset]);
+    const batches = results.map((row: any) => this.mapRowToBatchWithStats(row));
+
+    return { batches, total };
   }
 
   /**
@@ -967,27 +752,27 @@ export class OTARepository {
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVE', 'USED') THEN 1 ELSE 0 END) as tickets_sold,
+        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_sold,
         SUM(CASE
-          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'adult' THEN
+          WHEN t.status IN ('ACTIVATED', 'VERIFIED') AND t.customer_type = 'adult' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'child' THEN
+          WHEN t.status IN ('ACTIVATED', 'VERIFIED') AND t.customer_type = 'child' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.65
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
-          WHEN t.status IN ('ACTIVE', 'USED') AND t.customer_type = 'elderly' THEN
+          WHEN t.status IN ('ACTIVATED', 'VERIFIED') AND t.customer_type = 'elderly' THEN
             COALESCE(
               CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2)) * 0.83
+              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
             )
           ELSE 0
         END) as total_revenue_realized
       FROM ota_ticket_batches b
-      LEFT JOIN pre_generated_tickets t ON LOWER(t.batch_id) = LOWER(b.batch_id)
+      LEFT JOIN tickets t ON LOWER(t.batch_id) = LOWER(b.batch_id) AND t.channel = 'ota'
       WHERE b.reseller_metadata IS NOT NULL
         AND JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?
         AND DATE_FORMAT(b.created_at, '%Y-%m') = ?
@@ -1043,7 +828,7 @@ export class OTARepository {
         v.venue_name,
         JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) as wholesale_price
       FROM redemption_events r
-      INNER JOIN pre_generated_tickets t ON r.ticket_code = t.ticket_code
+      INNER JOIN tickets t ON r.ticket_code = t.ticket_code AND t.channel = 'ota'
       INNER JOIN ota_ticket_batches b ON t.batch_id = b.batch_id
       LEFT JOIN venues v ON r.venue_id = v.venue_id
       WHERE b.batch_id = ?
@@ -1066,8 +851,9 @@ export class OTARepository {
    * Get orders summary for a specific partner
    */
   async getPartnerOrdersSummary(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
-    const query = this.otaOrderRepo.createQueryBuilder('order')
-      .where('order.partner_id = :partnerId', { partnerId });
+    const query = this.orderRepo.createQueryBuilder('order')
+      .where('order.partner_id = :partnerId', { partnerId })
+      .andWhere('order.channel = :channel', { channel: OrderChannel.OTA });
 
     if (dateRange?.start_date) {
       query.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
@@ -1085,38 +871,10 @@ export class OTARepository {
 
     return {
       total_count: orders.length,
-      total_revenue: orders.reduce((sum, o) => sum + Number(o.total_amount), 0),
+      total_revenue: orders.reduce((sum, o) => sum + Number(o.total), 0),
       avg_order_value: orders.length > 0
-        ? orders.reduce((sum, o) => sum + Number(o.total_amount), 0) / orders.length
+        ? orders.reduce((sum, o) => sum + Number(o.total), 0) / orders.length
         : 0,
-      by_status: byStatus
-    };
-  }
-
-  /**
-   * Get reservations summary for a specific partner
-   */
-  async getPartnerReservationsSummary(partnerId: string, dateRange?: { start_date?: string; end_date?: string }) {
-    const query = this.reservationRepo.createQueryBuilder('reservation')
-      .where('reservation.channel_id = :partnerId', { partnerId });
-
-    if (dateRange?.start_date) {
-      query.andWhere('reservation.created_at >= :startDate', { startDate: dateRange.start_date });
-    }
-    if (dateRange?.end_date) {
-      query.andWhere('reservation.created_at <= :endDate', { endDate: dateRange.end_date });
-    }
-
-    const reservations = await query.getMany();
-
-    const byStatus: any = {};
-    reservations.forEach(res => {
-      byStatus[res.status] = (byStatus[res.status] || 0) + 1;
-    });
-
-    return {
-      total_count: reservations.length,
-      total_quantity: reservations.reduce((sum, r) => sum + r.quantity, 0),
       by_status: byStatus
     };
   }
@@ -1125,7 +883,7 @@ export class OTARepository {
    * Get tickets summary for a specific partner
    */
   async getPartnerTicketsSummary(partnerId: string) {
-    const tickets = await this.preGeneratedTicketRepo.find({
+    const tickets = await this.ticketRepo.find({
       where: { partner_id: partnerId }
     });
 
@@ -1176,29 +934,123 @@ export class OTARepository {
   }
 
   /**
-   * Get platform-wide summary
+   * Get partner summary
+   * 返回三组数据：全局总览 + 今日数据 + 时间筛选区间数据
+   * 按 partner_id 筛选
    */
-  async getPlatformSummary(dateRange?: { start_date?: string; end_date?: string }) {
-    const orderQuery = this.otaOrderRepo.createQueryBuilder('order');
+  async getPartnerSummary(options: { partner_id: string; start_date?: string; end_date?: string }) {
+    const { partner_id, start_date, end_date } = options;
 
-    if (dateRange?.start_date) {
-      orderQuery.andWhere('order.created_at >= :startDate', { startDate: dateRange.start_date });
+    // 今天的日期范围
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // 1. 全局票券统计（使用 TypeORM QueryBuilder）
+    const ticketStatsQuery = this.ticketRepo.createQueryBuilder('t')
+      .select('COUNT(*)', 'total')
+      .addSelect('SUM(CASE WHEN t.status = :preGen THEN 1 ELSE 0 END)', 'pre_generated')
+      .addSelect('SUM(CASE WHEN t.status = :activated THEN 1 ELSE 0 END)', 'activated')
+      .addSelect('SUM(CASE WHEN t.status = :verified THEN 1 ELSE 0 END)', 'verified')
+      .where('t.channel = :channel', { channel: 'ota' })
+      .andWhere('t.partner_id = :partnerId', { partnerId: partner_id })
+      .setParameters({ preGen: 'PRE_GENERATED', activated: 'ACTIVATED', verified: 'VERIFIED' });
+
+    // 2. 今日票券统计
+    const todayTicketStatsQuery = this.ticketRepo.createQueryBuilder('t')
+      .select('SUM(CASE WHEN t.created_at >= :todayStart THEN 1 ELSE 0 END)', 'created')
+      .addSelect('SUM(CASE WHEN t.activated_at >= :todayStart THEN 1 ELSE 0 END)', 'activated')
+      .addSelect('SUM(CASE WHEN t.verified_at >= :todayStart THEN 1 ELSE 0 END)', 'verified')
+      .where('t.channel = :channel', { channel: 'ota' })
+      .andWhere('t.partner_id = :partnerId', { partnerId: partner_id })
+      .setParameters({ todayStart });
+
+    // 3. 全局订单统计
+    const orderStatsQuery = this.orderRepo.createQueryBuilder('o')
+      .select('COUNT(*)', 'total_orders')
+      .addSelect('COALESCE(SUM(o.total), 0)', 'total_revenue')
+      .where('o.channel = :channel', { channel: OrderChannel.OTA })
+      .andWhere('o.partner_id = :partnerId', { partnerId: partner_id });
+
+    // 4. 今日订单统计
+    const todayOrderStatsQuery = this.orderRepo.createQueryBuilder('o')
+      .select('COUNT(*)', 'orders')
+      .addSelect('COALESCE(SUM(o.total), 0)', 'revenue')
+      .where('o.channel = :channel', { channel: OrderChannel.OTA })
+      .andWhere('o.partner_id = :partnerId', { partnerId: partner_id })
+      .andWhere('o.created_at >= :todayStart', { todayStart });
+
+    // 并行执行查询
+    const [ticketStats, todayTicketStats, orderStats, todayOrderStats] = await Promise.all([
+      ticketStatsQuery.getRawOne(),
+      todayTicketStatsQuery.getRawOne(),
+      orderStatsQuery.getRawOne(),
+      todayOrderStatsQuery.getRawOne()
+    ]);
+
+    // 5. 时间筛选区间统计（如果提供了时间参数）
+    let filtered = null;
+    if (start_date || end_date) {
+      const filteredTicketQuery = this.ticketRepo.createQueryBuilder('t')
+        .select('COUNT(*)', 'total')
+        .addSelect('SUM(CASE WHEN t.status = :preGen THEN 1 ELSE 0 END)', 'pre_generated')
+        .addSelect('SUM(CASE WHEN t.status = :activated THEN 1 ELSE 0 END)', 'activated')
+        .addSelect('SUM(CASE WHEN t.status = :verified THEN 1 ELSE 0 END)', 'verified')
+        .where('t.channel = :channel', { channel: 'ota' })
+        .andWhere('t.partner_id = :partnerId', { partnerId: partner_id })
+        .setParameters({ preGen: 'PRE_GENERATED', activated: 'ACTIVATED', verified: 'VERIFIED' });
+
+      const filteredOrderQuery = this.orderRepo.createQueryBuilder('o')
+        .select('COUNT(*)', 'orders')
+        .addSelect('COALESCE(SUM(o.total), 0)', 'revenue')
+        .where('o.channel = :channel', { channel: OrderChannel.OTA })
+        .andWhere('o.partner_id = :partnerId', { partnerId: partner_id });
+
+      if (start_date) {
+        filteredTicketQuery.andWhere('t.created_at >= :startDate', { startDate: start_date });
+        filteredOrderQuery.andWhere('o.created_at >= :startDate', { startDate: start_date });
+      }
+      if (end_date) {
+        filteredTicketQuery.andWhere('t.created_at <= :endDate', { endDate: end_date });
+        filteredOrderQuery.andWhere('o.created_at <= :endDate', { endDate: end_date });
+      }
+
+      const [ft, fo] = await Promise.all([
+        filteredTicketQuery.getRawOne(),
+        filteredOrderQuery.getRawOne()
+      ]);
+
+      filtered = {
+        start_date: start_date || null,
+        end_date: end_date || null,
+        orders: parseInt(fo?.orders) || 0,
+        revenue: parseFloat(fo?.revenue) || 0,
+        total_tickets: parseInt(ft?.total) || 0,
+        pre_generated_tickets: parseInt(ft?.pre_generated) || 0,
+        activated_tickets: parseInt(ft?.activated) || 0,
+        verified_tickets: parseInt(ft?.verified) || 0
+      };
     }
-    if (dateRange?.end_date) {
-      orderQuery.andWhere('order.created_at <= :endDate', { endDate: dateRange.end_date });
-    }
-
-    const orders = await orderQuery.getMany();
-    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-
-    const totalTickets = await this.preGeneratedTicketRepo.count();
-    const activeTickets = await this.preGeneratedTicketRepo.count({ where: { status: 'ACTIVE' } });
 
     return {
-      total_orders: orders.length,
-      total_revenue: totalRevenue,
-      total_tickets_generated: totalTickets,
-      total_tickets_activated: activeTickets
+      // 全局总览
+      total_orders: parseInt(orderStats?.total_orders) || 0,
+      total_revenue: parseFloat(orderStats?.total_revenue) || 0,
+      total_tickets: parseInt(ticketStats?.total) || 0,
+      pre_generated_tickets: parseInt(ticketStats?.pre_generated) || 0,
+      activated_tickets: parseInt(ticketStats?.activated) || 0,
+      verified_tickets: parseInt(ticketStats?.verified) || 0,
+      // 今日统计
+      today: {
+        orders: parseInt(todayOrderStats?.orders) || 0,
+        revenue: parseFloat(todayOrderStats?.revenue) || 0,
+        created_tickets: parseInt(todayTicketStats?.created) || 0,
+        activated_tickets: parseInt(todayTicketStats?.activated) || 0,
+        verified_tickets: parseInt(todayTicketStats?.verified) || 0
+      },
+      // 时间筛选区间（如果有）
+      filtered
     };
   }
 
@@ -1206,10 +1058,11 @@ export class OTARepository {
    * Get top partners by revenue
    */
   async getTopPartners(limit: number = 5, dateRange?: { start_date?: string; end_date?: string }) {
-    const query = this.otaOrderRepo.createQueryBuilder('order')
+    const query = this.orderRepo.createQueryBuilder('order')
       .select('order.partner_id', 'partner_id')
-      .addSelect('COUNT(order.order_id)', 'orders_count')
-      .addSelect('SUM(order.total_amount)', 'revenue')
+      .addSelect('COUNT(order.id)', 'orders_count')
+      .addSelect('SUM(order.total)', 'revenue')
+      .where('order.channel = :channel', { channel: OrderChannel.OTA })
       .groupBy('order.partner_id')
       .orderBy('revenue', 'DESC')
       .limit(limit);
@@ -1339,11 +1192,11 @@ export class OTARepository {
       LEFT JOIN (
         SELECT
           batch_id,
-          COUNT(CASE WHEN status IN ('ACTIVE', 'USED') THEN 1 END) as activated_count,
-          COUNT(CASE WHEN status = 'USED' THEN 1 END) as used_count,
+          COUNT(CASE WHEN status IN ('ACTIVATED', 'VERIFIED') THEN 1 END) as activated_count,
+          COUNT(CASE WHEN status = 'VERIFIED' THEN 1 END) as used_count,
           -- 总收入：所有已激活票券的实际价格（包含客户类型折扣）
           SUM(
-            CASE WHEN status IN ('ACTIVE', 'USED') THEN
+            CASE WHEN status IN ('ACTIVATED', 'VERIFIED') THEN
               COALESCE(
                 CAST(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.pricing_breakdown.final_price')) AS DECIMAL(10,2)),
                 0
@@ -1352,15 +1205,15 @@ export class OTARepository {
           ) as total_revenue,
           -- 已实现收入：已核销票券的实际价格
           SUM(
-            CASE WHEN status = 'USED' THEN
+            CASE WHEN status = 'VERIFIED' THEN
               COALESCE(
                 CAST(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.pricing_breakdown.final_price')) AS DECIMAL(10,2)),
                 0
               )
             ELSE 0 END
           ) as realized_revenue
-        FROM pre_generated_tickets
-        WHERE status IN ('ACTIVE', 'USED')
+        FROM tickets
+        WHERE channel = 'ota' AND status IN ('ACTIVATED', 'VERIFIED')
         GROUP BY batch_id
       ) batch_stats ON otb.batch_id = batch_stats.batch_id
 

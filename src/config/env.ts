@@ -44,6 +44,13 @@ export const env = cleanEnv(process.env, {
   WECHAT_APPID: str({ default: 'wx39a36fbaaefacd42' }), // WeChat mini-program AppID
   WECHAT_APP_SECRET: str({ default: '6afcba50d4b53ebc6034e213a8bd8592' }), // WeChat mini-program AppSecret
 
+  // Wallyt/SwiftPass Payment Configuration
+  WALLYT_API_URL: str({ default: 'https://gateway.wepayez.com/pay/gateway' }), // Payment API endpoint
+  WALLYT_MCH_ID: str({ default: '' }), // Merchant ID (商户号)
+  WALLYT_SECRET_KEY: str({ default: '' }), // API Secret Key (支付密钥)
+  WALLYT_SIGN_TYPE: str({ choices: ['MD5', 'SHA256', 'RSA_1_256'], default: 'MD5' }), // Signature type
+  WALLYT_NOTIFY_URL: str({ default: '' }), // Payment callback URL
+
   // Directus CMS Configuration (for QR Code logo images + Ticket Reservations)
   USE_DIRECTUS: bool({ default: false }), // Enable Directus CMS integration for ticket reservations
   DIRECTUS_URL: str({ default: 'https://dudu-derp-cxk5g.ondigitalocean.app' }), // Directus instance URL (e.g., https://your-directus.com)

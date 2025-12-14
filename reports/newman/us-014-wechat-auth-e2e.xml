@@ -1,52 +1,239 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="US-014 WeChat Mini-Program Authentication" tests="11" time="0.176">
-  <testsuite name="1. WeChat Login Flow / 1.1 New User Login" id="9b212da5-51b8-4c83-af47-147524a193b5" timestamp="2025-11-28T07:56:06.994Z" tests="5" failures="0" errors="0" time="0.042">
-    <testcase name="Status code is 200" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Response has token" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Response has user object" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Response has needs_phone flag" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="needs_phone reflects phone status" time="0.042" classname="Us014WeChatMiniProgramAuthentication"/>
+<testsuites name="US-014 WeChat Mini-Program Authentication" tests="11" time="0.548">
+  <testsuite name="1. WeChat Login Flow / 1.1 New User Login" id="f29269ed-d8b1-4342-a34b-dfc33d911a90" timestamp="2025-12-11T09:37:23.459Z" tests="5" failures="5" errors="0" time="0.244">
+    <testcase name="Status code is 200" time="0.244" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 1. WeChat Login Flow / 1.1 New User Login.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Response has token" time="0.244" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 1. WeChat Login Flow / 1.1 New User Login.]]>
+        <![CDATA[Test description: Response has token.]]>
+        <![CDATA[Error message: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'
+   at Object.eval sandbox-script.js:2:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Response has user object" time="0.244" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'user'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 1. WeChat Login Flow / 1.1 New User Login.]]>
+        <![CDATA[Test description: Response has user object.]]>
+        <![CDATA[Error message: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'user'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'user'
+   at Object.eval sandbox-script.js:3:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Response has needs_phone flag" time="0.244" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'needs_phone'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 1. WeChat Login Flow / 1.1 New User Login.]]>
+        <![CDATA[Test description: Response has needs_phone flag.]]>
+        <![CDATA[Error message: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'needs_phone'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'needs_phone'
+   at Object.eval sandbox-script.js:4:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="needs_phone reflects phone status" time="0.244" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="Cannot read properties of undefined (reading 'phone')">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 1. WeChat Login Flow / 1.1 New User Login.]]>
+        <![CDATA[Test description: needs_phone reflects phone status.]]>
+        <![CDATA[Error message: Cannot read properties of undefined (reading 'phone').]]>
+        <![CDATA[Stacktrace: TypeError: Cannot read properties of undefined (reading 'phone')
+   at Object.eval sandbox-script.js:5:1).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="1. WeChat Login Flow / 1.2 Returning User Login" id="cd71fc94-a708-4347-a73f-1c393cbb679c" timestamp="2025-11-28T07:56:06.994Z" tests="3" failures="0" errors="0" time="0.026">
-    <testcase name="Status code is 200" time="0.026" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Returns same user (deterministic mock)" time="0.026" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="New token issued" time="0.026" classname="Us014WeChatMiniProgramAuthentication"/>
+  <testsuite name="1. WeChat Login Flow / 1.2 Returning User Login" id="c23c97ea-146d-4129-8002-4331edd39b7b" timestamp="2025-12-11T09:37:23.459Z" tests="3" failures="3" errors="0" time="0.154">
+    <testcase name="Status code is 200" time="0.154" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 1. WeChat Login Flow / 1.2 Returning User Login.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:2).]]>
+      </failure>
+    </testcase>
+    <testcase name="Returns same user (deterministic mock)" time="0.154" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 1. WeChat Login Flow / 1.2 Returning User Login.]]>
+        <![CDATA[Test description: Returns same user (deterministic mock).]]>
+        <![CDATA[Error message: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'
+   at Object.eval sandbox-script.js:2:2).]]>
+      </failure>
+    </testcase>
+    <testcase name="New token issued" time="0.154" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected undefined to be a string">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 1. WeChat Login Flow / 1.2 Returning User Login.]]>
+        <![CDATA[Test description: New token issued.]]>
+        <![CDATA[Error message: expected undefined to be a string.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be a string
+   at Object.eval sandbox-script.js:3:2).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="2. Phone Binding Flow / 2.1 Bind Phone Number" id="ca938b4e-7635-4a34-84eb-2444251581d4" timestamp="2025-11-28T07:56:06.994Z" tests="3" failures="0" errors="0" time="0.018">
-    <testcase name="Status code is 200" time="0.018" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Response has phone number" time="0.018" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Response has updated user" time="0.018" classname="Us014WeChatMiniProgramAuthentication"/>
+  <testsuite name="2. Phone Binding Flow / 2.1 Bind Phone Number" id="881b0e50-3112-4a8b-b8fe-f09d0cdd8f7f" timestamp="2025-12-11T09:37:23.459Z" tests="3" failures="3" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 2. Phone Binding Flow / 2.1 Bind Phone Number.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:3).]]>
+      </failure>
+    </testcase>
+    <testcase name="Response has phone number" time="0.001" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'phone'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 2. Phone Binding Flow / 2.1 Bind Phone Number.]]>
+        <![CDATA[Test description: Response has phone number.]]>
+        <![CDATA[Error message: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'phone'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'phone'
+   at Object.eval sandbox-script.js:2:3).]]>
+      </failure>
+    </testcase>
+    <testcase name="Response has updated user" time="0.001" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'user'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 2. Phone Binding Flow / 2.1 Bind Phone Number.]]>
+        <![CDATA[Test description: Response has updated user.]]>
+        <![CDATA[Error message: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'user'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'user'
+   at Object.eval sandbox-script.js:3:3).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="2. Phone Binding Flow / 2.2 Phone Binding - Missing Auth" id="9399dd80-a3ac-4c66-a492-12ee8ccf5449" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.004">
-    <testcase name="Status code is 401" time="0.004" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Returns auth error" time="0.004" classname="Us014WeChatMiniProgramAuthentication"/>
+  <testsuite name="2. Phone Binding Flow / 2.2 Phone Binding - Missing Auth" id="fb12a55b-3ea4-428b-aff3-b7b56ad1b1e5" timestamp="2025-12-11T09:37:23.459Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Status code is 401" time="0.003" classname="Us014WeChatMiniProgramAuthentication"/>
+    <testcase name="Returns auth error" time="0.003" classname="Us014WeChatMiniProgramAuthentication"/>
   </testsuite>
-  <testsuite name="2. Phone Binding Flow / 2.3 Phone Binding - Invalid Token" id="617f68df-fad4-4be3-af1f-f423861c9980" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.002">
+  <testsuite name="2. Phone Binding Flow / 2.3 Phone Binding - Invalid Token" id="a710a454-ec99-4e04-ac6a-c6bae659d7dc" timestamp="2025-12-11T09:37:23.459Z" tests="2" failures="0" errors="0" time="0.002">
     <testcase name="Status code is 401" time="0.002" classname="Us014WeChatMiniProgramAuthentication"/>
     <testcase name="Returns authentication error" time="0.002" classname="Us014WeChatMiniProgramAuthentication"/>
   </testsuite>
-  <testsuite name="3. Validation Tests / 3.1 Login - Missing Code" id="b8bfab14-0e0b-41ae-b243-51374a6342df" timestamp="2025-11-28T07:56:06.994Z" tests="3" failures="0" errors="0" time="0.001">
+  <testsuite name="3. Validation Tests / 3.1 Login - Missing Code" id="2f8ed73d-9173-4eeb-9164-cfcbf398109e" timestamp="2025-12-11T09:37:23.459Z" tests="3" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 400" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
     <testcase name="Error code is VALIDATION_ERROR" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
     <testcase name="Error message indicates missing code" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
   </testsuite>
-  <testsuite name="3. Validation Tests / 3.2 Login - Empty Code" id="e0cf1de8-3c6c-46f8-b2fc-505652cd1082" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="3. Validation Tests / 3.2 Login - Empty Code" id="1a8dba0a-ef6c-4602-984a-804229162398" timestamp="2025-12-11T09:37:23.459Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 400" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
     <testcase name="Returns validation error" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
   </testsuite>
-  <testsuite name="3. Validation Tests / 3.3 Phone Binding - Missing Code" id="3190ecd1-c39e-40ad-b641-b2896d04073f" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="Status code is 400" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Error code is VALIDATION_ERROR" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
+  <testsuite name="3. Validation Tests / 3.3 Phone Binding - Missing Code" id="4adece02-d364-44ca-b33f-3794a1494f27" timestamp="2025-12-11T09:37:23.459Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected response to have status code 400 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 3. Validation Tests / 3.3 Phone Binding - Missing Code.]]>
+        <![CDATA[Test description: Status code is 400.]]>
+        <![CDATA[Error message: expected response to have status code 400 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 400 but got 401
+   at Object.eval sandbox-script.js:1:8).]]>
+      </failure>
+    </testcase>
+    <testcase name="Error code is VALIDATION_ERROR" time="0.001" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected 'INTERNAL_ERROR' to equal 'VALIDATION_ERROR'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 3. Validation Tests / 3.3 Phone Binding - Missing Code.]]>
+        <![CDATA[Test description: Error code is VALIDATION_ERROR.]]>
+        <![CDATA[Error message: expected 'INTERNAL_ERROR' to equal 'VALIDATION_ERROR'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 'INTERNAL_ERROR' to equal 'VALIDATION_ERROR'
+   at Object.eval sandbox-script.js:2:8).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="4. Complete E2E Flow / 4.1 E2E: Login -> Bind Phone -> Verify" id="0aa4a0c9-b2df-4685-946c-bad54a5e45ce" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.051">
-    <testcase name="Status code is 200" time="0.051" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Complete login response" time="0.051" classname="Us014WeChatMiniProgramAuthentication"/>
+  <testsuite name="4. Complete E2E Flow / 4.1 E2E: Login -> Bind Phone -> Verify" id="98874f83-4055-455f-8de8-35f75a80fbe4" timestamp="2025-12-11T09:37:23.459Z" tests="2" failures="2" errors="0" time="0.138">
+    <testcase name="Status code is 200" time="0.138" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 4. Complete E2E Flow / 4.1 E2E: Login -> Bind Phone -> Verify.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:9).]]>
+      </failure>
+    </testcase>
+    <testcase name="Complete login response" time="0.138" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 4. Complete E2E Flow / 4.1 E2E: Login -> Bind Phone -> Verify.]]>
+        <![CDATA[Test description: Complete login response.]]>
+        <![CDATA[Error message: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'WECHAT_AUTH_FAILED', …(1) } to have property 'token'
+   at Object.eval sandbox-script.js:2:9).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="4. Complete E2E Flow / 4.2 E2E: Bind Phone After Login" id="bdce0087-7870-4806-b3dd-d259dabc2c24" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.029">
-    <testcase name="Status code is 200" time="0.029" classname="Us014WeChatMiniProgramAuthentication"/>
-    <testcase name="Phone bound successfully" time="0.029" classname="Us014WeChatMiniProgramAuthentication"/>
+  <testsuite name="4. Complete E2E Flow / 4.2 E2E: Bind Phone After Login" id="a3dacaf6-6e92-48ba-88a8-c1427e877320" timestamp="2025-12-11T09:37:23.459Z" tests="2" failures="2" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 4. Complete E2E Flow / 4.2 E2E: Bind Phone After Login.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:10).]]>
+      </failure>
+    </testcase>
+    <testcase name="Phone bound successfully" time="0.002" classname="Us014WeChatMiniProgramAuthentication">
+      <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'phone'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: us-014-wechat-auth.]]>
+        <![CDATA[Collection name: US-014 WeChat Mini-Program Authentication.]]>
+        <![CDATA[Request name: 4. Complete E2E Flow / 4.2 E2E: Bind Phone After Login.]]>
+        <![CDATA[Test description: Phone bound successfully.]]>
+        <![CDATA[Error message: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'phone'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'INTERNAL_ERROR', …(1) } to have property 'phone'
+   at Object.eval sandbox-script.js:2:10).]]>
+      </failure>
+    </testcase>
   </testsuite>
-  <testsuite name="5. Health Check / 5.1 Server Health Check" id="edb43cee-1524-44a6-96ef-d2c767a11b97" timestamp="2025-11-28T07:56:06.994Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="5. Health Check / 5.1 Server Health Check" id="24f01249-2a0b-4748-a6f3-d209270294d6" timestamp="2025-12-11T09:37:23.459Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
     <testcase name="Server is healthy" time="0.001" classname="Us014WeChatMiniProgramAuthentication"/>
   </testsuite>

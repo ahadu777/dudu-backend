@@ -7,7 +7,7 @@ import { mockDataStore } from '../../core/mock/data';
 import { AppDataSource } from '../../config/database';
 import { VenueRepository } from '../venue/domain/venue.repository';
 import { dataSourceConfig } from '../../config/data-source';
-import { ProductEntity } from '../ota/domain/product.entity';
+import { ProductEntity } from '../../models';
 
 const router = Router();
 
@@ -53,62 +53,22 @@ router.post('/decrypt', async (req: Request, res: Response) => {
 
     // Step 2: Fetch complete ticket information
     // Note: No ownership validation here since encrypted_data itself is the security credential
-    // Try all sources without prefix-based restrictions
+    // Query tickets from local database (tickets table for miniprogram, pre_generated_tickets for OTA)
 
     let ticket;
     let ticketType = 'NORMAL';
+    let venueRepo: VenueRepository | null = null;
 
-    // Try Directus first (primary source for customer-created tickets)
-    try {
-      const { DirectusService } = await import('../../utils/directus');
-      const directusService = new DirectusService();
-      ticket = await directusService.getTicketByNumber(ticketCode);
-      if (ticket) {
-        ticketType = 'DIRECTUS';
-        logger.info('qr.decrypt.ticket_source', {
-          ticket_code: ticketCode,
-          source: 'directus',
-          status: ticket.status
-        });
-      }
-    } catch (error) {
-      logger.warn('qr.decrypt.directus_lookup_failed', {
-        ticket_code: ticketCode,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-
-    // Try database second (if available - OTA tickets)
-    if (!ticket && dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
-      const venueRepo = new VenueRepository(AppDataSource);
+    // Query local database first (OTA pre_generated_tickets + miniprogram tickets)
+    if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+      venueRepo = new VenueRepository(AppDataSource);
       ticket = await venueRepo.getTicketByCode(ticketCode);
       if (ticket) {
-        ticketType = 'OTA';
+        ticketType = ticket.ticket_type || (ticketCode.startsWith('MP-') ? 'MINIPROGRAM' : 'OTA');
         logger.info('qr.decrypt.ticket_source', {
           ticket_code: ticketCode,
-          source: 'database'
-        });
-      }
-    }
-
-    // Fallback to mock stores if not found in Directus or database
-    if (!ticket) {
-      ticket = mockDataStore.preGeneratedTickets.get(ticketCode);
-      if (ticket) {
-        ticketType = 'OTA';
-        logger.info('qr.decrypt.ticket_source', {
-          ticket_code: ticketCode,
-          source: 'mock_pregenerated'
-        });
-      }
-    }
-
-    if (!ticket) {
-      ticket = mockDataStore.getTicketByCode(ticketCode);
-      if (ticket) {
-        logger.info('qr.decrypt.ticket_source', {
-          ticket_code: ticketCode,
-          source: 'mock_store'
+          source: 'database',
+          ticket_type: ticketType
         });
       }
     }
@@ -117,6 +77,56 @@ router.post('/decrypt', async (req: Request, res: Response) => {
       return res.status(404).json({
         error: 'TICKET_NOT_FOUND',
         message: 'Ticket not found',
+        jti: result.data.jti,
+        ticket_code: ticketCode
+      });
+    }
+
+    // ========================================
+    // 小程序票券 QR 过期检查
+    // - OTA 票券：QR 码长期有效，不检查过期
+    // - 小程序票券：QR 码有 30 分钟有效期，过期后需重新生成
+    // ========================================
+    if (ticketType === 'MINIPROGRAM' && result.is_expired) {
+      logger.warn('qr.decrypt.qr_expired', {
+        ticket_code: ticketCode,
+        ticket_type: ticketType,
+        qr_expires_at: result.data.expires_at,
+        reason: 'Miniprogram QR code has expired'
+      });
+      return res.status(401).json({
+        error: 'QR_EXPIRED',
+        message: '二维码已过期，请重新生成',
+        jti: result.data.jti,
+        ticket_code: ticketCode,
+        expires_at: result.data.expires_at
+      });
+    }
+
+    // JTI 验证：检查二维码是否已被新码替代（一码失效机制）
+    // - OTA 票券：current_jti 存储在 raw.jti.current_jti
+    // - 小程序票券：current_jti 存储在 extra.current_jti
+    let currentJti: string | undefined;
+
+    // OTA 票券
+    if (ticket.raw?.jti?.current_jti) {
+      currentJti = ticket.raw.jti.current_jti;
+    }
+    // 小程序票券
+    else if (ticket.extra?.current_jti) {
+      currentJti = ticket.extra.current_jti;
+    }
+
+    if (currentJti && currentJti !== result.data.jti) {
+      logger.warn('qr.decrypt.jti_mismatch', {
+        ticket_code: ticketCode,
+        qr_jti: result.data.jti,
+        current_jti: currentJti,
+        ticket_type: ticketType
+      });
+      return res.status(401).json({
+        error: 'QR_SUPERSEDED',
+        message: '此二维码已失效，请重新生成',
         jti: result.data.jti,
         ticket_code: ticketCode
       });
@@ -174,6 +184,32 @@ router.post('/decrypt', async (req: Request, res: Response) => {
       };
     });
 
+    // Fetch reservation information for slot_date and slot_time (using TypeORM)
+    let reservationInfo: { slot_date: string | null; slot_time: string | null } = {
+      slot_date: null,
+      slot_time: null
+    };
+
+    if (venueRepo) {
+      try {
+        const slotInfo = await venueRepo.getTicketReservationSlot(ticketCode);
+        if (slotInfo) {
+          reservationInfo = slotInfo;
+          logger.info('qr.decrypt.reservation_found', {
+            ticket_code: ticketCode,
+            slot_date: reservationInfo.slot_date,
+            slot_time: reservationInfo.slot_time
+          });
+        }
+      } catch (error) {
+        logger.warn('qr.decrypt.reservation_lookup_failed', {
+          ticket_code: ticketCode,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        // Continue without reservation info - not a fatal error
+      }
+    }
+
     // Return complete information: QR metadata + ticket details
     return res.status(200).json({
       // QR code metadata (解密信息)
@@ -195,6 +231,9 @@ router.post('/decrypt', async (req: Request, res: Response) => {
           email: ticket.customer_email || null,      // 顾客邮箱
           phone: ticket.customer_phone || null       // 顾客电话
         },
+        // Reservation information (预订信息)
+        slot_date: reservationInfo.slot_date,        // 预订日期 (e.g., "2025-01-15")
+        slot_time: reservationInfo.slot_time,        // 预订时段 (e.g., "10:00 - 12:00")
         entitlements: formattedEntitlements,
         product_info: productInfo,
         // Additional fields for debugging
@@ -352,7 +391,8 @@ router.post('/public/:code', async (req: Request, res: Response, next: NextFunct
     }
 
     // Validate ticket status - only allow QR generation for valid statuses
-    const validStatuses = ['RESERVED', 'ACTIVATED', 'PRE_GENERATED', 'ACTIVE', 'active', 'partially_redeemed'];
+    // 统一状态：使用 ACTIVATED（不再使用 ACTIVE）
+    const validStatuses = ['RESERVED', 'ACTIVATED', 'PRE_GENERATED', 'active', 'partially_redeemed'];
     if (!validStatuses.includes(ticket.status)) {
       logger.warn('qr.public.invalid_status', {
         ticket_code: ticketCode,
@@ -422,8 +462,35 @@ router.post('/public/:code', async (req: Request, res: Response, next: NextFunct
     // Import QR generation utility
     const { generateSecureQR } = await import('../../utils/qr-crypto');
 
-    // Generate QR code with calculated expiry
-    const qrResult = await generateSecureQR(ticketCode, expiryMinutes);
+    // Get product QR color config (if ticket has product_id)
+    let qrColorConfig;
+    const productId = (ticket as any).product_id;
+    if (productId && dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+      try {
+        const productRepo = AppDataSource.getRepository(ProductEntity);
+        const product = await productRepo.findOne({ where: { id: productId } });
+        if (product?.qr_config) {
+          qrColorConfig = {
+            dark_color: product.qr_config.dark_color,
+            light_color: product.qr_config.light_color
+          };
+          logger.debug('qr.public.color_config_loaded', {
+            ticket_code: ticketCode,
+            product_id: productId,
+            qr_config: qrColorConfig
+          });
+        }
+      } catch (error) {
+        logger.warn('qr.public.color_config_error', {
+          ticket_code: ticketCode,
+          product_id: productId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Generate QR code with calculated expiry and color config
+    const qrResult = await generateSecureQR(ticketCode, expiryMinutes, undefined, qrColorConfig);
 
     // Calculate remaining time
     const expiresAt = new Date(qrResult.expires_at);
@@ -703,7 +770,7 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
           phone: ticket.customer_phone || null       // 顾客电话
         },
         entitlements: formattedEntitlements,
-        can_generate_qr: ['PRE_GENERATED', 'ACTIVE', 'USED', 'active', 'partially_redeemed'].includes(ticket.status),
+        can_generate_qr: ['PRE_GENERATED', 'ACTIVATED', 'VERIFIED', 'active', 'partially_redeemed'].includes(ticket.status),
         product_info: productInfo,
         // Additional fields for backward compatibility and debugging
         product_id: ticket.product_id,
@@ -725,381 +792,5 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
     next(error);
   }
 });
-
-/**
- * GET /qr/verify
- *
- * Verify ticket QR code scanned by WeChat
- * This endpoint is designed for WeChat in-app browser display
- *
- * @query t - Encrypted token (contains all ticket info)
- * @returns HTML page showing ticket verification status
- */
-router.get('/verify', async (req: Request, res: Response) => {
-  try {
-    const encryptedToken = req.query.t as string;
-
-    logger.info('qr.verify.request', {
-      has_token: !!encryptedToken,
-      user_agent: req.headers['user-agent'],
-      ip: req.ip
-    });
-
-    // Validate parameters
-    if (!encryptedToken) {
-      return res.status(400).send(generateErrorHTML(
-        '参数错误',
-        '二维码格式不正确，请重新扫描',
-        'INVALID_PARAMETERS'
-      ));
-    }
-
-    // Decrypt and verify token (contains all info including ticket_code)
-    let decryptResult;
-    try {
-      decryptResult = await decryptAndVerifyQR(encryptedToken);
-    } catch (error) {
-      logger.warn('qr.verify.decryption_failed', {
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-      return res.status(401).send(generateErrorHTML(
-        '验证失败',
-        '二维码已过期或无效，请重新生成',
-        'TOKEN_EXPIRED_OR_INVALID'
-      ));
-    }
-
-    const decryptedData = decryptResult.data;
-    const ticketCode = decryptedData.ticket_code; // Get ticket code from decrypted data
-
-    // Check token expiration
-    if (decryptResult.is_expired) {
-      const expiredAt = new Date(decryptedData.expires_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-      return res.status(401).send(generateErrorHTML(
-        '二维码已过期',
-        `此二维码已于 ${expiredAt} 过期，请重新生成`,
-        'QR_EXPIRED'
-      ));
-    }
-
-    // Fetch ticket information
-    let ticket;
-    let ticketType = 'NORMAL';
-
-    // Try OTA tickets first
-    const otaTicket = mockDataStore.preGeneratedTickets.get(ticketCode);
-    if (otaTicket) {
-      ticket = {
-        code: otaTicket.ticket_code,
-        product_id: otaTicket.product_id,
-        status: otaTicket.status,
-        order_id: otaTicket.order_id,
-        batch_id: otaTicket.batch_id,
-        partner_id: otaTicket.partner_id
-      };
-      ticketType = 'OTA';
-    } else {
-      // Try normal tickets
-      const normalTicket = mockDataStore.getTicketByCode(ticketCode);
-      if (normalTicket) {
-        ticket = {
-          code: normalTicket.code,
-          status: normalTicket.status,
-          order_id: normalTicket.order_id?.toString()
-        };
-      }
-    }
-
-    if (!ticket) {
-      return res.status(404).send(generateErrorHTML(
-        '票券不存在',
-        '未找到此票券，请联系客服',
-        'TICKET_NOT_FOUND'
-      ));
-    }
-
-    // Get product information
-    const product = mockDataStore.getProduct(ticket.product_id || 0);
-
-    // Generate success HTML
-    const expiresAt = new Date(decryptedData.expires_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-    const timeRemaining = decryptResult.remaining_seconds > 0
-      ? Math.floor(decryptResult.remaining_seconds / 60)
-      : 0;
-
-    logger.info('qr.verify.success', {
-      ticket_code: ticketCode,
-      ticket_type: ticketType,
-      status: ticket.status,
-      product_name: product?.name
-    });
-
-    return res.status(200).send(generateSuccessHTML(
-      ticketCode,
-      ticket,
-      product,
-      expiresAt,
-      timeRemaining,
-      ticketType
-    ));
-
-  } catch (error) {
-    logger.error('qr.verify.error', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    });
-
-    return res.status(500).send(generateErrorHTML(
-      '系统错误',
-      '验证过程中发生错误，请稍后重试',
-      'INTERNAL_ERROR'
-    ));
-  }
-});
-
-// Helper functions for HTML generation
-function generateSuccessHTML(
-  ticketCode: string,
-  ticket: any,
-  product: any,
-  expiresAt: string,
-  timeRemaining: number,
-  ticketType: string
-): string {
-  const statusText = getStatusText(ticket.status);
-  const statusColor = getStatusColor(ticket.status);
-
-  return `
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>票券验证成功</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .container {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      max-width: 500px;
-      width: 100%;
-    }
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 30px;
-      text-align: center;
-      border-radius: 20px 20px 0 0;
-    }
-    .checkmark {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: white;
-      margin: 0 auto 15px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 36px;
-    }
-    .content {
-      padding: 30px;
-    }
-    .ticket-code {
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: 10px;
-      text-align: center;
-      margin-bottom: 20px;
-      font-family: monospace;
-      font-size: 18px;
-      font-weight: bold;
-      letter-spacing: 2px;
-      color: #667eea;
-    }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 15px 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .label { color: #666; font-size: 14px; }
-    .value { color: #333; font-weight: 600; font-size: 16px; text-align: right; }
-    .status {
-      display: inline-block;
-      padding: 5px 15px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .status-active { background: #d4edda; color: #155724; }
-    .status-used { background: #f8d7da; color: #721c24; }
-    .status-pending { background: #fff3cd; color: #856404; }
-    .timer {
-      background: #e7f3ff;
-      color: #0066cc;
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
-      margin-top: 15px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .footer {
-      text-align: center;
-      padding: 20px;
-      color: #999;
-      font-size: 12px;
-      background: #f8f9fa;
-      border-radius: 0 0 20px 20px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="checkmark">✓</div>
-      <h1>票券验证成功</h1>
-    </div>
-    <div class="content">
-      <div class="ticket-code">${ticketCode}</div>
-      ${product ? `<div class="info-row"><span class="label">产品名称</span><span class="value">${product.name}</span></div>` : ''}
-      <div class="info-row"><span class="label">票券状态</span><span class="value"><span class="status ${statusColor}">${statusText}</span></span></div>
-      <div class="info-row"><span class="label">票券类型</span><span class="value">${ticketType === 'OTA' ? 'OTA合作伙伴' : '直销票券'}</span></div>
-      ${ticket.order_id ? `<div class="info-row"><span class="label">订单编号</span><span class="value">${ticket.order_id}</span></div>` : ''}
-      <div class="info-row"><span class="label">验证时间</span><span class="value">${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span></div>
-      ${timeRemaining > 0 ? `<div class="timer">⏱️ 此二维码将在 ${timeRemaining} 分钟后过期</div>` : ''}
-    </div>
-    <div class="footer">
-      <p>此页面仅供验证使用</p>
-    </div>
-  </div>
-</body>
-</html>
-  `;
-}
-
-function generateErrorHTML(title: string, message: string, code: string): string {
-  return `
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .container {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      max-width: 500px;
-      width: 100%;
-      text-align: center;
-    }
-    .header {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      color: white;
-      padding: 30px;
-      border-radius: 20px 20px 0 0;
-    }
-    .error-icon {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: white;
-      margin: 0 auto 15px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 36px;
-    }
-    .content { padding: 30px; }
-    .message {
-      font-size: 16px;
-      color: #666;
-      line-height: 1.6;
-      margin-bottom: 20px;
-    }
-    .error-code {
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 8px;
-      font-family: monospace;
-      font-size: 12px;
-      color: #999;
-    }
-    .footer {
-      padding: 20px;
-      background: #f8f9fa;
-      color: #999;
-      font-size: 12px;
-      border-radius: 0 0 20px 20px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="error-icon">✕</div>
-      <h1>${title}</h1>
-    </div>
-    <div class="content">
-      <p class="message">${message}</p>
-      <div class="error-code">错误代码: ${code}</div>
-    </div>
-    <div class="footer">
-      <p>如有疑问，请联系客服</p>
-    </div>
-  </div>
-</body>
-</html>
-  `;
-}
-
-function getStatusText(status: string): string {
-  const statusMap: { [key: string]: string } = {
-    'PRE_GENERATED': '待激活',
-    'ACTIVE': '可使用',
-    'pending': '待激活',
-    'active': '可使用',
-    'used': '已使用',
-    'expired': '已过期',
-    'partially_redeemed': '部分使用'
-  };
-  return statusMap[status] || status;
-}
-
-function getStatusColor(status: string): string {
-  const colorMap: { [key: string]: string } = {
-    'PRE_GENERATED': 'status-pending',
-    'ACTIVE': 'status-active',
-    'pending': 'status-pending',
-    'active': 'status-active',
-    'used': 'status-used',
-    'expired': 'status-used',
-    'partially_redeemed': 'status-active'
-  };
-  return colorMap[status] || 'status-pending';
-}
 
 export default router;

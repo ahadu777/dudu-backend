@@ -2,20 +2,21 @@
 card: "OTA Channel Management - Inventory Allocation and Reservation"
 slug: ota-channel-management
 team: "A - Commerce"
-oas_paths: ["/api/ota/inventory", "/api/ota/reserve"]
-migrations: ["db/migrations/0010_channel_inventory.sql", "db/migrations/0011_channel_reservations.sql"]
-status: "Done"
+oas_paths: ["/api/ota/inventory"]
+migrations: ["db/migrations/0010_channel_inventory.sql"]
+status: "deprecated"
 readiness: "mvp"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/us-012-ota-integration-e2e.xml"
-last_update: "2025-11-03T17:37:00+08:00"
+last_update: "2025-12-09T10:50:00+08:00"
 related_stories: ["US-012"]
+deprecation_note: "Reservation APIs (/api/ota/reserve, /api/ota/reservations/*) removed - use ticket-reservation module for C-end time slot booking"
 relationships:
   enhanced_by: ["ota-authentication-middleware"]
   depends_on: ["catalog-endpoint", "order-create"]
   triggers: ["ota-order-processing"]
-  data_dependencies: ["Product", "ProductInventory", "ChannelReservation"]
+  data_dependencies: ["Product", "ProductInventory"]
   integration_points:
     data_stores: ["data.ts", "store.ts"]
     external_apis: ["OTA Partner Platforms"]

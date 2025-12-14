@@ -182,7 +182,7 @@ export class CustomerReservationServiceMock {
       };
     }
 
-    if (!/^[\d\s\+\-\(\)]+$/.test(customer_phone)) {
+    if (!/^[\d\s+\-()]+$/.test(customer_phone)) {
       return {
         success: false,
         error: 'Valid phone number is required',
@@ -214,8 +214,9 @@ export class CustomerReservationServiceMock {
         };
       }
 
-      // Get customer info from validated ticket
-      const { customer_email, customer_phone } = validation.ticket;
+      // Get customer info and orq from validated ticket
+      const { customer_email, customer_phone, orq: ticketOrq } = validation.ticket;
+      const reservationOrq = ticketOrq || 1; // Default to 1 if not available
 
       if (!customer_email || !customer_phone) {
         return {
@@ -258,13 +259,13 @@ export class CustomerReservationServiceMock {
       const reservation: TicketReservation = {
         id: reservationId,
         ticket_code,
-        slot_id: parseInt(slot_id),
+        slot_id: slot_id, // Keep as string
         visitor_name: customer_email, // Use customer_email from ticket
         visitor_phone: customer_phone, // Use customer_phone from ticket
         status: 'RESERVED',
         reserved_at: new Date().toISOString(),
         verified_at: null,
-        orq,
+        orq: reservationOrq,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -294,7 +295,7 @@ export class CustomerReservationServiceMock {
         data: {
           reservation_id: reservationId,
           ticket_code,
-          slot_id: parseInt(slot_id),
+          slot_id: slot_id, // Keep as string
           slot_date: slot.date,
           slot_time: `${slot.start_time} - ${slot.end_time}`,
           customer_email,

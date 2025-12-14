@@ -2,7 +2,7 @@
 card: "Customer Reservation Portal - Ticket Validation & Booking"
 slug: customer-reservation-portal
 team: "B - Fulfillment"
-oas_paths: ["/api/tickets/validate", "/api/reservation-slots/available", "/api/reservations/create"]
+oas_paths: ["/api/tickets/validate", "/api/reservations/create"]
 migrations: ["db/migrations/0021_ticket_reservations.sql"]
 status: "Done"
 readiness: "mvp"

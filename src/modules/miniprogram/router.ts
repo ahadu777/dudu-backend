@@ -1,13 +1,16 @@
 import { Router } from 'express';
-import { mockDataStore } from '../../core/mock/data';
 import { logger } from '../../utils/logger';
-import { AppDataSource } from '../../config/database';
-import { ProductEntity } from '../ota/domain/product.entity';
-import { ProductInventoryEntity } from '../ota/domain/product-inventory.entity';
-import { dataSourceConfig } from '../../config/data-source';
-import { paginationMiddleware, formatPaginatedResponse } from '../../middlewares/pagination';
+import { paginationMiddleware } from '../../middlewares/pagination';
+import { authenticate } from '../../middlewares/auth';
+import { MiniprogramOrderService } from './order.service';
+import { MiniprogramProductService } from './product.service';
+import { MiniprogramProfileService } from './profile.service';
+import { CreateOrderRequest } from './order.types';
 
 const router = Router();
+const orderService = new MiniprogramOrderService();
+const productService = new MiniprogramProductService();
+const profileService = new MiniprogramProfileService();
 
 /**
  * GET /miniprogram/products
@@ -17,131 +20,27 @@ router.get('/products', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }
   const startTime = Date.now();
 
   try {
-    // 获取查询参数
     const category = req.query.category as string | undefined;
     const { page, limit, offset } = req.pagination;
 
-    // Check if database is available
-    const useDatabase = dataSourceConfig.useDatabase && AppDataSource.isInitialized;
+    const result = await productService.getProductList({ category, offset: offset!, limit });
 
-    let allProducts: any[];
-
-    if (useDatabase) {
-      // Database mode: Get products with inventory from database
-      const productRepo = AppDataSource.getRepository(ProductEntity);
-      const inventoryRepo = AppDataSource.getRepository(ProductInventoryEntity);
-
-      const dbProducts = await productRepo.createQueryBuilder('product')
-        .leftJoinAndSelect('product.inventory', 'inventory')
-        .where('product.status = :status', { status: 'active' })
-        .getMany();
-
-      // Transform database products to common format
-      allProducts = dbProducts.map(p => {
-        const inventory = p.inventory && p.inventory.length > 0 ? p.inventory[0] : null;
-
-        // Convert entitlements to functions format
-        const functions = p.entitlements ? p.entitlements.map((e: any) => ({
-          function_code: e.type,
-          function_name: e.description,
-          max_uses: e.quantity || 1
-        })) : [];
-
-        return {
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          unit_price: Number(p.base_price),
-          base_price: Number(p.base_price),
-          active: p.status === 'active',
-          functions: functions,
-          channel_allocations: inventory ? inventory.channel_allocations : {}
-        };
-      });
-    } else {
-      // Mock mode: Get products from mockDataStore
-      allProducts = mockDataStore.getActiveProducts();
-    }
-
-    // 过滤：只显示 direct channel 有库存的商品
-    let filteredProducts = allProducts.filter(product => {
-      const directAllocation = product.channel_allocations['direct'];
-      if (!directAllocation) return false;
-
-      // 计算可售数量 = allocated - reserved - sold
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-      return available > 0;
-    });
-
-    // 分类过滤（如果提供）
-    if (category) {
-      // 暂时跳过分类过滤，因为 mock data 中没有 category 字段
-      // 可以在后续根据实际需求添加
-    }
-
-    // 转换为 API 响应格式
-    const products = filteredProducts.map(product => {
-      const directAllocation = product.channel_allocations['direct'];
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-
-      // 计算库存状态
-      let status: 'in_stock' | 'low_stock' | 'out_of_stock';
-      if (available > 10) {
-        status = 'in_stock';
-      } else if (available > 0 && available <= 10) {
-        status = 'low_stock';
-      } else {
-        status = 'out_of_stock';
-      }
-
-      return {
-        id: product.id,
-        sku: product.sku,
-        name: product.name,
-        description: product.description,
-        base_price: product.unit_price,
-        functions: product.functions.map((f: any) => ({
-          function_code: f.function_code,
-          label: f.function_name,
-          quantity: f.max_uses
-        })),
-        availability: {
-          available: available,
-          allocated: directAllocation.allocated,
-          status: status
-        },
-        status: product.active ? 'active' : 'inactive'
-      };
-    });
-
-    // 分页 - 使用 offset (由中间件自动计算)
-    const total = products.length;
-    const paginatedProducts = products.slice(offset!, offset! + limit);
-
-    // 使用标准的分页响应格式
-    const response = formatPaginatedResponse(paginatedProducts, total, req.pagination);
-
-    // 将 items 重命名为 products 以匹配 API 规范
-    const apiResponse = {
-      total: response.total,
-      page: response.page,
-      page_size: response.page_size,
-      products: response.items
-    };
-
-    // 记录日志
     logger.info('miniprogram.products.list', {
-      total: apiResponse.total,
-      page: apiResponse.page,
-      page_size: apiResponse.page_size,
-      returned: apiResponse.products.length
+      total: result.total,
+      page,
+      page_size: limit,
+      returned: result.products.length
     });
 
-    // 记录响应时间
     const latency = Date.now() - startTime;
     logger.info('miniprogram.products.list.latency', { latency_ms: latency });
 
-    res.status(200).json(apiResponse);
+    res.status(200).json({
+      total: result.total,
+      page,
+      page_size: limit,
+      products: result.products
+    });
 
   } catch (error) {
     logger.error('miniprogram.products.list.error', { error: String(error) });
@@ -169,156 +68,14 @@ router.get('/products/:id', async (req, res) => {
       });
     }
 
-    // Check if database is available
-    const useDatabase = dataSourceConfig.useDatabase && AppDataSource.isInitialized;
+    const product = await productService.getProductDetail(productId);
 
-    let product: any = null;
-
-    if (useDatabase) {
-      // Database mode
-      const productRepo = AppDataSource.getRepository(ProductEntity);
-      const inventoryRepo = AppDataSource.getRepository(ProductInventoryEntity);
-
-      const dbProduct = await productRepo.createQueryBuilder('product')
-        .leftJoinAndSelect('product.inventory', 'inventory')
-        .where('product.id = :id', { id: productId })
-        .andWhere('product.status = :status', { status: 'active' })
-        .getOne();
-
-      if (!dbProduct) {
-        logger.info('miniprogram.product.not_found', { product_id: productId });
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product not found or not available for mini-program'
-        });
-      }
-
-      const inventory = dbProduct.inventory && dbProduct.inventory.length > 0 ? dbProduct.inventory[0] : null;
-      const directAllocation = inventory?.channel_allocations?.['direct'];
-
-      if (!directAllocation) {
-        logger.info('miniprogram.product.no_direct_channel', { product_id: productId });
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product not available for mini-program'
-        });
-      }
-
-      // Calculate availability
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-
-      if (available <= 0) {
-        logger.info('miniprogram.product.out_of_stock', { product_id: productId });
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product is out of stock'
-        });
-      }
-
-      // Convert entitlements to functions format
-      const functions = dbProduct.entitlements ? dbProduct.entitlements.map((e: any) => ({
-        function_code: e.type,
-        label: e.description,
-        quantity: e.quantity || 1
-      })) : [];
-
-      // Calculate status
-      let status: 'in_stock' | 'low_stock' | 'out_of_stock';
-      if (available > 10) {
-        status = 'in_stock';
-      } else if (available > 0 && available <= 10) {
-        status = 'low_stock';
-      } else {
-        status = 'out_of_stock';
-      }
-
-      product = {
-        id: dbProduct.id,
-        name: dbProduct.name,
-        description: dbProduct.description,
-        category: dbProduct.category,
-        base_price: Number(dbProduct.base_price),
-        weekend_premium: dbProduct.weekend_premium ? Number(dbProduct.weekend_premium) : undefined,
-        customer_discounts: dbProduct.customer_discounts,
-        functions: functions,
-        availability: {
-          channel: 'direct',
-          available: available,
-          allocated: directAllocation.allocated,
-          reserved: directAllocation.reserved,
-          sold: directAllocation.sold,
-          status: status
-        },
-        status: dbProduct.status,
-        images: [], // Placeholder for future implementation
-        terms_and_conditions: null // Placeholder for future implementation
-      };
-    } else {
-      // Mock mode
-      const mockProduct = mockDataStore.getProduct(productId);
-
-      if (!mockProduct) {
-        logger.info('miniprogram.product.not_found', { product_id: productId });
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product not found'
-        });
-      }
-
-      if (!mockProduct.active) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product is not active'
-        });
-      }
-
-      const directAllocation = mockProduct.channel_allocations['direct'];
-      if (!directAllocation) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product not available for mini-program'
-        });
-      }
-
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-
-      if (available <= 0) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product is out of stock'
-        });
-      }
-
-      let status: 'in_stock' | 'low_stock' | 'out_of_stock';
-      if (available > 10) {
-        status = 'in_stock';
-      } else if (available > 0 && available <= 10) {
-        status = 'low_stock';
-      } else {
-        status = 'out_of_stock';
-      }
-
-      product = {
-        id: mockProduct.id,
-        sku: mockProduct.sku,
-        name: mockProduct.name,
-        description: mockProduct.description,
-        base_price: mockProduct.unit_price,
-        functions: mockProduct.functions.map((f: any) => ({
-          function_code: f.function_code,
-          label: f.function_name,
-          quantity: f.max_uses
-        })),
-        availability: {
-          channel: 'direct',
-          available: available,
-          allocated: directAllocation.allocated,
-          reserved: directAllocation.reserved,
-          sold: directAllocation.sold,
-          status: status
-        },
-        status: mockProduct.active ? 'active' : 'inactive'
-      };
+    if (!product) {
+      logger.info('miniprogram.product.not_found', { product_id: productId });
+      return res.status(404).json({
+        code: 'NOT_FOUND',
+        message: 'Product not found or not available'
+      });
     }
 
     logger.info('miniprogram.product.detail', {
@@ -358,124 +115,510 @@ router.get('/products/:id/availability', async (req, res) => {
       });
     }
 
-    // Check if database is available
-    const useDatabase = dataSourceConfig.useDatabase && AppDataSource.isInitialized;
+    const availability = await productService.checkAvailability(productId, quantity);
 
-    let availabilityData: any = null;
-
-    if (useDatabase) {
-      // Database mode
-      const inventoryRepo = AppDataSource.getRepository(ProductInventoryEntity);
-
-      const inventory = await inventoryRepo.findOne({
-        where: { product_id: productId },
-        relations: ['product']
+    if (!availability) {
+      logger.info('miniprogram.availability.not_found', { product_id: productId });
+      return res.status(404).json({
+        code: 'NOT_FOUND',
+        message: 'Product not found or not available'
       });
-
-      if (!inventory || !inventory.product) {
-        logger.info('miniprogram.availability.not_found', { product_id: productId });
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product not found'
-        });
-      }
-
-      const directAllocation = inventory.channel_allocations?.['direct'];
-
-      if (!directAllocation) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product not available for mini-program'
-        });
-      }
-
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-      const isAvailable = available >= quantity;
-
-      let status: 'in_stock' | 'low_stock' | 'out_of_stock';
-      if (available > 10) {
-        status = 'in_stock';
-      } else if (available > 0 && available <= 10) {
-        status = 'low_stock';
-      } else {
-        status = 'out_of_stock';
-      }
-
-      availabilityData = {
-        product_id: productId,
-        channel: 'direct',
-        available: available,
-        allocated: directAllocation.allocated,
-        reserved: directAllocation.reserved,
-        sold: directAllocation.sold,
-        is_available: isAvailable,
-        requested_quantity: quantity,
-        status: status,
-        last_updated: new Date().toISOString()
-      };
-    } else {
-      // Mock mode
-      const mockProduct = mockDataStore.getProduct(productId);
-
-      if (!mockProduct) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product not found'
-        });
-      }
-
-      const directAllocation = mockProduct.channel_allocations['direct'];
-
-      if (!directAllocation) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'Product not available for mini-program'
-        });
-      }
-
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-      const isAvailable = available >= quantity;
-
-      let status: 'in_stock' | 'low_stock' | 'out_of_stock';
-      if (available > 10) {
-        status = 'in_stock';
-      } else if (available > 0 && available <= 10) {
-        status = 'low_stock';
-      } else {
-        status = 'out_of_stock';
-      }
-
-      availabilityData = {
-        product_id: productId,
-        channel: 'direct',
-        available: available,
-        allocated: directAllocation.allocated,
-        reserved: directAllocation.reserved,
-        sold: directAllocation.sold,
-        is_available: isAvailable,
-        requested_quantity: quantity,
-        status: status,
-        last_updated: new Date().toISOString()
-      };
     }
 
     logger.info('miniprogram.availability.check', {
       product_id: productId,
       requested_quantity: quantity,
-      available: availabilityData.available,
-      is_available: availabilityData.is_available
+      available: availability.available,
+      is_available: availability.is_available
     });
 
     const latency = Date.now() - startTime;
     logger.info('miniprogram.availability.latency', { latency_ms: latency });
 
-    res.status(200).json(availabilityData);
+    res.status(200).json(availability);
 
   } catch (error) {
     logger.error('miniprogram.availability.error', { error: String(error) });
     res.status(500).json({
       code: 'INTERNAL_ERROR',
       message: 'Failed to check availability'
+    });
+  }
+});
+
+// ========== 订单相关 API ==========
+
+/**
+ * POST /miniprogram/orders
+ * 创建订单
+ */
+router.post('/orders', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const request: CreateOrderRequest = req.body;
+
+    // 参数校验
+    if (!request.order_no) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '订单号不能为空'
+      });
+    }
+
+    if (!request.product_id) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '产品ID不能为空'
+      });
+    }
+
+    if (!request.travel_date) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '出行日期不能为空'
+      });
+    }
+
+    if (!request.customer_breakdown || request.customer_breakdown.length === 0) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '客户明细不能为空'
+      });
+    }
+
+    // 验证客户明细
+    for (const item of request.customer_breakdown) {
+      if (!['adult', 'child', 'elderly'].includes(item.customer_type)) {
+        return res.status(400).json({
+          code: 'INVALID_REQUEST',
+          message: `无效的客户类型: ${item.customer_type}`
+        });
+      }
+      if (!item.count || item.count < 1) {
+        return res.status(400).json({
+          code: 'INVALID_REQUEST',
+          message: '客户数量必须大于0'
+        });
+      }
+    }
+
+    const response = await orderService.createOrder(userId, request);
+    res.status(201).json(response);
+
+  } catch (error: any) {
+    logger.error('miniprogram.order.create.error', { error: error.message || String(error) });
+
+    if (error.code) {
+      const statusMap: Record<string, number> = {
+        'PRODUCT_NOT_FOUND': 404,
+        'INVENTORY_NOT_FOUND': 404,
+        'CHANNEL_NOT_AVAILABLE': 400,
+        'INSUFFICIENT_INVENTORY': 400
+      };
+      const status = statusMap[error.code] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '创建订单失败'
+    });
+  }
+});
+
+/**
+ * GET /miniprogram/orders
+ * 获取订单列表
+ */
+router.get('/orders', authenticate, paginationMiddleware({ defaultLimit: 20, maxLimit: 50 }), async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const { page, limit } = req.pagination;
+    const result = await orderService.getOrderList(userId, page, limit);
+
+    res.status(200).json({
+      orders: result.orders,
+      total: result.total,
+      page,
+      page_size: limit
+    });
+
+  } catch (error: any) {
+    logger.error('miniprogram.order.list.error', { error: error.message || String(error) });
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '获取订单列表失败'
+    });
+  }
+});
+
+/**
+ * GET /miniprogram/orders/:id
+ * 获取订单详情
+ */
+router.get('/orders/:id', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const orderId = parseInt(req.params.id);
+    if (isNaN(orderId)) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '无效的订单ID'
+      });
+    }
+
+    const order = await orderService.getOrderDetail(userId, orderId);
+    if (!order) {
+      return res.status(404).json({
+        code: 'NOT_FOUND',
+        message: '订单不存在'
+      });
+    }
+
+    res.status(200).json(order);
+
+  } catch (error: any) {
+    logger.error('miniprogram.order.detail.error', { error: error.message || String(error) });
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '获取订单详情失败'
+    });
+  }
+});
+
+/**
+ * POST /miniprogram/orders/:id/cancel
+ * 取消订单
+ *
+ * 功能：
+ * 1. 仅允许取消 PENDING 状态的订单
+ * 2. 取消后释放预留库存
+ * 3. 支持幂等调用（已取消的订单再次取消返回成功）
+ *
+ * 使用场景：
+ * - 用户主动取消
+ * - 前端检测到订单超时（expires_at）后自动调用
+ */
+router.post('/orders/:id/cancel', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const orderId = parseInt(req.params.id);
+    if (isNaN(orderId)) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '无效的订单ID'
+      });
+    }
+
+    const result = await orderService.cancelOrder(userId, orderId);
+
+    logger.info('miniprogram.order.cancel.success', {
+      order_id: orderId,
+      user_id: userId
+    });
+
+    res.status(200).json(result);
+
+  } catch (error: any) {
+    logger.error('miniprogram.order.cancel.error', {
+      error: error.message || String(error),
+      code: error.code
+    });
+
+    if (error.code) {
+      const statusMap: Record<string, number> = {
+        'ORDER_NOT_FOUND': 404,
+        'INVALID_ORDER_STATUS': 400
+      };
+      const status = statusMap[error.code] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '取消订单失败'
+    });
+  }
+});
+
+/**
+ * POST /miniprogram/tickets/:code/qr
+ * 为票券生成二维码
+ *
+ * 特性：
+ * 1. 验证票券所有权（必须是当前用户的票券）
+ * 2. 生成新二维码时，旧二维码自动失效（通过 jti 机制）
+ * 3. 默认有效期 30 分钟
+ *
+ * @param code - 票券编码 (ticket_code)
+ * @body expiry_minutes - 可选，二维码有效期（分钟），默认30，最大1440
+ */
+router.post('/tickets/:code/qr', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const ticketCode = req.params.code;
+    if (!ticketCode || ticketCode.length < 3) {
+      return res.status(400).json({
+        code: 'INVALID_TICKET_CODE',
+        message: '无效的票券编码'
+      });
+    }
+
+    // 验证有效期参数
+    let expiryMinutes = 30;
+    if (req.body?.expiry_minutes !== undefined) {
+      expiryMinutes = Number(req.body.expiry_minutes);
+      if (isNaN(expiryMinutes) || expiryMinutes < 1 || expiryMinutes > 1440) {
+        return res.status(400).json({
+          code: 'INVALID_EXPIRY',
+          message: '有效期必须在 1-1440 分钟之间'
+        });
+      }
+    }
+
+    const result = await orderService.generateTicketQR(userId, ticketCode, expiryMinutes);
+
+    logger.info('miniprogram.ticket.qr.success', {
+      ticket_code: ticketCode,
+      user_id: userId,
+      expires_at: result.expires_at
+    });
+
+    res.status(200).json({
+      success: true,
+      qr_image: result.qr_image,
+      encrypted_data: result.encrypted_data,
+      ticket_code: result.ticket_code,
+      expires_at: result.expires_at,
+      valid_for_seconds: result.valid_for_seconds,
+      issued_at: new Date().toISOString(),
+      jti: result.jti
+    });
+
+  } catch (error: any) {
+    logger.error('miniprogram.ticket.qr.error', {
+      error: error.message || String(error),
+      code: error.code
+    });
+
+    if (error.code) {
+      const statusMap: Record<string, number> = {
+        'TICKET_NOT_FOUND': 404,
+        'UNAUTHORIZED': 403,
+        'INVALID_TICKET_STATUS': 400
+      };
+      const status = statusMap[error.code] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '生成二维码失败'
+    });
+  }
+});
+
+/**
+ * POST /miniprogram/orders/:id/simulate-payment
+ * 模拟支付成功（仅用于测试环境）
+ *
+ * 功能：
+ * 1. 将订单状态从 PENDING 更新为 PAID
+ * 2. 确认库存（reserved -> sold）
+ * 3. 自动生成票券
+ *
+ * 注意：此接口仅用于开发测试，生产环境应禁用
+ */
+router.post('/orders/:id/simulate-payment', authenticate, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const orderId = parseInt(req.params.id);
+    if (isNaN(orderId)) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '无效的订单ID'
+      });
+    }
+
+    const result = await orderService.simulatePayment(userId, orderId);
+
+    logger.info('miniprogram.order.simulate_payment.success', {
+      order_id: orderId,
+      user_id: userId,
+      ticket_count: result.tickets?.length || 0
+    });
+
+    res.status(200).json({
+      message: '模拟支付成功',
+      order: result
+    });
+
+  } catch (error: any) {
+    logger.error('miniprogram.order.simulate_payment.error', {
+      error: error.message || String(error),
+      code: error.code
+    });
+
+    if (error.code) {
+      const statusMap: Record<string, number> = {
+        'ORDER_NOT_FOUND': 404,
+        'INVALID_ORDER_STATUS': 400
+      };
+      const status = statusMap[error.code] || 500;
+      return res.status(status).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '模拟支付失败'
+    });
+  }
+});
+
+// ========== 用户资料 API ==========
+
+/**
+ * GET /miniprogram/profile
+ * 获取当前用户资料
+ */
+router.get('/profile', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const profile = await profileService.getProfile(userId);
+
+    if (!profile) {
+      logger.info('miniprogram.profile.not_found', { user_id: userId });
+      return res.status(404).json({
+        code: 'NOT_FOUND',
+        message: '用户不存在'
+      });
+    }
+
+    res.status(200).json(profile);
+
+  } catch (error: any) {
+    logger.error('miniprogram.profile.get.error', {
+      error: error.message || String(error)
+    });
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '获取用户资料失败'
+    });
+  }
+});
+
+/**
+ * POST /miniprogram/profile
+ * 更新用户资料（部分更新）
+ *
+ * Body:
+ * - name?: string - 显示名称
+ * - nickname?: string - 昵称（存储在 wechat_extra 中）
+ */
+router.post('/profile', authenticate, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        code: 'UNAUTHORIZED',
+        message: '请先登录'
+      });
+    }
+
+    const { name, nickname } = req.body;
+
+    // 至少需要一个字段
+    if (name === undefined && nickname === undefined) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: '请提供要更新的字段'
+      });
+    }
+
+    const profile = await profileService.updateProfile(userId, { name, nickname });
+
+    // 日志已在 service 层记录，此处不重复
+
+    res.status(200).json(profile);
+
+  } catch (error: any) {
+    logger.error('miniprogram.profile.update.error', {
+      error: error.message || String(error),
+      code: error.code
+    });
+
+    // 使用 ProfileError 的 statusCode 和 code
+    if (error.statusCode && error.code) {
+      return res.status(error.statusCode).json({
+        code: error.code,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: '更新用户资料失败'
     });
   }
 });

@@ -1,3 +1,15 @@
+---
+id: US-011
+title: Complex Pricing System
+owner: Product
+status: "Done"
+priority: High
+business_requirement: "PRD-001"
+cards:
+  - complex-pricing-engine
+  - schedule-pricing-rules
+---
+
 # Story Analysis: Complex Pricing System (US-011)
 
 ## Story: Dynamic Multi-Variable Pricing

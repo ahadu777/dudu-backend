@@ -9,6 +9,7 @@ branch: ""
 pr: ""
 newman_report: ""
 last_update: "2025-10-19T22:40:00+0800"
+related_stories: ["US-001", "US-004"]
 ---
 
 # Payment webhook — Dev Notes

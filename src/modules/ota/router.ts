@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { otaAuthMiddleware, adminAuthMiddleware } from '../../middlewares/otaAuth';
+import { paginationMiddleware } from '../../middlewares/pagination';
 import { otaService } from './service';
 import { logger } from '../../utils/logger';
 
@@ -85,219 +86,16 @@ router.get('/inventory', otaAuthMiddleware('inventory:read'), async (req: Authen
   }
 });
 
-// POST /api/ota/reserve - Reserve package inventory
-router.post('/reserve', otaAuthMiddleware('reserve:create'), async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { product_id, quantity, reservation_expires_at } = req.body;
-
-    // Validate required fields
-    if (typeof product_id !== 'number' || typeof quantity !== 'number') {
-      return res.status(400).json({
-        error: 'INVALID_REQUEST',
-        message: 'product_id and quantity are required and must be numbers'
-      });
-    }
-
-    const partnerId = getPartnerIdWithFallback(req);
-    const reservation = await otaService.createReservation({
-      product_id,
-      quantity,
-      reservation_expires_at
-    }, partnerId);
-
-    res.status(201).json(reservation);
-
-  } catch (error: any) {
-    logger.error('OTA reservation request failed', {
-      partner: req.ota_partner?.name,
-      error: error.message,
-      request_body: req.body
-    });
-
-    const statusCode = error.code === 'PRODUCT_NOT_FOUND' ? 404 :
-                      error.code === 'SOLD_OUT' ? 409 :
-                      error.code === 'VALIDATION_ERROR' ? 422 : 500;
-
-    res.status(statusCode).json({
-      code: error.code || 'INTERNAL_ERROR',
-      message: error.message || 'Failed to create reservation'
-    });
-  }
-});
-
-// GET /api/ota/reservations/:id - Get reservation details
-router.get('/reservations/:id', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const reservationId = req.params.id;
-    const reservation = await otaService.getReservation(reservationId);
-
-    res.json(reservation);
-
-  } catch (error: any) {
-    logger.error('OTA reservation lookup failed', {
-      partner: req.ota_partner?.name,
-      reservation_id: req.params.id,
-      error: error.message
-    });
-
-    const statusCode = error.code === 'RESERVATION_NOT_FOUND' ? 404 : 500;
-
-    res.status(statusCode).json({
-      code: error.code || 'INTERNAL_ERROR',
-      message: error.message || 'Failed to retrieve reservation'
-    });
-  }
-});
-
-// GET /api/ota/reservations - List active reservations for specific partner
-router.get('/reservations', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const partnerId = getPartnerIdWithFallback(req);
-    const reservations = await otaService.getActiveReservations(partnerId);
-
-    res.json({
-      reservations,
-      total_count: reservations.length
-    });
-
-  } catch (error: any) {
-    logger.error('OTA reservations list failed', {
-      partner: req.ota_partner?.name,
-      error: error.message
-    });
-
-    res.status(500).json({
-      error: 'INTERNAL_ERROR',
-      message: 'Failed to retrieve reservations'
-    });
-  }
-});
-
-// POST /api/ota/reservations/:id/activate - Convert reservation to order
-router.post('/reservations/:id/activate', otaAuthMiddleware('reserve:activate'), async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const reservationId = req.params.id;
-    const { customer_details, customer_type, payment_reference, special_requests } = req.body;
-
-    // Validate required fields
-    if (!customer_details) {
-      return res.status(400).json({
-        error: 'INVALID_REQUEST',
-        message: 'customer_details is required'
-      });
-    }
-
-    if (!customer_details.name) {
-      return res.status(400).json({
-        error: 'INVALID_REQUEST',
-        message: 'customer_details must include name'
-      });
-    }
-
-    // Validate customer_type if provided
-    if (customer_type) {
-      if (!Array.isArray(customer_type)) {
-        return res.status(400).json({
-          error: 'INVALID_REQUEST',
-          message: 'customer_type must be an array'
-        });
-      }
-
-      const validTypes = ['adult', 'child', 'elderly'];
-      for (const type of customer_type) {
-        if (!validTypes.includes(type)) {
-          return res.status(400).json({
-            error: 'INVALID_REQUEST',
-            message: 'customer_type elements must be one of: adult, child, elderly'
-          });
-        }
-      }
-    }
-
-    const order = await otaService.activateReservation(reservationId, {
-      customer_details,
-      customer_type,
-      payment_reference,
-      special_requests
-    });
-
-    res.status(201).json(order);
-
-  } catch (error: any) {
-    logger.error('OTA reservation activation failed', {
-      partner: req.ota_partner?.name,
-      reservation_id: req.params.id,
-      error: error.message
-    });
-
-    const statusCode = error.code === 'RESERVATION_NOT_FOUND' ? 404 :
-                      error.code === 'VALIDATION_ERROR' ? 409 : 500;
-
-    res.status(statusCode).json({
-      code: error.code || 'INTERNAL_ERROR',
-      message: error.message || 'Failed to activate reservation'
-    });
-  }
-});
-
-// POST /api/ota/reservations/cleanup - Manually trigger expired reservation cleanup
-router.post('/reservations/cleanup', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const expiredCount = await otaService.expireOldReservations();
-
-    res.json({
-      message: 'Cleanup completed',
-      expired_reservations: expiredCount
-    });
-
-  } catch (error: any) {
-    logger.error('OTA reservation cleanup failed', {
-      partner: req.ota_partner?.name,
-      error: error.message
-    });
-
-    res.status(500).json({
-      error: 'INTERNAL_ERROR',
-      message: 'Failed to cleanup reservations'
-    });
-  }
-});
-
-// DELETE /api/ota/reservations/:id - Cancel reservation
-router.delete('/reservations/:id', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const reservationId = req.params.id;
-    await otaService.cancelReservation(reservationId);
-
-    res.status(204).send();
-
-  } catch (error: any) {
-    logger.error('OTA reservation cancellation failed', {
-      partner: req.ota_partner?.name,
-      reservation_id: req.params.id,
-      error: error.message
-    });
-
-    const statusCode = error.code === 'RESERVATION_NOT_FOUND' ? 404 :
-                      error.code === 'CANNOT_CANCEL_ACTIVATED' ? 409 : 500;
-
-    res.status(statusCode).json({
-      code: error.code || 'INTERNAL_ERROR',
-      message: error.message || 'Failed to cancel reservation'
-    });
-  }
-});
-
 // GET /api/ota/orders - List confirmed orders for OTA
-router.get('/orders', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/orders', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const partnerId = getPartnerIdWithFallback(req);
-    const orders = await otaService.getOrders(partnerId);
-
-    res.json({
-      orders,
-      total_count: orders.length
+    const result = await otaService.getOrders(partnerId, {
+      page: req.pagination.page,
+      limit: req.pagination.limit
     });
+
+    res.paginated(result.orders, result.total);
 
   } catch (error: any) {
     logger.error('OTA orders list failed', {
@@ -340,12 +138,19 @@ router.get('/orders/:id/tickets', async (req: AuthenticatedRequest, res: Respons
 });
 
 // GET /api/ota/tickets - List tickets with optional filters
-router.get('/tickets', otaAuthMiddleware('inventory:read'), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/tickets', otaAuthMiddleware('inventory:read'), paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { status, batch_id, created_after, created_before, page, limit } = req.query;
+    const {
+      status, batch_id, created_after, created_before,
+      // 新增筛选参数
+      ticket_code, customer_name, reseller_name, product_id
+    } = req.query;
 
-    // Parse and validate query parameters
-    const filters: any = {};
+    // 使用中间件解析的分页参数
+    const filters: any = {
+      page: req.pagination.page,
+      page_size: req.pagination.limit
+    };
 
     if (status) {
       filters.status = status as string;
@@ -363,32 +168,30 @@ router.get('/tickets', otaAuthMiddleware('inventory:read'), async (req: Authenti
       filters.created_before = created_before as string;
     }
 
-    if (page) {
-      const pageNum = parseInt(page as string, 10);
-      if (isNaN(pageNum) || pageNum < 1) {
-        return res.status(422).json({
-          error: 'INVALID_PARAMETER',
-          message: 'page must be a positive integer'
-        });
-      }
-      filters.page = pageNum;
+    // 新增筛选条件
+    if (ticket_code) {
+      filters.ticket_code = ticket_code as string;
     }
 
-    if (limit) {
-      const limitNum = parseInt(limit as string, 10);
-      if (isNaN(limitNum) || limitNum < 1) {
-        return res.status(422).json({
-          error: 'INVALID_PARAMETER',
-          message: 'limit must be a positive integer'
-        });
+    if (customer_name) {
+      filters.customer_name = customer_name as string;
+    }
+
+    if (reseller_name) {
+      filters.reseller_name = reseller_name as string;
+    }
+
+    if (product_id) {
+      const productIdNum = parseInt(product_id as string, 10);
+      if (!isNaN(productIdNum)) {
+        filters.product_id = productIdNum;
       }
-      filters.limit = limitNum;
     }
 
     const partnerId = getPartnerIdWithFallback(req);
     const result = await otaService.getTickets(partnerId, filters);
 
-    res.json(result);
+    res.paginated(result.tickets, result.pagination.total_count);
 
   } catch (error: any) {
     logger.error('OTA tickets list failed', {
@@ -417,11 +220,11 @@ router.post('/tickets/bulk-generate', otaAuthMiddleware('tickets:bulk-generate')
       special_pricing
     } = req.body;
 
-    // Validate required fields
-    if (typeof product_id !== 'number' || typeof quantity !== 'number' || !batch_id) {
+    // Validate required fields (batch_id is optional - will be auto-generated if not provided)
+    if (typeof product_id !== 'number' || typeof quantity !== 'number') {
       return res.status(400).json({
         error: 'INVALID_REQUEST',
-        message: 'product_id (number), quantity (number), and batch_id are required'
+        message: 'product_id (number) and quantity (number) are required'
       });
     }
 
@@ -535,6 +338,62 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
     res.status(statusCode).json({
       code: error.code || 'INTERNAL_ERROR',
       message: error.message || 'Failed to activate ticket'
+    });
+  }
+});
+
+// GET /api/ota/batches - List all batches with pagination and filters
+router.get('/batches', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { status, product_id, reseller, created_after, created_before } = req.query;
+
+    const filters: any = {
+      page: req.pagination.page,
+      limit: req.pagination.limit
+    };
+
+    if (status) {
+      filters.status = status as string;
+    }
+
+    if (product_id) {
+      const productIdNum = parseInt(product_id as string, 10);
+      if (isNaN(productIdNum)) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'product_id must be a valid number'
+        });
+      }
+      filters.product_id = productIdNum;
+    }
+
+    if (reseller) {
+      filters.reseller = reseller as string;
+    }
+
+    if (created_after) {
+      filters.created_after = created_after as string;
+    }
+
+    if (created_before) {
+      filters.created_before = created_before as string;
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const result = await otaService.listBatches(partnerId, filters);
+
+    res.paginated(result.batches, result.total);
+
+  } catch (error: any) {
+    logger.error('OTA batches list failed', {
+      partner: req.ota_partner?.name,
+      error: error.message,
+      query: req.query
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve batches'
     });
   }
 });
@@ -716,12 +575,14 @@ router.get('/admin/partners/:partnerId/statistics', adminAuthMiddleware(), async
   }
 });
 
-// GET /api/ota/admin/dashboard - Get platform dashboard summary
-router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+// GET /api/ota/dashboard - Get partner dashboard summary (returns data for current API key's partner)
+router.get('/dashboard', otaAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { start_date, end_date } = req.query;
+    const partnerId = req.ota_partner!.id;
 
     const summary = await otaService.getDashboardSummary({
+      partner_id: partnerId,
       start_date: start_date as string,
       end_date: end_date as string
     });
@@ -729,8 +590,8 @@ router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedR
     res.json(summary);
 
   } catch (error: any) {
-    logger.error('OTA admin get dashboard failed', {
-      admin: req.ota_partner?.name,
+    logger.error('OTA get dashboard failed', {
+      partner: req.ota_partner?.name,
       error: error.message
     });
 
@@ -744,37 +605,17 @@ router.get('/admin/dashboard', adminAuthMiddleware(), async (req: AuthenticatedR
 // ============= RESELLER MANAGEMENT CRUD (NEW - 2025-11-14) =============
 
 // GET /api/ota/resellers/summary - Aggregate reseller info from batches (JSON-based with pagination)
-router.get('/resellers/summary', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/resellers/summary', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { status = 'active', date_range, page, limit, batches_per_reseller } = req.query;
+    const { status = 'active', date_range, batches_per_reseller } = req.query;
 
-    // 验证分页参数
+    // 使用中间件解析的分页参数
     const filters: any = {
       status: status as string,
-      date_range: date_range as string
+      date_range: date_range as string,
+      page: req.pagination.page,
+      limit: req.pagination.limit
     };
-
-    if (page) {
-      const pageNum = parseInt(page as string, 10);
-      if (isNaN(pageNum) || pageNum < 1) {
-        return res.status(422).json({
-          error: 'INVALID_PARAMETER',
-          message: 'page must be a positive integer'
-        });
-      }
-      filters.page = pageNum;
-    }
-
-    if (limit) {
-      const limitNum = parseInt(limit as string, 10);
-      if (isNaN(limitNum) || limitNum < 1) {
-        return res.status(422).json({
-          error: 'INVALID_PARAMETER',
-          message: 'limit must be a positive integer'
-        });
-      }
-      filters.limit = limitNum;
-    }
 
     if (batches_per_reseller) {
       const batchesNum = parseInt(batches_per_reseller as string, 10);
@@ -788,9 +629,17 @@ router.get('/resellers/summary', async (req: AuthenticatedRequest, res: Response
     }
 
     const partnerId = getPartnerIdWithFallback(req);
-    const summary = await otaService.getResellersSummary(partnerId, filters);
+    const result = await otaService.getResellersSummary(partnerId, filters);
 
-    res.json(summary);
+    // 分页响应 + 额外的 summary 字段
+    res.json({
+      items: result.resellers,
+      total: result.total,
+      page: req.pagination.page,
+      page_size: req.pagination.limit,
+      has_more: req.pagination.page! * req.pagination.limit < result.total,
+      summary: result.summary
+    });
   } catch (error: any) {
     logger.error('OTA reseller summary failed', {
       partner: req.ota_partner?.name,
@@ -806,12 +655,15 @@ router.get('/resellers/summary', async (req: AuthenticatedRequest, res: Response
 });
 
 // GET /api/ota/resellers - List all resellers for current OTA partner
-router.get('/resellers', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/resellers', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const partnerId = getPartnerIdWithFallback(req);
-    const result = await otaService.listResellers(partnerId);
+    const result = await otaService.listResellers(partnerId, {
+      page: req.pagination.page,
+      limit: req.pagination.limit
+    });
 
-    res.json(result);
+    res.paginated(result.resellers, result.total);
   } catch (error: any) {
     logger.error('OTA list resellers failed', {
       partner: req.ota_partner?.name,
@@ -978,6 +830,139 @@ router.delete('/resellers/:id', async (req: AuthenticatedRequest, res: Response)
     res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Failed to deactivate reseller'
+    });
+  }
+});
+
+// ============= PRODUCT QR CONFIG MANAGEMENT (NEW) =============
+
+/**
+ * GET /api/ota/products/qr-configs
+ * Get QR configurations for all products (batch query)
+ */
+router.get('/products/qr-configs', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const configs = await otaService.getAllProductQRConfigs();
+
+    res.json({
+      products: configs,
+      total_count: configs.length
+    });
+  } catch (error: any) {
+    logger.error('OTA get all product QR configs failed', {
+      partner: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve product QR configurations'
+    });
+  }
+});
+
+/**
+ * GET /api/ota/products/:id/qr-config
+ * Get QR code configuration for a product
+ */
+router.get('/products/:id/qr-config', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'Invalid product ID'
+      });
+    }
+
+    const qrConfig = await otaService.getProductQRConfig(productId);
+
+    if (!qrConfig) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Product not found'
+      });
+    }
+
+    res.json(qrConfig);
+  } catch (error: any) {
+    logger.error('OTA get product QR config failed', {
+      partner: req.ota_partner?.name,
+      product_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to retrieve product QR configuration'
+    });
+  }
+});
+
+/**
+ * PUT /api/ota/products/:id/qr-config
+ * Update QR code configuration for a product
+ *
+ * Request body:
+ * {
+ *   "dark_color": "#0066CC",    // QR foreground color (hex format)
+ *   "light_color": "#FFFFFF",   // QR background color (hex format)
+ *   "logo_url": "https://..."   // Optional logo URL
+ * }
+ */
+router.put('/products/:id/qr-config', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'Invalid product ID'
+      });
+    }
+
+    const { dark_color, light_color, logo_url } = req.body;
+
+    // Validate hex color format
+    const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+
+    if (dark_color && !hexColorRegex.test(dark_color)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'dark_color must be a valid hex color (e.g., #CC0000)'
+      });
+    }
+
+    if (light_color && !hexColorRegex.test(light_color)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'light_color must be a valid hex color (e.g., #FFFFFF)'
+      });
+    }
+
+    const result = await otaService.updateProductQRConfig(productId, {
+      dark_color,
+      light_color,
+      logo_url
+    });
+
+    if (!result) {
+      return res.status(404).json({
+        error: 'NOT_FOUND',
+        message: 'Product not found'
+      });
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('OTA update product QR config failed', {
+      partner: req.ota_partner?.name,
+      product_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Failed to update product QR configuration'
     });
   }
 });

@@ -23,7 +23,8 @@ export class CustomerReservationController {
       this.service = new CustomerReservationServiceDirectus();
     } else {
       logger.info('customer_reservation.controller.using_mock');
-      this.service = new CustomerReservationServiceEnhanced();
+      // Use singleton to share state with operatorValidation module
+      this.service = CustomerReservationServiceEnhanced.getInstance();
     }
   }
 
@@ -35,14 +36,15 @@ export class CustomerReservationController {
     try {
       const { ticket_code, orq } = req.body as TicketValidationRequest;
 
-      if (!ticket_code || !orq) {
+      if (!ticket_code) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_code, orq',
+          error: 'Missing required field: ticket_code',
         });
         return;
       }
 
+      // orq is optional - customer doesn't need to know organization
       const result = await this.service.validateTicket({ ticket_code, orq });
 
       if (!result.valid) {
@@ -77,10 +79,10 @@ export class CustomerReservationController {
     try {
       const { ticket_code, orq } = req.body as VerifyContactRequest;
 
-      if (!ticket_code || !orq) {
+      if (!ticket_code) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_code, orq',
+          error: 'Missing required field: ticket_code',
         });
         return;
       }
@@ -113,13 +115,13 @@ export class CustomerReservationController {
    */
   async createReservation(req: Request, res: Response): Promise<void> {
     try {
-      const { ticket_code, slot_id, orq, customer_email, customer_phone } =
+      const { ticket_code, slot_id, orq, customer_name, customer_email, customer_phone } =
         req.body as CreateReservationRequest;
 
-      if (!ticket_code || !slot_id || !orq) {
+      if (!ticket_code || !slot_id) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: ticket_code, slot_id, orq',
+          error: 'Missing required fields: ticket_code, slot_id',
         });
         return;
       }
@@ -128,6 +130,7 @@ export class CustomerReservationController {
         ticket_code,
         slot_id,
         orq,
+        customer_name,
         customer_email,
         customer_phone,
       });
