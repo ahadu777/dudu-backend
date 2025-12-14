@@ -263,6 +263,50 @@ The compliance dashboard doesn't just report errors - it **tells the story** of 
 
 This creates an **intelligent learning loop** where the AI helps you understand the documentation rules rather than just enforcing them.
 
+**Developer Workflow Integration:**
+
+The compliance dashboard integrates seamlessly into your development workflow:
+
+1. **During Development**: Create docs alongside code, check `/compliance` before committing
+2. **Code Review**: Reviewer can verify compliance score is acceptable (e.g., >80%)
+3. **Onboarding**: New developers learn documentation standards through immediate feedback
+4. **Refactoring**: When reorganizing docs, instantly see what breaks and how to fix it
+5. **Quality Gates**: Can be integrated into CI/CD to enforce documentation standards
+
+**Example workflow:**
+```bash
+# 1. Create feature branch
+git checkout -b feat/loyalty-program
+
+# 2. Write docs (PRD, stories, cards)
+vim docs/prd/PRD-009-loyalty-program.md
+vim docs/stories/_index.yaml
+vim docs/cards/loyalty-points-earn.md
+
+# 3. Implement code
+vim src/modules/loyalty/...
+
+# 4. Check compliance BEFORE committing
+open http://localhost:8080/compliance
+# See: Score 75% - need bidirectional links
+
+# 5. Fix violations
+# Add related_stories fields, update PRD links
+
+# 6. Re-check compliance
+# Score: 100% ✅
+
+# 7. Commit with confidence
+git add . && git commit -m "Add loyalty program with full docs"
+```
+
+**Benefits:**
+- Documentation becomes part of development, not an afterthought
+- Quality is enforced automatically, not manually
+- Developers learn through use, not reading manuals
+- Compliance is measurable (score goes from -26% → 0% → 80%)
+- Trust in documentation increases because it's always validated
+
 ---
 
 ### 10. Test Coverage - `/coverage`
