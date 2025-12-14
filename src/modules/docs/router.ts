@@ -2664,7 +2664,6 @@ router.get('/coverage', (_req: Request, res: Response) => {
     <div class="tabs">
       <button class="tab active" data-tab="overview">Overview</button>
       <button class="tab" data-tab="scenarios">Test Scenarios</button>
-      <button class="tab" data-tab="howto">How to Run Tests</button>
     </div>
 
     <!-- Overview Tab (default) -->
@@ -2828,85 +2827,6 @@ router.get('/coverage', (_req: Request, res: Response) => {
         html += `
     </div>
 
-    <!-- How to Run Tab -->
-    <div id="tab-howto" class="tab-content">
-      <h2>How to Run Tests</h2>
-      <p style="color: #666; margin-bottom: 20px;">Quick reference for running automated tests</p>
-
-      <div class="quick-start">
-        <h3>Quick Start Commands</h3>
-        <pre><code># Run all tests (Smoke + PRD + Story)
-npm test
-
-# Run specific PRD tests
-npm run test:prd 006    # PRD-006 Ticket Activation
-npm run test:prd 007    # PRD-007 Reservation Validation
-npm run test:prd 008    # PRD-008 Mini-Program Phase 1
-
-# Run Story tests
-npm run test:story 012  # US-012 OTA Integration
-npm run test:story 013  # US-013 Venue Operations
-
-# Run complete platform tests
-npx newman run postman/COMPLETE-PLATFORM-TESTS.postman_collection.json
-
-# Run quick smoke tests
-npx newman run postman/QUICK-SMOKE-TESTS.postman_collection.json</code></pre>
-      </div>
-
-      <div style="margin-top: 30px;">
-        <h3>Test Collections</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Collection</th>
-              <th>Description</th>
-              <th>Command</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>COMPLETE-PLATFORM-TESTS</code></td>
-              <td>Full test suite (82 requests, 179 assertions)</td>
-              <td><code>npm test</code></td>
-            </tr>
-            <tr>
-              <td><code>prd-006-ticket-activation</code></td>
-              <td>Ticket activation & reservation (46 assertions)</td>
-              <td><code>npm run test:prd 006</code></td>
-            </tr>
-            <tr>
-              <td><code>prd-007-reservation-validation</code></td>
-              <td>Reservation validation (62 assertions)</td>
-              <td><code>npm run test:prd 007</code></td>
-            </tr>
-            <tr>
-              <td><code>prd-008-miniprogram-phase1</code></td>
-              <td>Mini-program API (64 assertions)</td>
-              <td><code>npm run test:prd 008</code></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div style="margin-top: 30px;">
-        <h3>Understanding Test Results</h3>
-        <div class="stats-summary">
-          <div class="stat-box" style="border-left-color: #28a745;">
-            <h3>✅ Passed</h3>
-            <p style="font-size: 0.9em; color: #666;">Assertion verified successfully</p>
-          </div>
-          <div class="stat-box" style="border-left-color: #dc3545;">
-            <h3>❌ Failed</h3>
-            <p style="font-size: 0.9em; color: #666;">Assertion did not match expected value</p>
-          </div>
-          <div class="stat-box" style="border-left-color: #ffc107;">
-            <h3>⚠️ Pending</h3>
-            <p style="font-size: 0.9em; color: #666;">Test planned but not yet implemented</p>
-          </div>
-        </div>
-      </div>
-    </div>
 
   </div>
 
