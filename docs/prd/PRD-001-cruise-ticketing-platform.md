@@ -8,7 +8,7 @@ owner: "Product Manager"
 status: "Done"
 created_date: "2025-10-27"
 last_updated: "2025-11-19"
-related_stories: ["US-001", "US-002", "US-003", "US-004", "US-005", "US-006", "US-007", "US-008", "US-009", "US-011"]
+related_stories: ["US-001", "US-003", "US-004", "US-007", "US-008", "US-009", "US-011"]
 implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engine", "tickets-issuance", "my-tickets", "qr-generation-api"]
 ```
 

@@ -10,6 +10,7 @@ status: "Done"
 priority: High
 business_requirement: "PRD-001"
 cards:
+  - db-baseline               # 数据库基础架构
   - catalog-endpoint
   - order-create
   - payment-webhook
@@ -19,11 +20,6 @@ cards:
   - operators-login
   - venue-enhanced-scanning
   - reports-redemptions
-notes:
-  - Catalog uses products[].id/name (not product_id/product_name)
-  - QR generation via /qr/:code returns encrypted QR payload
-  - /operators/login responds { operator_token } (operator_id lives in JWT claims if needed)
-  - /venue/scan returns entitlements[]; check remaining_uses there
 ---
 
 ## Business goal
@@ -41,25 +37,25 @@ Enable a user to purchase a package with multiple functions (bus, ferry, museum)
 - Refunds, reschedules, partner revenue share, coupons marketplace
 
 ## Acceptance (Given/When/Then)
-**Story A — Purchase**  
-- Given products are for sale  
-- When the user creates an order (idempotent)  
-- Then inventory is reserved and an order is `PENDING_PAYMENT`
+**Story A — Purchase**
+- Given 用户浏览可购买的套餐商品
+- When 用户选择商品并提交订单
+- Then 系统预留库存，用户看到订单待支付状态和15分钟支付倒计时
 
-**Story B — Payment & issuance (sync)**  
-- Given a pending order  
-- When the gateway notifies SUCCESS (valid HMAC)  
-- Then order becomes `PAID`, inventory commits, and tickets are issued exactly once
+**Story B — Payment & issuance (sync)**
+- Given 用户有一笔待支付订单
+- When 用户完成支付
+- Then 订单状态变为已支付，用户收到票券
 
 **Story C — View & QR**
-- Given the user has tickets
-- When they call `/my/tickets` and `POST /qr/:code`
-- Then tickets include entitlements and a short-lived encrypted QR is returned
+- Given 用户已购买票券
+- When 用户查看我的票券并请求二维码
+- Then 用户看到票券权益列表和用于核销的动态二维码
 
 **Story D — Redemption & reporting**
-- Given an operator with valid JWT token
-- When `POST /venue/scan` is called with a valid QR token and function
-- Then remaining uses decrement atomically and a redemption event is stored
+- Given 操作员已登录验票系统
+- When 操作员扫描用户的二维码
+- Then 系统显示核销结果，用户权益使用次数减少，核销记录被保存
 
 ## Non-functional constraints
 - Idempotency for order create & webhook  

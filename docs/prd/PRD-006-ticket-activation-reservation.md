@@ -9,7 +9,7 @@ status: "Draft"
 created_date: "2025-11-14"
 last_updated: "2025-11-14"
 related_stories: ["US-016"]
-implementation_cards: ["ticket-activation", "time-slot-reservation", "reservation-validation-scanning"]
+implementation_cards: ["ticket-lifecycle-daemon", "reservation-slot-management", "operator-validation-scanner", "customer-reservation-portal"]
 ```
 
 ## Executive Summary
@@ -335,48 +335,10 @@ CREATE TABLE ticket_reservations (
 
 ## Technical Implementation
 
-### API Endpoints
-
-**Ticket Validation**:
-- `POST /api/tickets/validate` - Validate ticket eligibility for reservation
-  - Request: `{ticket_code: string, orq: number}`
-  - Response: `{success: boolean, valid: boolean, ticket?: {...}, error?: string}`
-
-**Contact Verification**:
-- `POST /api/tickets/verify-contact` - Verify customer contact information
-  - Request: `{ticket_code: string, orq: number}`
-  - Response: `{success: boolean, message?: string, error?: string}`
-
-**Reservation Slots**:
-- `GET /api/reservation-slots/available` - Get available time slots for month
-  - Query: `?month=2025-11&orq=12&venueId=1`
-  - Response: Array of slots grouped by date with capacity status
-
-**Reservation Management**:
-- `POST /api/reservations/create` - Create reservation for ticket and slot
-  - Request: `{ticket_code: string, slot_id: string, orq: number, customer_email?: string, customer_phone?: string}`
-  - Response: `{success: boolean, data?: {...}, error?: string}`
-- `PUT /api/reservations/:reservation_id` - Modify reservation (change slot)
-  - Request: `{new_slot_id: string}`
-- `DELETE /api/reservations/:reservation_id` - Cancel reservation
-
-**Operator Validation** (Future Phase):
-- `POST /api/operator/validate-ticket` - Validate ticket for venue entry
-- `POST /api/operator/verify-ticket` - Mark ticket as verified
-
-### Frontend Components
-
-**Consumer Web Interface**:
-- Ticket activation page
-- Reservation calendar component
-- Reservation management dashboard
-- My reservations view
-
-**Operator Mini-App/Device Interface**:
-- Operator login screen
-- QR scanner interface with camera access
-- Validation result display (color-coded)
-- Scan history and session management
+> API 契约和技术实现细节见相关 Cards:
+> - [ticket-activation](../cards/ticket-activation.md) - 票券激活
+> - [reservation-management](../cards/reservation-management.md) - 预约管理
+> - [operator-validation-scanner](../cards/operator-validation-scanner.md) - 操作员验证
 
 ## Success Metrics & KPIs
 

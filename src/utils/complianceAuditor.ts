@@ -29,7 +29,7 @@ export interface ComplianceReport {
 
 const VALID_PRD_STATUSES = ['Draft', 'In Progress', 'Done'];
 const VALID_STORY_STATUSES = ['Draft', 'In Progress', 'Done'];
-const VALID_CARD_STATUSES = ['Ready', 'In Progress', 'Done'];
+const VALID_CARD_STATUSES = ['Ready', 'In Progress', 'Done', 'deprecated', 'Deprecated'];
 
 /**
  * Run comprehensive compliance audit on all documentation

@@ -11,6 +11,8 @@ Identify task type and load corresponding spec document:
 | "我想做..." / "I want to..." / "Help me implement..." | Natural Language Requirement | `@docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md` |
 | New feature / New Story / 新功能 | New Feature Development | `@docs/reference/DUPLICATE-PREVENTION.md` |
 | "PRD or Story?" / "这应该是 PRD 还是 Story？" | Document Layer Decision | `@docs/reference/DOCUMENT-LAYER-DECISION.md` |
+| Create PRD / Story / Card / 写文档 | Document Creation | `@docs/reference/DOCUMENT-SPEC.md` |
+| Deprecate feature / 废弃功能 | Document Lifecycle | `@docs/reference/DOCUMENT-SPEC.md` (Section 4-5) |
 | Modify existing API / Change fields / 改 API | API Change | `@docs/reference/API-CHANGE-MANAGEMENT.md` |
 | Design new API / New endpoint / 新端点 | New API Design | `@docs/reference/RESTFUL-API-DESIGN.md` |
 | Write tests / Generate tests / 写测试 | Test Generation | `@docs/reference/AI-TEST-GENERATION.md` |
@@ -82,12 +84,22 @@ npm run validate:docs   # 检查 PRD→Stories→Cards→Code 一致性
 
 ### 文档层级决策
 
-| 用户说的 | 层级 | 动作 |
-|---------|------|------|
-| "我想做会员积分系统" | **PRD** | 创建 PRD |
-| "用户能查看订单历史" | **Story** | 创建 Story |
-| "订单列表需要分页" | **Card** | 更新 Card |
-| "修复分页的bug" | **Code** | 直接修代码 |
+| 用户说的 | 层级 | 动作 | 视角 |
+|---------|------|------|------|
+| "我想做会员积分系统" | **PRD** | 创建 PRD | 产品/商业 |
+| "用户能查看订单历史" | **Story** | 创建 Story | 用户（黑盒） |
+| "订单列表需要分页" | **Card** | 更新 Card | 技术（白盒） |
+| "修复分页的bug" | **Code** | 直接修代码 | - |
+
+### 三层职责边界
+
+| 层级 | 应该包含 | 不应该包含 |
+|------|----------|------------|
+| PRD | 为什么做、成功指标、功能列表 | API路径、验收标准、实现细节 |
+| Story | 用户能力、业务验收标准 | API路径、字段名、错误码 |
+| Card | API契约、技术验收标准、数据影响 | 业务目标、成功指标 |
+
+> 详细规范见 `docs/reference/DOCUMENT-SPEC.md`
 
 ### 常用命令
 
@@ -152,10 +164,13 @@ grep -ri "关键词" docs/
 
 ## Reference Links
 
-| 资源 | 位置 |
-|------|------|
-| 详细工作流 | [docs/reference/](docs/reference/) |
-| 案例研究 | [docs/cases/](docs/cases/) |
-| PRDs | [docs/prd/](docs/prd/) |
-| 测试覆盖率 | [docs/test-coverage/_index.yaml](docs/test-coverage/_index.yaml) |
-| OpenAPI 规范 | [openapi/openapi.json](openapi/openapi.json) |
+| 资源 | 位置 | 说明 |
+|------|------|------|
+| **文档规范** | [docs/reference/DOCUMENT-SPEC.md](docs/reference/DOCUMENT-SPEC.md) | PRD/Story/Card 模板、关系、生命周期 |
+| 详细工作流 | [docs/reference/](docs/reference/) | 各类任务的详细指南 |
+| 案例研究 | [docs/cases/](docs/cases/) | 实际案例分析 |
+| PRDs | [docs/prd/](docs/prd/) | 产品需求文档 |
+| Stories | [docs/stories/](docs/stories/) | 用户故事 |
+| Cards | [docs/cards/](docs/cards/) | 技术卡片 |
+| 测试覆盖率 | [docs/test-coverage/_index.yaml](docs/test-coverage/_index.yaml) | 测试状态追踪 |
+| OpenAPI 规范 | [openapi/openapi.json](openapi/openapi.json) | API 文档 |

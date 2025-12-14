@@ -2,7 +2,7 @@
 card: "Wallyt WeChat Mini-Program Payment"
 slug: wallyt-payment
 team: "A - Commerce"
-oas_paths: ["/payments/wechat/prepay", "/payments/wallyt/notify", "/payments/status/:orderId", "/payments/refund"]
+oas_paths: ["/payments/wechat/prepay", "/payments/wallyt/notify", "/payments/status/:orderId"]  # refund 由 refund-processing 卡片负责
 migrations: []
 status: "Done"
 readiness: "mvp"
@@ -20,7 +20,7 @@ deprecates: ["wechat-payment-session"]
 ## Status & Telemetry
 - Status: Done
 - Readiness: mvp（小程序调起微信支付 - Wallyt 集成）
-- Spec Paths: `/payments/wechat/prepay`, `/payments/wallyt/notify`, `/payments/status/:orderId`, `/payments/refund`
+- Spec Paths: `/payments/wechat/prepay`, `/payments/wallyt/notify`, `/payments/status/:orderId`
 - Migrations: 无（复用 order_payments 表）
 - Last Update: 2025-12-11
 
