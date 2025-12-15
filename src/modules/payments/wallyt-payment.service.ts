@@ -433,6 +433,10 @@ export class WallytPaymentService {
           ticket.travel_date = order.travel_date;
           ticket.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
           ticket.channel = 'direct';
+          // 复制订单联系人信息到票券（用于预订时自动填充）
+          ticket.customer_name = order.contact_name;
+          ticket.customer_email = order.contact_email;
+          ticket.customer_phone = order.contact_phone;
           ticket.entitlements = productEntitlements.map(e => ({
             function_code: e.type,
             remaining_uses: e.metadata?.quantity || (e as any).quantity || 1
