@@ -8,7 +8,7 @@ import {
   OperatorSession,
   ValidationLog,
 } from './types';
-import { CustomerReservationServiceEnhanced, CustomerInfo } from '../customerReservation/service.enhanced';
+import { CustomerReservationServiceMock, CustomerInfo } from '../customerReservation/service.mock';
 import { ReservationSlotServiceMock } from '../reservation-slots/service.mock';
 import { logger } from '../../utils/logger';
 import { randomBytes } from 'crypto';
@@ -26,12 +26,12 @@ export class OperatorValidationServiceEnhanced {
   private sessions: Map<string, OperatorSession> = new Map();
   private validationLogs: ValidationLog[] = [];
   private nextLogId = 1;
-  private customerService: CustomerReservationServiceEnhanced;
+  private customerService: CustomerReservationServiceMock;
   private slotsService: ReservationSlotServiceMock;
 
   constructor() {
     // Use singleton to share state with customerReservation module
-    this.customerService = CustomerReservationServiceEnhanced.getInstance();
+    this.customerService = CustomerReservationServiceMock.getInstance();
     this.slotsService = new ReservationSlotServiceMock();
     this.seedMockOperators();
   }

@@ -17,11 +17,11 @@ import { TicketEntity, TicketReservationEntity, ReservationSlotEntity } from '..
 import { Repository, Not } from 'typeorm';
 
 /**
- * CustomerReservationServiceDirectus
+ * CustomerReservationService
+ * Database implementation using TypeORM
  * Unified ticket lookup from tickets table (supports both mini-program and OTA)
- * Uses TypeORM for all database queries
  */
-export class CustomerReservationServiceDirectus {
+export class CustomerReservationService {
   private ticketRepo!: Repository<TicketEntity>;
   private reservationRepo!: Repository<TicketReservationEntity>;
   private slotRepo!: Repository<ReservationSlotEntity>;
@@ -39,6 +39,7 @@ export class CustomerReservationServiceDirectus {
     this.slotRepo = AppDataSource.getRepository(ReservationSlotEntity);
     this.initialized = true;
   }
+
   /**
    * Validate ticket eligibility for reservation
    * Unified lookup from tickets table (supports both mini-program and OTA)
@@ -78,9 +79,6 @@ export class CustomerReservationServiceDirectus {
     ticket: TicketEntity
   ): Promise<TicketValidationResponse> {
     const ticket_code = ticket.ticket_code;
-
-    // Note: orq check removed - customer doesn't need to know organization
-    // The ticket already contains its own orq value
 
     // Check if ticket is activated
     if (ticket.status !== 'ACTIVATED') {
@@ -123,7 +121,7 @@ export class CustomerReservationServiceDirectus {
         customer_email: ticket.customer_email,
         customer_phone: ticket.customer_phone,
         order_id: Number(ticket.order_id),
-        orq: ticket.orq,  // Return ticket's own organization
+        orq: ticket.orq,
         source: 'direct' as ReservationSource
       }
     };
@@ -184,7 +182,6 @@ export class CustomerReservationServiceDirectus {
             customer_name: ticket.customer_name,
             customer_email: ticket.customer_email,
             customer_phone: ticket.customer_phone,
-            // OTA tickets: orq will be determined from slot during reservation
             source: 'ota' as ReservationSource
           }
         };
@@ -244,23 +241,16 @@ export class CustomerReservationServiceDirectus {
 
     const ticketSource = validation.ticket.source || 'direct';
 
-    // Determine customer info: use provided values or fallback to ticket values
+    // 2. Determine customer info: use provided values or fallback to ticket values
     const customer_name = providedName || validation.ticket.customer_name || undefined;
-    let customer_email: string;
-    let customer_phone: string;
+    const customer_email = providedEmail || validation.ticket.customer_email || '';
+    const customer_phone = providedPhone || validation.ticket.customer_phone || '';
 
-    if (providedEmail && providedPhone) {
-      customer_email = providedEmail;
-      customer_phone = providedPhone;
-    } else {
-      customer_email = validation.ticket.customer_email || '';
-      customer_phone = validation.ticket.customer_phone || '';
-      if (!customer_email || !customer_phone) {
-        return { success: false, error: 'Missing customer contact information in ticket' };
-      }
+    if (!customer_email || !customer_phone) {
+      return { success: false, error: 'Missing customer contact information' };
     }
 
-    // 2. Check slot capacity
+    // 3. Check slot capacity
     const slot = await this.slotRepo.findOne({ where: { id: parseInt(slot_id) } });
     if (!slot) {
       return { success: false, error: 'Slot not found' };
@@ -269,11 +259,10 @@ export class CustomerReservationServiceDirectus {
       return { success: false, error: 'Slot is full' };
     }
 
-    // 3. Determine orq: use ticket's orq for direct, slot's orq for OTA
+    // 4. Determine orq: use ticket's orq for direct, slot's orq for OTA
     const reservationOrq = validation.ticket.orq || slot.orq;
 
-    // 4. Create reservation record
-    // Get ticket_id for direct tickets (need to look it up)
+    // 5. Create reservation record
     let directTicketId: number | undefined;
     if (ticketSource === 'direct') {
       const ticket = await this.ticketRepo.findOne({ where: { ticket_code } });
@@ -295,11 +284,11 @@ export class CustomerReservationServiceDirectus {
 
     const savedReservation = await this.reservationRepo.save(reservation);
 
-    // 4. Update slot booked count
+    // 6. Update slot booked count
     slot.booked_count += 1;
     await this.slotRepo.save(slot);
 
-    // 5. Update ticket status (only for direct tickets, OTA keeps ACTIVE)
+    // 7. Update ticket status (only for direct tickets, OTA keeps ACTIVE)
     if (ticketSource === 'direct') {
       await this.ticketRepo.update(
         { ticket_code },
@@ -320,7 +309,7 @@ export class CustomerReservationServiceDirectus {
         ticket_code,
         source: ticketSource,
         slot_id: slot_id,
-        slot_date: slot.date, // Already a string in the entity
+        slot_date: slot.date,
         slot_time: `${slot.start_time} - ${slot.end_time}`,
         customer_email,
         customer_phone,
@@ -387,7 +376,7 @@ export class CustomerReservationServiceDirectus {
         reservation_id,
         ticket_code: ticketCode || '',
         new_slot_id: new_slot_id,
-        new_slot_date: newSlot.date, // Already a string in the entity
+        new_slot_date: newSlot.date,
         new_slot_time: `${newSlot.start_time} - ${newSlot.end_time}`,
         updated_at: new Date().toISOString()
       }

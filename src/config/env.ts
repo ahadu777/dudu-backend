@@ -11,6 +11,7 @@ export const env = cleanEnv(process.env, {
   PORT: num({ default: 8080 }), // App Platform 使用 8080，本地开发可以设置为 3000
 
   // Database Configuration
+  USE_DATABASE: bool({ default: true }), // Enable database mode (true) or mock mode (false)
   DB_HOST: str({ default: 'localhost' }),
   DB_PORT: num({ default: 3306 }),
   DB_USERNAME: str({ default: 'root' }),
