@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-004 WeChat Authentication Tests" tests="6" time="0.406">
-  <testsuite name="4.1 WeChat Login - Empty Code (Validation)" id="017585a6-158f-4105-93b1-70cd825156e4" timestamp="2025-12-14T12:46:27.464Z" tests="3" failures="0" errors="0" time="0.011">
+<testsuites name="PRD-004 WeChat Authentication Tests" tests="6" time="0.366">
+  <testsuite name="4.1 WeChat Login - Empty Code (Validation)" id="50cb8082-4a49-4349-99f7-1cef706a73b8" timestamp="2025-12-15T04:33:23.480Z" tests="3" failures="0" errors="0" time="0.011">
     <testcase name="Status code is 400 (Bad Request)" time="0.011" classname="Prd004WeChatAuthenticationTests"/>
     <testcase name="Returns validation error" time="0.011" classname="Prd004WeChatAuthenticationTests"/>
     <testcase name="Has error details" time="0.011" classname="Prd004WeChatAuthenticationTests"/>
   </testsuite>
-  <testsuite name="4.2 WeChat Login - Missing Code" id="25e93be5-52b1-4ec4-9b95-574e57b1ac15" timestamp="2025-12-14T12:46:27.464Z" tests="2" failures="0" errors="0" time="0.004">
-    <testcase name="Status code is 400 (Bad Request)" time="0.004" classname="Prd004WeChatAuthenticationTests"/>
-    <testcase name="Returns validation error for missing code" time="0.004" classname="Prd004WeChatAuthenticationTests"/>
+  <testsuite name="4.2 WeChat Login - Missing Code" id="0390ef87-7da5-409e-8717-7679ca2e2129" timestamp="2025-12-15T04:33:23.480Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 400 (Bad Request)" time="0.002" classname="Prd004WeChatAuthenticationTests"/>
+    <testcase name="Returns validation error for missing code" time="0.002" classname="Prd004WeChatAuthenticationTests"/>
   </testsuite>
-  <testsuite name="4.3 WeChat Login - Invalid Code (WeChat Rejects)" id="d079907b-10ba-4d2e-b7fb-81e8db30b939" timestamp="2025-12-14T12:46:27.464Z" tests="2" failures="0" errors="0" time="0.276">
-    <testcase name="Status code is 401 or 422 (WeChat rejects invalid code)" time="0.276" classname="Prd004WeChatAuthenticationTests"/>
-    <testcase name="Returns auth failed error" time="0.276" classname="Prd004WeChatAuthenticationTests"/>
+  <testsuite name="4.3 WeChat Login - Invalid Code (WeChat Rejects)" id="fde1092d-9fbe-4f66-849f-517512115017" timestamp="2025-12-15T04:33:23.480Z" tests="2" failures="0" errors="0" time="0.186">
+    <testcase name="Status code is 401 or 422 (WeChat rejects invalid code)" time="0.186" classname="Prd004WeChatAuthenticationTests"/>
+    <testcase name="Returns auth failed error" time="0.186" classname="Prd004WeChatAuthenticationTests"/>
   </testsuite>
-  <testsuite name="4.4 Phone Binding - No JWT Token" id="6ce048a3-3eac-4634-9606-f58a49ce837a" timestamp="2025-12-14T12:46:27.464Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="Status code is 401 (Unauthorized)" time="0.001" classname="Prd004WeChatAuthenticationTests"/>
-    <testcase name="Returns unauthorized error" time="0.001" classname="Prd004WeChatAuthenticationTests"/>
+  <testsuite name="4.4 Phone Binding - No JWT Token" id="8cb1ac01-3872-4a4c-b391-52e811a6ddde" timestamp="2025-12-15T04:33:23.480Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Status code is 401 (Unauthorized)" time="0.003" classname="Prd004WeChatAuthenticationTests"/>
+    <testcase name="Returns unauthorized error" time="0.003" classname="Prd004WeChatAuthenticationTests"/>
   </testsuite>
-  <testsuite name="4.5 Phone Binding - Invalid JWT Token" id="65fcb85a-fa63-4e4f-b595-f0cd3e0a1aec" timestamp="2025-12-14T12:46:27.464Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="Status code is 401 (Unauthorized)" time="0.001" classname="Prd004WeChatAuthenticationTests"/>
-    <testcase name="Returns unauthorized error for invalid token" time="0.001" classname="Prd004WeChatAuthenticationTests"/>
+  <testsuite name="4.5 Phone Binding - Invalid JWT Token" id="251616cd-0791-409a-a6ce-0c107504fd4d" timestamp="2025-12-15T04:33:23.480Z" tests="2" failures="0" errors="0" time="0.006">
+    <testcase name="Status code is 401 (Unauthorized)" time="0.006" classname="Prd004WeChatAuthenticationTests"/>
+    <testcase name="Returns unauthorized error for invalid token" time="0.006" classname="Prd004WeChatAuthenticationTests"/>
   </testsuite>
-  <testsuite name="4.6 Login Response Time (&lt;500ms)" id="a52ae08d-6c73-49ec-bada-67b618066309" timestamp="2025-12-14T12:46:27.464Z" tests="1" failures="0" errors="0" time="0.113">
-    <testcase name="Login response time &lt;500ms" time="0.113" classname="Prd004WeChatAuthenticationTests"/>
+  <testsuite name="4.6 Login Response Time (&lt;500ms)" id="9d76bda3-ffa6-4f24-8c62-f7a1789fdbca" timestamp="2025-12-15T04:33:23.480Z" tests="1" failures="0" errors="0" time="0.158">
+    <testcase name="Login response time &lt;500ms" time="0.158" classname="Prd004WeChatAuthenticationTests"/>
   </testsuite>
 </testsuites>

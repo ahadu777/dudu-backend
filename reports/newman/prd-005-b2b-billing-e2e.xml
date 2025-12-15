@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-005 B2B Billing &amp; Analytics Tests" tests="6" time="19.004">
-  <testsuite name="5.1 Query Resellers List" id="d99c1111-fb39-418f-a8db-9bb7b61533e1" timestamp="2025-12-14T12:46:28.465Z" tests="3" failures="0" errors="0" time="1.467">
-    <testcase name="Status code is 200" time="1.467" classname="Prd005B2BBillingAnalyticsTests"/>
-    <testcase name="Returns paginated resellers" time="1.467" classname="Prd005B2BBillingAnalyticsTests"/>
-    <testcase name="Save first reseller ID if available" time="1.467" classname="Prd005B2BBillingAnalyticsTests"/>
+<testsuites name="PRD-005 B2B Billing &amp; Analytics Tests" tests="6" time="10.960">
+  <testsuite name="5.1 Query Resellers List" id="4a8c242b-d5b2-4d94-92bd-782ff98b6cba" timestamp="2025-12-15T04:33:24.475Z" tests="3" failures="0" errors="0" time="0.326">
+    <testcase name="Status code is 200" time="0.326" classname="Prd005B2BBillingAnalyticsTests"/>
+    <testcase name="Returns paginated resellers" time="0.326" classname="Prd005B2BBillingAnalyticsTests"/>
+    <testcase name="Save first reseller ID if available" time="0.326" classname="Prd005B2BBillingAnalyticsTests"/>
   </testsuite>
-  <testsuite name="5.2 Bulk Generate Tickets for Billing" id="3cfda8d4-5442-4b80-8f9a-e66da66f938d" timestamp="2025-12-14T12:46:28.465Z" tests="3" failures="0" errors="0" time="7.932">
-    <testcase name="Status code is 201" time="7.932" classname="Prd005B2BBillingAnalyticsTests"/>
-    <testcase name="Returns batch ID" time="7.932" classname="Prd005B2BBillingAnalyticsTests"/>
-    <testcase name="Returns tickets array" time="7.932" classname="Prd005B2BBillingAnalyticsTests"/>
+  <testsuite name="5.2 Bulk Generate Tickets for Billing" id="69fbbcfb-c819-404f-bfe6-b39a84e79061" timestamp="2025-12-15T04:33:24.475Z" tests="3" failures="0" errors="0" time="4.386">
+    <testcase name="Status code is 201" time="4.386" classname="Prd005B2BBillingAnalyticsTests"/>
+    <testcase name="Returns batch ID" time="4.386" classname="Prd005B2BBillingAnalyticsTests"/>
+    <testcase name="Returns tickets array" time="4.386" classname="Prd005B2BBillingAnalyticsTests"/>
   </testsuite>
-  <testsuite name="5.3 Query Batches List" id="e0530a6c-d0ee-471e-b489-40e61da00249" timestamp="2025-12-14T12:46:28.465Z" tests="2" failures="0" errors="0" time="1.334">
-    <testcase name="Status code is 200" time="1.334" classname="Prd005B2BBillingAnalyticsTests"/>
-    <testcase name="Returns paginated batches" time="1.334" classname="Prd005B2BBillingAnalyticsTests"/>
+  <testsuite name="5.3 Query Batches List" id="2087ddbc-3468-489b-aede-9c6e05e6985c" timestamp="2025-12-15T04:33:24.475Z" tests="2" failures="0" errors="0" time="0.620">
+    <testcase name="Status code is 200" time="0.620" classname="Prd005B2BBillingAnalyticsTests"/>
+    <testcase name="Returns paginated batches" time="0.620" classname="Prd005B2BBillingAnalyticsTests"/>
   </testsuite>
-  <testsuite name="5.4 Batch Analytics" id="f4c106ad-cf24-4a82-80ac-2533f104d531" timestamp="2025-12-14T12:46:28.465Z" tests="2" failures="0" errors="0" time="0.758">
-    <testcase name="Status code is 200" time="0.758" classname="Prd005B2BBillingAnalyticsTests"/>
-    <testcase name="Has analytics data" time="0.758" classname="Prd005B2BBillingAnalyticsTests"/>
+  <testsuite name="5.4 Batch Analytics" id="7720b0a9-3969-433d-9bad-f6c8459dcb87" timestamp="2025-12-15T04:33:24.475Z" tests="2" failures="0" errors="0" time="0.628">
+    <testcase name="Status code is 200" time="0.628" classname="Prd005B2BBillingAnalyticsTests"/>
+    <testcase name="Has analytics data" time="0.628" classname="Prd005B2BBillingAnalyticsTests"/>
   </testsuite>
-  <testsuite name="5.5 Billing Summary" id="2ddb6b06-3ebf-4b0e-b4e7-7aff74deff67" timestamp="2025-12-14T12:46:28.465Z" tests="2" failures="0" errors="0" time="6.839">
-    <testcase name="Status code is 200" time="6.839" classname="Prd005B2BBillingAnalyticsTests"/>
-    <testcase name="Has billing data" time="6.839" classname="Prd005B2BBillingAnalyticsTests"/>
+  <testsuite name="5.5 Billing Summary" id="b9b86bc4-9403-4bf7-a211-b1233334e2f1" timestamp="2025-12-15T04:33:24.475Z" tests="2" failures="0" errors="0" time="4.687">
+    <testcase name="Status code is 200" time="4.687" classname="Prd005B2BBillingAnalyticsTests"/>
+    <testcase name="Has billing data" time="4.687" classname="Prd005B2BBillingAnalyticsTests"/>
   </testsuite>
-  <testsuite name="5.6 OTA Inventory Check" id="2bdec5d3-d1c0-4a1b-92f8-9153bb0a0978" timestamp="2025-12-14T12:46:28.465Z" tests="2" failures="0" errors="0" time="0.674">
-    <testcase name="Status code is 200" time="0.674" classname="Prd005B2BBillingAnalyticsTests"/>
-    <testcase name="Has inventory data" time="0.674" classname="Prd005B2BBillingAnalyticsTests"/>
+  <testsuite name="5.6 OTA Inventory Check" id="9f780b1f-9a0b-4f9f-8c49-b81efcac5737" timestamp="2025-12-15T04:33:24.475Z" tests="2" failures="0" errors="0" time="0.313">
+    <testcase name="Status code is 200" time="0.313" classname="Prd005B2BBillingAnalyticsTests"/>
+    <testcase name="Has inventory data" time="0.313" classname="Prd005B2BBillingAnalyticsTests"/>
   </testsuite>
 </testsuites>
