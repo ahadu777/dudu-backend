@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-001: Cruise Ticketing Core Tests" tests="6" time="1.945">
-  <testsuite name="1.1 Get Product Catalog" id="3b7b2540-44a6-44c5-9967-57fd36774662" timestamp="2025-12-15T04:32:42.743Z" tests="3" failures="0" errors="0" time="0.012">
+<testsuites name="PRD-001: Cruise Ticketing Core Tests" tests="6" time="1.902">
+  <testsuite name="1.1 Get Product Catalog" id="95ea3f4a-020d-4ef7-85c7-7fa9cbe735e4" timestamp="2025-12-15T09:03:21.618Z" tests="3" failures="0" errors="0" time="0.012">
     <testcase name="Status code is 200" time="0.012" classname="Prd001CruiseTicketingCoreTests"/>
     <testcase name="Response has products array" time="0.012" classname="Prd001CruiseTicketingCoreTests"/>
     <testcase name="Products have required fields" time="0.012" classname="Prd001CruiseTicketingCoreTests"/>
   </testsuite>
-  <testsuite name="1.2 Get Product Detail" id="9e8800d3-dd63-4a01-888b-0fa156608bd9" timestamp="2025-12-15T04:32:42.743Z" tests="2" failures="0" errors="0" time="0.003">
-    <testcase name="Status code is 200 or 404" time="0.003" classname="Prd001CruiseTicketingCoreTests"/>
-    <testcase name="Response is valid JSON" time="0.003" classname="Prd001CruiseTicketingCoreTests"/>
+  <testsuite name="1.2 Get Product Detail" id="08221d52-e950-4ef6-830e-c5dab8e4b352" timestamp="2025-12-15T09:03:21.618Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200 or 404" time="0.002" classname="Prd001CruiseTicketingCoreTests"/>
+    <testcase name="Response is valid JSON" time="0.002" classname="Prd001CruiseTicketingCoreTests"/>
   </testsuite>
-  <testsuite name="1.3 Miniprogram Products List" id="489e1333-c5c2-4aef-970b-c38a7e5d3607" timestamp="2025-12-15T04:32:42.743Z" tests="3" failures="0" errors="0" time="0.332">
-    <testcase name="Status code is 200" time="0.332" classname="Prd001CruiseTicketingCoreTests"/>
-    <testcase name="Response has products array" time="0.332" classname="Prd001CruiseTicketingCoreTests"/>
-    <testcase name="Has pagination info" time="0.332" classname="Prd001CruiseTicketingCoreTests"/>
+  <testsuite name="1.3 Miniprogram Products List" id="a2f1a080-77a1-4844-bb0b-6a48a6371387" timestamp="2025-12-15T09:03:21.618Z" tests="3" failures="0" errors="0" time="0.333">
+    <testcase name="Status code is 200" time="0.333" classname="Prd001CruiseTicketingCoreTests"/>
+    <testcase name="Response has products array" time="0.333" classname="Prd001CruiseTicketingCoreTests"/>
+    <testcase name="Has pagination info" time="0.333" classname="Prd001CruiseTicketingCoreTests"/>
   </testsuite>
-  <testsuite name="1.4 Miniprogram Product Detail" id="9cdb366d-295a-4022-88ba-a138fb6687e0" timestamp="2025-12-15T04:32:42.743Z" tests="3" failures="0" errors="0" time="0.308">
-    <testcase name="Status code is 200" time="0.308" classname="Prd001CruiseTicketingCoreTests"/>
-    <testcase name="Product has required fields" time="0.308" classname="Prd001CruiseTicketingCoreTests"/>
-    <testcase name="Product has availability info" time="0.308" classname="Prd001CruiseTicketingCoreTests"/>
+  <testsuite name="1.4 Miniprogram Product Detail" id="a4d99b33-02d7-404e-9399-fdf71287a1c6" timestamp="2025-12-15T09:03:21.618Z" tests="3" failures="0" errors="0" time="0.314">
+    <testcase name="Status code is 200" time="0.314" classname="Prd001CruiseTicketingCoreTests"/>
+    <testcase name="Product has required fields" time="0.314" classname="Prd001CruiseTicketingCoreTests"/>
+    <testcase name="Product has availability info" time="0.314" classname="Prd001CruiseTicketingCoreTests"/>
   </testsuite>
-  <testsuite name="1.5 Product Availability Check" id="62da1253-c115-4cef-9a83-add55a1ddd0e" timestamp="2025-12-15T04:32:42.743Z" tests="2" failures="0" errors="0" time="0.983">
-    <testcase name="Status code is 200" time="0.983" classname="Prd001CruiseTicketingCoreTests"/>
-    <testcase name="Has availability info" time="0.983" classname="Prd001CruiseTicketingCoreTests"/>
+  <testsuite name="1.5 Product Availability Check" id="44ee14da-c95c-456b-88ed-4835250dc064" timestamp="2025-12-15T09:03:21.618Z" tests="2" failures="0" errors="0" time="0.931">
+    <testcase name="Status code is 200" time="0.931" classname="Prd001CruiseTicketingCoreTests"/>
+    <testcase name="Has availability info" time="0.931" classname="Prd001CruiseTicketingCoreTests"/>
   </testsuite>
-  <testsuite name="1.6 Product Not Found (404)" id="2f389991-7a0f-4dad-a02f-dd28dd863bb8" timestamp="2025-12-15T04:32:42.743Z" tests="2" failures="0" errors="0" time="0.307">
-    <testcase name="Status code is 404" time="0.307" classname="Prd001CruiseTicketingCoreTests"/>
-    <testcase name="Has error response" time="0.307" classname="Prd001CruiseTicketingCoreTests"/>
+  <testsuite name="1.6 Product Not Found (404)" id="95a49a1f-95b6-4765-9d1d-7d6116d06e1c" timestamp="2025-12-15T09:03:21.618Z" tests="2" failures="0" errors="0" time="0.310">
+    <testcase name="Status code is 404" time="0.310" classname="Prd001CruiseTicketingCoreTests"/>
+    <testcase name="Has error response" time="0.310" classname="Prd001CruiseTicketingCoreTests"/>
   </testsuite>
 </testsuites>

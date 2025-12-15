@@ -43,8 +43,11 @@ export class ReservationSlotServiceDirectus {
         grouped.set(slot.date, []);
       }
 
+      // Calculate available_count (virtual property)
+      const available_count = slot.total_capacity - (slot.booked_count || 0);
+
       // Calculate capacity status
-      const availablePercent = (slot.available_count / slot.total_capacity) * 100;
+      const availablePercent = (available_count / slot.total_capacity) * 100;
       let capacityStatus: 'AVAILABLE' | 'LIMITED' | 'FULL' = 'AVAILABLE';
 
       if (availablePercent === 0) {
@@ -58,7 +61,7 @@ export class ReservationSlotServiceDirectus {
         start_time: slot.start_time,
         end_time: slot.end_time,
         total_capacity: slot.total_capacity,
-        available_count: slot.available_count,
+        available_count,
         capacity_status: capacityStatus,
         status: slot.status
       });

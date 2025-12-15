@@ -1,31 +1,150 @@
 import { Router } from 'express';
-import { OperatorValidationController } from './controller';
+import { OperatorValidationServiceEnhanced } from './service.enhanced';
+import { OperatorValidationServiceDirectus } from './service.directus';
+import {
+  OperatorLoginRequest,
+  ValidateTicketRequest,
+  VerifyTicketRequest,
+} from './types';
+import { logger } from '../../utils/logger';
+import { env } from '../../config/env';
 
 const router = Router();
-const controller = new OperatorValidationController();
+
+// Initialize service based on environment
+const useDirectus = env.USE_DIRECTUS;
+const service = useDirectus
+  ? new OperatorValidationServiceDirectus()
+  : new OperatorValidationServiceEnhanced();
+
+if (useDirectus) {
+  logger.info('operator_validation.router.using_directus');
+} else {
+  logger.info('operator_validation.router.using_mock');
+}
 
 /**
- * @route POST /api/operator/login
- * @description Operator authentication
- * @body {operator_id: string, password: string, terminal_id: string, orq: number}
- * @returns {OperatorLoginResponse}
+ * POST /api/operator/login
+ * Operator authentication
  */
-router.post('/api/operator/login', (req, res) => controller.login(req, res));
+router.post('/api/operator/login', async (req, res) => {
+  try {
+    const { operator_id, password, terminal_id, orq } = req.body as OperatorLoginRequest;
+
+    if (!operator_id || !password || !terminal_id || !orq) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: operator_id, password, terminal_id, orq',
+      });
+    }
+
+    const result = await service.login({ operator_id, password, terminal_id, orq });
+
+    if (!result.success) {
+      return res.status(401).json(result);
+    }
+
+    logger.info('operator.login.api.success', { operator_id, terminal_id });
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error('operator.login.api.error', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process login',
+    });
+  }
+});
 
 /**
- * @route POST /api/operator/validate-ticket
- * @description Validate ticket via QR scan (returns color code)
- * @body {ticket_code: string, operator_id: string, terminal_id: string, orq: number}
- * @returns {ValidateTicketResponse}
+ * POST /api/operator/validate-ticket
+ * Validate ticket via QR scan (returns color code)
  */
-router.post('/api/operator/validate-ticket', (req, res) => controller.validateTicket(req, res));
+router.post('/api/operator/validate-ticket', async (req, res) => {
+  try {
+    const { ticket_code, operator_id, terminal_id, orq } = req.body as ValidateTicketRequest;
+
+    if (!ticket_code || !operator_id || !terminal_id || !orq) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: ticket_code, operator_id, terminal_id, orq',
+      });
+    }
+
+    const result = await service.validateTicket({
+      ticket_code,
+      operator_id,
+      terminal_id,
+      orq,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    logger.info('operator.validate_ticket.api.success', {
+      ticket_code,
+      operator_id,
+      color_code: result.validation_result?.color_code,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error('operator.validate_ticket.api.error', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate ticket',
+    });
+  }
+});
 
 /**
- * @route POST /api/operator/verify-ticket
- * @description Verify ticket entry (operator decision: ALLOW/DENY)
- * @body {ticket_code: string, operator_id: string, terminal_id: string, validation_decision: 'ALLOW'|'DENY', orq: number}
- * @returns {VerifyTicketResponse}
+ * POST /api/operator/verify-ticket
+ * Verify ticket entry (operator decision: ALLOW/DENY)
  */
-router.post('/api/operator/verify-ticket', (req, res) => controller.verifyTicket(req, res));
+router.post('/api/operator/verify-ticket', async (req, res) => {
+  try {
+    const { ticket_code, operator_id, terminal_id, validation_decision, orq } =
+      req.body as VerifyTicketRequest;
+
+    if (!ticket_code || !operator_id || !terminal_id || !validation_decision || !orq) {
+      return res.status(400).json({
+        success: false,
+        error:
+          'Missing required fields: ticket_code, operator_id, terminal_id, validation_decision, orq',
+      });
+    }
+
+    if (!['ALLOW', 'DENY'].includes(validation_decision)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid validation_decision. Must be ALLOW or DENY',
+      });
+    }
+
+    const result = await service.verifyTicket({
+      ticket_code,
+      operator_id,
+      terminal_id,
+      validation_decision,
+      orq,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    logger.info('operator.verify_ticket.api.success', {
+      ticket_code,
+      operator_id,
+      decision: validation_decision,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error('operator.verify_ticket.api.error', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify ticket',
+    });
+  }
+});
 
 export default router;

@@ -1,51 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-008 DeepTravel 小程序 Phase 1 - Package Booking" tests="25" time="3.820">
-  <testsuite name="0. Prerequisites - Auth Setup / 0.1 Auth Setup (Token pre-configured)" id="c4efe417-2f6d-4b9a-ae9a-69298e2810a2" timestamp="2025-12-15T04:33:37.770Z" tests="2" failures="0" errors="0" time="0.010">
+<testsuites name="PRD-008 DeepTravel 小程序 Phase 1 - Package Booking" tests="25" time="3.938">
+  <testsuite name="0. Prerequisites - Auth Setup / 0.1 Auth Setup (Token pre-configured)" id="09804a78-1666-425e-94c4-5317c83df204" timestamp="2025-12-15T09:04:22.721Z" tests="2" failures="0" errors="0" time="0.010">
     <testcase name="Server is healthy" time="0.010" classname="Prd008DeepTravelPhase1PackageBooking"/>
     <testcase name="Auth token is configured" time="0.010" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A1. Product Catalog - Direct Channel / A1.1 Get product list (default)" id="c219c218-f370-4768-bb11-10252d9321f2" timestamp="2025-12-15T04:33:37.770Z" tests="5" failures="0" errors="0" time="0.318">
-    <testcase name="Returns 200" time="0.318" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns product array" time="0.318" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Has pagination info" time="0.318" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Products have required fields" time="0.318" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Products show availability from direct channel" time="0.318" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A1. Product Catalog - Direct Channel / A1.1 Get product list (default)" id="4ad6bb7c-a437-4344-8ed5-dc0196c40aaa" timestamp="2025-12-15T09:04:22.721Z" tests="5" failures="0" errors="0" time="0.323">
+    <testcase name="Returns 200" time="0.323" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns product array" time="0.323" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Has pagination info" time="0.323" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Products have required fields" time="0.323" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Products show availability from direct channel" time="0.323" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A1. Product Catalog - Direct Channel / A1.2 Product list pagination" id="c6228eec-cf4b-4e29-a7d2-ef532e84b8ec" timestamp="2025-12-15T04:33:37.770Z" tests="2" failures="0" errors="0" time="0.375">
-    <testcase name="Returns 200" time="0.375" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Respects pagination params" time="0.375" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A1. Product Catalog - Direct Channel / A1.2 Product list pagination" id="404f36d5-b625-49fa-94eb-3ccbc7fcdb5a" timestamp="2025-12-15T09:04:22.721Z" tests="2" failures="0" errors="0" time="0.361">
+    <testcase name="Returns 200" time="0.361" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Respects pagination params" time="0.361" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A2. Product Detail - Package Inclusions / A2.1 Get product detail - cruise package" id="69495c48-14d0-4eea-92de-e5016dcf1bc0" timestamp="2025-12-15T04:33:37.770Z" tests="5" failures="0" errors="0" time="0.306">
-    <testcase name="Returns 200" time="0.306" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns product detail" time="0.306" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Has pricing info" time="0.306" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Has package functions/inclusions" time="0.306" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Has availability info" time="0.306" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A2. Product Detail - Package Inclusions / A2.1 Get product detail - cruise package" id="e3ccf207-1383-4c27-a794-900dd2eef033" timestamp="2025-12-15T09:04:22.721Z" tests="5" failures="0" errors="0" time="0.307">
+    <testcase name="Returns 200" time="0.307" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns product detail" time="0.307" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Has pricing info" time="0.307" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Has package functions/inclusions" time="0.307" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Has availability info" time="0.307" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A2. Product Detail - Package Inclusions / A2.2 Product not found" id="6349c54a-776b-4174-b1fc-0f1912ffa94e" timestamp="2025-12-15T04:33:37.770Z" tests="2" failures="0" errors="0" time="0.307">
-    <testcase name="Returns 404" time="0.307" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns NOT_FOUND error" time="0.307" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A2. Product Detail - Package Inclusions / A2.2 Product not found" id="098adbdd-8227-4441-9cc5-a29f8d947708" timestamp="2025-12-15T09:04:22.721Z" tests="2" failures="0" errors="0" time="0.309">
+    <testcase name="Returns 404" time="0.309" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns NOT_FOUND error" time="0.309" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A2. Product Detail - Package Inclusions / A2.3 Invalid product ID" id="75be288f-0de6-4a91-a779-7c82c81b2177" timestamp="2025-12-15T04:33:37.770Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Returns 400" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns validation error" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A2. Product Detail - Package Inclusions / A2.3 Invalid product ID" id="dc88de6c-fb77-436b-b6b6-be0d6f397827" timestamp="2025-12-15T09:04:22.721Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Returns 400" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns validation error" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A3. Inventory Availability / A3.1 Check availability (default)" id="c3aee60a-5dc7-4f85-846a-2d9b7caf0774" timestamp="2025-12-15T04:33:37.770Z" tests="4" failures="0" errors="0" time="0.926">
-    <testcase name="Returns 200" time="0.926" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Returns availability info" time="0.926" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Availability is boolean" time="0.926" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Available count is number" time="0.926" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A3. Inventory Availability / A3.1 Check availability (default)" id="ccc80ec7-012c-49db-8965-b1125e27c1dc" timestamp="2025-12-15T09:04:22.721Z" tests="4" failures="0" errors="0" time="0.987">
+    <testcase name="Returns 200" time="0.987" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Returns availability info" time="0.987" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Availability is boolean" time="0.987" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Available count is number" time="0.987" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A3. Inventory Availability / A3.2 Check availability with quantity" id="10365c4e-0d9e-45a2-9203-e2958e0249ea" timestamp="2025-12-15T04:33:37.770Z" tests="3" failures="0" errors="0" time="0.926">
-    <testcase name="Returns 200" time="0.926" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="Checks requested quantity" time="0.926" classname="Prd008DeepTravelPhase1PackageBooking"/>
-    <testcase name="is_available reflects quantity check" time="0.926" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A3. Inventory Availability / A3.2 Check availability with quantity" id="3a79ad04-108b-4f4c-984b-c4eefb31b232" timestamp="2025-12-15T09:04:22.721Z" tests="3" failures="0" errors="0" time="0.991">
+    <testcase name="Returns 200" time="0.991" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="Checks requested quantity" time="0.991" classname="Prd008DeepTravelPhase1PackageBooking"/>
+    <testcase name="is_available reflects quantity check" time="0.991" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A3. Inventory Availability / A3.3 Availability - product not found" id="758b1475-c59a-479c-a13e-c3c27b3aee6b" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.621">
-    <testcase name="Returns 404" time="0.621" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A3. Inventory Availability / A3.3 Availability - product not found" id="061ab71a-fae5-47e0-846c-bc896ab96a73" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.624">
+    <testcase name="Returns 404" time="0.624" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A4. Order Creation (DB Required) / A4.1 Create order - success" id="c04cd339-a0b7-40ed-aa3f-b8922ea725ab" timestamp="2025-12-15T04:33:37.770Z" tests="4" failures="4" errors="0" time="0.004">
-    <testcase name="Returns 201" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking">
+  <testsuite name="A4. Order Creation (DB Required) / A4.1 Create order - success" id="a741065e-a876-44c0-95fa-4acc876388c0" timestamp="2025-12-15T09:04:22.721Z" tests="4" failures="4" errors="0" time="0.003">
+    <testcase name="Returns 201" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected response to have status code 201 but got 401">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -57,7 +57,7 @@
    at Object.eval sandbox-script.js:1:10).]]>
       </failure>
     </testcase>
-    <testcase name="Returns order with ID" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking">
+    <testcase name="Returns order with ID" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'id'">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -69,7 +69,7 @@
    at Object.eval sandbox-script.js:2:10).]]>
       </failure>
     </testcase>
-    <testcase name="Has pricing context" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking">
+    <testcase name="Has pricing context" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'pricing_context'">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -81,7 +81,7 @@
    at Object.eval sandbox-script.js:3:10).]]>
       </failure>
     </testcase>
-    <testcase name="Total calculated correctly" time="0.004" classname="Prd008DeepTravelPhase1PackageBooking">
+    <testcase name="Total calculated correctly" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="Cannot read properties of undefined (reading 'subtotal')">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -94,7 +94,7 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="A4. Order Creation (DB Required) / A4.2 Error - missing order_no" id="9eb0b366-ed03-4758-bcd9-fd3274a168d1" timestamp="2025-12-15T04:33:37.770Z" tests="2" failures="2" errors="0" time="0.002">
+  <testsuite name="A4. Order Creation (DB Required) / A4.2 Error - missing order_no" id="66fdd99d-7c92-4546-9ab4-6efa2ca42793" timestamp="2025-12-15T09:04:22.721Z" tests="2" failures="2" errors="0" time="0.002">
     <testcase name="Returns 400" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected response to have status code 400 but got 401">
         <![CDATA[Failed 1 times.]]>
@@ -120,8 +120,8 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="A4. Order Creation (DB Required) / A4.3 Error - invalid customer type" id="72e8ee72-6843-418b-afc4-52ac193900c7" timestamp="2025-12-15T04:33:37.770Z" tests="2" failures="2" errors="0" time="0.003">
-    <testcase name="Returns 400" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
+  <testsuite name="A4. Order Creation (DB Required) / A4.3 Error - invalid customer type" id="9af416ef-65fd-48af-a71f-2f29e34b4103" timestamp="2025-12-15T09:04:22.721Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Returns 400" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected response to have status code 400 but got 401">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -133,7 +133,7 @@
    at Object.eval sandbox-script.js:1:12).]]>
       </failure>
     </testcase>
-    <testcase name="Returns INVALID_REQUEST" time="0.003" classname="Prd008DeepTravelPhase1PackageBooking">
+    <testcase name="Returns INVALID_REQUEST" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected 'INTERNAL_ERROR' to equal 'INVALID_REQUEST'">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -146,11 +146,11 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="A4. Order Creation (DB Required) / A4.4 Error - unauthorized" id="5c14a609-96e2-4e1a-949f-cf03797b1b69" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.002">
+  <testsuite name="A4. Order Creation (DB Required) / A4.4 Error - unauthorized" id="a7317b11-283f-46fa-b9e1-c06ed4d8588d" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.002">
     <testcase name="Returns 401" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A5. Order Management (DB Required) / A5.1 Get order list" id="92477cbb-2503-4578-afa2-d2bfd8365188" timestamp="2025-12-15T04:33:37.770Z" tests="3" failures="3" errors="0" time="0.002">
-    <testcase name="Returns 200" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
+  <testsuite name="A5. Order Management (DB Required) / A5.1 Get order list" id="29c656d3-878b-47fe-b738-d996d055fa39" timestamp="2025-12-15T09:04:22.721Z" tests="3" failures="3" errors="0" time="0.001">
+    <testcase name="Returns 200" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -162,7 +162,7 @@
    at Object.eval sandbox-script.js:1:14).]]>
       </failure>
     </testcase>
-    <testcase name="Returns orders array" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
+    <testcase name="Returns orders array" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'orders'">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -174,7 +174,7 @@
    at Object.eval sandbox-script.js:2:14).]]>
       </failure>
     </testcase>
-    <testcase name="Has pagination info" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
+    <testcase name="Has pagination info" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected { code: 'INTERNAL_ERROR', …(1) } to have property 'total'">
         <![CDATA[Failed 1 times.]]>
         <![CDATA[Collection JSON ID: prd-008-miniprogram-phase1.]]>
@@ -187,16 +187,16 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="A5. Order Management (DB Required) / A5.2 Get order detail" id="6f4cec21-feec-4816-8ae6-bf12436b57de" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="No order created to test detail" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A5. Order Management (DB Required) / A5.2 Get order detail" id="d4f1265e-8820-4646-895b-c4489775e8b4" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="No order created to test detail" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A5. Order Management (DB Required) / A5.3 Error - unauthorized" id="8c04ef90-fcd6-40e2-8f3b-2d83a45dea1f" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.002">
-    <testcase name="Returns 401" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A5. Order Management (DB Required) / A5.3 Error - unauthorized" id="28305d1b-f18f-4ecc-afa0-38353889e47d" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.000">
+    <testcase name="Returns 401" time="0.000" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A6. Simulate Payment (DB Required) / A6.1 Simulate payment - success" id="6fb8e241-5f85-47c9-8692-112678d43920" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="A6. Simulate Payment (DB Required) / A6.1 Simulate payment - success" id="e0708514-85df-4ac0-b03c-f2d7c77ff98e" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="No order created to test payment" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A6. Simulate Payment (DB Required) / A6.2 Error - order not found" id="9d13bca5-8393-4c7d-aa3a-03c1ad8e812d" timestamp="2025-12-15T04:33:37.770Z" tests="2" failures="2" errors="0" time="0.002">
+  <testsuite name="A6. Simulate Payment (DB Required) / A6.2 Error - order not found" id="19b948ab-97fa-4586-ba9d-092f5032733d" timestamp="2025-12-15T09:04:22.721Z" tests="2" failures="2" errors="0" time="0.002">
     <testcase name="Returns 404" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected response to have status code 404 but got 401">
         <![CDATA[Failed 1 times.]]>
@@ -222,7 +222,7 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="A6. Simulate Payment (DB Required) / A6.3 Error - already paid (invalid status)" id="b536ec29-745e-4128-a530-7cd1906e1563" timestamp="2025-12-15T04:33:37.770Z" tests="2" failures="2" errors="0" time="0.001">
+  <testsuite name="A6. Simulate Payment (DB Required) / A6.3 Error - already paid (invalid status)" id="eb25ca1e-fb0f-4b48-9942-7c45e350819d" timestamp="2025-12-15T09:04:22.721Z" tests="2" failures="2" errors="0" time="0.001">
     <testcase name="Returns 200 or 400" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking">
       <failure type="AssertionFailure" message="expected [ 200, 400 ] to include 404">
         <![CDATA[Failed 1 times.]]>
@@ -252,22 +252,22 @@
       </failure>
     </testcase>
   </testsuite>
-  <testsuite name="A6. Simulate Payment (DB Required) / A6.4 Error - unauthorized" id="ed22f081-b875-4bd4-86d9-064e794dd6c4" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.002">
-    <testcase name="Returns 401" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A6. Simulate Payment (DB Required) / A6.4 Error - unauthorized" id="75c90f16-66d0-4e48-b5ae-ca1ea1ebbc13" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="Returns 401" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.1 Generate QR - success (default expiry)" id="7fd3ac4a-e290-4966-8e6c-3b8298a9569b" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.1 Generate QR - success (default expiry)" id="7f14a978-f361-4114-8f36-0fe49cd8207c" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="No ticket available for QR test" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.2 Generate QR - custom expiry (60 min)" id="14d1e6fb-8856-498b-bc3b-4afcd0dcf68c" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="No ticket available for QR test" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.2 Generate QR - custom expiry (60 min)" id="aa69304f-4d1e-4e02-8a09-e00d8b4ca04c" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="No ticket available for QR test" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.3 Error - ticket not found" id="9d80e7cf-6212-4d1e-ba7e-a59b73bb451d" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.002">
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.3 Error - ticket not found" id="e9de962b-3eda-4254-981b-034f69d62ae5" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.002">
     <testcase name="Requires valid auth token - WeChat login may have failed" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.4 Error - invalid expiry" id="8c769822-a854-4286-9daa-66cf918f153c" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.002">
-    <testcase name="No ticket available for expiry test" time="0.002" classname="Prd008DeepTravelPhase1PackageBooking"/>
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.4 Error - invalid expiry" id="d289bf4b-e4cc-4454-a83a-f4df0b9d2187" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="No ticket available for expiry test" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
-  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.5 Error - unauthorized" id="0d716541-4002-4839-b685-33a416c773b6" timestamp="2025-12-15T04:33:37.770Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="A7. Ticket QR Generation (DB Required) / A7.5 Error - unauthorized" id="3d44ed43-f657-459b-a02f-8b013b4d5da5" timestamp="2025-12-15T09:04:22.721Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="Returns 401" time="0.001" classname="Prd008DeepTravelPhase1PackageBooking"/>
   </testsuite>
 </testsuites>
