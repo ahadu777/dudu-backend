@@ -1,4 +1,28 @@
 /**
+ * Validate URL to prevent XSS via javascript: protocol
+ * Only allows safe protocols: http, https, mailto, tel, and relative URLs
+ */
+function sanitizeUrl(url: string): string {
+  const trimmedUrl = url.trim().toLowerCase();
+
+  // Allow relative URLs (starting with / or #) and safe protocols
+  if (
+    trimmedUrl.startsWith('/') ||
+    trimmedUrl.startsWith('#') ||
+    trimmedUrl.startsWith('http://') ||
+    trimmedUrl.startsWith('https://') ||
+    trimmedUrl.startsWith('mailto:') ||
+    trimmedUrl.startsWith('tel:')
+  ) {
+    return url;
+  }
+
+  // Block dangerous protocols (javascript:, data:, vbscript:, etc.)
+  // Return safe fallback
+  return '#';
+}
+
+/**
  * Simple markdown to HTML converter for basic formatting
  */
 export function markdownToHtml(markdown: string): string {
@@ -27,8 +51,11 @@ export function markdownToHtml(markdown: string): string {
   html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  // Links - sanitize URLs to prevent XSS
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+    const safeUrl = sanitizeUrl(url);
+    return `<a href="${safeUrl}">${text}</a>`;
+  });
 
   // Lists
   html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
