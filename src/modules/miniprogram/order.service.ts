@@ -260,6 +260,10 @@ export class MiniprogramOrderService {
             ticket.travel_date = order.travel_date;
             ticket.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1年有效期
             ticket.channel = 'direct';
+            // 复制订单联系人信息到票券（用于预订时自动填充）
+            ticket.customer_name = order.contact_name;
+            ticket.customer_email = order.contact_email;
+            ticket.customer_phone = order.contact_phone;
             // 复制产品权益到票券（与 OTA 保持一致，使用 remaining_uses）
             // 支持两种数据格式：{ type, metadata: { quantity } } 或 { type, quantity }
             ticket.entitlements = productEntitlements.map(e => ({
