@@ -349,4 +349,50 @@ curl 'http://localhost:8080/api/ota/resellers/summary?page=1&limit=3&batches_per
 
 ---
 
+### 2025-12-15: Intent Analysis & Context Awareness (CASE-005)
+
+**Problem Identified**: AI was distracted by user's open file instead of focusing on user's actual question.
+
+**Scenario**: User asked "你觉得现在的ai工作流还有能够改进的地方吗" (Do you think the AI workflow can be improved?)
+
+**AI Failure**:
+1. User had `complianceAuditor.ts` open in IDE
+2. AI read that file first (irrelevant to the question)
+3. User correctly pointed out: "查看工作流你不应该是去看claude.md文档或者skill吗"
+
+**Root Cause Analysis**:
+- Step 0 (Task Classification) existed but lacked "Intent Analysis" step
+- No guidance on handling "context noise" (open files unrelated to task)
+- Missing task types: Explanation, Feasibility, Meta/Process, Code Review
+
+**Improvements Made**:
+
+1. **CLAUDE.md Simplified** - Removed duplicate workflow details, points to skill
+2. **Step 0 Enhanced** - Added "Intent Analysis" with 3 sub-steps:
+   - 0.1 检查上下文干扰 (Check context interference)
+   - 0.2 匹配任务类型 (Match task type)
+   - 0.3 判断是否需要完整流程 (Determine if full workflow needed)
+3. **New Task Types Added**:
+   - Explanation (解释类) → 直接回答
+   - Feasibility (可行性评估) → 分析后回答
+   - Meta/Process (工作流改进) → 完整流程
+   - Code Review (代码审查) → 阅读后回答
+4. **Step 1 Enhanced** - Added "上下文相关性检查"
+5. **Step 4 Added** - Experience Learning (可选)
+6. **Anti-Patterns Updated** - Added "被用户打开的文件带偏"
+
+**Files Changed**:
+- `CLAUDE.md` - Simplified to entry point
+- `.claude/skills/ai-workflow/SKILL.md` - Core workflow (5 steps)
+- `.claude/skills/ai-workflow/references/experience-learning.md` - New reference
+
+**Test Result**: ✅ **SUCCESS**
+- Workflow now explicitly addresses "context noise" issue
+- Clear guidance on when to ignore open files
+- New task types cover previously missing scenarios
+
+**Key Learning**: AI context includes irrelevant signals (open files, recent navigation). Step 0 must actively filter noise by analyzing user intent first, not just matching patterns.
+
+---
+
 *This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns.***

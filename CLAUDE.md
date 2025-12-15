@@ -1,69 +1,32 @@
 # AI Development Guide
 
-## ⚠️ MANDATORY WORKFLOW (每次任务必须执行)
+## ⚠️ MANDATORY WORKFLOW
 
-### Step 0: Task Classification / 任务分类
-
-Identify task type and load corresponding spec document:
-
-| Request Pattern | Task Type | Must Read First |
-|-----------------|-----------|-----------------|
-| "我想做..." / "I want to..." / "Help me implement..." | Natural Language Requirement | `@docs/reference/NATURAL-LANGUAGE-OPTIMIZATION.md` |
-| New feature / New Story / 新功能 | New Feature Development | `@docs/reference/DUPLICATE-PREVENTION.md` |
-| "PRD or Story?" / "这应该是 PRD 还是 Story？" | Document Layer Decision | `@docs/reference/DOCUMENT-LAYER-DECISION.md` |
-| Create PRD / Story / Card / 写文档 | Document Creation | `@docs/reference/DOCUMENT-SPEC.md` |
-| Deprecate feature / 废弃功能 | Document Lifecycle | `@docs/reference/DOCUMENT-SPEC.md` (Section 4-5) |
-| Modify existing API / Change fields / 改 API | API Change | `@docs/reference/API-CHANGE-MANAGEMENT.md` |
-| Design new API / New endpoint / 新端点 | New API Design | `@docs/reference/RESTFUL-API-DESIGN.md` |
-| Write tests / Generate tests / 写测试 | Test Generation | `@docs/reference/AI-TEST-GENERATION.md` |
-| Newman report / 测试报告 | Test Report | `@docs/reference/NEWMAN-REPORT-STANDARD.md` |
-| Refactor / Change architecture / 重构 | Refactoring | `@docs/reference/REFACTORING-IMPACT.md` |
-| Cross-module / Complex dependencies / 跨模块 | Complex Scenario | `@docs/reference/KNOWLEDGE-GRAPH.md` |
-| Error / Stuck / Not working / 报错 | Troubleshooting | `@docs/reference/TROUBLESHOOTING.md` |
-| Fix bug / Simple change / 简单改动 | Simple Fix | No doc needed → Go to Step 1 |
-
-### Step 1: Reality Check (Required / 必须执行)
-
-```bash
-# Service status / 服务状态
-curl http://localhost:8080/healthz
-
-# Document status / 相关文档状态
-grep -ri "keywords" docs/cards/ docs/stories/
-grep "status:" docs/cards/related-card.md
-
-# Code status / 代码现状
-ls src/modules/related-module/
-grep -r "related-function" src/modules/
-```
-
-**5-Minute Rule**: If basic commands don't clarify state, complex analysis won't help.
-
-### Step 2: Execute Development / 执行开发
+**所有开发任务必须遵循 5 步工作流，详见 skill：**
 
 ```
-1. Update Card status: "Ready" → "In Progress"
-2. Follow spec document loaded in Step 0
-3. Follow existing patterns in src/modules/
-4. Ensure TypeScript compiles
+@.claude/skills/ai-workflow/SKILL.md
 ```
 
-### Step 3: Verify Completion / 验证完成
+### 工作流概述
 
-```bash
-# Endpoint test / 端点测试
-curl http://localhost:8080/[endpoint]
+| Step | 名称 | 关键动作 |
+|------|------|----------|
+| 0 | Intent Analysis | 解析用户意图 → 匹配任务类型 → 加载参考文档 |
+| 1 | Reality Check | 验证服务状态、文档状态、代码现状 |
+| 2 | Execute | 按规范执行，更新 Card 状态 |
+| 3 | Verify | 测试验证，文档一致性检查 |
+| 4 | Learn (可选) | 记录经验教训，改进工作流 |
 
-# Run related tests / 运行相关测试
-npm run test:prd [N]    # PRD test
-npm run test:story [N]  # Story test
+### 快速判断：是否需要完整工作流？
 
-# Document consistency / 文档一致性校验
-npm run validate:docs   # 检查 PRD→Stories→Cards→Code 一致性
-
-# Update status / 更新状态
-# Card: "In Progress" → "Done"
-```
+| 情况 | 需要完整流程？ |
+|------|---------------|
+| 用户问"这是什么" / "解释一下" | ❌ 直接回答 |
+| 用户问"能不能做X" / 可行性评估 | ❌ 分析后回答 |
+| 修复 typo / 简单改动 | ⚠️ 简化流程（跳过 Step 0/4） |
+| 新功能 / API 修改 / 重构 | ✅ 完整 5 步 |
+| 改进工作流本身 | ✅ 完整 5 步 |
 
 ---
 
