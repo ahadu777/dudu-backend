@@ -107,17 +107,9 @@ cards:
 2. **Ticket Generation**: Same ticket issuance service creates tickets with entitlements
 3. **QR System**: Identical QR generation and redemption for OTA tickets
 
-### 3. API Endpoints
+### 3. Technical Reference
 
-> 详细 API 契约见关联 Cards，此处仅列出端点清单：
-
-| 端点 | 用途 | Card |
-|------|------|------|
-| `GET /api/ota/inventory` | 查询库存 | ota-channel-management |
-| `POST /api/ota/tickets/bulk-generate` | 批量生成票券 | ota-premade-tickets |
-| `GET /api/ota/tickets` | 查询票券 | ota-order-retrieval |
-| `GET /qr/{ticket_code}/info` | 票券状态查询 | qr-generation-api |
-| `GET /api/ota/resellers` | 分销商管理 | ota-reseller-management |
+> API contracts and implementation details: see related Cards below
 
 ### 4. 数据影响
 

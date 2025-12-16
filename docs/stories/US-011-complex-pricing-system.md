@@ -66,25 +66,8 @@ cards:
 - Add-ons calculated separately and summed
 - Final total includes all components with clear breakdown
 
-## API Endpoints Needed
-
-### Core Pricing Engine
-- **POST** /pricing/calculate - Calculate total price for booking request
-  - Request: { product_id, quantity, customer_breakdown[], booking_dates[], addons[] }
-  - Response: { base_price, adjustments[], addons_total, final_total, breakdown }
-  - Errors: 400, 422 (invalid dates/customer types)
-
-### Enhanced Product Information
-- **GET** /catalog/products/{id}/pricing-rules - Get all pricing rules for product
-  - Response: { base_prices, time_rules[], customer_rules[], special_dates[] }
-
-### Package Configuration
-- **GET** /catalog/packages/{package_tier} - Get package tier details and inclusions
-  - Response: { tier_name, base_price, inclusions[], upgrade_options[] }
-
-### Add-on Management
-- **GET** /catalog/addons - List available add-on products
-  - Response: { addons[{id, name, price, quantity, description}] }
+## Technical Reference
+> API contracts and implementation details: see Cards `complex-pricing-engine`, `schedule-pricing-rules`
 
 ## Data Changes
 
@@ -119,32 +102,12 @@ cards:
 - Package configuration management
 - Add-on inventory tracking
 
-## Proposed Cards
+## Related Cards
 
-### 1. **complex-pricing-engine**: Core pricing calculation logic
-   - **Team**: A - Commerce
-   - **Endpoints**: POST /pricing/calculate, GET /pricing/rules
-   - **Dependencies**: catalog-endpoint
-
-### 2. **package-tier-management**: Package configuration and tiers
-   - **Team**: B - Fulfillment
-   - **Endpoints**: GET /catalog/packages/{tier}, GET /catalog/packages
-   - **Dependencies**: promotion-detail
-
-### 3. **addon-products-catalog**: Add-on products and token packages
-   - **Team**: A - Commerce
-   - **Endpoints**: GET /catalog/addons, POST /addons/reserve
-   - **Dependencies**: None
-
-### 4. **special-date-pricing**: Calendar-based and event pricing
-   - **Team**: B - Fulfillment
-   - **Endpoints**: GET /calendar/pricing-dates, GET /calendar/special-events
-   - **Dependencies**: complex-pricing-engine
-
-### 5. **order-create**: Enhanced order processing with complex pricing support
-   - **Team**: A - Commerce
-   - **Endpoints**: POST /orders (enhanced for complex pricing)
-   - **Dependencies**: complex-pricing-engine
+| Card | Team | Description |
+|------|------|-------------|
+| complex-pricing-engine | A - Commerce | Core pricing calculation logic |
+| schedule-pricing-rules | B - Fulfillment | Calendar-based and event pricing |
 
 ## Implementation Priority
 

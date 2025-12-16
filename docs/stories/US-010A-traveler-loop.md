@@ -84,10 +84,10 @@ related_features:
 ## Implementation Progress
 
 ### Phase 1: 商品浏览与订单创建 ✅
-| Card | Status | API Endpoints |
-|------|--------|---------------|
-| miniprogram-product-catalog | Done | GET /miniprogram/products, GET /miniprogram/products/:id, GET /miniprogram/products/:id/availability |
-| miniprogram-order | Done | POST /miniprogram/orders, GET /miniprogram/orders, GET /miniprogram/orders/:id |
+| Card | Status | Description |
+|------|--------|-------------|
+| miniprogram-product-catalog | Done | 商品列表、详情、库存查询 |
+| miniprogram-order | Done | 订单创建、列表、详情查询 |
 
 **Database Tables Created**:
 - `orders` - 订单主表

@@ -34,30 +34,8 @@ cards:
 4. **Data Rules:** Profile updates are audited for compliance
 5. **Audit Rules:** Log all profile access and modification attempts
 
-## API Endpoints Needed
-
-- **GET** /profile - Get current user's profile information
-  - Response: { user_id, name, email, preferences, created_at, updated_at }
-  - Errors: 401, 404
-
-- **PUT** /profile - Update profile information
-  - Request: { name?, email?, preferences? }
-  - Response: { updated_profile, validation_errors? }
-  - Errors: 400, 401, 422
-
-- **GET** /profile/settings - Get user settings and preferences
-  - Response: { notification_settings, privacy_settings, display_preferences }
-  - Errors: 401
-
-- **PUT** /profile/settings - Update user settings
-  - Request: { notification_settings?, privacy_settings?, display_preferences? }
-  - Response: { updated_settings }
-  - Errors: 400, 401, 422
-
-- **GET** /profile/activity - Get user activity history
-  - Query params: limit, offset, type
-  - Response: { activities[], total, pagination }
-  - Errors: 401
+## Technical Reference
+> API contracts and implementation details: see Cards `user-profile-endpoint`, `user-settings-endpoint`, `user-activity-endpoint`
 
 ## Data Changes
 
@@ -86,22 +64,13 @@ cards:
 - Activity logging system
 - Profile image storage (future enhancement)
 
-## Proposed Cards
+## Related Cards
 
-1. **user-profile-endpoint**: Core profile management
-   - **Team**: C - Identity & Access
-   - **Endpoints**: GET/PUT /profile
-   - **Dependencies**: None
-
-2. **user-settings-endpoint**: Settings and preferences management
-   - **Team**: C - Identity & Access
-   - **Endpoints**: GET/PUT /profile/settings
-   - **Dependencies**: user-profile-endpoint
-
-3. **user-activity-endpoint**: Activity history and audit trail
-   - **Team**: C - Identity & Access
-   - **Endpoints**: GET /profile/activity
-   - **Dependencies**: user-profile-endpoint
+| Card | Team | Description |
+|------|------|-------------|
+| user-profile-endpoint | C - Identity & Access | Core profile management |
+| user-settings-endpoint | C - Identity & Access | Settings and preferences |
+| user-activity-endpoint | C - Identity & Access | Activity history and audit |
 
 ## Implementation Priority
 

@@ -76,79 +76,15 @@ So that I can monitor venue capacity in real-time
 
 ---
 
-## Technical Cards
+## Related Cards
 
-### Card 1: Reservation Slot Management System
-**Card**: `reservation-slot-management`
-**Team**: B - Fulfillment
-**Endpoints**:
-- `GET /api/reservation-slots/available`
-- `POST /api/reservation-slots/create` (admin - future)
+| Card | Team | Description |
+|------|------|-------------|
+| reservation-slot-management | B - Fulfillment | Time slot configuration and capacity management |
+| customer-reservation-portal | B - Fulfillment | Customer reservation UI and booking flow |
+| operator-validation-scanner | C - Operations | QR scanning and ticket validation at venues |
 
-**Responsibilities**:
-- Manage time slot configuration (date, start_time, end_time, capacity)
-- Track real-time booking counts per slot
-- Calculate availability (total_capacity - booked_count)
-- Update slot status (ACTIVE, FULL, CLOSED)
-
-**Data Requirements**:
-- Create `reservation_slots` table
-- Fields: date, start_time, end_time, total_capacity, booked_count, status
-- Computed field: available_count
-- Unique constraint on (date, start_time, orq)
-
----
-
-### Card 2: Customer Reservation Portal
-**Card**: `customer-reservation-portal`
-**Team**: B - Fulfillment
-**Endpoints**:
-- `POST /api/tickets/validate` - Validate ticket code before reservation
-- `GET /api/reservation-slots/available` - Get available slots (requires `orq` query param)
-- `POST /api/reservations/create` - Create reservation for ticket
-
-**Responsibilities**:
-- Validate ticket eligibility for reservation (ticket must be ACTIVATED)
-- Display calendar with available slots grouped by date
-- Create reservation with capacity enforcement
-- Generate QR code and send confirmation
-- Handle concurrent booking conflicts
-
-**Data Requirements**:
-- Update `tickets` table: Add customer_email, customer_phone, status enum
-- Create `ticket_reservations` table
-- Link ticket → slot (one-to-one)
-- Transaction safety for capacity checks
-
-**Note**: Contact verification endpoint (`POST /api/tickets/verify-contact`) was planned but not implemented in MVP. Contact info is collected and validated during reservation creation.
-
----
-
-### Card 3: Operator Validation Scanner
-**Card**: `operator-validation-scanner`
-**Team**: C - Operations
-
-**On-Site Verification Endpoints** (Primary - Production):
-- `POST /operators/auth` - Operator login, returns session_token
-- `POST /qr/public/{ticket_code}` - Generate QR code for ticket
-- `POST /qr/decrypt` - Decrypt QR code, returns ticket info
-- `POST /venue/scan` - Redeem ticket entitlement (requires operator auth)
-
-**Legacy Endpoints** (For display validation only):
-- `POST /operators/validate-ticket` - Check ticket status (returns GREEN/YELLOW/RED)
-- `POST /operators/verify-ticket` - Record operator decision
-
-**Responsibilities**:
-- Authenticate operators
-- Scan QR codes and decrypt ticket info
-- Validate ticket status and reservation
-- Redeem ticket entitlements at venue
-- Display color-coded validation results (GREEN/RED/YELLOW)
-
-**Data Requirements**:
-- Update `tickets` table: Add verified_at, verified_by fields
-- Query reservations with JOIN to slots
-- Record verification events
+> API contracts and technical implementation: see individual Card documentation
 
 ---
 
@@ -358,57 +294,14 @@ Order #456: 3 tickets
 
 ---
 
-## Data Schema
+## Data Requirements
 
-### tickets (updated)
-```sql
-ALTER TABLE tickets
-  ADD COLUMN status ENUM('PENDING_PAYMENT', 'ACTIVATED', 'RESERVED', 'VERIFIED', 'EXPIRED'),
-  ADD COLUMN customer_email VARCHAR(255),
-  ADD COLUMN customer_phone VARCHAR(20),
-  ADD COLUMN activated_at TIMESTAMP NULL,
-  ADD COLUMN reserved_at TIMESTAMP NULL,
-  ADD COLUMN verified_at TIMESTAMP NULL,
-  ADD COLUMN verified_by INT NULL,
-  ADD COLUMN qr_code TEXT;
-```
+> Database schema details: see related Cards (`reservation-slot-management`, `customer-reservation-portal`)
 
-### reservation_slots (new)
-```sql
-CREATE TABLE reservation_slots (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  date DATE NOT NULL,
-  start_time TIME NOT NULL,
-  end_time TIME NOT NULL,
-  venue_id INT NULL,
-  total_capacity INT DEFAULT 200,
-  booked_count INT DEFAULT 0,
-  available_count INT AS (total_capacity - booked_count) STORED,
-  status ENUM('ACTIVE', 'FULL', 'CLOSED') DEFAULT 'ACTIVE',
-  orq INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY (date, start_time, orq)
-);
-```
-
-### ticket_reservations (new)
-```sql
-CREATE TABLE ticket_reservations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  ticket_id INT NOT NULL UNIQUE,
-  slot_id INT NOT NULL,
-  customer_email VARCHAR(255) NOT NULL,
-  customer_phone VARCHAR(20) NOT NULL,
-  reserved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  status ENUM('RESERVED', 'CANCELLED', 'VERIFIED') DEFAULT 'RESERVED',
-  orq INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
-  FOREIGN KEY (slot_id) REFERENCES reservation_slots(id)
-);
-```
+**Key Data Concepts**:
+- Ticket status tracking (PENDING_PAYMENT → ACTIVATED → RESERVED → VERIFIED)
+- Time slots with capacity limits
+- Ticket-to-slot reservations (one ticket = one reservation)
 
 ---
 

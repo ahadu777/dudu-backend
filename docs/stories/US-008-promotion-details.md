@@ -31,12 +31,8 @@ cards:
 4. **State Rules:** Display real-time inventory and availability status
 5. **Audit Rules:** Log promotion detail views for analytics (product_id, timestamp)
 
-## API Endpoints Needed
-
-- **GET** /catalog/promotions/{id} - Get detailed promotion information
-  - Request: Path parameter `id` (product ID)
-  - Response: { promotion: { id, sku, name, description, unit_price, status, functions, inventory, features, images } }
-  - Errors: 400 (invalid ID), 404 (not found), 500 (server error)
+## Technical Reference
+> API contract and implementation details: see Card `promotion-detail-endpoint`
 
 ## Data Changes
 
@@ -63,12 +59,11 @@ cards:
 - Analytics: Track promotion detail views
 - Marketing: Support for rich content (images, features)
 
-## Proposed Cards
+## Related Cards
 
-1. **promotion-detail-endpoint**: Core promotion detail API
-   - **Team**: A - Commerce
-   - **Endpoints**: GET /catalog/promotions/{id}
-   - **Dependencies**: catalog (extends existing module)
+| Card | Team | Description |
+|------|------|-------------|
+| promotion-detail-endpoint | A - Commerce | Core promotion detail API (extends catalog module) |
 
 ## Implementation Notes
 

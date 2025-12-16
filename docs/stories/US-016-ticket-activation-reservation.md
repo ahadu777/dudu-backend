@@ -62,72 +62,15 @@ So that I can enforce reservation policies accurately
 I want to view scan history and validation decisions
 So that I can monitor entry patterns and resolve disputes
 
-## Technical Cards
+## Related Cards
 
-### Card 1: Ticket Activation System
-**Card**: `ticket-activation`
-**Team**: B - Tickets
-**Endpoints**:
-- `POST /api/tickets/:ticket_id/activate`
-- `GET /api/tickets/:ticket_id/status`
+| Card | Team | Description |
+|------|------|-------------|
+| ticket-activation | B - Tickets | Ticket activation workflow (inactive → active) |
+| time-slot-reservation | B - Tickets | Calendar-based reservation management |
+| reservation-validation-scanning | C - Operations | Enhanced operator scanning with reservation checks |
 
-**Responsibilities**:
-- Transition tickets from inactive → active status
-- Track activation timestamp and mode
-- Validate activation eligibility
-- Support both immediate and deferred activation modes
-
-**Data Requirements**:
-- Add `activation_status` to tickets table
-- Add `activated_at` timestamp
-- Add `activation_mode` enum field
-
----
-
-### Card 2: Time-Slot Reservation Management
-**Card**: `time-slot-reservation`
-**Team**: B - Tickets
-**Endpoints**:
-- `GET /api/tickets/:ticket_id/availability`
-- `POST /api/reservations`
-- `GET /api/reservations/:reservation_id`
-- `PUT /api/reservations/:reservation_id`
-- `DELETE /api/reservations/:reservation_id`
-
-**Responsibilities**:
-- Calendar-based date/time selection
-- Create and manage ticket reservations
-- Validate reservation eligibility (only active tickets)
-- Support batch reservations (multiple tickets same date)
-- Handle reservation modifications and cancellations
-
-**Data Requirements**:
-- Create `ticket_reservations` table
-- Track reservation dates and time slots
-- Link reservations to tickets
-- Index for efficient date lookups
-
----
-
-### Card 3: Enhanced Operator Scanning with Reservation Validation
-**Card**: `reservation-validation-scanning`
-**Team**: C - Operations
-**Endpoints** (extending existing):
-- `POST /venue/scan` (enhanced with reservation validation)
-- `GET /api/operators/scan-history`
-
-**Responsibilities**:
-- Extend existing scan endpoint with reservation checks
-- Display activation status, reservation status, reserved date
-- Validate ticket for current date
-- Color-coded validation results (valid/warning/invalid)
-- Log scan decisions with reservation context
-- Support offline validation with cached rules
-
-**Data Requirements**:
-- Join tickets with reservations on scan
-- Cache validation rules for offline mode
-- Track scan events with reservation validation results
+> API contracts and technical implementation: see individual Card documentation
 
 ---
 
@@ -165,9 +108,9 @@ graph LR
 ### Functional Requirements
 
 **Ticket Activation**:
-- [ ] Tickets purchased in pre-made mode have `status=inactive`
-- [ ] Immediate mode tickets have `status=active` automatically
-- [ ] `POST /api/tickets/:ticket_id/activate` transitions inactive → active
+- [ ] Tickets purchased in pre-made mode start as inactive
+- [ ] Immediate mode tickets are activated automatically at purchase
+- [ ] Customer can activate tickets when ready (inactive → active)
 - [ ] Activation is irreversible (cannot go back to inactive)
 - [ ] Only active tickets can create reservations
 

@@ -44,28 +44,28 @@ cards:
 #### Acceptance Criteria
 
 ##### Venue CRUD Management
-- [x] GET /venue returns list of all active venues with supported functions
-- [x] GET /venue?include_inactive=true includes deactivated venues
-- [x] POST /venue creates new venue with venue_code, venue_name, venue_type
-- [x] PUT /venue/:venue_id updates venue information
-- [x] DELETE /venue/:venue_id soft deletes venue (sets is_active=false)
-- [x] DELETE /venue/:venue_id?hard_delete=true permanently removes venue
-- [x] Duplicate venue_code prevention with clear error messages
+- [x] Administrators can list all active venues with supported functions
+- [x] Administrators can view inactive venues when needed
+- [x] Administrators can create new venues with code, name, and type
+- [x] Administrators can update venue information
+- [x] Administrators can soft-delete venues (deactivate)
+- [x] Administrators can permanently remove venues when required
+- [x] System prevents duplicate venue codes with clear error messages
 
 ##### Venue Scanning Operations
-- [x] POST /venue/scan validates QR token and redeems entitlement
-- [x] Scan endpoint requires operator JWT authentication
-- [x] JTI + function_code combination prevents replay attacks
+- [x] Operators can scan QR tokens to validate and redeem entitlements
+- [x] Scanning requires operator authentication
+- [x] System prevents replay attacks (same QR + function cannot be used twice)
 - [x] Supports all function codes: ferry_boarding, gift_redemption, playground_token
-- [x] OTA tickets (PRE_GENERATED) must be activated before scanning
-- [x] Returns detailed response with entitlements and remaining uses
-- [x] Records all redemption events with operator attribution
+- [x] OTA tickets must be activated before scanning
+- [x] Scan results show entitlements and remaining uses
+- [x] All redemption events are recorded with operator attribution
 
 ##### Venue Analytics
-- [x] GET /venue/:venue_code/analytics returns performance metrics
-- [x] Analytics supports configurable time window (1-168 hours)
-- [x] Metrics include: total_scans, success_rate, fraud_attempts, function_breakdown
-- [x] Invalid hours parameter (>168) returns 400 error
+- [x] Managers can view venue performance metrics
+- [x] Analytics support configurable time windows (up to 1 week)
+- [x] Metrics include: total scans, success rate, fraud attempts, function breakdown
+- [x] Invalid time parameters are rejected with clear error messages
 
 ##### Performance & Security
 - [x] All endpoints respond within 2 seconds
@@ -121,60 +121,8 @@ src/modules/venue/
     └── venue.repository.ts  # Database operations
 ```
 
-#### Key API Endpoints
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | /venue | List all venues | None |
-| POST | /venue | Create new venue | Admin |
-| GET | /venue/:venue_id | Get venue details | None |
-| PUT | /venue/:venue_id | Update venue | Admin |
-| DELETE | /venue/:venue_id | Delete venue | Admin |
-| POST | /venue/scan | Scan and redeem ticket | Operator JWT |
-| GET | /venue/:venue_code/analytics | Get venue analytics | None |
-
-#### Route Order (Critical)
-```typescript
-// Static paths MUST come before dynamic paths
-router.post('/scan', authenticateOperator, ...);           // Static
-router.get('/:venue_code/analytics', ...);                 // Param with suffix
-router.get('/:venue_id', ...);                             // Bare param (last)
-```
-
-#### Response Formats
-
-**Scan Success:**
-```json
-{
-  "result": "success",
-  "ticket_status": "ACTIVE",
-  "entitlements": [...],
-  "remaining_uses": 2,
-  "operator_info": {
-    "operator_id": 1,
-    "username": "operator1"
-  },
-  "performance_metrics": {
-    "response_time_ms": 45,
-    "fraud_checks_passed": true
-  },
-  "ts": "2025-11-25T10:30:00Z"
-}
-```
-
-**Scan Rejection:**
-```json
-{
-  "result": "reject",
-  "reason": "ALREADY_REDEEMED",
-  "operator_info": {...},
-  "performance_metrics": {
-    "response_time_ms": 12,
-    "fraud_checks_passed": false
-  },
-  "ts": "2025-11-25T10:30:05Z"
-}
-```
+#### Technical Reference
+> API contracts and response formats: see related Cards below
 
 ### 4. Related Cards
 
