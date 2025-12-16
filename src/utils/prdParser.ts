@@ -98,9 +98,10 @@ export function loadPRDDocuments(): PRDDocument[] {
     const content = fs.readFileSync(filePath, 'utf-8');
     const { metadata, body } = parseFrontmatter(content);
     
-    // Extract title from first line if not in metadata
+    // Extract title from first line (e.g., "# PRD-001: Cruise Package Ticketing Platform")
     const titleMatch = body.match(/^#\s+(.+)$/m) || content.match(/^#\s+(.+)$/m);
-    const title = String(metadata.title || metadata.prd_id || (titleMatch ? titleMatch[1] : filename));
+    // Prefer markdown title over prd_id since markdown title includes description
+    const title = String(metadata.title || (titleMatch ? titleMatch[1] : null) || metadata.prd_id || filename);
 
     return {
       filename,
