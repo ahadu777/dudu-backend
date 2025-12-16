@@ -9,7 +9,8 @@ status: "Draft"
 created_date: "2025-11-14"
 last_updated: "2025-11-14"
 related_stories: ["US-016"]
-implementation_cards: ["ticket-lifecycle-daemon", "reservation-slot-management", "operator-validation-scanner", "customer-reservation-portal"]
+implementation_cards: ["reservation-slot-management", "operator-validation-scanner", "customer-reservation-portal"]
+# deprecated_cards: ["ticket-lifecycle-daemon"] - moved to _deprecated/
 ```
 
 ## Executive Summary

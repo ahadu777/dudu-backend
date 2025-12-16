@@ -9,7 +9,7 @@ status: "Done"
 created_date: "2025-11-15"
 last_updated: "2025-12-11"
 related_stories: []
-implementation_cards: ["ota-reseller-management"]  # Phase 2/3 cards deferred, not yet created
+implementation_cards: []  # ota-reseller-management deprecated, moved to _deprecated/
 depends_on: "PRD-002"
 deadline: "2026-02-28"
 phase_status:

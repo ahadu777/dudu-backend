@@ -6,8 +6,8 @@ status: "Draft"
 priority: High
 created_date: "2025-11-14"
 business_requirement: "PRD-006"
-cards:
-  - ticket-lifecycle-daemon
+cards: []
+# deprecated: [ticket-lifecycle-daemon] - moved to _deprecated/
 ---
 
 # US-016: Ticket Activation and Time-Slot Reservation

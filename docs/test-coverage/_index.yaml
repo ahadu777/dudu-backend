@@ -415,9 +415,9 @@ coverage_registry:
         "POST /miniprogram/orders/:id/simulate-payment": "✅ Tested (4 scenarios)"
         "POST /miniprogram/tickets/:code/qr": "✅ Tested (5 scenarios)"
     coverage_gaps:
-      - "⏸️ Phase 2: Route Schedule Search (travel-search-hub)"
-      - "⏸️ Phase 2: Seat Lock Service (seat-lock-service)"
-      - "⏸️ Phase 3: WeChat Payment Integration (wechat-payment-session)"
+      - "⏸️ Phase 2: Route Schedule Search (待规划)"
+      - "⏸️ Phase 2: Seat Selection (待规划)"
+      - "⏸️ Phase 3: WeChat Payment Integration (wallyt-payment)"
       - "⏸️ Phase 3: Bundle Ticket Engine (bundle-ticket-engine)"
     coverage_notes: |
       **Phase 1 Complete (2025-12-11)**:

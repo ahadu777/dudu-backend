@@ -12,11 +12,10 @@ enhances:
 depends_on:
   - US-001  # Core ticketing foundation required
 cards:
-  - ota-channel-management
-  - ota-reseller-management
   - ota-order-retrieval
   - ota-premade-tickets
   - ota-reservation-management
+# deprecated: [ota-channel-management, ota-reseller-management] - moved to _deprecated/
 ---
 
 # US-012: OTA Platform Integration for Bulk Ticket Reservation

@@ -10,7 +10,8 @@ version: "2.0"
 created_date: "2025-11-03"
 last_updated: "2025-12-12"
 related_stories: ["US-012"]
-implementation_cards: ["ota-channel-management", "ota-reseller-management", "ota-order-retrieval", "ota-premade-tickets", "ota-reservation-management"]
+implementation_cards: ["ota-order-retrieval", "ota-premade-tickets", "ota-reservation-management"]
+# deprecated_cards: ["ota-channel-management", "ota-reseller-management"] - moved to _deprecated/
 enhances: "PRD-001"
 enables: "PRD-005"
 ```
