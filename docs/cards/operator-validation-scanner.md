@@ -2,7 +2,7 @@
 card: "Operator Validation Scanner - QR Code Entry Validation"
 slug: operator-validation-scanner
 team: "C - Operations"
-oas_paths: ["/operators/auth", "/qr/decrypt", "/venue/scan", "/operators/validate-ticket", "/operators/verify-ticket"]
+oas_paths: ["/operators/auth", "/operators/validate-ticket", "/operators/verify-ticket"]
 migrations: ["db/migrations/0022_operator_validation.sql"]
 status: "Done"
 readiness: "mvp"
@@ -25,8 +25,9 @@ relationships:
 ## Status & Telemetry
 - Status: Ready
 - Readiness: mvp
-- **Primary Paths (Production)**: /operators/auth, /qr/decrypt, /venue/scan
-- **Legacy Paths (Display Only)**: /operators/validate-ticket, /operators/verify-ticket
+- **Primary Path**: /operators/auth
+- **Legacy Paths**: /operators/validate-ticket, /operators/verify-ticket
+- **Depends on**: /qr/decrypt (qr-generation-api), /venue/scan (venue-enhanced-scanning)
 - Migrations: db/migrations/0022_operator_validation.sql
 - Newman: 79/79 • reports/newman/prd-007-e2e.xml
 - Last Update: 2025-12-16T12:00:00+08:00
