@@ -187,30 +187,8 @@ export class CustomerReservationServiceMock {
       };
     }
 
-    // Get customer info from ticket
+    // Get customer info from ticket (optional)
     const { customer_email, customer_phone } = validation.ticket;
-
-    if (!customer_email || !customer_phone) {
-      return {
-        success: false,
-        error: 'Missing customer contact information in ticket',
-      };
-    }
-
-    // Basic validation of contact info
-    if (customer_email.trim().length < 3) {
-      return {
-        success: false,
-        error: 'Valid customer email is required',
-      };
-    }
-
-    if (!/^[\d\s+\-()]+$/.test(customer_phone)) {
-      return {
-        success: false,
-        error: 'Valid phone number is required',
-      };
-    }
 
     logger.info('contact.verification.success', { ticket_code, customer_email });
 
@@ -242,13 +220,6 @@ export class CustomerReservationServiceMock {
       const customer_email = providedEmail || ticketEmail || '';
       const customer_phone = providedPhone || ticketPhone || '';
       const reservationOrq = ticketOrq || 1; // Default to 1 if not available
-
-      if (!customer_email || !customer_phone) {
-        return {
-          success: false,
-          error: 'Missing customer contact information',
-        };
-      }
 
       // 2. Get slot details
       const slot = await this.slotsService.getSlotById(slot_id);

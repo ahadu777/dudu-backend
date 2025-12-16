@@ -246,10 +246,6 @@ export class CustomerReservationService {
     const customer_email = providedEmail || validation.ticket.customer_email || '';
     const customer_phone = providedPhone || validation.ticket.customer_phone || '';
 
-    if (!customer_email || !customer_phone) {
-      return { success: false, error: 'Missing customer contact information' };
-    }
-
     // 3. Check slot capacity
     const slot = await this.slotRepo.findOne({ where: { id: parseInt(slot_id) } });
     if (!slot) {
