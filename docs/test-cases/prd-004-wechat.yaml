@@ -1,0 +1,46 @@
+prd_id: PRD-004
+feature: 微信小程序登录
+description: 微信授权登录、JWT认证、手机号绑定
+test_command: npm run test:prd 004
+
+test_cases:
+  - id: TC-004-01
+    name: 微信授权登录
+    priority: P0
+    preconditions:
+      - 微信小程序已配置
+      - 用户有微信账号
+    steps:
+      - 用户点击微信登录
+      - 获取微信 code
+      - 发送 POST 到 /api/wechat/login
+    expected:
+      - 登录成功
+      - 返回用户 token
+      - 创建或匹配用户账号
+
+  - id: TC-004-02
+    name: 手机号绑定
+    priority: P1
+    preconditions:
+      - 用户已微信登录
+      - 手机号未绑定
+    steps:
+      - 获取手机号授权
+      - 发送绑定请求
+    expected:
+      - 绑定成功
+      - 用户信息更新手机号
+
+  - id: TC-004-03
+    name: Token 刷新
+    priority: P1
+    preconditions:
+      - 用户已登录
+      - Token 即将过期
+    steps:
+      - 发送 Token 刷新请求
+      - 验证新 Token
+    expected:
+      - 返回新 Token
+      - 旧 Token 失效

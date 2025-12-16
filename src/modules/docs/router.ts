@@ -8,6 +8,7 @@ import { getCardStats } from '../../utils/cardParser';
 import { buildSitemap } from '../../utils/sitemapBuilder';
 import { runComplianceAudit } from '../../utils/complianceAuditor';
 import { loadTestCoverageData, getCoverageStats } from '../../utils/coverageParser';
+import { loadAllTestCases, FeatureTestCases } from '../../utils/testCaseParser';
 import { baseLayout, sharedStyles } from './templates/base';
 import { componentStyles, pageHeader } from './templates/components';
 import { projectDocsStyles } from './styles';
@@ -20,6 +21,67 @@ import {
   handleStoriesList,
   handleStoryDetail
 } from './handlers';
+
+// Generate detailed test cases for QA - loads from YAML files
+function generateTestCasesHTML(): string {
+  const allTestCases = loadAllTestCases();
+
+  if (allTestCases.length === 0) {
+    return '<p style="color: #666;">暂无测试用例数据。请在 docs/test-cases/ 目录下添加 YAML 文件。</p>';
+  }
+
+  return allTestCases.map((feature: FeatureTestCases) => `
+    <div class="test-case-group">
+      <div class="test-case-header" data-feature="${feature.prd_id}">
+        <div>
+          <span class="prd-badge">${feature.prd_id}</span>
+          <h3>${feature.feature}</h3>
+        </div>
+        <div class="test-case-summary">
+          <span class="case-count">${feature.test_cases.length} 个用例</span>
+          <span class="toggle-arrow" id="arrow-tc-${feature.prd_id}">▶</span>
+        </div>
+      </div>
+      <div class="test-case-body" id="body-tc-${feature.prd_id}">
+        <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">${feature.description}</p>
+        <div style="margin-bottom: 15px;">
+          <code style="background: #2c3e50; color: #2ecc71; padding: 8px 12px; border-radius: 4px;">${feature.test_command}</code>
+          <button class="copy-btn" data-cmd="${feature.test_command}" style="margin-left: 10px;">复制</button>
+        </div>
+        ${feature.test_cases.map(tc => `
+          <div class="test-case-card priority-${tc.priority.toLowerCase()}">
+            <div class="test-case-title">
+              <span class="case-id">${tc.id}</span>
+              <span class="case-name">${tc.name}</span>
+              <span class="priority-badge ${tc.priority.toLowerCase()}">${tc.priority}</span>
+            </div>
+
+            <div class="test-case-section">
+              <h5>📋 前置条件</h5>
+              <ul>
+                ${tc.preconditions.map(p => `<li>${p}</li>`).join('')}
+              </ul>
+            </div>
+
+            <div class="test-case-section">
+              <h5>🔢 测试步骤</h5>
+              <ol>
+                ${tc.steps.map(s => `<li>${s}</li>`).join('')}
+              </ol>
+            </div>
+
+            <div class="test-case-section">
+              <h5>✅ 预期结果</h5>
+              <ul class="expected-list">
+                ${tc.expected.map(e => `<li>${e}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
 
 const router = Router();
 
@@ -1769,6 +1831,444 @@ router.get('/coverage', (_req: Request, res: Response) => {
     .toggle-arrow.expanded {
       transform: rotate(90deg);
     }
+    /* QA Guide Styles */
+    .qa-guide-section {
+      max-width: 1000px;
+    }
+    .step-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 30px 0;
+    }
+    .step-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 25px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    .step-number {
+      width: 40px;
+      height: 40px;
+      background: white;
+      color: #667eea;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5em;
+      font-weight: bold;
+      margin: 0 auto 15px;
+    }
+    .step-card h3 {
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+    .step-card p {
+      opacity: 0.9;
+      font-size: 0.9em;
+    }
+    .qa-quick-commands {
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    .qa-quick-commands h3 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+    .command-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .command-table th, .command-table td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .command-table th {
+      background: #e9ecef;
+      font-weight: 600;
+    }
+    .command-table code {
+      background: #2c3e50;
+      color: #2ecc71;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: 'Monaco', monospace;
+    }
+    .copy-btn {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: #2980b9;
+    }
+    .copy-btn.copied {
+      background: #27ae60;
+    }
+    .qa-workflow {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 25px;
+      margin: 20px 0;
+    }
+    .qa-workflow h3 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+    .workflow-steps {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .workflow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 180px;
+    }
+    .workflow-icon {
+      font-size: 1.5em;
+    }
+    .workflow-step strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    .workflow-step p {
+      font-size: 0.85em;
+      color: #666;
+      margin: 0;
+    }
+    .workflow-step code {
+      background: #2c3e50;
+      color: #2ecc71;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+    .workflow-arrow {
+      font-size: 1.5em;
+      color: #3498db;
+      font-weight: bold;
+    }
+    .qa-tips {
+      background: #e8f4f8;
+      padding: 25px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    .qa-tips h3 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+    .qa-tips details {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .qa-tips summary {
+      font-weight: 600;
+      color: #3498db;
+    }
+    .qa-tips details p {
+      margin-top: 10px;
+      color: #666;
+      padding-left: 10px;
+      border-left: 3px solid #3498db;
+    }
+    /* Feature Mapping Styles */
+    .feature-search {
+      margin-bottom: 20px;
+    }
+    .feature-search input {
+      width: 100%;
+      padding: 15px 20px;
+      font-size: 1em;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .feature-search input:focus {
+      border-color: #3498db;
+    }
+    .feature-mapping-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.2s;
+    }
+    .feature-card:hover {
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .feature-card.hidden {
+      display: none;
+    }
+    .feature-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .feature-card h4 {
+      color: #2c3e50;
+      margin: 0;
+      font-size: 1.1em;
+    }
+    .feature-card .prd-badge {
+      background: #3498db;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+    .feature-card .description {
+      color: #666;
+      font-size: 0.9em;
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+    .feature-card .test-info {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    .feature-card .test-info span {
+      display: block;
+      font-size: 0.85em;
+      color: #666;
+    }
+    .feature-card .test-info strong {
+      color: #27ae60;
+    }
+    .feature-card .test-command {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .feature-card .test-command code {
+      flex: 1;
+      background: #2c3e50;
+      color: #2ecc71;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-family: 'Monaco', monospace;
+      font-size: 0.85em;
+    }
+    .feature-keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .keyword-tag {
+      background: #e8f4f8;
+      color: #3498db;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75em;
+    }
+    /* Test Case Styles */
+    .test-case-group {
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .test-case-header {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%);
+      padding: 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .test-case-header:hover {
+      background: linear-gradient(135deg, #e8f4f8 0%, #d4edda 100%);
+    }
+    .test-case-header h3 {
+      display: inline;
+      color: #2c3e50;
+      margin-left: 10px;
+      font-size: 1.1em;
+    }
+    .test-case-summary {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .case-count {
+      background: #3498db;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+    }
+    .test-case-body {
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    }
+    .test-case-body.expanded {
+      padding: 20px;
+      max-height: 5000px;
+    }
+    .test-case-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-left: 4px solid #3498db;
+    }
+    .test-case-card.priority-p0 {
+      border-left-color: #e74c3c;
+    }
+    .test-case-card.priority-p1 {
+      border-left-color: #f39c12;
+    }
+    .test-case-card.priority-p2 {
+      border-left-color: #27ae60;
+    }
+    .test-case-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .case-id {
+      background: #2c3e50;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: 'Monaco', monospace;
+      font-size: 0.85em;
+    }
+    .case-name {
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 1.1em;
+      flex: 1;
+    }
+    .priority-badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+    .priority-badge.p0 {
+      background: #fce4e4;
+      color: #e74c3c;
+    }
+    .priority-badge.p1 {
+      background: #fef5e7;
+      color: #f39c12;
+    }
+    .priority-badge.p2 {
+      background: #e8f8f5;
+      color: #27ae60;
+    }
+    .test-case-section {
+      margin-bottom: 15px;
+    }
+    .test-case-section h5 {
+      color: #3498db;
+      margin-bottom: 8px;
+      font-size: 0.95em;
+    }
+    .test-case-section ul, .test-case-section ol {
+      margin-left: 20px;
+      color: #555;
+    }
+    .test-case-section li {
+      margin: 5px 0;
+      line-height: 1.5;
+    }
+    .expected-list li {
+      color: #27ae60;
+    }
+    .test-cases-intro {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+    }
+    .test-cases-intro h2 {
+      margin-bottom: 10px;
+    }
+    .test-cases-intro p {
+      opacity: 0.9;
+      margin-bottom: 15px;
+    }
+    .test-cases-legend {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.2);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.9em;
+    }
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+    .legend-color.p0 { background: #e74c3c; }
+    .legend-color.p1 { background: #f39c12; }
+    .legend-color.p2 { background: #27ae60; }
+    @media (max-width: 768px) {
+      .step-cards {
+        grid-template-columns: 1fr;
+      }
+      .workflow-steps {
+        flex-direction: column;
+      }
+      .workflow-arrow {
+        transform: rotate(90deg);
+      }
+      .test-case-title {
+        flex-wrap: wrap;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1825,14 +2325,45 @@ router.get('/coverage', (_req: Request, res: Response) => {
 
     <!-- Tabs for different views -->
     <div class="tabs">
-      <button class="tab active" data-tab="overview">Overview</button>
-      <button class="tab" data-tab="scenarios">Test Scenarios</button>
+      <button class="tab active" data-tab="testcases">📝 测试用例</button>
+      <button class="tab" data-tab="coverage">📊 测试覆盖</button>
+      <button class="tab" data-tab="execution">🔄 执行详情</button>
     </div>
 
-    <!-- Overview Tab (default) -->
-    <div id="tab-overview" class="tab-content active">
-      <h2>PRD Coverage Details</h2>
-      <p style="color: #666; margin-bottom: 20px;">Click on PRD ID to view full documentation</p>
+    <!-- Test Cases Tab (default) -->
+    <div id="tab-testcases" class="tab-content active">
+      <div class="test-cases-intro">
+        <h2>📝 测试用例文档</h2>
+        <p>详细测试用例，包含前置条件、测试步骤和预期结果。可搜索功能名称，点击展开查看。</p>
+        <div class="test-cases-legend">
+          <div class="legend-item">
+            <span class="legend-color p0"></span>
+            <span>P0 - 核心功能</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color p1"></span>
+            <span>P1 - 重要功能</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color p2"></span>
+            <span>P2 - 一般功能</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-search" style="margin-bottom: 20px;">
+        <input type="text" id="testcase-search" placeholder="🔍 搜索功能名称（如：订单、支付、票券、激活...）" />
+      </div>
+
+      <div id="testcase-list">
+        ${generateTestCasesHTML()}
+      </div>
+    </div>
+
+    <!-- Coverage Tab -->
+    <div id="tab-coverage" class="tab-content">
+      <h2>📊 测试覆盖统计</h2>
+      <p style="color: #666; margin-bottom: 20px;">PRD 测试覆盖率和断言统计，点击 PRD ID 查看详情</p>
 
       <table>
         <thead>
@@ -1878,10 +2409,10 @@ router.get('/coverage', (_req: Request, res: Response) => {
       </table>
     </div>
 
-    <!-- Test Scenarios Tab -->
-    <div id="tab-scenarios" class="tab-content">
-      <h2>Detailed Test Scenarios</h2>
-      <p style="color: #666; margin-bottom: 20px;">Click on each PRD to view tested scenarios and acceptance criteria</p>
+    <!-- Execution Details Tab -->
+    <div id="tab-execution" class="tab-content">
+      <h2>🔄 执行详情</h2>
+      <p style="color: #666; margin-bottom: 20px;">Newman 测试执行结果，点击展开查看 API 端点状态和测试场景</p>
       `;
 
         // Add detailed PRD sections
@@ -2018,6 +2549,63 @@ router.get('/coverage', (_req: Request, res: Response) => {
           arrow.classList.toggle('expanded');
         });
       });
+
+      // Test case toggle
+      document.querySelectorAll('.test-case-header[data-feature]').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var featureId = this.getAttribute('data-feature');
+          var body = document.getElementById('body-tc-' + featureId);
+          var arrow = document.getElementById('arrow-tc-' + featureId);
+          body.classList.toggle('expanded');
+          arrow.classList.toggle('expanded');
+        });
+      });
+
+      // Copy button functionality
+      document.querySelectorAll('.copy-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var cmd = this.getAttribute('data-cmd');
+          var button = this;
+          navigator.clipboard.writeText(cmd).then(function() {
+            var originalText = button.textContent;
+            button.textContent = '已复制!';
+            button.classList.add('copied');
+            setTimeout(function() {
+              button.textContent = originalText;
+              button.classList.remove('copied');
+            }, 2000);
+          }).catch(function(err) {
+            console.error('复制失败:', err);
+            alert('复制失败，请手动复制命令');
+          });
+        });
+      });
+
+      // Test case search functionality
+      var testcaseSearch = document.getElementById('testcase-search');
+      if (testcaseSearch) {
+        testcaseSearch.addEventListener('input', function() {
+          var searchTerm = this.value.toLowerCase().trim();
+          var groups = document.querySelectorAll('.test-case-group');
+
+          groups.forEach(function(group) {
+            var header = group.querySelector('.test-case-header');
+            var featureName = header ? header.querySelector('h3').textContent.toLowerCase() : '';
+            var prdId = header ? header.querySelector('.prd-badge').textContent.toLowerCase() : '';
+
+            var matches = searchTerm === '' ||
+                          featureName.includes(searchTerm) ||
+                          prdId.includes(searchTerm);
+
+            if (matches) {
+              group.style.display = '';
+            } else {
+              group.style.display = 'none';
+            }
+          });
+        });
+      }
     });
   </script>
 </body>

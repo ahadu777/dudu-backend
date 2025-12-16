@@ -1,0 +1,73 @@
+prd_id: PRD-008
+feature: 小程序订单流程
+description: 产品浏览、下单、支付模拟、票券QR生成
+test_command: npm run test:prd 008
+
+test_cases:
+  - id: TC-008-01
+    name: 浏览产品
+    priority: P0
+    preconditions:
+      - 小程序已打开
+      - 产品数据存在
+    steps:
+      - 进入产品列表页
+      - 点击产品查看详情
+    expected:
+      - 显示产品列表
+      - 产品详情完整
+      - 价格和库存准确
+
+  - id: TC-008-02
+    name: 创建订单
+    priority: P0
+    preconditions:
+      - 用户已登录
+      - 产品有库存
+    steps:
+      - 选择产品数量
+      - 填写联系信息
+      - 提交订单
+    expected:
+      - 订单创建成功
+      - 生成订单号
+      - 进入支付状态
+
+  - id: TC-008-03
+    name: 支付完成
+    priority: P0
+    preconditions:
+      - 订单已创建
+    steps:
+      - 选择支付方式
+      - 完成支付
+    expected:
+      - 支付成功
+      - 订单状态变为"已支付"
+      - 生成票券二维码
+
+  - id: TC-008-04
+    name: 查看我的票券
+    priority: P1
+    preconditions:
+      - 订单已支付
+    steps:
+      - 进入"我的票券"页面
+      - 查看票券详情
+    expected:
+      - 显示票券列表
+      - 可查看二维码
+      - 显示使用状态
+
+  - id: TC-008-05
+    name: 订单超时取消
+    priority: P1
+    preconditions:
+      - 订单已创建
+      - 超过支付时限
+    steps:
+      - 等待订单超时
+      - 查询订单状态
+    expected:
+      - 订单自动取消
+      - 库存释放

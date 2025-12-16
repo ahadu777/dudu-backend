@@ -1,0 +1,45 @@
+prd_id: PRD-002
+feature: OTA 分销平台
+description: 预制票券生成、批次管理、分销商对接
+test_command: npm run test:prd 002
+
+test_cases:
+  - id: TC-002-01
+    name: 生成预制票券批次
+    priority: P0
+    preconditions:
+      - 操作员已登录
+      - 产品可用
+    steps:
+      - 选择产品和数量
+      - 发送 POST 请求创建批次
+      - 验证返回的批次信息
+    expected:
+      - 批次创建成功，返回批次ID
+      - 生成指定数量的票券
+      - 票券状态为"未激活"
+
+  - id: TC-002-02
+    name: 查询批次状态
+    priority: P1
+    preconditions:
+      - 批次已创建
+    steps:
+      - 发送 GET 请求到 /api/batches/{batchId}
+      - 验证批次详情
+    expected:
+      - 返回批次信息
+      - 包含票券统计（已激活/未激活）
+
+  - id: TC-002-03
+    name: 批次票券列表查询
+    priority: P1
+    preconditions:
+      - 批次已创建
+      - 批次中有票券
+    steps:
+      - 发送 GET 请求到 /api/batches/{batchId}/tickets
+      - 验证返回的票券列表
+    expected:
+      - 返回票券列表
+      - 每张票券包含唯一编码和状态

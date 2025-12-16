@@ -1,0 +1,47 @@
+prd_id: PRD-001
+feature: 产品目录与套餐
+description: 浏览套餐产品、查看详情、价格和库存
+test_command: npm run test:prd 001
+
+test_cases:
+  - id: TC-001-01
+    name: 获取产品列表
+    priority: P0
+    preconditions:
+      - 服务已启动
+      - 数据库中存在产品数据
+    steps:
+      - 发送 GET 请求到 /api/products
+      - 检查响应状态码
+      - 验证返回的产品列表格式
+    expected:
+      - 响应状态码 200
+      - 返回 JSON 数组
+      - 每个产品包含 id, name, price 字段
+
+  - id: TC-001-02
+    name: 获取单个产品详情
+    priority: P0
+    preconditions:
+      - 服务已启动
+      - 产品 ID 存在
+    steps:
+      - 发送 GET 请求到 /api/products/{id}
+      - 检查响应状态码
+      - 验证产品详情完整性
+    expected:
+      - 响应状态码 200
+      - 返回完整产品信息
+      - 包含 description, inventory, pricing 等字段
+
+  - id: TC-001-03
+    name: 产品不存在时返回404
+    priority: P1
+    preconditions:
+      - 服务已启动
+    steps:
+      - 发送 GET 请求到 /api/products/99999
+      - 检查响应状态码
+    expected:
+      - 响应状态码 404
+      - 返回错误信息
