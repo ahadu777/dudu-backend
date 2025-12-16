@@ -238,9 +238,152 @@ curl -s "http://localhost:8080/api/reservation-slots/available?month=2025-12" \
 
 ---
 
-## 🔐 Journey 2: Operator Validation Flow (Directus)
+## 🔐 Journey 2: On-Site Verification Flow (QR Decrypt + Venue Scan)
 
-### Step 2.1: Operator Login (Directus - Future Enhancement)
+> **Primary Flow**: This is the production flow for on-site ticket verification.
+
+### Step 2.1: Operator Login
+
+```bash
+# Login as operator to get session token
+curl -s -X POST http://localhost:8080/operators/auth \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operator_id": "OP-001",
+    "password": "password123",
+    "terminal_id": "GATE-A1",
+    "orq": 1
+  }' | python -m json.tool
+
+# Expected:
+# {
+#   "success": true,
+#   "data": {
+#     "operator_id": "OP-001",
+#     "operator_name": "Operator OP-001",
+#     "terminal_id": "GATE-A1",
+#     "session_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#     "expires_at": "2025-12-16T22:30:00.000Z"
+#   }
+# }
+
+# Save the token for subsequent requests
+export OPERATOR_TOKEN="<session_token from response>"
+```
+
+---
+
+### Step 2.2: Generate QR Code for Ticket
+
+```bash
+# Generate encrypted QR code for ticket
+curl -s -X POST http://localhost:8080/qr/public/TKT-20251201-ABC123 \
+  -H "Content-Type: application/json" \
+  -d '{"expiry_minutes": 30}' | python -m json.tool
+
+# Expected:
+# {
+#   "success": true,
+#   "ticket_code": "TKT-20251201-ABC123",
+#   "encrypted_data": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
+#   "qr_image": "data:image/png;base64,...",
+#   "expires_at": "2025-12-16T13:00:00.000Z"
+# }
+
+# Save encrypted_data for venue scan
+export QR_TOKEN="<encrypted_data from response>"
+```
+
+---
+
+### Step 2.3: Decrypt QR Code (POST /qr/decrypt)
+
+```bash
+# Operator scans QR code - decrypt to get ticket info
+curl -s -X POST http://localhost:8080/qr/decrypt \
+  -H "Content-Type: application/json" \
+  -d "{\"encrypted_data\": \"$QR_TOKEN\"}" | python -m json.tool
+
+# Expected:
+# {
+#   "ticket_code": "TKT-20251201-ABC123",
+#   "jti": "unique-token-id",
+#   "ticket_info": {
+#     "status": "RESERVED",
+#     "product_name": "Hong Kong Disneyland 1-Day Ticket",
+#     "customer_email": "alice@example.com",
+#     "reserved_date": "2025-12-16",
+#     "slot_time": "09:00-12:00"
+#   },
+#   "iat": 1702723200,
+#   "exp": 1702725000
+# }
+```
+
+---
+
+### Step 2.4: Venue Scan to Redeem Ticket (POST /venue/scan)
+
+```bash
+# Redeem ticket entitlement (requires operator auth)
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPERATOR_TOKEN" \
+  -d "{
+    \"qr_token\": \"$QR_TOKEN\",
+    \"function_code\": \"ferry\",
+    \"venue_code\": \"central-pier\"
+  }" | python -m json.tool
+
+# Expected Success:
+# {
+#   "result": "success",
+#   "ticket_code": "TKT-20251201-ABC123",
+#   "function_code": "ferry",
+#   "redeemed_at": "2025-12-16T10:30:00.000Z",
+#   "operator_id": "OP-001"
+# }
+
+# Expected Rejection (already used):
+# {
+#   "result": "reject",
+#   "reason": "Entitlement already redeemed",
+#   "redeemed_at": "2025-12-16T09:00:00.000Z"
+# }
+```
+
+---
+
+### Step 2.5: Error Scenarios
+
+**Invalid QR Token:**
+```bash
+curl -s -X POST http://localhost:8080/qr/decrypt \
+  -H "Content-Type: application/json" \
+  -d '{"encrypted_data": "invalid-token"}' | python -m json.tool
+
+# Expected: 400 Bad Request
+# {"error": "Invalid or expired QR token"}
+```
+
+**Venue Scan Without Auth:**
+```bash
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Content-Type: application/json" \
+  -d '{"qr_token": "some-token", "function_code": "ferry"}' | python -m json.tool
+
+# Expected: 401 Unauthorized
+# {"error": "Operator authentication required"}
+```
+
+---
+
+## 🔐 Journey 3: Legacy Operator Validation Flow (Display Only)
+
+> **Note**: This flow is for display validation (GREEN/YELLOW/RED) only.
+> For actual ticket redemption, use Journey 2 (QR Decrypt + Venue Scan).
+
+### Step 3.1: Operator Login (Legacy)
 
 ```bash
 # Login as operator (currently mock, Directus operators collection coming soon)

@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-002 OTA Platform Integration Tests" tests="8" time="16.819">
-  <testsuite name="2.1 Query OTA Inventory" id="5f4500c1-a0b4-4858-9866-f60ac0b09c59" timestamp="2025-12-15T09:03:24.152Z" tests="3" failures="0" errors="0" time="0.338">
+<testsuites name="PRD-002 OTA Platform Integration Tests" tests="8" time="17.816">
+  <testsuite name="2.1 Query OTA Inventory" id="a8839c67-f0fe-4afa-8469-f9d66ab506ca" timestamp="2025-12-16T05:24:50.271Z" tests="3" failures="0" errors="0" time="0.338">
     <testcase name="Status code is 200" time="0.338" classname="Prd002OtaPlatformIntegrationTests"/>
     <testcase name="Response has inventory data" time="0.338" classname="Prd002OtaPlatformIntegrationTests"/>
     <testcase name="Product 106 inventory available" time="0.338" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.2 List OTA Tickets" id="3381b6f4-cbb6-4d99-bc06-f2839c8d3143" timestamp="2025-12-15T09:03:24.152Z" tests="2" failures="0" errors="0" time="1.078">
-    <testcase name="Status code is 200" time="1.078" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has paginated data" time="1.078" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2.2 List OTA Tickets" id="62fd8159-8e65-48b5-9936-e6756ede4178" timestamp="2025-12-16T05:24:50.271Z" tests="2" failures="0" errors="0" time="1.836">
+    <testcase name="Status code is 200" time="1.836" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response has paginated data" time="1.836" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.3 Bulk Generate Tickets" id="26bda311-0642-413a-a648-a3047ef4e91d" timestamp="2025-12-15T09:03:24.152Z" tests="3" failures="0" errors="0" time="4.518">
-    <testcase name="Status code is 201" time="4.518" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Tickets generated" time="4.518" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Save batch_id and ticket_code" time="4.518" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2.3 Bulk Generate Tickets" id="8deeac9a-b107-471c-ac56-6537e49ca378" timestamp="2025-12-16T05:24:50.271Z" tests="3" failures="0" errors="0" time="4.667">
+    <testcase name="Status code is 201" time="4.667" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Tickets generated" time="4.667" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Save batch_id and ticket_code" time="4.667" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.4 Activate Pre-Made Ticket" id="b8353496-a2bc-4391-a6db-171e637d9422" timestamp="2025-12-15T09:03:24.152Z" tests="2" failures="0" errors="0" time="4.669">
-    <testcase name="Status code is 200" time="4.669" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Ticket activated" time="4.669" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2.4 Activate Pre-Made Ticket" id="762d652a-ff60-42f2-8eb1-8b6f61699330" timestamp="2025-12-16T05:24:50.271Z" tests="2" failures="0" errors="0" time="4.733">
+    <testcase name="Status code is 200" time="4.733" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Ticket activated" time="4.733" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.5 List Batches" id="7139565b-75fa-455c-8a1f-cafb246dd752" timestamp="2025-12-15T09:03:24.152Z" tests="2" failures="0" errors="0" time="0.629">
-    <testcase name="Status code is 200" time="0.629" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has paginated batches" time="0.629" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2.5 List Batches" id="a2ba1eca-c229-43e8-b59d-c373ca63a7ab" timestamp="2025-12-16T05:24:50.271Z" tests="2" failures="0" errors="0" time="0.650">
+    <testcase name="Status code is 200" time="0.650" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response has paginated batches" time="0.650" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.6 List Resellers" id="d60a5c39-0ba2-4dd4-837b-b54ada4d060d" timestamp="2025-12-15T09:03:24.152Z" tests="2" failures="0" errors="0" time="0.321">
-    <testcase name="Status code is 200" time="0.321" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has paginated resellers" time="0.321" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2.6 List Resellers" id="590880b9-5d61-4c2a-8a71-5a83e147510c" timestamp="2025-12-16T05:24:50.271Z" tests="2" failures="0" errors="0" time="0.322">
+    <testcase name="Status code is 200" time="0.322" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response has paginated resellers" time="0.322" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.7 Billing Summary" id="85830d8d-9518-438e-a429-f54d1d49cd21" timestamp="2025-12-15T09:03:24.152Z" tests="2" failures="0" errors="0" time="4.652">
-    <testcase name="Status code is 200" time="4.652" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has billing data" time="4.652" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2.7 Billing Summary" id="0d150ea2-9b73-4957-a93d-08d960207481" timestamp="2025-12-16T05:24:50.271Z" tests="2" failures="0" errors="0" time="4.647">
+    <testcase name="Status code is 200" time="4.647" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response has billing data" time="4.647" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.8 Batch Analytics" id="dd9375c6-4a3e-4853-8265-71b61d0d4d45" timestamp="2025-12-15T09:03:24.152Z" tests="2" failures="0" errors="0" time="0.614">
-    <testcase name="Status code is 200" time="0.614" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Has analytics data" time="0.614" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2.8 Batch Analytics" id="212a3423-9ad5-4f17-9acc-7fb86bc3593f" timestamp="2025-12-16T05:24:50.271Z" tests="2" failures="0" errors="0" time="0.623">
+    <testcase name="Status code is 200" time="0.623" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Has analytics data" time="0.623" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
 </testsuites>

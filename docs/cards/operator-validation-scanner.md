@@ -2,18 +2,18 @@
 card: "Operator Validation Scanner - QR Code Entry Validation"
 slug: operator-validation-scanner
 team: "C - Operations"
-oas_paths: ["/api/operator/login", "/api/operator/validate-ticket", "/api/operator/verify-ticket"]
+oas_paths: ["/operators/auth", "/qr/decrypt", "/venue/scan", "/operators/validate-ticket", "/operators/verify-ticket"]
 migrations: ["db/migrations/0022_operator_validation.sql"]
 status: "Done"
 readiness: "mvp"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/operator-validation-scanner.xml"
-last_update: "2025-11-14T19:30:00+08:00"
+last_update: "2025-12-16T12:00:00+08:00"
 related_stories: ["US-015", "US-016"]
 relationships:
-  depends_on: ["customer-reservation-portal", "operators-login"]
-  enhances: ["tickets-scan", "operators-login"]
+  depends_on: ["customer-reservation-portal", "operators-login", "qr-generation-api"]
+  enhances: ["tickets-scan", "operators-login", "venue-enhanced-scanning"]
   data_dependencies: ["Ticket", "TicketReservation", "ReservationSlot", "User"]
   integration_points:
     data_stores: ["tickets.repository.ts", "reservations.repository.ts", "operators.repository.ts"]
@@ -25,10 +25,11 @@ relationships:
 ## Status & Telemetry
 - Status: Ready
 - Readiness: mvp
-- Spec Paths: /api/operator/login, /api/operator/validate-ticket, /api/operator/verify-ticket
+- **Primary Paths (Production)**: /operators/auth, /qr/decrypt, /venue/scan
+- **Legacy Paths (Display Only)**: /operators/validate-ticket, /operators/verify-ticket
 - Migrations: db/migrations/0022_operator_validation.sql
-- Newman: 0/0 • reports/newman/operator-validation-scanner.xml
-- Last Update: 2025-11-14T12:00:00+08:00
+- Newman: 79/79 • reports/newman/prd-007-e2e.xml
+- Last Update: 2025-12-16T12:00:00+08:00
 
 ## 0) Prerequisites
 - customer-reservation-portal implemented (reservations exist)
@@ -37,7 +38,71 @@ relationships:
 - Camera access permissions configured
 - tickets, ticket_reservations, reservation_slots tables exist
 
-## 1) API Sequence (Context)
+## 1) Primary API Sequence (Production)
+
+```mermaid
+sequenceDiagram
+  actor OPERATOR as Venue Operator
+  participant UI as Scanner UI
+  participant AUTH as Auth Service
+  participant QR as QR Service
+  participant VENUE as Venue Service
+  participant DB as Database
+
+  OPERATOR->>+UI: Access /operator/scan page
+
+  alt Not Authenticated
+    UI->>+AUTH: POST /operators/auth
+    OPERATOR->>AUTH: Enter operator_id & password
+    AUTH->>+DB: Validate credentials
+    DB-->>-AUTH: Operator data
+    AUTH-->>-UI: session_token (JWT)
+  end
+
+  OPERATOR->>+UI: Scan customer's QR code
+  UI->>UI: Camera captures QR data
+
+  UI->>+QR: POST /qr/decrypt {encrypted_data}
+  QR->>QR: Verify JWT signature & expiry
+  QR->>+DB: Fetch ticket details
+  DB-->>-QR: Ticket + reservation info
+  QR-->>-UI: {ticket_code, ticket_info, status}
+
+  UI-->>OPERATOR: Display ticket info & status
+
+  alt Valid Ticket - Allow Entry
+    OPERATOR->>+UI: Click "Redeem"
+    UI->>+VENUE: POST /venue/scan {qr_token, function_code}
+    VENUE->>+DB: Check entitlement availability
+    DB-->>-VENUE: Entitlement status
+
+    alt Entitlement Available
+      VENUE->>+DB: Mark entitlement as REDEEMED
+      DB-->>-VENUE: Success
+      VENUE-->>-UI: {result: "success", redeemed_at}
+      UI-->>-OPERATOR: "Entry Allowed" ✅
+    else Already Redeemed
+      VENUE-->>UI: {result: "reject", reason: "Already used"}
+      UI-->>OPERATOR: "Already Redeemed" ⚠️
+    end
+  end
+```
+
+### Primary API Endpoints
+
+| Step | Endpoint | Purpose |
+|------|----------|---------|
+| 1 | `POST /operators/auth` | Operator login, returns session_token |
+| 2 | `POST /qr/decrypt` | Decrypt QR code, returns ticket info |
+| 3 | `POST /venue/scan` | Redeem ticket entitlement |
+
+---
+
+## 2) Legacy API Sequence (Display Validation Only)
+
+> **Note**: This flow is for display validation (GREEN/YELLOW/RED) only.
+> For actual ticket redemption in production, use the Primary API Sequence above.
+
 ```mermaid
 sequenceDiagram
   actor OPERATOR as Venue Operator
@@ -63,16 +128,8 @@ sequenceDiagram
   OPERATOR->>UI: Present ticket QR code
 
   UI->>UI: Detect QR code → Extract ticket_code
-  UI->>+API: POST /api/operator/validate-ticket {ticket_code}
+  UI->>+API: POST /operators/validate-ticket {ticket_code}
   API->>+DB: Query ticket with reservation and slot
-
-  DB->>DB: SELECT t.*, r.slot_id, r.status as reservation_status,
-           s.date, s.start_time, s.end_time
-           FROM tickets t
-           LEFT JOIN ticket_reservations r ON t.id = r.ticket_id
-           LEFT JOIN reservation_slots s ON r.slot_id = s.id
-           WHERE t.ticket_code = ?
-
   DB-->>-API: Ticket + Reservation + Slot data
 
   API->>API: Validate ticket status
@@ -84,13 +141,10 @@ sequenceDiagram
     UI-->>OPERATOR: Display GREEN - "✅ VALID TICKET"
 
     OPERATOR->>+UI: Click "Mark as Verified"
-    UI->>+API: POST /api/operator/verify-ticket {ticket_id, operator_id}
-    API->>+DB: BEGIN TRANSACTION
-    API->>DB: UPDATE tickets SET status='VERIFIED', verified_at=NOW(), verified_by=?
-    API->>DB: UPDATE ticket_reservations SET status='VERIFIED'
-    API->>DB: COMMIT
+    UI->>+API: POST /operators/verify-ticket {ticket_code, validation_decision: ALLOW}
+    API->>+DB: Update ticket status
     DB-->>-API: Success
-    API-->>-UI: 200 {success: true, verified_at}
+    API-->>-UI: 200 {success: true}
     UI-->>-OPERATOR: "Entry Allowed" → Return to scan mode
 
   else Wrong Date (RED)
@@ -114,7 +168,17 @@ sequenceDiagram
   UI->>UI: Reset camera, ready for next scan
 ```
 
-## 2) Contract (OAS 3.0.3)
+### Legacy API Endpoints
+
+| Step | Endpoint | Purpose |
+|------|----------|---------|
+| 1 | `POST /operators/auth` | Operator login |
+| 2 | `POST /operators/validate-ticket` | Check ticket status (GREEN/YELLOW/RED) |
+| 3 | `POST /operators/verify-ticket` | Record operator decision |
+
+---
+
+## 3) Contract (OAS 3.0.3)
 ```yaml
 paths:
   /api/operator/login:
@@ -398,7 +462,7 @@ components:
       bearerFormat: JWT
 ```
 
-## 3) Invariants
+## 4) Invariants
 - Only operators with valid JWT tokens can access validation APIs
 - Validation checks run in specific order: status → reservation → date
 - GREEN result requires: status=RESERVED AND has_reservation AND date_matches
@@ -408,7 +472,7 @@ components:
 - Verification records operator_id for audit trail
 - Tickets can be scanned multiple times (idempotent verification)
 
-## 4) Validations, Idempotency & Concurrency
+## 5) Validations, Idempotency & Concurrency
 
 **Validation Logic (Sequential Checks):**
 ```javascript
@@ -477,7 +541,7 @@ validateTicket(ticket, reservation, currentDate) {
 - 409: Already verified → Return warning with timestamp
 - 500: Database error → Log and show generic error to operator
 
-## 5) Rules & Writes (TX)
+## 6) Rules & Writes (TX)
 
 **POST /api/operator/login**:
 ```
@@ -596,7 +660,7 @@ validateTicket(ticket, reservation, currentDate) {
     }
 ```
 
-## 6) Data Impact & Transactions
+## 7) Data Impact & Transactions
 
 **Migration: db/migrations/0022_operator_validation.sql**
 
@@ -656,7 +720,7 @@ CREATE TABLE IF NOT EXISTS operator_sessions (
 - Enables token revocation if needed
 - Stores device info for security alerts
 
-## 7) Observability
+## 8) Observability
 
 **Logging Events:**
 - `operator.login.success` - {operator_id, venue_id, device_info}
@@ -687,7 +751,7 @@ CREATE TABLE IF NOT EXISTS operator_sessions (
 - Operator activity (scans per operator)
 - Average time per validation (histogram)
 
-## 8) Acceptance — Given / When / Then
+## 9) Acceptance — Given / When / Then
 
 **Given** operator logs in with valid credentials
 **When** they POST /api/operator/login
@@ -721,7 +785,7 @@ CREATE TABLE IF NOT EXISTS operator_sessions (
 **When** both call verify-ticket at same time
 **Then** first succeeds (200), second gets 409 ALREADY_VERIFIED
 
-## 9) Postman Coverage
+## 10) Postman Coverage
 
 **Authentication Tests:**
 - Operator login with valid credentials → 200 with JWT token

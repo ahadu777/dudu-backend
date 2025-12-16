@@ -127,17 +127,22 @@ So that I can monitor venue capacity in real-time
 ### Card 3: Operator Validation Scanner
 **Card**: `operator-validation-scanner`
 **Team**: C - Operations
-**Endpoints**:
-- `POST /api/operator/login`
-- `POST /api/operator/validate-ticket`
-- `POST /api/operator/verify-ticket`
+
+**On-Site Verification Endpoints** (Primary - Production):
+- `POST /operators/auth` - Operator login, returns session_token
+- `POST /qr/public/{ticket_code}` - Generate QR code for ticket
+- `POST /qr/decrypt` - Decrypt QR code, returns ticket info
+- `POST /venue/scan` - Redeem ticket entitlement (requires operator auth)
+
+**Legacy Endpoints** (For display validation only):
+- `POST /operators/validate-ticket` - Check ticket status (returns GREEN/YELLOW/RED)
+- `POST /operators/verify-ticket` - Record operator decision
 
 **Responsibilities**:
 - Authenticate operators
-- Scan QR codes or manual entry
+- Scan QR codes and decrypt ticket info
 - Validate ticket status and reservation
-- Check reservation date matches current date
-- Mark tickets as VERIFIED
+- Redeem ticket entitlements at venue
 - Display color-coded validation results (GREEN/RED/YELLOW)
 
 **Data Requirements**:
