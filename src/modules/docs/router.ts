@@ -2,13 +2,14 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../../utils/logger';
-import { markdownToHtml } from '../../utils/markdown';
+import { markdownToHtml, renderMarkdownFile } from '../../utils/markdown';
 import { loadPRDDocuments, loadStoriesIndex } from '../../utils/prdParser';
 import { getCardStats } from '../../utils/cardParser';
 import { buildSitemap } from '../../utils/sitemapBuilder';
 import { runComplianceAudit } from '../../utils/complianceAuditor';
 import { loadTestCoverageData, getCoverageStats } from '../../utils/coverageParser';
 import { loadAllTestCases, FeatureTestCases } from '../../utils/testCaseParser';
+import { loadPRDCoverageWithTests, PRDCoverage } from '../../utils/acParser';
 import { baseLayout, sharedStyles } from './templates/base';
 import { componentStyles, pageHeader } from './templates/components';
 import { projectDocsStyles } from './styles';
@@ -81,6 +82,147 @@ function generateTestCasesHTML(): string {
       </div>
     </div>
   `).join('');
+}
+
+// Generate AC Coverage HTML - PRD → Card → AC hierarchy with test results
+function generateACCoverageHTML(): string {
+  const prdCoverage = loadPRDCoverageWithTests();
+
+  if (prdCoverage.length === 0) {
+    return '<p style="color: #666;">暂无 AC 覆盖数据。请确保 docs/cards/ 目录下有包含验收标准的 Card 文件。</p>';
+  }
+
+  // Calculate totals
+  const totalACs = prdCoverage.reduce((sum, p) => sum + p.totalACs, 0);
+  const testedACs = prdCoverage.reduce((sum, p) => sum + p.testedACs, 0);
+  const totalPRDs = prdCoverage.filter(p => p.prdId !== 'Unknown').length;
+  const overallCoverage = totalACs > 0 ? Math.round((testedACs / totalACs) * 100) : 0;
+
+  return `
+    <div class="ac-coverage-summary">
+      <div class="ac-stat-row">
+        <div class="ac-stat">
+          <span class="ac-stat-number">${totalPRDs}</span>
+          <span class="ac-stat-label">PRDs 有 AC</span>
+        </div>
+        <div class="ac-stat">
+          <span class="ac-stat-number">${prdCoverage.reduce((sum, p) => sum + p.cards.length, 0)}</span>
+          <span class="ac-stat-label">Cards 解析</span>
+        </div>
+        <div class="ac-stat">
+          <span class="ac-stat-number">${totalACs}</span>
+          <span class="ac-stat-label">验收标准 (AC)</span>
+        </div>
+        <div class="ac-stat">
+          <span class="ac-stat-number coverage-${overallCoverage >= 80 ? 'high' : overallCoverage >= 50 ? 'medium' : 'low'}">${testedACs}/${totalACs}</span>
+          <span class="ac-stat-label">已测试 (${overallCoverage}%)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ac-coverage-intro">
+      <p><strong>覆盖率公式：</strong>已测试的 AC 数 / PRD 总 AC 数 × 100%</p>
+      <p><strong>数据来源：</strong>Card 文件 AC + Newman 测试报告 (reports/newman/prd-*.xml)</p>
+    </div>
+
+    <div class="ac-legend">
+      <span class="legend-item"><span class="status-icon passed">✅</span> 测试通过</span>
+      <span class="legend-item"><span class="status-icon failed">❌</span> 测试失败</span>
+      <span class="legend-item"><span class="status-icon pending">⏸️</span> 待测试</span>
+    </div>
+
+    ${prdCoverage.filter(p => p.prdId !== 'Unknown').map(prd => `
+      <div class="ac-prd-card">
+        <div class="ac-prd-header" data-prd-ac="${prd.prdId}">
+          <div class="ac-prd-title">
+            <a href="/prd/${prd.prdId}" class="prd-link">${prd.prdId}</a>
+            <span class="prd-name">${prd.prdTitle}</span>
+          </div>
+          <div class="ac-prd-stats">
+            <span class="coverage-badge coverage-${prd.coveragePercent >= 80 ? 'high' : prd.coveragePercent >= 50 ? 'medium' : 'low'}">${prd.coveragePercent}%</span>
+            <span class="ac-count">${prd.testedACs}/${prd.totalACs} ACs</span>
+            ${prd.newmanStats ? `<span class="newman-badge" title="Newman: ${prd.newmanStats.passedAssertions}/${prd.newmanStats.totalAssertions} assertions">🧪 ${prd.newmanStats.totalRequests}req</span>` : ''}
+            <span class="ac-cards-count">${prd.cards.length} Cards</span>
+            <span class="toggle-arrow-ac" id="arrow-ac-${prd.prdId}">▼</span>
+          </div>
+        </div>
+        <div class="ac-prd-body expanded" id="body-ac-${prd.prdId}">
+          ${prd.newmanStats ? `
+          <div class="newman-stats-bar">
+            <span class="newman-stat"><strong>Requests:</strong> ${prd.newmanStats.totalRequests}</span>
+            <span class="newman-stat"><strong>Assertions:</strong> ${prd.newmanStats.passedAssertions}/${prd.newmanStats.totalAssertions}</span>
+            <span class="newman-stat ${prd.newmanStats.passRate === 100 ? 'pass' : 'warn'}"><strong>Pass Rate:</strong> ${prd.newmanStats.passRate}%</span>
+          </div>
+          ` : ''}
+          ${prd.testCases && prd.testCases.length > 0 ? `
+          <details class="test-cases-section">
+            <summary class="test-cases-summary">🧪 测试用例 (${prd.testCases.length} tests)</summary>
+            <div class="test-cases-list">
+              ${prd.testCases.map(tc => `
+              <div class="test-case-item">
+                <div class="test-case-header-row">
+                  <code class="method ${tc.method.toLowerCase()}">${tc.method}</code>
+                  <span class="test-case-name">${tc.name}</span>
+                </div>
+                <div class="test-case-url"><code>${tc.url}</code></div>
+                ${tc.body ? `
+                <details class="test-case-body">
+                  <summary>Request Body</summary>
+                  <pre>${tc.body}</pre>
+                </details>
+                ` : ''}
+                ${tc.assertions.length > 0 ? `
+                <div class="test-case-assertions">
+                  ${tc.assertions.map(a => `<span class="assertion">✓ ${a}</span>`).join('')}
+                </div>
+                ` : ''}
+              </div>
+              `).join('')}
+            </div>
+          </details>
+          ` : ''}
+          ${prd.cards.map(card => {
+            const cardCoverage = card.totalACs > 0 ? Math.round((card.testedACs / card.totalACs) * 100) : 0;
+            return `
+            <div class="ac-card-section">
+              <div class="ac-card-header">
+                <a href="/cards/${card.cardSlug}" class="card-link">📋 ${card.cardName}</a>
+                <span class="card-status ${card.status.toLowerCase()}">${card.status}</span>
+                <span class="card-coverage coverage-${cardCoverage >= 80 ? 'high' : cardCoverage >= 50 ? 'medium' : 'low'}">${card.testedACs}/${card.totalACs} (${cardCoverage}%)</span>
+              </div>
+              ${card.oasPaths.length > 0 ? `
+                <div class="ac-endpoints">
+                  ${card.oasPaths.map(p => `<code class="endpoint">${p}</code>`).join('')}
+                </div>
+              ` : ''}
+              <div class="ac-categories">
+                ${card.categories.map(cat => `
+                  <div class="ac-category">
+                    <h5 class="ac-category-name">${cat.name}</h5>
+                    <ul class="ac-list">
+                      ${cat.acs.map(ac => `
+                        <li class="ac-item ${ac.testStatus}">
+                          <span class="ac-status-icon">${ac.testStatus === 'passed' ? '✅' : ac.testStatus === 'failed' ? '❌' : '⏸️'}</span>
+                          <div class="ac-content">
+                            <div class="ac-gwt">
+                              <span class="gwt-given"><strong>Given</strong> ${ac.given}</span>
+                              <span class="gwt-when"><strong>When</strong> ${ac.when}</span>
+                              <span class="gwt-then"><strong>Then</strong> ${ac.then}</span>
+                            </div>
+                            ${ac.testId ? `<span class="ac-test-id">Test: ${ac.testId}</span>` : ''}
+                          </div>
+                        </li>
+                      `).join('')}
+                    </ul>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `}).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
 }
 
 const router = Router();
@@ -1657,39 +1799,7 @@ router.get('/coverage', (_req: Request, res: Response) => {
     a:hover {
       text-decoration: underline;
     }
-    /* Enhanced PM-friendly styles */
-    .tabs {
-      display: flex;
-      border-bottom: 2px solid #e0e0e0;
-      margin: 30px 0 20px;
-      gap: 5px;
-    }
-    .tab {
-      padding: 12px 24px;
-      background: #f8f9fa;
-      border: none;
-      border-radius: 6px 6px 0 0;
-      cursor: pointer;
-      font-size: 1em;
-      font-weight: 500;
-      color: #666;
-      transition: all 0.2s;
-    }
-    .tab:hover {
-      background: #e8f4f8;
-      color: #3498db;
-    }
-    .tab.active {
-      background: #3498db;
-      color: white;
-    }
-    .tab-content {
-      display: none;
-      padding: 20px 0;
-    }
-    .tab-content.active {
-      display: block;
-    }
+    /* PRD Detail Card styles (kept for reference, may be removed later) */
     .prd-detail-card {
       border: 1px solid #e0e0e0;
       border-radius: 8px;
@@ -2219,6 +2329,395 @@ router.get('/coverage', (_req: Request, res: Response) => {
     .expected-list li {
       color: #27ae60;
     }
+    /* AC Coverage Styles */
+    .ac-coverage-header {
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+      color: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+    }
+    .ac-coverage-header h2 { margin-bottom: 10px; }
+    .ac-coverage-header p { opacity: 0.9; }
+    .ac-coverage-summary {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .ac-stat-row {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+    }
+    .ac-stat {
+      text-align: center;
+    }
+    .ac-stat-number {
+      display: block;
+      font-size: 2.5em;
+      font-weight: 700;
+      color: #3498db;
+    }
+    .ac-stat-label {
+      color: #666;
+      font-size: 0.9em;
+    }
+    .ac-coverage-intro {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 25px;
+    }
+    .ac-coverage-intro p { margin: 5px 0; color: #856404; font-size: 0.9em; }
+    .ac-legend {
+      display: flex;
+      gap: 25px;
+      margin-bottom: 20px;
+      padding: 10px 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9em;
+      color: #666;
+    }
+    .coverage-badge {
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 0.85em;
+      font-weight: 700;
+    }
+    .coverage-high { background: #d4edda; color: #155724; }
+    .coverage-medium { background: #fff3cd; color: #856404; }
+    .coverage-low { background: #f8d7da; color: #721c24; }
+    .card-coverage {
+      margin-left: auto;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+    .ac-test-id {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #1565c0;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      margin-top: 5px;
+    }
+    .ac-prd-card {
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .ac-prd-header {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%);
+      padding: 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ac-prd-header:hover {
+      background: linear-gradient(135deg, #e8f4f8 0%, #d4edda 100%);
+    }
+    .ac-prd-title {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .prd-link {
+      background: #3498db;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 0.9em;
+    }
+    .prd-link:hover { background: #2980b9; text-decoration: none; }
+    .prd-name { color: #2c3e50; font-weight: 600; font-size: 1.1em; }
+    .ac-prd-stats {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .ac-count {
+      background: #27ae60;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+    .ac-cards-count {
+      background: #9b59b6;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 0.85em;
+    }
+    .newman-badge {
+      background: #17a2b8;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 0.85em;
+      cursor: help;
+    }
+    .newman-stats-bar {
+      display: flex;
+      gap: 20px;
+      background: #f8f9fa;
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 0.9em;
+      border-left: 3px solid #17a2b8;
+    }
+    .newman-stat { color: #495057; }
+    .newman-stat.pass { color: #28a745; font-weight: 600; }
+    .newman-stat.warn { color: #ffc107; font-weight: 600; }
+    .toggle-arrow-ac {
+      font-size: 1.2em;
+      transition: transform 0.3s;
+    }
+    .toggle-arrow-ac.collapsed { transform: rotate(-90deg); }
+    .ac-prd-body {
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s, padding 0.3s;
+    }
+    .ac-prd-body.expanded {
+      padding: 20px;
+      max-height: 5000px;
+    }
+    .ac-card-section {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    .ac-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .card-link {
+      font-weight: 600;
+      color: #2c3e50;
+      text-decoration: none;
+    }
+    .card-link:hover { color: #3498db; }
+    .card-status {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.75em;
+      font-weight: 600;
+    }
+    .card-status.done { background: #d4edda; color: #155724; }
+    .card-status.in_progress, .card-status.in-progress { background: #fff3cd; color: #856404; }
+    .card-status.draft { background: #e0e0e0; color: #666; }
+    .card-ac-count {
+      margin-left: auto;
+      color: #666;
+      font-size: 0.85em;
+    }
+    .ac-endpoints {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+    .ac-endpoints code.endpoint {
+      background: #2c3e50;
+      color: #2ecc71;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.8em;
+    }
+    .ac-category { margin-bottom: 15px; }
+    .ac-category-name {
+      color: #3498db;
+      font-size: 0.95em;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px dashed #e0e0e0;
+    }
+    .ac-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .ac-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px;
+      margin: 5px 0;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 3px solid #e0e0e0;
+    }
+    .ac-item.passed { border-left-color: #27ae60; }
+    .ac-item.failed { border-left-color: #dc3545; }
+    .ac-item.pending { border-left-color: #ffc107; }
+    .ac-status-icon { font-size: 1em; }
+    .ac-content { flex: 1; }
+    .ac-gwt {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.9em;
+    }
+    .gwt-given, .gwt-when, .gwt-then {
+      display: block;
+      padding: 2px 0;
+    }
+    .gwt-given strong { color: #9b59b6; }
+    .gwt-when strong { color: #3498db; }
+    .gwt-then strong { color: #27ae60; }
+    /* Test Case Details Styles */
+    .test-case-details {
+      margin-top: 12px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+    .test-case-header-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .test-case-badge {
+      background: #17a2b8;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+    .test-case-name {
+      font-weight: 500;
+      color: #495057;
+      font-size: 0.9em;
+    }
+    .test-case-request {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .test-case-request .method {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.8em;
+    }
+    .test-case-request .method.get { background: #61affe; color: white; }
+    .test-case-request .method.post { background: #49cc90; color: white; }
+    .test-case-request .method.put { background: #fca130; color: white; }
+    .test-case-request .method.delete { background: #f93e3e; color: white; }
+    .test-case-request .url {
+      background: #2c3e50;
+      color: #2ecc71;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+    .test-case-body {
+      margin: 8px 0;
+    }
+    .test-case-body summary {
+      cursor: pointer;
+      color: #6c757d;
+      font-size: 0.85em;
+      padding: 4px 0;
+    }
+    .test-case-body pre {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      overflow-x: auto;
+      margin-top: 5px;
+    }
+    .test-case-assertions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .assertions-label {
+      font-size: 0.8em;
+      color: #6c757d;
+      font-weight: 500;
+    }
+    .assertion {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75em;
+      display: block;
+      margin: 2px 0;
+    }
+    /* Test Cases Section at PRD level */
+    .test-cases-section {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .test-cases-summary {
+      padding: 12px 15px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #17a2b8;
+      background: #e3f2fd;
+      border-radius: 8px;
+    }
+    .test-cases-summary:hover {
+      background: #bbdefb;
+    }
+    .test-cases-section[open] .test-cases-summary {
+      border-radius: 8px 8px 0 0;
+    }
+    .test-cases-list {
+      padding: 15px;
+      display: grid;
+      gap: 12px;
+    }
+    .test-case-item {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .test-case-url code {
+      background: #2c3e50;
+      color: #2ecc71;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      display: inline-block;
+      margin: 8px 0;
+    }
     .test-cases-intro {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -2323,241 +2822,27 @@ router.get('/coverage', (_req: Request, res: Response) => {
       </div>
     </div>
 
-    <!-- Tabs for different views -->
-    <div class="tabs">
-      <button class="tab active" data-tab="testcases">📝 测试用例</button>
-      <button class="tab" data-tab="coverage">📊 测试覆盖</button>
-      <button class="tab" data-tab="execution">🔄 执行详情</button>
+    <!-- Unified Coverage View -->
+    <div class="ac-coverage-header">
+      <h2>📋 测试覆盖率总览</h2>
+      <p>PRD → Card → AC 层级结构，展示验收标准覆盖状态与 Newman 测试结果</p>
     </div>
-
-    <!-- Test Cases Tab (default) -->
-    <div id="tab-testcases" class="tab-content active">
-      <div class="test-cases-intro">
-        <h2>📝 测试用例文档</h2>
-        <p>详细测试用例，包含前置条件、测试步骤和预期结果。可搜索功能名称，点击展开查看。</p>
-        <div class="test-cases-legend">
-          <div class="legend-item">
-            <span class="legend-color p0"></span>
-            <span>P0 - 核心功能</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-color p1"></span>
-            <span>P1 - 重要功能</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-color p2"></span>
-            <span>P2 - 一般功能</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="feature-search" style="margin-bottom: 20px;">
-        <input type="text" id="testcase-search" placeholder="🔍 搜索功能名称（如：订单、支付、票券、激活...）" />
-      </div>
-
-      <div id="testcase-list">
-        ${generateTestCasesHTML()}
-      </div>
-    </div>
-
-    <!-- Coverage Tab -->
-    <div id="tab-coverage" class="tab-content">
-      <h2>📊 测试覆盖统计</h2>
-      <p style="color: #666; margin-bottom: 20px;">PRD 测试覆盖率和断言统计，点击 PRD ID 查看详情</p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>PRD ID</th>
-            <th>Title</th>
-            <th>Status</th>
-            <th>Requests</th>
-            <th>Assertions</th>
-            <th>Pass Rate</th>
-            <th>Collection</th>
-          </tr>
-        </thead>
-        <tbody>`;
-
-        coverageData.coverage_registry.forEach(entry => {
-          const statusClass = entry.status.includes('100%') || entry.status.includes('Complete')
-            ? 'complete'
-            : entry.status.includes('Draft')
-            ? 'draft'
-            : 'partial';
-
-          const requests = entry.test_statistics?.total_requests || '-';
-          const assertions = entry.test_statistics?.total_assertions || '-';
-          const passed = entry.test_statistics?.passed_assertions || 0;
-          const total = entry.test_statistics?.total_assertions || 0;
-          const passRate = total > 0 ? `${Math.round((passed / total) * 100)}%` : '-';
-
-          html += `
-          <tr>
-            <td><a href="/prd/${entry.prd_id}">${entry.prd_id}</a></td>
-            <td>${entry.title}</td>
-            <td><span class="status-indicator ${statusClass}">${entry.status}</span></td>
-            <td>${requests}</td>
-            <td>${assertions}</td>
-            <td>${passRate}</td>
-            <td>${entry.primary_collection ? '<code>' + entry.primary_collection.split('/').pop() + '</code>' : '-'}</td>
-          </tr>`;
-        });
-
-        html += `
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Execution Details Tab -->
-    <div id="tab-execution" class="tab-content">
-      <h2>🔄 执行详情</h2>
-      <p style="color: #666; margin-bottom: 20px;">Newman 测试执行结果，点击展开查看 API 端点状态和测试场景</p>
-      `;
-
-        // Add detailed PRD sections
-        coverageData.coverage_registry.forEach(entry => {
-          const testedScenarios = entry.tested_scenarios || [];
-          const coverageAnalysis = entry.coverage_analysis || {};
-          const apiStatus = coverageAnalysis.api_endpoint_status || {};
-          const byFeature = coverageAnalysis.by_feature || coverageAnalysis.by_category || {};
-          const stats = entry.test_statistics;
-          const passRate = stats && stats.passed_assertions !== undefined && stats.total_assertions
-            ? Math.round((stats.passed_assertions / stats.total_assertions) * 100)
-            : 100;
-
-          html += `
-      <div class="prd-detail-card">
-        <div class="prd-detail-header" data-prd="${entry.prd_id}">
-          <div>
-            <h3>${entry.prd_id}: ${entry.title}</h3>
-            <span class="status-indicator ${entry.status.includes('100%') || entry.status.includes('Complete') ? 'complete' : 'partial'}">${entry.status}</span>
-          </div>
-          <span class="toggle-arrow" id="arrow-${entry.prd_id}">▶</span>
-        </div>
-        <div class="prd-detail-body" id="body-${entry.prd_id}">
-
-          <!-- Progress Bar -->
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: ${passRate}%">${passRate}% Passed</div>
-          </div>
-
-          <!-- Test Statistics -->
-          ${stats ? `
-          <div class="stats-summary" style="margin: 15px 0;">
-            <div class="stat-box">
-              <h3>Requests</h3>
-              <div class="number">${stats.total_requests || 0}</div>
-            </div>
-            <div class="stat-box">
-              <h3>Assertions</h3>
-              <div class="number">${stats.total_assertions || 0}</div>
-            </div>
-            <div class="stat-box">
-              <h3>Passed</h3>
-              <div class="number" style="color: #28a745;">${stats.passed_assertions || 0}</div>
-            </div>
-            <div class="stat-box">
-              <h3>Failed</h3>
-              <div class="number" style="color: ${(stats.failed_assertions || 0) > 0 ? '#dc3545' : '#28a745'};">${stats.failed_assertions || 0}</div>
-            </div>
-          </div>
-          ` : ''}
-
-          <!-- Feature Coverage -->
-          ${Object.keys(byFeature).length > 0 ? `
-          <div class="feature-group">
-            <h4>Feature Coverage</h4>
-            <div class="api-status-grid">
-              ${Object.entries(byFeature).map(([feature, coverage]) => `
-                <div class="api-status-item">
-                  <span>${feature}</span>
-                  <span class="badge">${coverage}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-          ` : ''}
-
-          <!-- API Endpoint Status -->
-          ${Object.keys(apiStatus).length > 0 ? `
-          <div class="feature-group">
-            <h4>API Endpoint Status</h4>
-            <div class="api-status-grid">
-              ${Object.entries(apiStatus).map(([endpoint, status]) => `
-                <div class="api-status-item">
-                  <code>${endpoint}</code>
-                  <span class="badge">${status}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-          ` : ''}
-
-          <!-- Tested Scenarios -->
-          ${testedScenarios.length > 0 ? `
-          <div class="feature-group">
-            <h4>Tested Scenarios (${testedScenarios.length} tests)</h4>
-            <ul class="scenario-list">
-              ${testedScenarios.map(scenario => `
-                <li class="${scenario.includes('✅') ? 'pass' : 'pending'}">${scenario}</li>
-              `).join('')}
-            </ul>
-          </div>
-          ` : ''}
-
-          <!-- Coverage Notes -->
-          ${entry.coverage_notes ? `
-          <div class="coverage-notes">
-            <h5>Coverage Notes</h5>
-            <p>${typeof entry.coverage_notes === 'string' ? entry.coverage_notes.replace(/\n/g, '<br>') : ''}</p>
-          </div>
-          ` : ''}
-
-        </div>
-      </div>`;
-        });
-
-        html += `
-    </div>
+    ${generateACCoverageHTML()}
 
 
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Tab switching
-      document.querySelectorAll('.tab[data-tab]').forEach(function(tab) {
-        tab.addEventListener('click', function() {
-          var tabName = this.getAttribute('data-tab');
-          // Hide all tabs
-          document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
-          document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-          // Show selected tab
-          document.getElementById('tab-' + tabName).classList.add('active');
-          this.classList.add('active');
-        });
-      });
-
-      // PRD detail toggle
-      document.querySelectorAll('.prd-detail-header[data-prd]').forEach(function(header) {
-        header.addEventListener('click', function() {
-          var prdId = this.getAttribute('data-prd');
-          var body = document.getElementById('body-' + prdId);
-          var arrow = document.getElementById('arrow-' + prdId);
+      // AC Coverage PRD toggle
+      document.querySelectorAll('.ac-prd-header[data-prd-ac]').forEach(function(header) {
+        header.addEventListener('click', function(e) {
+          if (e.target.classList.contains('prd-link')) return; // Don't toggle when clicking link
+          var prdId = this.getAttribute('data-prd-ac');
+          var body = document.getElementById('body-ac-' + prdId);
+          var arrow = document.getElementById('arrow-ac-' + prdId);
           body.classList.toggle('expanded');
-          arrow.classList.toggle('expanded');
-        });
-      });
-
-      // Test case toggle
-      document.querySelectorAll('.test-case-header[data-feature]').forEach(function(header) {
-        header.addEventListener('click', function() {
-          var featureId = this.getAttribute('data-feature');
-          var body = document.getElementById('body-tc-' + featureId);
-          var arrow = document.getElementById('arrow-tc-' + featureId);
-          body.classList.toggle('expanded');
-          arrow.classList.toggle('expanded');
+          arrow.classList.toggle('collapsed');
         });
       });
 
@@ -2582,30 +2867,6 @@ router.get('/coverage', (_req: Request, res: Response) => {
         });
       });
 
-      // Test case search functionality
-      var testcaseSearch = document.getElementById('testcase-search');
-      if (testcaseSearch) {
-        testcaseSearch.addEventListener('input', function() {
-          var searchTerm = this.value.toLowerCase().trim();
-          var groups = document.querySelectorAll('.test-case-group');
-
-          groups.forEach(function(group) {
-            var header = group.querySelector('.test-case-header');
-            var featureName = header ? header.querySelector('h3').textContent.toLowerCase() : '';
-            var prdId = header ? header.querySelector('.prd-badge').textContent.toLowerCase() : '';
-
-            var matches = searchTerm === '' ||
-                          featureName.includes(searchTerm) ||
-                          prdId.includes(searchTerm);
-
-            if (matches) {
-              group.style.display = '';
-            } else {
-              group.style.display = 'none';
-            }
-          });
-        });
-      }
     });
   </script>
 </body>
@@ -2621,382 +2882,131 @@ router.get('/coverage', (_req: Request, res: Response) => {
 
 // Documentation Hub - Main landing page
 router.get('/project-docs', (_req, res) => {
-      try {
-        const prdStats = { total: loadPRDDocuments().length };
-        const storyStats = { total: loadStoriesIndex().length };
-        const cardStats = getCardStats();
-        const coverageStats = getCoverageStats();
+  try {
+    const prdStats = { total: loadPRDDocuments().length };
+    const storyStats = { total: loadStoriesIndex().length };
+    const cardStats = getCardStats();
+    const coverageStats = getCoverageStats();
 
-        let html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Documentation Hub</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #2c3e50;
-      margin-bottom: 10px;
-      border-bottom: 3px solid #3498db;
-      padding-bottom: 10px;
-    }
-    .subtitle {
-      color: #7f8c8d;
-      margin-bottom: 30px;
-    }
-    .nav-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-    .nav-card {
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 25px;
-      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-      transition: all 0.3s;
-      text-decoration: none;
-      display: block;
-    }
-    .nav-card:hover {
-      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-      border-color: #3498db;
-      transform: translateY(-4px);
-    }
-    .nav-card h2 {
-      color: #3498db;
-      margin-bottom: 10px;
-      font-size: 1.4em;
-    }
-    .nav-card p {
-      color: #666;
-      margin-bottom: 15px;
-    }
-    .nav-card .stats {
-      color: #7f8c8d;
-      font-size: 0.9em;
-      margin-top: 10px;
-    }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-top: 30px;
-    }
-    .stat-box {
-      background: #f8f9fa;
-      border-left: 4px solid #3498db;
-      padding: 15px;
-      border-radius: 4px;
-    }
-    .stat-box h3 {
-      font-size: 0.9em;
-      color: #7f8c8d;
-      margin-bottom: 5px;
-    }
-    .stat-box .number {
-      font-size: 2em;
-      font-weight: 700;
-      color: #2c3e50;
-    }
-    .rules-section {
-      margin-top: 40px;
-      border: 3px solid #e74c3c;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .rules-header {
-      background: #e74c3c;
-      color: white;
-      padding: 15px 20px;
-      cursor: pointer;
-      user-select: none;
-      font-size: 1.1em;
-      font-weight: 600;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .rules-header:hover {
-      background: #c0392b;
-    }
-    .rules-content {
-      padding: 25px;
-      background: #fff5f5;
-    }
-    .rules-content h3 {
-      color: #e74c3c;
-      margin-top: 20px;
-      margin-bottom: 10px;
-      font-size: 1.1em;
-    }
-    .rules-content h3:first-child {
-      margin-top: 0;
-    }
-    .rules-content ul {
-      margin-left: 20px;
-      margin-bottom: 15px;
-    }
-    .rules-content li {
-      margin: 8px 0;
-      color: #555;
-    }
-    .rules-content code {
-      background: #f4f4f4;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 0.9em;
-      color: #c7254e;
-    }
-    .rules-content strong {
-      color: #2c3e50;
-    }
-    .warning-box {
-      background: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    .warning-box strong {
-      color: #856404;
-    }
-    details {
-      margin-top: 15px;
-    }
-    summary {
-      cursor: pointer;
-      font-weight: 600;
-      color: #3498db;
-      padding: 10px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      user-select: none;
-    }
-    summary:hover {
-      background: #e9ecef;
-    }
-    .example-box {
-      background: #f8f9fa;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 0.9em;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>📚 Documentation Hub</h1>
-    <p class="subtitle">Browse product documentation, user stories, implementation cards, and test coverage</p>
+    // 读取规则内容（从 markdown 文件）
+    const rulesHtml = renderMarkdownFile('docs/reference/developer-rules.md');
 
-    <div class="nav-grid">
-      <a href="/prd" class="nav-card">
-        <h2>📋 PRD Documents</h2>
-        <p>Product Requirements Documents with detailed specifications and business requirements</p>
-        <div class="stats">Total: ${prdStats.total} documents</div>
-      </a>
-
-      <a href="/stories" class="nav-card">
-        <h2>📖 User Stories</h2>
-        <p>User stories linking business requirements to technical implementation</p>
-        <div class="stats">Total: ${storyStats.total} stories</div>
-      </a>
-
-      <a href="/cards" class="nav-card">
-        <h2>🎯 Implementation Cards</h2>
-        <p>Technical implementation cards with API contracts and acceptance criteria</p>
-        <div class="stats">Total: ${cardStats.total} cards (${cardStats.byStatus.Done || 0} done)</div>
-      </a>
-
-      <a href="/sitemap" class="nav-card">
-        <h2>🗺️ Documentation Sitemap</h2>
-        <p>Hierarchical view of PRD → Story → Card relationships</p>
-        <div class="stats">Complete project structure</div>
-      </a>
-
-      <a href="/graph" class="nav-card">
-        <h2>📊 Relationship Graph</h2>
-        <p>Interactive visual graph showing connections between PRDs, Stories, and Cards</p>
-        <div class="stats">Click nodes to explore relationships</div>
-      </a>
-
-      <a href="/compliance" class="nav-card">
-        <h2>✅ Compliance Dashboard</h2>
-        <p>Real-time documentation compliance audit with self-healing suggestions</p>
-        <div class="stats">Automated compliance checking</div>
-      </a>
-
-      <a href="/coverage" class="nav-card">
-        <h2>📊 Test Coverage</h2>
-        <p>Test coverage metrics and Newman test reports</p>
-        <div class="stats">${coverageStats.complete}/${coverageStats.total_prds} PRDs fully covered</div>
-      </a>
-
-      <a href="/docs" class="nav-card">
-        <h2>🔧 API Documentation</h2>
-        <p>Swagger UI with OpenAPI 3.0 specification</p>
-        <div class="stats">Interactive API explorer</div>
-      </a>
-
-      <a href="/architecture" class="nav-card">
-        <h2>🏗️ Product Architecture</h2>
-        <p>Multi-platform product flowcharts: Mini-Program, OTA, Web Reservation, Venue Scanner</p>
-        <div class="stats">Complete system overview</div>
-      </a>
-    </div>
-
-    <h2 style="margin-top: 30px; margin-bottom: 15px;">Overview Statistics</h2>
-    <div class="stats-grid">
-      <div class="stat-box">
-        <h3>PRD Documents</h3>
-        <div class="number">${prdStats.total}</div>
-      </div>
-      <div class="stat-box">
-        <h3>User Stories</h3>
-        <div class="number">${storyStats.total}</div>
-      </div>
-      <div class="stat-box">
-        <h3>Implementation Cards</h3>
-        <div class="number">${cardStats.total}</div>
-      </div>
-      <div class="stat-box">
-        <h3>Test Coverage</h3>
-        <div class="number">${Math.round((coverageStats.complete / coverageStats.total_prds) * 100)}%</div>
-      </div>
-    </div>
-
-    <div class="rules-section">
-      <details open>
-        <summary class="rules-header">
-          <span>⚠️ Developer Maintenance Rules (MUST READ)</span>
-          <span style="font-size: 0.9em; font-weight: normal;">Click to expand/collapse</span>
-        </summary>
-        <div class="rules-content">
-          <div class="warning-box">
-            <strong>⚠️ Critical:</strong> These rules are REQUIRED for the documentation site to work correctly. Breaking these rules causes broken relationships, missing content, and navigation errors.
-          </div>
-
-          <h3>1. Always Include YAML Frontmatter</h3>
-          <p><strong>PRD Files (docs/prd/*.md):</strong></p>
-          <div class="example-box">---<br>prd_id: "PRD-009"<br>status: "Draft"<br>related_stories: []<br>---</div>
-          <p><strong>Story Entries (docs/stories/_index.yaml):</strong></p>
-          <div class="example-box">- id: US-020<br>&nbsp;&nbsp;title: "Story title"<br>&nbsp;&nbsp;status: "Draft"<br>&nbsp;&nbsp;business_requirement: "PRD-009"<br>&nbsp;&nbsp;cards: []</div>
-          <p><strong>Card Files (docs/cards/*.md):</strong></p>
-          <div class="example-box">---<br>slug: new-endpoint<br>status: "Ready"<br>team: "A - Commerce"<br>related_stories: ["US-020"]<br>---</div>
-
-          <h3>2. Use Consistent ID Formats</h3>
-          <ul>
-            <li><strong>PRD:</strong> <code>PRD-###</code> (e.g., PRD-001, PRD-009) ❌ NOT: prd-1, PRD1</li>
-            <li><strong>Story:</strong> <code>US-###</code> (e.g., US-001, US-020) ❌ NOT: us-1, US1</li>
-            <li><strong>Card slug:</strong> <code>kebab-case</code> (e.g., catalog-endpoint) ❌ NOT: catalog_endpoint</li>
-          </ul>
-
-          <h3>3. Maintain Bidirectional Relationships</h3>
-          <p><strong>When you link A → B, you MUST also link B → A</strong></p>
-          <ul>
-            <li>✅ Card links to story (<code>related_stories: ["US-020"]</code>)</li>
-            <li>✅ Story links back to card (<code>cards: ["card-slug"]</code>)</li>
-            <li>✅ Story links to PRD (<code>business_requirement: "PRD-009"</code>)</li>
-            <li>✅ PRD links back to story (<code>related_stories: ["US-020"]</code>)</li>
-          </ul>
-
-          <h3>4. File Naming Conventions</h3>
-          <ul>
-            <li><strong>PRD:</strong> <code>PRD-###-description.md</code></li>
-            <li><strong>Card:</strong> <code>slug-name.md</code> (must match slug in frontmatter)</li>
-            <li><strong>Story:</strong> Use <code>_index.yaml</code> (all stories in one file)</li>
-          </ul>
-
-          <h3>5. Valid Status Values</h3>
-          <ul>
-            <li><strong>PRD:</strong> Draft | In Progress | Done</li>
-            <li><strong>Story:</strong> Draft | In Progress | Done</li>
-            <li><strong>Card:</strong> Ready | In Progress | Done</li>
-          </ul>
-
-          <details>
-            <summary>🚨 Common Mistakes That Break the Site</summary>
-            <div style="margin-top: 15px;">
-              <p><strong>Mistake 1:</strong> Missing <code>business_requirement</code> in story → Story appears orphaned</p>
-              <p><strong>Mistake 2:</strong> Inconsistent ID casing (prd-009 vs PRD-009) → Links break</p>
-              <p><strong>Mistake 3:</strong> One-way relationships → Content missing from hierarchy</p>
-              <p><strong>Mistake 4:</strong> Missing <code>slug</code> in card frontmatter → Card invisible on site</p>
-            </div>
-          </details>
-
-          <details>
-            <summary>📋 Pre-Commit Checklist</summary>
-            <div style="margin-top: 15px;">
-              <p><strong>For new PRDs:</strong></p>
-              <ul>
-                <li>Filename follows <code>PRD-###-description.md</code></li>
-                <li><code>prd_id</code> matches filename</li>
-                <li><code>status</code> and <code>related_stories</code> fields present</li>
-                <li>PRD added to at least one story's <code>business_requirement</code></li>
-              </ul>
-              <p><strong>For new Stories:</strong></p>
-              <ul>
-                <li>Entry added to <code>docs/stories/_index.yaml</code></li>
-                <li><code>id</code> follows <code>US-###</code> format</li>
-                <li><code>business_requirement</code> links to existing PRD</li>
-                <li>PRD's <code>related_stories</code> includes this story ID</li>
-              </ul>
-              <p><strong>For new Cards:</strong></p>
-              <ul>
-                <li>Filename matches slug</li>
-                <li>All required fields present: <code>slug</code>, <code>status</code>, <code>team</code>, <code>related_stories</code></li>
-                <li>At least one story's <code>cards</code> array includes this slug</li>
-                <li>Slug uses kebab-case</li>
-              </ul>
-            </div>
-          </details>
-
-          <details>
-            <summary>📖 Full Documentation</summary>
-            <div style="margin-top: 15px;">
-              <p>For complete guide with step-by-step examples, troubleshooting, and detailed explanations, see:</p>
-              <p style="margin-top: 10px;"><strong>📄 <a href="https://github.com/Synque/express/blob/init-ai/docs/reference/DOCUMENTATION-SITE.md" target="_blank" style="color: #3498db;">docs/reference/DOCUMENTATION-SITE.md</a></strong></p>
-            </div>
-          </details>
-
-          <p style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #e0e0e0; color: #7f8c8d; font-size: 0.95em;">
-            <strong>Remember:</strong> The documentation site is zero-maintenance ONLY if developers follow these rules.
-            Always verify your changes at <a href="http://localhost:8080/sitemap" style="color: #3498db;">http://localhost:8080/sitemap</a> before committing.
-          </p>
-        </div>
-      </details>
-    </div>
-  </div>
-</body>
-</html>`;
-
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
-      } catch (error) {
-        logger.error('Error loading documentation hub:', error);
-        res.status(500).json({ error: 'Failed to load documentation hub' });
+    // 页面专用样式
+    const pageStyles = `
+      .nav-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
       }
+      .nav-card {
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 25px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        transition: all 0.3s;
+        text-decoration: none;
+        display: block;
+      }
+      .nav-card:hover {
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        border-color: #3498db;
+        transform: translateY(-4px);
+      }
+      .nav-card h2 { color: #3498db; margin-bottom: 10px; font-size: 1.4em; }
+      .nav-card p { color: #666; margin-bottom: 15px; }
+      .nav-card .stats { color: #7f8c8d; font-size: 0.9em; margin-top: 10px; }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 30px;
+      }
+      .stat-box {
+        background: #f8f9fa;
+        border-left: 4px solid #3498db;
+        padding: 15px;
+        border-radius: 4px;
+      }
+      .stat-box h3 { font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px; }
+      .stat-box .number { font-size: 2em; font-weight: 700; color: #2c3e50; }
+      .rules-section {
+        margin-top: 40px;
+        border: 3px solid #e74c3c;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .rules-header {
+        background: #e74c3c;
+        color: white;
+        padding: 15px 20px;
+        font-size: 1.1em;
+        font-weight: 600;
+      }
+      .rules-content {
+        padding: 25px;
+        background: #fff5f5;
+      }
+      .rules-content h1, .rules-content h2, .rules-content h3 { color: #e74c3c; margin-top: 20px; }
+      .rules-content table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+      .rules-content th, .rules-content td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+      .rules-content th { background: #f8f9fa; }
+      .rules-content blockquote { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; }
+      .rules-content pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; }
+      .rules-content code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+      .rules-content pre code { background: transparent; color: inherit; }
+    `;
+
+    // 导航卡片配置
+    const navCards = [
+      { href: '/prd', icon: '📋', title: 'PRD Documents', desc: 'Product Requirements Documents with detailed specifications', stats: `Total: ${prdStats.total} documents` },
+      { href: '/stories', icon: '📖', title: 'User Stories', desc: 'User stories linking business requirements to technical implementation', stats: `Total: ${storyStats.total} stories` },
+      { href: '/cards', icon: '🎯', title: 'Implementation Cards', desc: 'Technical implementation cards with API contracts', stats: `Total: ${cardStats.total} cards (${cardStats.byStatus.Done || 0} done)` },
+      { href: '/sitemap', icon: '🗺️', title: 'Documentation Sitemap', desc: 'Hierarchical view of PRD → Story → Card relationships', stats: 'Complete project structure' },
+      { href: '/graph', icon: '📊', title: 'Relationship Graph', desc: 'Interactive visual graph showing connections', stats: 'Click nodes to explore' },
+      { href: '/compliance', icon: '✅', title: 'Compliance Dashboard', desc: 'Real-time documentation compliance audit', stats: 'Automated checking' },
+      { href: '/coverage', icon: '📊', title: 'Test Coverage', desc: 'Test coverage metrics and Newman reports', stats: `${coverageStats.complete}/${coverageStats.total_prds} PRDs covered` },
+      { href: '/docs', icon: '🔧', title: 'API Documentation', desc: 'Swagger UI with OpenAPI 3.0 specification', stats: 'Interactive explorer' },
+      { href: '/architecture', icon: '🏗️', title: 'Product Architecture', desc: 'Multi-platform product flowcharts', stats: 'System overview' },
+    ];
+
+    const navGridHtml = navCards.map(card => `
+      <a href="${card.href}" class="nav-card">
+        <h2>${card.icon} ${card.title}</h2>
+        <p>${card.desc}</p>
+        <div class="stats">${card.stats}</div>
+      </a>
+    `).join('');
+
+    const coveragePercent = Math.round((coverageStats.complete / coverageStats.total_prds) * 100);
+
+    const content = `
+      <h1>📚 Documentation Hub</h1>
+      <p class="subtitle">Browse product documentation, user stories, implementation cards, and test coverage</p>
+
+      <div class="nav-grid">${navGridHtml}</div>
+
+      <h2 style="margin-top: 30px; margin-bottom: 15px;">Overview Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-box"><h3>PRD Documents</h3><div class="number">${prdStats.total}</div></div>
+        <div class="stat-box"><h3>User Stories</h3><div class="number">${storyStats.total}</div></div>
+        <div class="stat-box"><h3>Implementation Cards</h3><div class="number">${cardStats.total}</div></div>
+        <div class="stat-box"><h3>Test Coverage</h3><div class="number">${coveragePercent}%</div></div>
+      </div>
+
+      <div class="rules-section">
+        <div class="rules-header">⚠️ Developer Maintenance Rules (MUST READ)</div>
+        <div class="rules-content">${rulesHtml}</div>
+      </div>
+    `;
+
+    const html = baseLayout({ title: 'Documentation Hub', styles: pageStyles }, content);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    logger.error('Error loading documentation hub:', error);
+    res.status(500).json({ error: 'Failed to load documentation hub' });
+  }
 });
 
 // ============ Directus PRD Viewer ============
