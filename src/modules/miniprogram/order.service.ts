@@ -107,9 +107,14 @@ export class MiniprogramOrderService {
 
       const savedOrder = await manager.save(order);
 
-      // 6. 预留库存
-      directAllocation.reserved += totalQuantity;
-      inventory.channel_allocations['direct'] = directAllocation;
+      // 6. 预留库存 - 创建新对象，触发 TypeORM JSON 字段变更检测
+      inventory.channel_allocations = {
+        ...inventory.channel_allocations,
+        direct: {
+          ...directAllocation,
+          reserved: directAllocation.reserved + totalQuantity
+        }
+      };
 
       await manager.save(inventory);
 
@@ -216,10 +221,15 @@ export class MiniprogramOrderService {
       if (inventory) {
         const directAllocation = inventory.channel_allocations?.['direct'];
         if (directAllocation) {
-          // 从预留转为已售
-          directAllocation.reserved -= order.quantity;
-          directAllocation.sold += order.quantity;
-          inventory.channel_allocations['direct'] = directAllocation;
+          // 从预留转为已售 - 创建新对象，触发 TypeORM JSON 字段变更检测
+          inventory.channel_allocations = {
+            ...inventory.channel_allocations,
+            direct: {
+              ...directAllocation,
+              reserved: directAllocation.reserved - order.quantity,
+              sold: directAllocation.sold + order.quantity
+            }
+          };
           await manager.save(inventory);
         }
       }
@@ -327,8 +337,14 @@ export class MiniprogramOrderService {
       if (inventory) {
         const directAllocation = inventory.channel_allocations?.['direct'];
         if (directAllocation && directAllocation.reserved >= order.quantity) {
-          directAllocation.reserved -= order.quantity;
-          inventory.channel_allocations['direct'] = directAllocation;
+          // 创建新对象，触发 TypeORM JSON 字段变更检测
+          inventory.channel_allocations = {
+            ...inventory.channel_allocations,
+            direct: {
+              ...directAllocation,
+              reserved: directAllocation.reserved - order.quantity
+            }
+          };
           await manager.save(inventory);
         }
       }
@@ -399,8 +415,14 @@ export class MiniprogramOrderService {
         if (directAllocation) {
           // 确保不会减成负数
           const releaseAmount = Math.min(directAllocation.reserved, totalQuantityToRelease);
-          directAllocation.reserved -= releaseAmount;
-          inventory.channel_allocations['direct'] = directAllocation;
+          // 创建新对象，触发 TypeORM JSON 字段变更检测
+          inventory.channel_allocations = {
+            ...inventory.channel_allocations,
+            direct: {
+              ...directAllocation,
+              reserved: directAllocation.reserved - releaseAmount
+            }
+          };
           await manager.save(inventory);
         }
       }

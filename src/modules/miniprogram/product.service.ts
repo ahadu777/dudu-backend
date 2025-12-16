@@ -123,18 +123,16 @@ export class MiniprogramProductService {
       allProducts = mockDataStore.getActiveProducts();
     }
 
-    // 过滤：只显示 direct channel 有库存的商品
+    // 过滤：只显示有 direct channel 配置的商品（不再过滤库存为0的商品）
     const filteredProducts = allProducts.filter(product => {
       const directAllocation = product.channel_allocations['direct'];
-      if (!directAllocation) return false;
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-      return available > 0;
+      return !!directAllocation;
     });
 
     // 转换为 API 响应格式
     const products: ProductListItem[] = filteredProducts.map(product => {
       const directAllocation = product.channel_allocations['direct'];
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
+      const available = Math.max(0, directAllocation.allocated - directAllocation.reserved - directAllocation.sold);
 
       return {
         id: product.id,
@@ -181,8 +179,7 @@ export class MiniprogramProductService {
 
       if (!directAllocation) return null;
 
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-      if (available <= 0) return null;
+      const available = Math.max(0, directAllocation.allocated - directAllocation.reserved - directAllocation.sold);
 
       const functions = dbProduct.entitlements ? dbProduct.entitlements.map((e: any) => ({
         function_code: e.type,
@@ -220,8 +217,7 @@ export class MiniprogramProductService {
       const directAllocation = mockProduct.channel_allocations['direct'];
       if (!directAllocation) return null;
 
-      const available = directAllocation.allocated - directAllocation.reserved - directAllocation.sold;
-      if (available <= 0) return null;
+      const available = Math.max(0, directAllocation.allocated - directAllocation.reserved - directAllocation.sold);
 
       return {
         id: mockProduct.id,
