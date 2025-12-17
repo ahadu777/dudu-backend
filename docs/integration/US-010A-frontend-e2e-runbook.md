@@ -371,18 +371,6 @@
 
 ## 📚 Reference Documents
 
-### Detailed Test Cases
-- **File**: `docs/test-cases/TEST_CASES.md`
-- **Content**: 70+ 测试用例（功能测试、边界测试、安全测试）
-- **Lines**: 1039 行
-- **Status**: ✅ Complete
-
-### Final Test Report
-- **File**: `docs/test-cases/FINAL_TEST_REPORT.md`
-- **Content**: 四轮测试报告，包含代码审查和质量评分
-- **Lines**: 1200 行
-- **Status**: ✅ Zero Defects Confirmed
-
 ### Backend API Tests
 - **Collection**: `postman/auto-generated/prd-008-miniprogram-phase1.postman_collection.json`
 - **Coverage**: 100% (64/64 assertions pass)

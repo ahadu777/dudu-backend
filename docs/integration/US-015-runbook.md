@@ -693,3 +693,52 @@ Fields:
 **Status:** ✅ All endpoints tested and working
 **Mode:** Mock service (USE_DATABASE=false)
 **Ready for:** Newman automation, Frontend integration
+
+---
+
+## Web 端 E2E 测试结果 (2025-12-16)
+
+### 测试概要
+
+**测试报告**: [WEB-RESERVATION-E2E-REPORT.md](../test-cases/WEB-RESERVATION-E2E-REPORT.md)
+
+| 指标 | 数值 | 评级 |
+|------|------|------|
+| 总测试用例 | 72 | - |
+| 通过 | 66 | 91.67% |
+| 警告 | 6 | 8.33% |
+| **总体评分** | **91.67%** | **优秀** |
+
+### 测试场景
+
+1. **OTA 平台 Web 端预订** (DT- 前缀票券)
+2. **小程序下单后 Web 端预订** (MP- 前缀票券)
+3. **预订后小程序查看预订信息**
+
+### 发现的问题
+
+| ID | 优先级 | 问题 | 建议 |
+|----|--------|------|------|
+| ISS-001 | **高** | 缺少 Rate Limiting | 添加速率限制 (每分钟 30 次) |
+| ISS-002 | **高** | 大 Payload (100KB) 导致 500 | 限制请求体大小为 10KB |
+| OPT-001 | 中 | 时段查询较慢 (1404ms) | 添加 Redis 缓存 |
+
+### 已澄清 (非问题)
+
+| 原报告 | 实际情况 |
+|--------|---------|
+| OPT-002: 预订后票券状态返回 UNKNOWN | **设计行为**: 小程序票券→RESERVED，OTA票券→保持ACTIVATED。参见 [service.ts:287-293](../../src/modules/customerReservation/service.ts#L287) |
+
+### 性能数据
+
+| 端点 | 平均响应时间 | 请求次数 |
+|------|-------------|---------|
+| `/api/tickets/validate` | 627ms | 122 |
+| `/api/reservation-slots/available` | 1404ms | 8 |
+| `/api/reservations/create` | 688ms | 18 |
+
+### 上线建议
+
+**系统可以安全上线**，但需要先修复：
+1. 添加 Rate Limiting (防 DoS)
+2. 限制请求体大小 (防资源耗尽)

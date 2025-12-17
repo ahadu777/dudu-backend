@@ -471,5 +471,52 @@ And operator can still re-verify if needed (idempotent)
 
 ---
 
+## Web 端 E2E 测试结果 (2025-12-16)
+
+### 测试概要
+
+| 指标 | 数值 |
+|------|------|
+| 总测试用例 | 72 |
+| 通过 | 66 (91.67%) |
+| 警告 | 6 (8.33%) |
+| 评级 | **优秀** |
+
+### 测试覆盖
+
+- **票券验证**: OTA 票券 (DT-) + 小程序票券 (MP-) 验证
+- **边界测试**: 32 项全部通过 (安全性 100%)
+- **并发测试**: 系统能够处理并发预订请求
+- **压力测试**: 50 次快速连续请求
+
+### 发现的问题
+
+| 优先级 | 问题 | 建议 |
+|--------|------|------|
+| **高** | 缺少 Rate Limiting | 添加速率限制 (每分钟 30 次) |
+| **高** | 大 Payload (100KB) 导致 500 | 限制请求体大小为 10KB |
+| 中 | 时段查询较慢 (1404ms) | 添加 Redis 缓存 |
+
+### 已澄清 (非问题)
+
+| 原报告 | 实际情况 |
+|--------|---------|
+| 预订后票券状态返回 UNKNOWN | **设计行为**: 小程序票券→RESERVED，OTA票券→保持ACTIVATED |
+
+### 性能指标
+
+| 端点 | 平均响应时间 |
+|------|-------------|
+| `/api/tickets/validate` | 627ms |
+| `/api/reservation-slots/available` | 1404ms |
+| `/api/reservations/create` | 688ms |
+
+### 详细报告
+
+- [WEB-RESERVATION-E2E-REPORT.md](../test-cases/WEB-RESERVATION-E2E-REPORT.md)
+- [web-reservation-e2e.yaml](../test-cases/web-reservation-e2e.yaml)
+
+---
+
 **Story Status**: Draft - Ready for implementation
 **Next Steps**: Review with teams → Estimate cards → Begin Sprint 1
