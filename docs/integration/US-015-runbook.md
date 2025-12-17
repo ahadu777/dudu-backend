@@ -700,7 +700,7 @@ Fields:
 
 ### 测试概要
 
-**测试报告**: [WEB-RESERVATION-E2E-REPORT.md](../test-cases/WEB-RESERVATION-E2E-REPORT.md)
+**测试报告**: [prd-007-frontend-e2e.md](../../postman/auto-generated/prd-007-frontend-e2e.md)
 
 | 指标 | 数值 | 评级 |
 |------|------|------|
