@@ -4,77 +4,86 @@ title: Promotion Details
 owner: Product
 status: "Done"
 priority: Medium
+created_date: "2025-10-21"
+last_updated: "2025-12-17"
 business_requirement: "PRD-001"
+depends_on: []
 cards:
   - promotion-detail-endpoint
 ---
 
-# Story Analysis: Promotion Details (US-008)
+## 变更日志
+| 日期 | 变更 | 原因 |
+|------|------|------|
+| 2025-12-17 | 格式重构 | 验收标准改为 Given/When/Then 格式 |
+| 2025-10-21 | 创建 | 初始版本 |
 
-## Story: Promotion Detail View
-**As a** dashboard user
-**I want** to open and view detailed information about promotions/products
-**So that** I can understand what I'm buying before making a purchase decision
+---
 
-**Acceptance Criteria:**
-- [ ] Users can click on a promotion to view detailed information
-- [ ] Detail view shows product description, pricing, and features
-- [ ] Detail view shows real-time inventory availability
-- [ ] Detail view includes images and additional marketing content
-- [ ] Detail view provides clear next steps for purchasing
+## 用户目标
 
-## Business Rules
+**作为** 浏览商品的用户
+**我想要** 查看商品/套餐的详细信息
+**以便于** 在购买前了解商品内容和价格
 
-1. **Timing Rules:** Promotion details can be viewed at any time for active products
-2. **Permission Rules:** Public access, no authentication required for viewing details
-3. **Validation Rules:** Must handle both active and inactive products gracefully
-4. **State Rules:** Display real-time inventory and availability status
-5. **Audit Rules:** Log promotion detail views for analytics (product_id, timestamp)
+---
 
-## Technical Reference
-> API contract and implementation details: see Card `promotion-detail-endpoint`
+## 范围
 
-## Data Changes
+### 包含 (In Scope)
+- 商品详情页展示
+- 价格和套餐内容显示
+- 实时库存可用性
+- 图片和营销内容
 
-### Existing Tables Modified:
-- **No database changes required** - using existing product data with enhanced presentation
+### 不包含 (Out of Scope)
+- 商品评论和评分
+- 相关商品推荐
+- 促销活动倒计时
 
-### New Data Structures:
-- **Enhanced product presentation**: Add description, features, images to existing mock data
-- **Inventory calculations**: Real-time available = sellable_cap - reserved - sold
+---
 
-### Migration Requirements:
-- Backfill existing data? No (using mock data enhancements)
-- Breaking changes? No
-- Performance impact? Low (single product lookup)
+## 验收标准
 
-## Integration Impact
+### A. 查看商品详情
+- **Given** 用户在商品列表页面
+- **When** 用户点击某个商品
+- **Then** 系统显示该商品的完整详情页，包括描述、价格和套餐内容
 
-### Existing Cards Affected:
-- **catalog**: Extended with new promotion detail endpoint
-- **mockStore**: Enhanced with promotion detail method
+### B. 查看价格信息
+- **Given** 用户正在查看商品详情
+- **When** 页面加载完成
+- **Then** 用户看到清晰的价格显示，包括不同客户类型（成人/儿童/长者）的价格
 
-### New Integration Points:
-- Frontend dashboard: New promotion detail modal/page
-- Analytics: Track promotion detail views
-- Marketing: Support for rich content (images, features)
+### C. 查看库存状态
+- **Given** 用户正在查看商品详情
+- **When** 页面加载完成
+- **Then** 系统显示实时库存可用数量
 
-## Related Cards
+### D. 查看已下架商品
+- **Given** 某商品已下架或不可用
+- **When** 用户尝试访问该商品详情
+- **Then** 系统显示友好提示"该商品暂不可用"
 
-| Card | Team | Description |
-|------|------|-------------|
-| promotion-detail-endpoint | A - Commerce | Core promotion detail API (extends catalog module) |
+### E. 购买入口
+- **Given** 用户查看了商品详情并决定购买
+- **When** 用户点击购买按钮
+- **Then** 系统引导用户进入下单流程
 
-## Implementation Notes
+---
 
-- **Built on existing infrastructure**: Extends current catalog module
-- **Mock data first**: Enhanced mock store with rich promotion data
-- **No database changes**: Leverages existing product foundation
-- **Frontend ready**: Provides all data needed for rich detail views
+## 业务规则
 
-## Story Status
+1. **访问权限**：商品详情页公开访问，无需登录
+2. **时效性**：活跃商品可随时查看详情
+3. **库存显示**：实时计算可用库存 = 可售数量 - 已预订 - 已售出
+4. **价格展示**：清晰展示不同客户类型和时间段的价格差异
+5. **浏览记录**：记录商品浏览行为用于分析
 
-- **Created**: 2025-10-21
-- **Status**: Completed (retroactively documented)
-- **Implementation**: Already completed in catalog module
-- **Next Steps**: Create proper card documentation and update story index
+---
+
+## 关联 Cards
+
+| Card | 状态 | 描述 |
+|------|------|------|
+| promotion-detail-endpoint | Done | 商品详情 API |

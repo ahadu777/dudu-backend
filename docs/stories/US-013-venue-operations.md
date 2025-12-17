@@ -5,8 +5,11 @@ owner: Product
 status: "Done"
 priority: High
 created_date: "2025-11-04"
-completed_date: "2025-11-25"
+last_updated: "2025-12-17"
 business_requirement: "PRD-003"
+depends_on:
+  - US-001  # 票券必须存在才能核销
+  - US-002  # 操作员认证基础
 cards:
   - venue-management-crud
   - venue-enhanced-scanning
@@ -14,175 +17,138 @@ cards:
   - operator-validation-scanner
 ---
 
-# US-013: Event Venue Operations Platform
+## 变更日志
+| 日期 | 变更 | 原因 |
+|------|------|------|
+| 2025-12-17 | 格式重构 | 验收标准改为 Given/When/Then 格式 |
+| 2025-11-25 | 完成 | 实现完成 |
+| 2025-11-04 | 创建 | 初始版本 |
 
-## Story Analysis
+---
 
-### 1. Story Understanding
+## 用户目标
 
-#### Core Story
-**As a** venue operator at ferry terminals, gift shops, or playgrounds
-**I want** to scan customer tickets and validate their entitlements in real-time
-**So that** I can provide seamless service while preventing fraud and tracking redemptions
+**作为** 码头、礼品店或游乐场的场馆操作员
+**我想要** 扫描客户票券并实时验证其权益
+**以便于** 我可以提供无缝服务，同时防止欺诈并追踪核销记录
 
-#### Venue Management Story
-**As a** system administrator
-**I want** to manage venues (create, update, delete) with supported functions configuration
-**So that** operators can be assigned to appropriate venues with correct entitlement validation
+---
 
-#### Analytics Story
-**As a** business manager
-**I want** to view venue performance analytics (success rates, fraud detection, operator performance)
-**So that** I can optimize operations and identify issues proactively
+## 范围
 
-#### Business Context
-- **Business Driver**: PRD-003 Multi-terminal redemption with fraud prevention
-- **Security Requirement**: JTI-based replay attack prevention
-- **Performance Target**: <2 second response time for all scan operations
-- **Audit Requirement**: Complete redemption event logging with operator attribution
+### 包含 (In Scope)
+- 场馆管理（增删改查）
+- 二维码扫描核销
+- 防重放攻击
+- 场馆分析报表
 
-#### Acceptance Criteria
+### 不包含 (Out of Scope)
+- 离线核销队列
+- 手动输入票券编码
+- 场馆排班管理
 
-##### Venue CRUD Management
-- [x] Administrators can list all active venues with supported functions
-- [x] Administrators can view inactive venues when needed
-- [x] Administrators can create new venues with code, name, and type
-- [x] Administrators can update venue information
-- [x] Administrators can soft-delete venues (deactivate)
-- [x] Administrators can permanently remove venues when required
-- [x] System prevents duplicate venue codes with clear error messages
+---
 
-##### Venue Scanning Operations
-- [x] Operators can scan QR tokens to validate and redeem entitlements
-- [x] Scanning requires operator authentication
-- [x] System prevents replay attacks (same QR + function cannot be used twice)
-- [x] Supports all function codes: ferry_boarding, gift_redemption, playground_token
-- [x] OTA tickets must be activated before scanning
-- [x] Scan results show entitlements and remaining uses
-- [x] All redemption events are recorded with operator attribution
+## 验收标准
 
-##### Venue Analytics
-- [x] Managers can view venue performance metrics
-- [x] Analytics support configurable time windows (up to 1 week)
-- [x] Metrics include: total scans, success rate, fraud attempts, function breakdown
-- [x] Invalid time parameters are rejected with clear error messages
+### A. 场馆管理
 
-##### Performance & Security
-- [x] All endpoints respond within 2 seconds
-- [x] Fraud detection logs all suspicious activities
-- [x] Complete audit trail for 7-year compliance requirement
-- [x] Operator information included in all redemption records
+#### A1. 查看场馆列表
+- **Given** 管理员需要查看所有场馆
+- **When** 管理员访问场馆列表
+- **Then** 系统显示所有活跃场馆及其支持的功能
 
-### 2. Business Rules Extraction
+#### A2. 创建新场馆
+- **Given** 管理员需要添加新场馆
+- **When** 管理员提交场馆信息（编码、名称、类型、支持功能）
+- **Then** 系统创建场馆，返回成功确认
 
-#### Venue Types
-1. **Ferry Terminal** (ferry_terminal)
-   - Primary function: ferry_boarding
-   - High-volume scanning operations
-   - Example: Central Pier, Cheung Chau Terminal
+#### A3. 更新场馆信息
+- **Given** 管理员需要修改场馆配置
+- **When** 管理员更新场馆名称或支持功能
+- **Then** 系统保存更改，场馆配置立即生效
 
-2. **Gift Shop** (gift_shop)
-   - Primary function: gift_redemption
-   - Medium-volume operations
+#### A4. 场馆编码唯一性
+- **Given** 管理员尝试创建新场馆
+- **When** 场馆编码与已存在的重复
+- **Then** 系统拒绝创建，返回明确的错误信息
 
-3. **Playground** (playground)
-   - Primary function: playground_token
-   - Variable volume based on peak hours
+### B. 扫描核销
 
-#### Multi-Function Venues
-- Some venues support multiple functions (e.g., Cheung Chau supports ferry_boarding + gift_redemption + playground_token)
-- Function validation ensures tickets are scanned at appropriate venues
-- `supported_functions` array in venue configuration
+#### B1. 有效票券核销
+- **Given** 操作员已登录，客户持有有效票券
+- **When** 操作员扫描客户的二维码
+- **Then** 系统验证票券权益，扣减使用次数，返回核销成功
 
-#### Scanning Rules
-1. **Authentication**: Operator JWT required for all scan operations
-2. **QR Validation**: Decrypt and verify signature (tamper-proof)
-3. **Replay Prevention**: JTI + function_code unique constraint
-4. **Status Check**: Only ACTIVE tickets can be scanned
-5. **Entitlement Check**: Function must exist with remaining_uses > 0
-6. **Decrement**: Reduce remaining_uses by 1 on successful scan
-7. **Audit**: Record complete redemption event
+#### B2. 未激活票券拒绝
+- **Given** OTA 票券尚未激活
+- **When** 操作员扫描该票券
+- **Then** 系统拒绝核销，提示"票券未激活"
 
-#### Analytics Rules
-- Time window limited to 1-168 hours (1 week maximum)
-- Metrics aggregated by function_code
-- Success rate = successful_scans / total_scans
-- Fraud rate tracks rejected scans due to replay attempts
+#### B3. 重放攻击防护
+- **Given** 某二维码已在该场馆核销过某功能
+- **When** 同一二维码再次扫描相同功能
+- **Then** 系统拒绝核销，提示"该功能已核销"
 
-### 3. Technical Implementation
+#### B4. 操作员认证要求
+- **Given** 未登录的用户
+- **When** 尝试执行扫描操作
+- **Then** 系统拒绝请求，返回认证错误
 
-#### Module Structure
-```
-src/modules/venue/
-├── router.ts          # API routes with Swagger documentation
-├── service.ts         # Business logic (VenueOperationsService)
-└── domain/
-    ├── venue.entity.ts      # TypeORM entity
-    └── venue.repository.ts  # Database operations
-```
+### C. 场馆分析
 
-#### Technical Reference
-> API contracts and response formats: see related Cards below
+#### C1. 查看场馆指标
+- **Given** 经理需要了解场馆运营情况
+- **When** 经理查询某时间段的场馆分析
+- **Then** 系统返回总扫描数、成功率、欺诈尝试次数、功能分布
 
-### 4. Related Cards
+#### C2. 时间窗口限制
+- **Given** 经理查询分析数据
+- **When** 时间窗口超过 1 周
+- **Then** 系统拒绝请求，提示"时间窗口不能超过 168 小时"
 
-| Card | Status | Description |
-|------|--------|-------------|
-| venue-management-crud | Done | CRUD operations for venues |
-| venue-enhanced-scanning | Done | QR scanning with fraud prevention |
-| venue-analytics-reporting | Done | Performance metrics and analytics |
-| venue-session-management | Deprecated | Session-based scanning (replaced by JWT auth) |
+---
 
-### 5. Integration Points
+## 业务规则
 
-#### Dependencies
-- **US-001**: Ticket purchase creates entitlements scanned at venues
-- **US-002**: Operator authentication for scan operations
-- **US-012**: OTA tickets must be activated before venue scanning
+### 场馆类型
+- **码头** (ferry_terminal): 主要功能 ferry_boarding
+- **礼品店** (gift_shop): 主要功能 gift_redemption
+- **游乐场** (playground): 主要功能 playground_token
 
-#### Database Tables
-- `venues` - Venue master data with supported_functions
-- `venue_sessions` - Operator sessions (deprecated, JWT used instead)
-- `redemption_events` - Complete audit trail of all scans
+### 多功能场馆
+- 部分场馆支持多种功能（如长洲码头支持登船+礼品+游乐场）
+- 场馆配置中的 `supported_functions` 数组定义支持的功能
 
-### 6. Testing
+### 扫描规则
+1. 操作员 JWT 必须有效
+2. 二维码签名验证
+3. JTI + function_code 唯一约束防重放
+4. 只有 ACTIVE 状态票券可扫描
+5. 功能权益必须有剩余次数
 
-#### Test Assets
-- **Newman Collection**: `reports/collections/us-013-venue-operations.json`
-- **Runbook**: `docs/integration/US-013-runbook.md`
+### 分析规则
+- 时间窗口限制: 1-168 小时（最长 1 周）
+- 成功率 = 成功扫描数 / 总扫描数
+- 欺诈率追踪因重放尝试被拒绝的扫描
 
-#### Test Scenarios
-1. Venue CRUD operations (create, read, update, soft delete, hard delete)
-2. Scanning with valid operator JWT
-3. Scan rejection without authentication (401)
-4. Analytics retrieval with various time windows
-5. Invalid hours parameter validation
-6. Performance validation (<2 second response)
+---
 
-#### Run Tests
-```bash
-# Start server
-npm start
+## 关联 Cards
 
-# Run Newman tests
-npx newman run reports/collections/us-013-venue-operations.json
-```
+| Card | 状态 | 描述 |
+|------|------|------|
+| venue-management-crud | Done | 场馆 CRUD 操作 |
+| venue-enhanced-scanning | Done | 带防欺诈的二维码扫描 |
+| venue-analytics-reporting | Done | 性能指标和分析 |
+| operator-validation-scanner | Done | 操作员验证扫描器 |
 
-### 7. Completion Notes
+---
 
-**Implemented Features:**
-- Full CRUD for venue management
-- JWT-authenticated scanning with fraud prevention
-- JTI-based replay attack detection
-- Multi-function venue support
-- Real-time analytics with configurable time windows
-- Complete audit logging
+## 性能指标
 
-**Known Limitations:**
-- 7-year audit retention requires long-term verification (outside automation scope)
-- Session management deprecated in favor of stateless JWT authentication
-
-**Performance Achieved:**
-- Average response time: <100ms (well under 2s requirement)
-- Fraud detection: Real-time JTI tracking
-- Success rate tracking: Per-venue, per-function breakdowns
+| 指标 | 目标 | 实际 |
+|------|------|------|
+| API 响应时间 | < 2s | < 100ms |
+| 欺诈检测 | 实时 | 实时 JTI 追踪 |
+| 审计追踪 | 7 年 | 完整记录 |

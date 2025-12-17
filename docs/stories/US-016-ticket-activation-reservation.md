@@ -5,254 +5,140 @@ owner: Product
 status: "Draft"
 priority: High
 created_date: "2025-11-14"
+last_updated: "2025-12-17"
 business_requirement: "PRD-006"
+depends_on:
+  - US-001  # 票券必须存在
 cards: []
-# deprecated: [ticket-lifecycle-daemon] - moved to _deprecated/
+# 待创建的 Cards:
+#   - ticket-activation
+#   - time-slot-reservation
+#   - reservation-validation-scanning
 ---
 
-# US-016: Ticket Activation and Time-Slot Reservation
-
-## Business Context
-
-### Problem Statement
-Customers purchasing tickets are forced to commit to specific dates at purchase time, limiting flexibility for advance purchases, gift tickets, and group coordination. Operators lack visibility into whether scanned tickets are reserved for the current day.
-
-### Solution Overview
-Implement a two-phase ticket lifecycle where tickets are purchased in inactive state, activated by customers when ready, and then reserved for specific date/time slots. Enhance operator scanning to validate reservation status and date matching.
-
-### Success Criteria
-- ✅ Support both immediate and pre-made ticket purchase modes
-- ✅ Enable ticket activation workflow (inactive → active)
-- ✅ Provide calendar-based reservation UI
-- ✅ Operator scanning displays reservation status and validates dates
-- ✅ <3s scan-to-validation time
-- ✅ >75% of activated tickets have reservations within 7 days
-
-## User Stories
-
-### Consumer Stories
-
-**As a customer purchasing advance tickets**
-I want to buy tickets now and activate them later
-So that I can lock in pricing without committing to specific dates immediately
-
-**As a customer with activated tickets**
-I want to select a specific date and time from a calendar
-So that I can reserve my experience for a convenient time
-
-**As a gift ticket recipient**
-I want to activate tickets given to me and schedule when I'll use them
-So that I can plan my visit independently
-
-**As a customer managing reservations**
-I want to view and modify my reservations
-So that I can adjust plans if needed before my visit
-
-### Operator Stories
-
-**As a venue operator**
-I want to scan a QR code and immediately see if the ticket has a reservation
-So that I can quickly validate entry eligibility
-
-**As a venue operator**
-I want to see if a ticket is valid for today's date
-So that I can enforce reservation policies accurately
-
-**As a venue manager**
-I want to view scan history and validation decisions
-So that I can monitor entry patterns and resolve disputes
-
-## Related Cards
-
-| Card | Team | Description |
-|------|------|-------------|
-| ticket-activation | B - Tickets | Ticket activation workflow (inactive → active) |
-| time-slot-reservation | B - Tickets | Calendar-based reservation management |
-| reservation-validation-scanning | C - Operations | Enhanced operator scanning with reservation checks |
-
-> API contracts and technical implementation: see individual Card documentation
+## 变更日志
+| 日期 | 变更 | 原因 |
+|------|------|------|
+| 2025-12-17 | 格式重构 | 验收标准改为 Given/When/Then 格式 |
+| 2025-11-14 | 创建 | 初始版本 |
 
 ---
 
-## Implementation Sequence
+## 用户目标
 
-```mermaid
-graph LR
-    A[ticket-activation] --> B[time-slot-reservation]
-    A --> C[reservation-validation-scanning]
-    B --> C
-    D[tickets-issuance] -.depends.-> A
-    E[my-tickets] -.depends.-> A
-    F[operators-login] -.depends.-> C
-```
-
-**Phase 1**: Ticket Activation System
-1. Database schema changes (activation fields)
-2. Activation endpoint implementation
-3. Status tracking and validation logic
-
-**Phase 2**: Reservation Management
-1. Create reservations table
-2. Calendar availability API
-3. Reservation CRUD operations
-4. Frontend calendar component
-
-**Phase 3**: Enhanced Scanning
-1. Extend scan endpoint with reservation validation
-2. Operator UI updates (color-coded results)
-3. Scan history with reservation context
-4. Offline validation capabilities
-
-## Acceptance Criteria
-
-### Functional Requirements
-
-**Ticket Activation**:
-- [ ] Tickets purchased in pre-made mode start as inactive
-- [ ] Immediate mode tickets are activated automatically at purchase
-- [ ] Customer can activate tickets when ready (inactive → active)
-- [ ] Activation is irreversible (cannot go back to inactive)
-- [ ] Only active tickets can create reservations
-
-**Reservation Management**:
-- [ ] Calendar UI displays available dates
-- [ ] Customer can select date and optional time slot
-- [ ] Reservation created with ticket_id, date, time_slot
-- [ ] Support multiple tickets reserved for same date/time
-- [ ] Reservations can be modified before redemption date
-- [ ] Cancelling reservation returns ticket to active (no reservation)
-
-**Operator Scanning**:
-- [ ] Scan displays: activation status, reservation status, reserved date
-- [ ] Visual validation: GREEN (valid today), YELLOW (no reservation), RED (invalid)
-- [ ] Ticket with reservation for today → GREEN (allow entry)
-- [ ] Ticket with reservation for different date → RED (deny entry, show date)
-- [ ] Ticket with no reservation → YELLOW (configurable policy)
-- [ ] Inactive ticket → RED (require activation first)
-- [ ] Scan validation completes in <3s
-
-### Non-Functional Requirements
-
-**Performance**:
-- [ ] Activation endpoint: <1s response time
-- [ ] Reservation creation: <2s response time
-- [ ] Scan validation: <1s response time (critical path)
-- [ ] Calendar availability query: <2s for 90-day range
-
-**Reliability**:
-- [ ] Offline scan capability with cached validation rules
-- [ ] Reservation conflicts prevented via locking
-- [ ] Transaction safety for status transitions
-
-**Usability**:
-- [ ] Clear activation instructions in order confirmation
-- [ ] Intuitive calendar date selection
-- [ ] Color-coded operator scanning results
-- [ ] Helpful error messages for validation failures
-
-## Testing Strategy
-
-### Unit Tests
-- Activation status transitions
-- Reservation eligibility validation
-- Date matching logic
-- Business rule validation
-
-### Integration Tests
-- End-to-end activation flow
-- Reservation creation and modification
-- Scan validation with various scenarios
-- Concurrent reservation handling
-
-### E2E Scenarios
-```gherkin
-Scenario: Pre-made ticket with reservation flow
-  Given I purchase a ticket in pre-made mode
-  When I activate the ticket
-  And I create a reservation for 2025-11-20
-  And operator scans on 2025-11-20
-  Then ticket is validated and entry allowed
-
-Scenario: Wrong date scanning
-  Given I have a ticket reserved for 2025-11-20
-  When operator scans on 2025-11-19
-  Then scan shows RED with message "Reserved for 2025-11-20"
-  And entry is denied
-
-Scenario: No reservation with permissive policy
-  Given I have an activated ticket with no reservation
-  And venue policy allows unreserved tickets
-  When operator scans
-  Then scan shows YELLOW with "No reservation - allowed"
-  And entry is allowed
-
-Scenario: Inactive ticket rejection
-  Given I have an inactive ticket
-  When operator scans
-  Then scan shows RED with "Ticket not activated"
-  And entry is denied
-```
-
-## Risks & Mitigations
-
-### Technical Risks
-- **Offline scanning reliability**: Implement offline-first with periodic sync
-- **Reservation conflicts**: Use row-level locking and real-time availability checks
-- **Calendar UX complexity**: User testing with simplified date picker
-
-### Business Risks
-- **Customer confusion (two modes)**: Clear UI indicators and onboarding flows
-- **No-show management**: Implement cancellation policies and reminder notifications
-- **Policy enforcement complexity**: Configurable rules with admin interface
-
-### Operational Risks
-- **Operator training requirements**: Simple color-coded UI, training materials
-- **Peak capacity management**: Dynamic capacity limits and waitlist system
-
-## Metrics & Monitoring
-
-### Key Metrics
-- **Activation Rate**: % of inactive tickets activated (target: >80% within 30 days)
-- **Reservation Rate**: % of active tickets with reservations (target: >75% within 7 days)
-- **Scan Validation Time**: P95 scan-to-decision latency (target: <3s)
-- **No-Show Rate**: % of reservations where customer doesn't arrive (target: <10%)
-- **Entry Rejection Rate**: % of scans resulting in denial (by reason)
-
-### Logging Events
-- `ticket.activation.success` - Ticket activated
-- `reservation.created` - Reservation made
-- `reservation.modified` - Reservation changed
-- `reservation.cancelled` - Reservation cancelled
-- `scan.validation.success` - Scan allowed entry
-- `scan.validation.failure` - Scan denied entry (with reason)
-
-### Alerts
-- High activation failure rate
-- Reservation creation errors
-- Scan validation timeouts
-- Unusually high rejection rates
-
-## Dependencies
-
-### Existing System Dependencies
-- **US-001** (Ticket Issuance): Tickets must exist before activation
-- **US-003** (My Tickets): Display activation/reservation status
-- **US-002** (Operator Scanning): Base scanning infrastructure
-
-### External Dependencies
-- Calendar UI component library
-- QR scanning device/camera access
-- Offline data sync mechanism
-
-## Future Enhancements
-- Automated reservation reminders (SMS/email)
-- Waitlist for fully booked dates
-- Group reservation coordination tools
-- Advanced capacity management and overbooking
-- Dynamic pricing based on reservation demand
-- Integration with external calendar systems (Google Calendar, etc.)
+**作为** 提前购票的客户
+**我想要** 先购买票券，稍后再激活并预约使用时间
+**以便于** 我可以锁定价格，而不需要立即确定出行日期
 
 ---
 
-**Story Status**: Draft - Ready for breakdown into technical cards
-**Next Steps**: Review with teams → Estimate effort → Create detailed cards → Begin implementation
+## 范围
+
+### 包含 (In Scope)
+- 票券激活流程（inactive → active）
+- 日历式预约选择
+- 操作员预约状态验证
+- 礼品票激活支持
+
+### 不包含 (Out of Scope)
+- 自动预约提醒
+- 候补系统
+- 高级容量管理
+
+---
+
+## 验收标准
+
+### A. 票券激活
+
+#### A1. 预制票券激活
+- **Given** 客户持有预制模式购买的未激活票券
+- **When** 客户选择激活票券
+- **Then** 票券状态从 INACTIVE 变为 ACTIVE，可以进行预约
+
+#### A2. 即时购买自动激活
+- **Given** 客户以即时模式购买票券
+- **When** 支付完成
+- **Then** 票券自动激活，状态为 ACTIVE
+
+#### A3. 激活不可逆
+- **Given** 客户已激活票券
+- **When** 客户尝试撤销激活
+- **Then** 系统拒绝，提示"激活后无法撤销"
+
+### B. 时段预约
+
+#### B1. 查看可用日期
+- **Given** 客户持有已激活的票券
+- **When** 客户访问预约页面
+- **Then** 系统显示日历，标识可用日期和剩余容量
+
+#### B2. 创建预约
+- **Given** 客户选择了日期和时段
+- **When** 客户确认预约
+- **Then** 预约创建成功，票券关联该时段
+
+#### B3. 修改预约
+- **Given** 客户有一个未到期的预约
+- **When** 客户在使用日期前修改预约
+- **Then** 原预约取消，新预约创建
+
+#### B4. 取消预约
+- **Given** 客户有一个未使用的预约
+- **When** 客户取消预约
+- **Then** 预约取消，票券恢复为 ACTIVE（无预约）状态
+
+### C. 操作员验证
+
+#### C1. 今日有效预约
+- **Given** 票券预约了今天的时段
+- **When** 操作员扫描二维码
+- **Then** 屏幕显示绿色，允许入场
+
+#### C2. 日期不匹配
+- **Given** 票券预约的是其他日期（如 11 月 20 日）
+- **When** 操作员在 11 月 19 日扫描
+- **Then** 屏幕显示红色"日期不符"，显示"预约日期：2025-11-20"
+
+#### C3. 无预约但已激活
+- **Given** 票券已激活但未预约
+- **When** 操作员扫描二维码
+- **Then** 屏幕显示黄色"无预约"（是否允许入场取决于场馆政策）
+
+#### C4. 未激活票券
+- **Given** 票券尚未激活
+- **When** 操作员扫描二维码
+- **Then** 屏幕显示红色"票券未激活"，拒绝入场
+
+---
+
+## 业务规则
+
+### 激活规则
+- **预制模式**：票券初始为 INACTIVE，需客户手动激活
+- **即时模式**：票券在支付成功后自动激活
+- **不可逆**：激活后无法恢复到未激活状态
+
+### 预约规则
+- **激活前提**：只有 ACTIVE 状态的票券可以预约
+- **支持多票**：同一订单多张票可预约相同或不同时段
+- **可修改**：预约可在使用前修改或取消
+
+### 验证结果
+| 颜色 | 状态 | 操作员动作 |
+|------|------|-----------|
+| 绿色 | 今日有效预约 | 允许入场 |
+| 黄色 | 无预约（政策可配置） | 视场馆政策 |
+| 红色 | 日期不符/未激活 | 拒绝入场 |
+
+---
+
+## 关联 Cards
+
+> 待创建的 Cards（Story 状态为 Draft）：
+
+| Card | 状态 | 描述 |
+|------|------|------|
+| ticket-activation | 待创建 | 票券激活工作流 |
+| time-slot-reservation | 待创建 | 日历式预约管理 |
+| reservation-validation-scanning | 待创建 | 带预约检查的操作员扫描 |

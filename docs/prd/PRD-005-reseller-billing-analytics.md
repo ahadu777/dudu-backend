@@ -8,7 +8,7 @@ owner: "Finance Team"
 status: "Done"
 created_date: "2025-11-15"
 last_updated: "2025-12-11"
-related_stories: []
+related_stories: ["US-017"]
 implementation_cards: []  # ota-reseller-management deprecated, moved to _deprecated/
 depends_on: "PRD-002"
 deadline: "2026-02-28"
@@ -252,6 +252,6 @@ phase_status:
 **Next Review**: Monthly business requirements validation
 **Related Documents**:
 - `PRD-002-ota-platform-integration.md` (dependency - ticket generation and redemption)
-- `docs/stories/US-015-reseller-billing-system.md` (implementation story)
+- `docs/stories/US-017-reseller-billing-analytics.md` (implementation story)
 
 **Business Impact Summary**: Enables sophisticated B2B2C revenue sharing model with usage-based billing, ensuring regulatory compliance while reducing reseller inventory risk and providing transparent commission management for OTA partner ecosystems.
