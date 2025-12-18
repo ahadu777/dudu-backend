@@ -1,6 +1,7 @@
 import App from './app';
 import { env } from './config/env';
 import { logger } from './utils/logger';
+import { keepAliveService } from './utils/keep-alive';
 
 const startServer = async () => {
   try {
@@ -21,9 +22,13 @@ const startServer = async () => {
       logger.info(`🌍 Environment: ${env.NODE_ENV}`);
     });
 
+    // Start keep-alive service to prevent Render from sleeping
+    keepAliveService.start();
+
     // Graceful shutdown
     const gracefulShutdown = (signal: string) => {
       logger.info(`${signal} received. Closing server gracefully...`);
+      keepAliveService.stop();
       server.close(() => {
         logger.info('Server closed');
         process.exit(0);
