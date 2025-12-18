@@ -1,5 +1,8 @@
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 import { logger } from './logger';
+
+// 纯字母数字字母表，避免生成 DT--xxx 或 DT-_xxx 这样的票券码
+const SAFE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 export interface TicketCodeGenerator {
   generate(prefix?: string): string;
@@ -9,7 +12,7 @@ export interface TicketCodeGenerator {
 /**
  * Secure ticket code generator using nanoid
  *
- * Collision probability with nanoid(12):
+ * Collision probability with nanoid(12) using 63-char alphabet:
  * - 1,000 tickets: 0.0000000001%
  * - 1,000,000 tickets: 0.00001%
  * - 1,000,000,000 tickets: 0.01%
@@ -17,7 +20,8 @@ export interface TicketCodeGenerator {
  * Database UNIQUE constraints provide final protection against the astronomically unlikely collision.
  */
 class SecureTicketCodeGenerator implements TicketCodeGenerator {
-  private readonly ID_LENGTH = 12; // 64^12 = 4.7 × 10^21 combinations
+  private readonly ID_LENGTH = 12; // 62^12 ≈ 3.2 × 10^21 combinations
+  private readonly nanoid = customAlphabet(SAFE_ALPHABET, this.ID_LENGTH);
 
   /**
    * Generate secure ticket code
@@ -25,7 +29,7 @@ class SecureTicketCodeGenerator implements TicketCodeGenerator {
    * @returns Ticket code (e.g., 'TKT-V1StGXR8_Z5j')
    */
   generate(prefix: string = 'TKT'): string {
-    return `${prefix}-${nanoid(this.ID_LENGTH)}`;
+    return `${prefix}-${this.nanoid()}`;
   }
 
   /**
