@@ -44,6 +44,7 @@ Every development task MUST follow these steps:
 | Modify existing API | API Change | `references/api-change.md` |
 | Error / Stuck / Bug | Troubleshooting | `references/troubleshooting.md` |
 | Run tests / Test failed | Testing | `references/testing.md` |
+| Create/update Runbook | Runbook | `references/runbook.md` |
 | **"这是什么" / "解释" / "为什么"** | **Explanation** | No ref → 直接回答 |
 | **"能不能" / "可行吗" / "评估"** | **Feasibility** | No ref → 分析后回答 |
 | **"改进工作流" / "优化流程"** | **Meta/Process** | `references/experience-learning.md` |
@@ -252,6 +253,7 @@ Load these as needed based on task type:
 - `references/api-change.md` - Breaking vs non-breaking changes
 - `references/troubleshooting.md` - Common issues and fixes
 - `references/testing.md` - Test execution, failure handling, coverage
+- `references/runbook.md` - Runbook 格式规范、命名规则、GWT 编写指南
 - `docs/reference/EXPERIENCE-LEARNING.md` - Experience-based improvement
 
 ### Code Review Skill

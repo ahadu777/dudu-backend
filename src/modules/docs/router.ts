@@ -10,6 +10,8 @@ import { runComplianceAudit } from '../../utils/complianceAuditor';
 import { loadTestCoverageData, getCoverageStats } from '../../utils/coverageParser';
 import { loadAllTestCases, FeatureTestCases } from '../../utils/testCaseParser';
 import { loadPRDCoverageWithTests, PRDCoverage } from '../../utils/acParser';
+import { extractPrdTestData, PrdTestData, TestCaseDetail } from '../../utils/newmanParser';
+import { extractStoryTestData, StoryTestData, RunbookTestCase } from '../../utils/runbookParser';
 import { baseLayout, sharedStyles } from './templates/base';
 import { componentStyles, pageHeader } from './templates/components';
 import { projectDocsStyles } from './styles';
@@ -1636,382 +1638,323 @@ router.get('/architecture', (_req: Request, res: Response) => {
       }
 });
 
-router.get('/coverage', (_req: Request, res: Response) => {
+router.get('/coverage', (req: Request, res: Response) => {
       try {
-        const coverageData = loadTestCoverageData();
-        const coverageStats = getCoverageStats();
+        const tab = (req.query.tab as string) || 'prd';
 
-        if (!coverageData || !coverageData.coverage_registry) {
-          return res.status(404).json({ error: 'Coverage data not found' });
-        }
+        // 加载 PRD 测试数据（Newman）- 过滤掉 Unknown
+        const reportsDir = path.join(process.cwd(), 'reports/newman');
+        const prdTestData = extractPrdTestData(reportsDir)
+          .filter(p => p.prdId !== 'Unknown');
 
-        let html = `<!DOCTYPE html>
-<html lang="en">
+        // 加载 Story 测试数据（Runbook）- 过滤掉 Unknown
+        const storyTestData = extractStoryTestData()
+          .filter(s => s.storyId !== 'Unknown');
+
+        // 计算总统计
+        const prdStats = prdTestData.reduce((acc, prd) => ({
+          total: acc.total + prd.stats.total,
+          passed: acc.passed + prd.stats.passed,
+          failed: acc.failed + prd.stats.failed
+        }), { total: 0, passed: 0, failed: 0 });
+
+        const storyStats = storyTestData.reduce((acc, story) => ({
+          total: acc.total + story.stats.total,
+          passed: acc.passed + story.stats.passed,
+          failed: acc.failed + story.stats.failed,
+          pending: acc.pending + story.stats.pending
+        }), { total: 0, passed: 0, failed: 0, pending: 0 });
+
+        const isPrdTab = tab === 'prd';
+        const isStoryTab = tab === 'story';
+
+        const html = `<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test Coverage</title>
+  <title>QA Dashboard - 测试用例文档</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
       line-height: 1.6;
       color: #333;
-      background: #f5f5f5;
-      padding: 20px;
+      background: #f5f7fa;
     }
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+    /* 顶部标题栏 */
+    .page-header {
       background: white;
-      padding: 30px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .header {
+      padding: 24px 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
     }
-    h1 {
-      color: #2c3e50;
-      border-bottom: 3px solid #3498db;
-      padding-bottom: 10px;
-    }
-    .nav-links {
+    .page-title {
       display: flex;
-      gap: 15px;
-      font-size: 0.9em;
+      align-items: center;
+      gap: 12px;
     }
-    .nav-links a {
+    .page-title h1 {
+      font-size: 2em;
+      color: #2c3e50;
+      font-weight: 600;
+    }
+    .page-subtitle {
+      color: #7f8c8d;
+      font-size: 0.95em;
+      margin-top: 4px;
+    }
+    .page-nav {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+    .page-nav a {
       color: #3498db;
       text-decoration: none;
-      padding: 5px 10px;
-      border-radius: 4px;
-      transition: background 0.2s;
+      font-weight: 500;
+      transition: color 0.2s;
     }
-    .nav-links a:hover {
-      background: #e8f4f8;
+    .page-nav a:hover {
+      color: #2980b9;
     }
-    .subtitle {
+
+    /* Tab 导航 - 参考 mesh.synque.ai 设计 */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: transparent;
+      margin-bottom: 24px;
+    }
+    .tab {
+      padding: 12px 24px;
+      text-decoration: none;
       color: #7f8c8d;
-      margin-bottom: 20px;
+      font-weight: 500;
+      background: white;
+      border-radius: 8px;
+      transition: all 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }
-    .stats-summary {
+    .tab:hover {
+      color: #3498db;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    }
+    .tab.active {
+      color: white;
+      background: #3498db;
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+
+    /* 头部 Banner - 移除渐变，使用简洁设计 */
+    .header-banner {
+      background: white;
+      padding: 0;
+      border-radius: 0;
+      margin-bottom: 24px;
+      display: none; /* 隐藏原有 banner，使用 page-header 替代 */
+    }
+
+    /* 统计卡片 - 参考 mesh.synque.ai 设计 */
+    .stats-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 20px;
-      margin-bottom: 30px;
+      margin-bottom: 32px;
     }
-    .stat-box {
-      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-      border: 1px solid #e9ecef;
+    .stat-card {
+      background: white;
+      padding: 24px;
       border-radius: 12px;
-      padding: 20px;
       text-align: center;
-      transition: all 0.3s ease;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid #f0f0f0;
     }
-    .stat-box:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     }
-    .stat-box .icon {
+    .stat-card .icon {
       font-size: 2em;
-      margin-bottom: 10px;
-      display: block;
+      margin-bottom: 12px;
     }
-    .stat-box h3 {
-      font-size: 0.8em;
-      color: #6c757d;
+    .stat-card .number {
+      font-size: 2.8em;
+      font-weight: 700;
+      color: #2c3e50;
       margin-bottom: 8px;
+      line-height: 1;
+    }
+    .stat-card .label {
+      color: #7f8c8d;
+      font-size: 0.85em;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+    .stat-card.success .number { color: #27ae60; }
+    .stat-card.warning .number { color: #f39c12; }
+    .stat-card.danger .number { color: #e74c3c; }
+    .stat-card.primary .number { color: #3498db; }
+
+    /* Section Header - 参考 mesh.synque.ai 设计 */
+    .section-header {
+      margin-bottom: 24px;
+    }
+    .section-header h2 {
+      font-size: 1.5em;
+      color: #2c3e50;
+      margin-bottom: 4px;
       font-weight: 600;
     }
-    .stat-box .number {
-      font-size: 2.2em;
-      font-weight: 700;
-      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .section-header p {
+      color: #7f8c8d;
+      font-size: 0.9em;
     }
-    .stat-box.success .number {
-      background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+
+    /* Info Box - 说明框 */
+    .info-box {
+      background: #e8f4f8;
+      border-left: 4px solid #3498db;
+      padding: 20px 24px;
+      border-radius: 8px;
+      margin-bottom: 24px;
     }
-    .stat-box.speed .number {
-      background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .info-box h4 {
+      color: #2c3e50;
+      margin-bottom: 12px;
+      font-size: 1.1em;
     }
-    .stat-box .subtitle {
-      font-size: 0.75em;
-      color: #adb5bd;
-      margin-top: 5px;
+    .info-box p {
+      color: #34495e;
+      line-height: 1.6;
+      margin-bottom: 8px;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
+    .info-box ul {
+      color: #34495e;
+      line-height: 1.8;
     }
-    th, td {
-      padding: 12px;
-      text-align: left;
-      border-bottom: 1px solid #e0e0e0;
+    .info-box code {
+      background: #34495e;
+      color: #2ecc71;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9em;
     }
-    th {
+
+    /* API Endpoint Section */
+    .api-endpoint-section {
       background: #f8f9fa;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .api-info {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .api-title {
       font-weight: 600;
       color: #2c3e50;
+      font-size: 1.05em;
     }
-    tr:hover {
-      background: #f8f9fa;
+    .api-description {
+      color: #555;
+      line-height: 1.6;
     }
-    .status-indicator {
-      display: inline-block;
-      padding: 4px 10px;
+    .api-description code {
+      background: #e67e22;
+      color: white;
+      padding: 3px 8px;
       border-radius: 4px;
-      font-size: 0.85em;
       font-weight: 600;
+      font-size: 0.9em;
     }
-    .status-indicator.complete {
-      background: #d4edda;
-      color: #155724;
+    .api-example {
+      margin-top: 8px;
     }
-    .status-indicator.partial {
-      background: #fff3cd;
-      color: #856404;
+    .api-example strong {
+      color: #7f8c8d;
+      font-size: 0.9em;
+      display: block;
+      margin-bottom: 6px;
     }
-    .status-indicator.draft {
-      background: #e0e0e0;
-      color: #666;
+    .curl-example {
+      display: block;
+      background: #2c3e50;
+      color: #2ecc71;
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.85em;
+      overflow-x: auto;
+      white-space: nowrap;
     }
-    a {
-      color: #3498db;
-      text-decoration: none;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-    /* PRD Detail Card styles (kept for reference, may be removed later) */
-    .prd-detail-card {
-      border: 1px solid #e0e0e0;
+
+    /* PRD/Story 列表 */
+    .test-group {
+      background: white;
       border-radius: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
       overflow: hidden;
     }
-    .prd-detail-header {
+    .test-group-header {
+      padding: 16px 20px;
       background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%);
-      padding: 20px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      transition: background 0.2s;
     }
-    .prd-detail-header:hover {
+    .test-group-header:hover {
       background: linear-gradient(135deg, #e8f4f8 0%, #d4edda 100%);
     }
-    .prd-detail-header h3 {
-      color: #2c3e50;
+    .test-group-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .test-group-title h3 {
       margin: 0;
-    }
-    .prd-detail-body {
-      padding: 0;
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-    }
-    .prd-detail-body.expanded {
-      padding: 20px;
-      max-height: 2000px;
-    }
-    .feature-group {
-      margin-bottom: 20px;
-    }
-    .feature-group h4 {
-      color: #3498db;
-      margin-bottom: 10px;
-      padding-bottom: 5px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    .scenario-list {
-      list-style: none;
-      padding: 0;
-    }
-    .scenario-list li {
-      padding: 8px 12px;
-      margin: 4px 0;
-      background: #f8f9fa;
-      border-radius: 4px;
-      font-size: 0.95em;
-    }
-    .scenario-list li.pass {
-      border-left: 3px solid #28a745;
-    }
-    .scenario-list li.pending {
-      border-left: 3px solid #ffc107;
-    }
-    .progress-bar {
-      background: #e0e0e0;
-      border-radius: 10px;
-      height: 20px;
-      overflow: hidden;
-      margin: 10px 0;
-    }
-    .progress-fill {
-      background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
-      height: 100%;
-      border-radius: 10px;
-      transition: width 0.3s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 600;
-      font-size: 0.85em;
-    }
-    .api-status-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 10px;
-    }
-    .api-status-item {
-      padding: 10px 15px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .api-status-item code {
-      background: #2c3e50;
-      color: #fff;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.85em;
-    }
-    .api-status-item .badge {
-      font-size: 0.8em;
-      padding: 2px 8px;
-      border-radius: 10px;
-      background: #d4edda;
-      color: #155724;
-    }
-    .quick-start {
-      background: #2c3e50;
-      color: #ecf0f1;
-      padding: 20px;
-      border-radius: 8px;
-      margin-top: 30px;
-    }
-    .quick-start h3 {
-      color: #3498db;
-      margin-bottom: 15px;
-    }
-    .quick-start pre {
-      background: #1a252f;
-      padding: 15px;
-      border-radius: 4px;
-      overflow-x: auto;
-      font-size: 0.9em;
-    }
-    .quick-start code {
-      color: #2ecc71;
-    }
-    .coverage-notes {
-      background: #fff3cd;
-      border: 1px solid #ffc107;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 15px;
-    }
-    .coverage-notes h5 {
-      color: #856404;
-      margin-bottom: 10px;
-    }
-    .toggle-arrow {
-      transition: transform 0.3s;
-    }
-    .toggle-arrow.expanded {
-      transform: rotate(90deg);
-    }
-    /* QA Guide Styles */
-    .qa-guide-section {
-      max-width: 1000px;
-    }
-    .step-cards {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin: 30px 0;
-    }
-    .step-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 25px;
-      border-radius: 12px;
-      text-align: center;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    }
-    .step-number {
-      width: 40px;
-      height: 40px;
-      background: white;
-      color: #667eea;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5em;
-      font-weight: bold;
-      margin: 0 auto 15px;
-    }
-    .step-card h3 {
-      margin-bottom: 10px;
+      color: #2c3e50;
       font-size: 1.1em;
     }
-    .step-card p {
-      opacity: 0.9;
-      font-size: 0.9em;
+    .test-group-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    .qa-quick-commands {
-      background: #f8f9fa;
-      padding: 25px;
-      border-radius: 12px;
-      margin: 20px 0;
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 500;
     }
-    .qa-quick-commands h3 {
-      margin-bottom: 15px;
-      color: #2c3e50;
-    }
-    .command-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .command-table th, .command-table td {
-      padding: 12px 15px;
-      text-align: left;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    .command-table th {
-      background: #e9ecef;
-      font-weight: 600;
-    }
-    .command-table code {
+    .badge-blue { background: #e6f7ff; color: #1890ff; }
+    .badge-green { background: #f6ffed; color: #52c41a; }
+    .badge-orange { background: #fff7e6; color: #fa8c16; }
+    .badge-gray { background: #f5f5f5; color: #666; }
+    .run-cmd {
+      font-family: 'Monaco', 'Consolas', monospace;
       background: #2c3e50;
       color: #2ecc71;
-      padding: 4px 10px;
+      padding: 6px 12px;
       border-radius: 4px;
-      font-family: 'Monaco', monospace;
+      font-size: 0.85em;
     }
     .copy-btn {
-      background: #3498db;
+      background: #1890ff;
       color: white;
       border: none;
       padding: 6px 12px;
@@ -2020,852 +1963,521 @@ router.get('/coverage', (_req: Request, res: Response) => {
       font-size: 0.85em;
       transition: all 0.2s;
     }
-    .copy-btn:hover {
-      background: #2980b9;
-    }
-    .copy-btn.copied {
-      background: #27ae60;
-    }
-    .qa-workflow {
-      background: white;
-      border: 2px solid #e0e0e0;
-      border-radius: 12px;
-      padding: 25px;
-      margin: 20px 0;
-    }
-    .qa-workflow h3 {
-      margin-bottom: 20px;
-      color: #2c3e50;
-    }
-    .workflow-steps {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .workflow-step {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: 8px;
-      flex: 1;
-      min-width: 180px;
-    }
-    .workflow-icon {
-      font-size: 1.5em;
-    }
-    .workflow-step strong {
-      display: block;
-      margin-bottom: 5px;
-      color: #2c3e50;
-    }
-    .workflow-step p {
-      font-size: 0.85em;
-      color: #666;
-      margin: 0;
-    }
-    .workflow-step code {
-      background: #2c3e50;
-      color: #2ecc71;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 0.9em;
-    }
-    .workflow-arrow {
-      font-size: 1.5em;
-      color: #3498db;
-      font-weight: bold;
-    }
-    .qa-tips {
-      background: #e8f4f8;
-      padding: 25px;
-      border-radius: 12px;
-      margin: 20px 0;
-    }
-    .qa-tips h3 {
-      margin-bottom: 15px;
-      color: #2c3e50;
-    }
-    .qa-tips details {
-      background: white;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      cursor: pointer;
-    }
-    .qa-tips summary {
-      font-weight: 600;
-      color: #3498db;
-    }
-    .qa-tips details p {
-      margin-top: 10px;
-      color: #666;
-      padding-left: 10px;
-      border-left: 3px solid #3498db;
-    }
-    /* Feature Mapping Styles */
-    .feature-search {
-      margin-bottom: 20px;
-    }
-    .feature-search input {
-      width: 100%;
-      padding: 15px 20px;
-      font-size: 1em;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .feature-search input:focus {
-      border-color: #3498db;
-    }
-    .feature-mapping-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 20px;
-    }
-    .feature-card {
-      background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 12px;
-      padding: 20px;
-      transition: all 0.2s;
-    }
-    .feature-card:hover {
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      transform: translateY(-2px);
-    }
-    .feature-card.hidden {
-      display: none;
-    }
-    .feature-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-    .feature-card h4 {
-      color: #2c3e50;
-      margin: 0;
-      font-size: 1.1em;
-    }
-    .feature-card .prd-badge {
-      background: #3498db;
-      color: white;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.8em;
-      font-weight: 600;
-    }
-    .feature-card .description {
-      color: #666;
-      font-size: 0.9em;
-      margin-bottom: 15px;
-      line-height: 1.5;
-    }
-    .feature-card .test-info {
-      background: #f8f9fa;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-    }
-    .feature-card .test-info span {
-      display: block;
-      font-size: 0.85em;
-      color: #666;
-    }
-    .feature-card .test-info strong {
-      color: #27ae60;
-    }
-    .feature-card .test-command {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .feature-card .test-command code {
-      flex: 1;
-      background: #2c3e50;
-      color: #2ecc71;
-      padding: 10px 15px;
-      border-radius: 6px;
-      font-family: 'Monaco', monospace;
-      font-size: 0.85em;
-    }
-    .feature-keywords {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      margin-top: 10px;
-    }
-    .keyword-tag {
-      background: #e8f4f8;
-      color: #3498db;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.75em;
-    }
-    /* Test Case Styles */
-    .test-case-group {
-      border: 1px solid #e0e0e0;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      overflow: hidden;
-    }
-    .test-case-header {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%);
-      padding: 20px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .test-case-header:hover {
-      background: linear-gradient(135deg, #e8f4f8 0%, #d4edda 100%);
-    }
-    .test-case-header h3 {
-      display: inline;
-      color: #2c3e50;
-      margin-left: 10px;
-      font-size: 1.1em;
-    }
-    .test-case-summary {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    .case-count {
-      background: #3498db;
-      color: white;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.85em;
-    }
-    .test-case-body {
-      padding: 0;
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-    }
-    .test-case-body.expanded {
-      padding: 20px;
-      max-height: 5000px;
-    }
-    .test-case-card {
-      background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 15px;
-      border-left: 4px solid #3498db;
-    }
-    .test-case-card.priority-p0 {
-      border-left-color: #e74c3c;
-    }
-    .test-case-card.priority-p1 {
-      border-left-color: #f39c12;
-    }
-    .test-case-card.priority-p2 {
-      border-left-color: #27ae60;
-    }
-    .test-case-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    .case-id {
-      background: #2c3e50;
-      color: white;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-family: 'Monaco', monospace;
-      font-size: 0.85em;
-    }
-    .case-name {
-      font-weight: 600;
-      color: #2c3e50;
-      font-size: 1.1em;
-      flex: 1;
-    }
-    .priority-badge {
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 0.8em;
-      font-weight: 600;
-    }
-    .priority-badge.p0 {
-      background: #fce4e4;
-      color: #e74c3c;
-    }
-    .priority-badge.p1 {
-      background: #fef5e7;
-      color: #f39c12;
-    }
-    .priority-badge.p2 {
-      background: #e8f8f5;
-      color: #27ae60;
-    }
-    .test-case-section {
-      margin-bottom: 15px;
-    }
-    .test-case-section h5 {
-      color: #3498db;
-      margin-bottom: 8px;
-      font-size: 0.95em;
-    }
-    .test-case-section ul, .test-case-section ol {
-      margin-left: 20px;
-      color: #555;
-    }
-    .test-case-section li {
-      margin: 5px 0;
-      line-height: 1.5;
-    }
-    .expected-list li {
-      color: #27ae60;
-    }
-    /* AC Coverage Styles */
-    .ac-coverage-header {
-      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-      color: white;
-      padding: 25px;
-      border-radius: 12px;
-      margin-bottom: 25px;
-    }
-    .ac-coverage-header h2 { margin-bottom: 10px; }
-    .ac-coverage-header p { opacity: 0.9; }
-    .ac-coverage-summary {
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-    }
-    .ac-stat-row {
-      display: flex;
-      gap: 30px;
-      justify-content: center;
-    }
-    .ac-stat {
-      text-align: center;
-    }
-    .ac-stat-number {
-      display: block;
-      font-size: 2.5em;
-      font-weight: 700;
-      color: #3498db;
-    }
-    .ac-stat-label {
-      color: #666;
-      font-size: 0.9em;
-    }
-    .ac-coverage-intro {
-      background: #fff3cd;
-      border: 1px solid #ffc107;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 25px;
-    }
-    .ac-coverage-intro p { margin: 5px 0; color: #856404; font-size: 0.9em; }
-    .ac-legend {
-      display: flex;
-      gap: 25px;
-      margin-bottom: 20px;
-      padding: 10px 15px;
-      background: #f8f9fa;
-      border-radius: 8px;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.9em;
-      color: #666;
-    }
-    .coverage-badge {
-      padding: 4px 12px;
-      border-radius: 15px;
-      font-size: 0.85em;
-      font-weight: 700;
-    }
-    .coverage-high { background: #d4edda; color: #155724; }
-    .coverage-medium { background: #fff3cd; color: #856404; }
-    .coverage-low { background: #f8d7da; color: #721c24; }
-    .card-coverage {
-      margin-left: auto;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 0.8em;
-      font-weight: 600;
-    }
-    .ac-test-id {
-      display: inline-block;
-      background: #e3f2fd;
-      color: #1565c0;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.75em;
-      margin-top: 5px;
-    }
-    .ac-prd-card {
-      border: 2px solid #e0e0e0;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      overflow: hidden;
-    }
-    .ac-prd-header {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%);
-      padding: 20px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .ac-prd-header:hover {
-      background: linear-gradient(135deg, #e8f4f8 0%, #d4edda 100%);
-    }
-    .ac-prd-title {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    .prd-link {
-      background: #3498db;
-      color: white;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-weight: 600;
-      text-decoration: none;
-      font-size: 0.9em;
-    }
-    .prd-link:hover { background: #2980b9; text-decoration: none; }
-    .prd-name { color: #2c3e50; font-weight: 600; font-size: 1.1em; }
-    .ac-prd-stats {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    .ac-count {
-      background: #27ae60;
-      color: white;
-      padding: 4px 12px;
-      border-radius: 15px;
-      font-size: 0.85em;
-      font-weight: 600;
-    }
-    .ac-cards-count {
-      background: #9b59b6;
-      color: white;
-      padding: 4px 12px;
-      border-radius: 15px;
-      font-size: 0.85em;
-    }
-    .newman-badge {
-      background: #17a2b8;
-      color: white;
-      padding: 4px 12px;
-      border-radius: 15px;
-      font-size: 0.85em;
-      cursor: help;
-    }
-    .newman-stats-bar {
-      display: flex;
-      gap: 20px;
-      background: #f8f9fa;
-      padding: 10px 15px;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      font-size: 0.9em;
-      border-left: 3px solid #17a2b8;
-    }
-    .newman-stat { color: #495057; }
-    .newman-stat.pass { color: #28a745; font-weight: 600; }
-    .newman-stat.warn { color: #ffc107; font-weight: 600; }
-    .toggle-arrow-ac {
+    .copy-btn:hover { background: #40a9ff; }
+    .copy-btn.copied { background: #52c41a; }
+    .toggle-icon {
       font-size: 1.2em;
       transition: transform 0.3s;
+      color: #999;
     }
-    .toggle-arrow-ac.collapsed { transform: rotate(-90deg); }
-    .ac-prd-body {
-      padding: 0;
+    .toggle-icon.expanded { transform: rotate(90deg); }
+
+    /* 测试用例列表 */
+    .test-group-body {
       max-height: 0;
       overflow: hidden;
-      transition: max-height 0.3s, padding 0.3s;
+      transition: max-height 0.3s ease-out;
     }
-    .ac-prd-body.expanded {
-      padding: 20px;
+    .test-group-body.expanded {
       max-height: 5000px;
     }
-    .ac-card-section {
-      background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
+
+    /* Coverage Dashboard */
+    .coverage-dashboard {
+      padding: 20px;
     }
-    .ac-card-header {
+    .coverage-summary {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .coverage-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 24px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      min-width: 120px;
+    }
+    .coverage-stat .stat-value {
+      font-size: 1.5em;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+    .coverage-stat .stat-label {
+      font-size: 0.85em;
+      color: #7f8c8d;
+      margin-top: 4px;
+    }
+    .text-green { color: #27ae60 !important; }
+    .text-orange { color: #f39c12 !important; }
+
+    /* Feature Coverage */
+    .feature-coverage,
+    .tested-scenarios,
+    .api-endpoints {
+      margin-bottom: 20px;
+    }
+    .feature-coverage h5,
+    .tested-scenarios h5,
+    .api-endpoints h5 {
+      font-size: 1em;
+      color: #2c3e50;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+    }
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .feature-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 10px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #e0e0e0;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
     }
-    .card-link {
-      font-weight: 600;
-      color: #2c3e50;
-      text-decoration: none;
-    }
-    .card-link:hover { color: #3498db; }
-    .card-status {
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 0.75em;
+    .feature-status { font-size: 1em; }
+    .feature-name { flex: 1; color: #2c3e50; }
+    .feature-coverage-value {
+      font-family: monospace;
+      color: #27ae60;
       font-weight: 600;
     }
-    .card-status.done { background: #d4edda; color: #155724; }
-    .card-status.in_progress, .card-status.in-progress { background: #fff3cd; color: #856404; }
-    .card-status.draft { background: #e0e0e0; color: #666; }
-    .card-ac-count {
-      margin-left: auto;
-      color: #666;
-      font-size: 0.85em;
-    }
-    .ac-endpoints {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 15px;
-    }
-    .ac-endpoints code.endpoint {
-      background: #2c3e50;
-      color: #2ecc71;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 0.8em;
-    }
-    .ac-category { margin-bottom: 15px; }
-    .ac-category-name {
-      color: #3498db;
-      font-size: 0.95em;
-      margin-bottom: 10px;
-      padding-bottom: 5px;
-      border-bottom: 1px dashed #e0e0e0;
-    }
-    .ac-list {
+
+    /* Tested Scenarios */
+    .scenario-list {
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    .ac-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px;
-      margin: 5px 0;
+    .scenario-list li {
+      padding: 8px 12px;
       background: #f8f9fa;
       border-radius: 6px;
-      border-left: 3px solid #e0e0e0;
+      margin-bottom: 6px;
+      font-size: 0.9em;
+      color: #2c3e50;
     }
-    .ac-item.passed { border-left-color: #27ae60; }
-    .ac-item.failed { border-left-color: #dc3545; }
-    .ac-item.pending { border-left-color: #ffc107; }
-    .ac-status-icon { font-size: 1em; }
-    .ac-content { flex: 1; }
-    .ac-gwt {
+
+    /* API Endpoints */
+    .endpoint-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .endpoint-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    .endpoint-item.tested { background: #f6ffed; }
+    .endpoint-item.untested { background: #fffbe6; }
+    .endpoint-status { font-size: 1em; }
+    .endpoint-path {
+      flex: 1;
+      font-family: monospace;
+      font-size: 0.9em;
+      color: #2c3e50;
+      background: transparent;
+    }
+    .endpoint-badge {
+      font-size: 0.8em;
+      color: #52c41a;
+    }
+
+    .test-cases-list {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* 测试用例卡片 */
+    .test-case-card {
+      background: #fafafa;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 16px;
+      border-left: 4px solid #1890ff;
+    }
+    .test-case-card.p0 { border-left-color: #ff4d4f; }
+    .test-case-card.p1 { border-left-color: #faad14; }
+    .test-case-card.p2 { border-left-color: #52c41a; }
+    .test-case-card.passed { background: #f6ffed; }
+    .test-case-card.failed { background: #fff2f0; }
+
+    .tc-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e8e8e8;
+    }
+    .tc-id {
+      background: #2c3e50;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85em;
+    }
+    .tc-name {
+      flex: 1;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .tc-priority {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+    .tc-priority.p0 { background: #fff1f0; color: #cf1322; }
+    .tc-priority.p1 { background: #fffbe6; color: #d48806; }
+    .tc-priority.p2 { background: #f6ffed; color: #389e0d; }
+    .tc-status {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+    }
+    .tc-status.passed { background: #d9f7be; color: #389e0d; }
+    .tc-status.failed { background: #ffccc7; color: #cf1322; }
+    .tc-status.pending { background: #fff1b8; color: #d48806; }
+
+    .tc-section {
+      margin-bottom: 12px;
+    }
+    .tc-section h5 {
+      color: #1890ff;
+      font-size: 0.9em;
+      margin-bottom: 6px;
+    }
+    .tc-section ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #555;
+    }
+    .tc-section li {
+      margin: 4px 0;
+      line-height: 1.5;
+    }
+
+    /* AC Reference */
+    .ac-ref {
+      background: #e6f7ff;
+      color: #1890ff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      margin-left: 8px;
+    }
+
+    /* 验证点 */
+    .checkpoints {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      font-size: 0.9em;
     }
-    .gwt-given, .gwt-when, .gwt-then {
-      display: block;
-      padding: 2px 0;
-    }
-    .gwt-given strong { color: #9b59b6; }
-    .gwt-when strong { color: #3498db; }
-    .gwt-then strong { color: #27ae60; }
-    /* Test Case Details Styles */
-    .test-case-details {
-      margin-top: 12px;
-      padding: 12px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #e9ecef;
-    }
-    .test-case-header-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .test-case-badge {
-      background: #17a2b8;
-      color: white;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 0.8em;
-      font-weight: 600;
-    }
-    .test-case-name {
-      font-weight: 500;
-      color: #495057;
-      font-size: 0.9em;
-    }
-    .test-case-request {
+    .checkpoint {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 8px;
+      font-size: 0.9em;
+      color: #555;
     }
-    .test-case-request .method {
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-      font-size: 0.8em;
-    }
-    .test-case-request .method.get { background: #61affe; color: white; }
-    .test-case-request .method.post { background: #49cc90; color: white; }
-    .test-case-request .method.put { background: #fca130; color: white; }
-    .test-case-request .method.delete { background: #f93e3e; color: white; }
-    .test-case-request .url {
-      background: #2c3e50;
-      color: #2ecc71;
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-size: 0.85em;
-    }
-    .test-case-body {
-      margin: 8px 0;
-    }
-    .test-case-body summary {
-      cursor: pointer;
-      color: #6c757d;
-      font-size: 0.85em;
-      padding: 4px 0;
-    }
-    .test-case-body pre {
-      background: #2c3e50;
-      color: #ecf0f1;
-      padding: 10px;
-      border-radius: 4px;
-      font-size: 0.8em;
-      overflow-x: auto;
-      margin-top: 5px;
-    }
-    .test-case-assertions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-    }
-    .assertions-label {
-      font-size: 0.8em;
-      color: #6c757d;
-      font-weight: 500;
-    }
-    .assertion {
-      background: #e8f5e9;
-      color: #2e7d32;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.75em;
-      display: block;
-      margin: 2px 0;
-    }
-    /* Test Cases Section at PRD level */
-    .test-cases-section {
-      background: #f8f9fa;
-      border: 1px solid #e9ecef;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    .test-cases-summary {
-      padding: 12px 15px;
-      cursor: pointer;
-      font-weight: 600;
-      color: #17a2b8;
-      background: #e3f2fd;
-      border-radius: 8px;
-    }
-    .test-cases-summary:hover {
-      background: #bbdefb;
-    }
-    .test-cases-section[open] .test-cases-summary {
-      border-radius: 8px 8px 0 0;
-    }
-    .test-cases-list {
-      padding: 15px;
-      display: grid;
-      gap: 12px;
-    }
-    .test-case-item {
+    .checkpoint-icon { color: #52c41a; }
+
+    /* Given-When-Then */
+    .gwt-block {
       background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      padding: 12px;
-    }
-    .test-case-url code {
-      background: #2c3e50;
-      color: #2ecc71;
-      padding: 4px 10px;
       border-radius: 4px;
-      font-size: 0.85em;
+      padding: 12px;
+      margin-top: 8px;
+    }
+    .gwt-given { color: #722ed1; }
+    .gwt-when { color: #1890ff; }
+    .gwt-then { color: #52c41a; }
+    .gwt-block strong {
       display: inline-block;
-      margin: 8px 0;
+      width: 60px;
     }
-    .test-cases-intro {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 25px;
-      border-radius: 12px;
-      margin-bottom: 25px;
+
+    /* 执行命令块 */
+    .command-block {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 8px 0 0 0;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
     }
-    .test-cases-intro h2 {
-      margin-bottom: 10px;
+    .command-block code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
     }
-    .test-cases-intro p {
-      opacity: 0.9;
-      margin-bottom: 15px;
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
     }
-    .test-cases-legend {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.2);
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 0.9em;
-    }
-    .legend-color {
-      width: 12px;
-      height: 12px;
-      border-radius: 2px;
-    }
-    .legend-color.p0 { background: #e74c3c; }
-    .legend-color.p1 { background: #f39c12; }
-    .legend-color.p2 { background: #27ae60; }
+    .empty-state .icon { font-size: 4em; margin-bottom: 16px; }
+
+    /* 响应式 */
     @media (max-width: 768px) {
-      .step-cards {
-        grid-template-columns: 1fr;
-      }
-      .workflow-steps {
-        flex-direction: column;
-      }
-      .workflow-arrow {
-        transform: rotate(90deg);
-      }
-      .test-case-title {
-        flex-wrap: wrap;
-      }
+      .stats-row { flex-direction: column; }
+      .tc-header { flex-wrap: wrap; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <div>
+    <!-- 顶部标题栏 -->
+    <div class="page-header">
+      <div class="page-title">
         <h1>📊 Test Coverage</h1>
-        <p class="subtitle">Test coverage metrics and Newman test reports</p>
+        <div class="page-subtitle">测试覆盖率统计和 Newman 测试报告</div>
       </div>
-      <div class="nav-links">
-        <a href="/project-docs">← Project Docs</a>
-        <a href="/prd">PRDs</a>
-      </div>
-    </div>
-
-    <div class="stats-summary">
-      <div class="stat-box">
-        <span class="icon">📦</span>
-        <h3>Total PRDs</h3>
-        <div class="number">${coverageStats.total_prds}</div>
-        <div class="subtitle">Product requirements</div>
-      </div>
-      <div class="stat-box success">
-        <span class="icon">✅</span>
-        <h3>Fully Covered</h3>
-        <div class="number">${coverageStats.complete}</div>
-        <div class="subtitle">100% test coverage</div>
-      </div>
-      <div class="stat-box">
-        <span class="icon">📋</span>
-        <h3>Test Requests</h3>
-        <div class="number">${coverageStats.total_requests}</div>
-        <div class="subtitle">API calls executed</div>
-      </div>
-      <div class="stat-box">
-        <span class="icon">✓</span>
-        <h3>Assertions</h3>
-        <div class="number">${coverageStats.total_assertions}</div>
-        <div class="subtitle">Validations performed</div>
-      </div>
-      <div class="stat-box success">
-        <span class="icon">🎯</span>
-        <h3>Success Rate</h3>
-        <div class="number">${coverageStats.pass_rate}</div>
-        <div class="subtitle">All tests passing</div>
-      </div>
-      <div class="stat-box speed">
-        <span class="icon">⚡</span>
-        <h3>Response Time</h3>
-        <div class="number">${coverageData.coverage_summary?.test_statistics?.avg_response_time || '<500ms'}</div>
-        <div class="subtitle">Average latency</div>
+      <div class="page-nav">
+        <a href="/docs">← Project Docs</a>
+        <a href="/docs/prd">PRDs</a>
       </div>
     </div>
 
-    <!-- Unified Coverage View -->
-    <div class="ac-coverage-header">
-      <h2>📋 测试覆盖率总览</h2>
-      <p>PRD → Card → AC 层级结构，展示验收标准覆盖状态与 Newman 测试结果</p>
+    <!-- Tab 导航 -->
+    <div class="tabs">
+      <a href="/coverage?tab=prd" class="tab ${isPrdTab ? 'active' : ''}">PRD Coverage</a>
+      <a href="/coverage?tab=story" class="tab ${isStoryTab ? 'active' : ''}">Story E2E</a>
     </div>
-    ${generateACCoverageHTML()}
 
+    <!-- Header Banner -->
+    <div class="header-banner">
+      <h1>${isPrdTab ? '🤖 PRD 自动化测试' : '📖 Story E2E 测试'}</h1>
+      <p>${isPrdTab ? 'Newman 自动执行的 API 测试，基于 PRD 验收标准' : 'Runbook 定义的端到端测试场景，包含 Given-When-Then'}</p>
+    </div>
+
+    <!-- 统计卡片 -->
+    ${isPrdTab || isStoryTab ? `
+    <div class="stats-row">
+      ${isPrdTab ? `
+      <div class="stat-card">
+        <div class="number">${prdTestData.length}</div>
+        <div class="label">Total PRDs</div>
+      </div>
+      <div class="stat-card success">
+        <div class="number">${prdTestData.filter(p => p.stats.failed === 0).length}</div>
+        <div class="label">Fully Covered</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">${prdStats.total}</div>
+        <div class="label">Test Requests</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">${prdStats.passed + prdStats.failed}</div>
+        <div class="label">Assertions</div>
+      </div>
+      <div class="stat-card ${prdStats.total > 0 && prdStats.failed === 0 ? 'success' : 'danger'}">
+        <div class="number">${prdStats.total > 0 ? ((prdStats.passed / prdStats.total * 100).toFixed(1)) : 0}%</div>
+        <div class="label">Success Rate</div>
+      </div>
+      <div class="stat-card primary">
+        <div class="number">&lt;500ms</div>
+        <div class="label">Response Time</div>
+      </div>
+      ` : `
+      <div class="stat-card">
+        <div class="number">${storyTestData.length}</div>
+        <div class="label">Total Stories</div>
+      </div>
+      <div class="stat-card success">
+        <div class="number">${storyTestData.filter(s => s.stats.failed === 0 && s.stats.pending === 0).length}</div>
+        <div class="label">Fully Covered</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">${storyStats.total}</div>
+        <div class="label">Test Scenarios</div>
+      </div>
+      <div class="stat-card success">
+        <div class="number">${storyStats.passed}</div>
+        <div class="label">Passed</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="number">${storyStats.pending}</div>
+        <div class="label">Pending</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="number">${storyStats.failed}</div>
+        <div class="label">Failed</div>
+      </div>
+      `}
+    </div>
+    ` : ''}
+
+    <!-- PRD 自动化测试 (Newman) -->
+    ${isPrdTab ? `
+    <div class="section-header">
+      <h2>PRD Coverage Details</h2>
+      <p>Click on PRD ID to view full documentation</p>
+    </div>
+
+    <!-- 测试说明 -->
+    <div class="info-box">
+      <h4>📘 测试覆盖说明</h4>
+      <p><strong>断言（Assertion）</strong>：自动化测试中用来验证 API 响应是否符合预期的检查点。例如：</p>
+      <ul style="margin-left: 20px; margin-top: 8px;">
+        <li><code>Status code is 200</code> - 验证 HTTP 状态码为 200（成功）</li>
+        <li><code>Response has products array</code> - 验证响应包含 products 数组</li>
+        <li><code>Products have required fields</code> - 验证产品对象包含必需的字段（如 id, name, sku）</li>
+      </ul>
+      <p style="margin-top: 12px;"><strong>测试步骤</strong>：展示了每个测试用例要验证的具体断言内容。</p>
+      <p><strong>预期结果</strong>：列出所有需要通过的断言检查点（✓ 表示已通过）。</p>
+    </div>
+    ` : ''}
+    ${isPrdTab ? (prdTestData.length > 0 ? prdTestData.map((prd: PrdTestData, idx: number) => `
+    <div class="test-group" data-group="prd-${idx}">
+      <div class="test-group-header" data-group-id="prd-${idx}">
+        <div class="test-group-title">
+          <span class="toggle-icon" id="icon-prd-${idx}">▶</span>
+          <h3>${prd.prdId}: ${prd.prdTitle}</h3>
+        </div>
+        <div class="test-group-meta">
+          <span class="badge badge-blue">${prd.stats.total} 用例</span>
+          <span class="badge ${prd.stats.failed > 0 ? 'badge-orange' : 'badge-green'}">${prd.stats.passed}/${prd.stats.total} 通过</span>
+          <code class="run-cmd">${prd.runCommand}</code>
+          <button class="copy-btn" data-cmd="${prd.runCommand}">复制</button>
+        </div>
+      </div>
+      <div class="test-group-body" id="body-prd-${idx}">
+        <div class="test-cases-list">
+          ${prd.testCases.map((tc: TestCaseDetail) => `
+          <div class="test-case-card ${tc.priority.toLowerCase()} ${tc.status}">
+            <div class="tc-header">
+              <span class="tc-id">${tc.id}</span>
+              <span class="tc-name">${tc.name}</span>
+              <span class="tc-priority ${tc.priority.toLowerCase()}">${tc.priority}</span>
+              <span class="tc-status ${tc.status}">${tc.status === 'passed' ? '✅' : tc.status === 'failed' ? '❌' : '⏸️'}</span>
+            </div>
+            <div class="tc-section">
+              <h5>✅ 断言 (${tc.expected.length})</h5>
+              <ul class="assertions-list">${tc.expected.map(e => `<li>${e}</li>`).join('')}</ul>
+            </div>
+          </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    `).join('') : '<div class="empty-state"><div class="icon">📭</div><p>暂无 PRD 测试数据，请先运行 Newman 测试</p></div>') : ''}
+
+    <!-- Story E2E 测试 (Runbook) -->
+    ${isStoryTab ? `
+    <div class="section-header">
+      <h2>Story Test Scenarios</h2>
+      <p>End-to-end test scenarios with Given-When-Then format</p>
+    </div>
+    ` : ''}
+    ${isStoryTab ? (storyTestData.length > 0 ? storyTestData.map((story: StoryTestData, idx: number) => `
+    <div class="test-group" data-group="story-${idx}">
+      <div class="test-group-header" data-group-id="story-${idx}">
+        <div class="test-group-title">
+          <span class="toggle-icon" id="icon-story-${idx}">▶</span>
+          <h3>${story.storyId} ${story.storyTitle}</h3>
+        </div>
+        <div class="test-group-meta">
+          <span class="badge badge-blue">${story.stats.total} 用例</span>
+          <span class="badge ${story.stats.pending > 0 ? 'badge-gray' : 'badge-green'}">${story.stats.passed}/${story.stats.total} 通过</span>
+          <code class="run-cmd">${story.runCommand}</code>
+          <button class="copy-btn" data-cmd="${story.runCommand}">复制</button>
+        </div>
+      </div>
+      <div class="test-group-body" id="body-story-${idx}">
+        <div class="test-cases-list">
+          ${story.modules.map(mod => mod.testCases.map((tc: RunbookTestCase) => `
+          <div class="test-case-card ${tc.priority.toLowerCase()} ${tc.status}" data-priority="${tc.priority}" data-name="${tc.name}">
+            <div class="tc-header">
+              <span class="tc-id">${tc.id}</span>
+              <span class="tc-name">${tc.name}</span>
+              <span class="ac-ref">${tc.acReference}</span>
+              <span class="tc-priority ${tc.priority.toLowerCase()}">${tc.priority}</span>
+              <span class="tc-status ${tc.status}">${tc.status === 'passed' ? '✅ 通过' : tc.status === 'failed' ? '❌ 失败' : '⏸️ 待测'}</span>
+            </div>
+            <div class="tc-section">
+              <h5>📋 测试场景</h5>
+              <div class="gwt-block">
+                <div class="gwt-given"><strong>Given:</strong> ${tc.given}</div>
+                <div class="gwt-when"><strong>When:</strong> ${tc.when}</div>
+                <div class="gwt-then"><strong>Then:</strong> ${tc.then}</div>
+              </div>
+            </div>
+            ${tc.command ? `
+            <div class="tc-section">
+              <h5>🔧 执行命令</h5>
+              <pre class="command-block"><code>${tc.command.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+            </div>
+            ` : ''}
+            ${tc.checkpoints.length > 0 ? `
+            <div class="tc-section">
+              <h5>✅ 预期结果（${tc.checkpoints.length} 个验证点）</h5>
+              <ul class="assertions-list">
+                ${tc.checkpoints.map(cp => `<li>${cp}</li>`).join('')}
+              </ul>
+            </div>
+            ` : ''}
+          </div>
+          `).join('')).join('')}
+        </div>
+      </div>
+    </div>
+    `).join('') : '<div class="empty-state"><div class="icon">📭</div><p>暂无 Story 测试数据，请先创建 Runbook</p></div>') : ''}
 
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // AC Coverage PRD toggle
-      document.querySelectorAll('.ac-prd-header[data-prd-ac]').forEach(function(header) {
-        header.addEventListener('click', function(e) {
-          if (e.target.classList.contains('prd-link')) return; // Don't toggle when clicking link
-          var prdId = this.getAttribute('data-prd-ac');
-          var body = document.getElementById('body-ac-' + prdId);
-          var arrow = document.getElementById('arrow-ac-' + prdId);
-          body.classList.toggle('expanded');
-          arrow.classList.toggle('collapsed');
-        });
-      });
+    // 折叠/展开功能 - 事件委托
+    document.addEventListener('click', function(e) {
+      // 折叠/展开
+      var header = e.target.closest('.test-group-header');
+      if (header && !e.target.closest('.copy-btn')) {
+        var groupId = header.getAttribute('data-group-id');
+        if (groupId) {
+          var body = document.getElementById('body-' + groupId);
+          var icon = document.getElementById('icon-' + groupId);
+          if (body) body.classList.toggle('expanded');
+          if (icon) icon.classList.toggle('expanded');
+        }
+        return;
+      }
 
-      // Copy button functionality
-      document.querySelectorAll('.copy-btn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          var cmd = this.getAttribute('data-cmd');
-          var button = this;
-          navigator.clipboard.writeText(cmd).then(function() {
-            var originalText = button.textContent;
-            button.textContent = '已复制!';
-            button.classList.add('copied');
-            setTimeout(function() {
-              button.textContent = originalText;
-              button.classList.remove('copied');
-            }, 2000);
-          }).catch(function(err) {
-            console.error('复制失败:', err);
-            alert('复制失败，请手动复制命令');
-          });
+      // 复制按钮
+      var copyBtn = e.target.closest('.copy-btn');
+      if (copyBtn) {
+        e.stopPropagation();
+        var cmd = copyBtn.getAttribute('data-cmd');
+        navigator.clipboard.writeText(cmd).then(function() {
+          copyBtn.textContent = '已复制!';
+          copyBtn.classList.add('copied');
+          setTimeout(function() {
+            copyBtn.textContent = '复制';
+            copyBtn.classList.remove('copied');
+          }, 2000);
         });
-      });
+        return;
+      }
 
     });
   </script>

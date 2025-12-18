@@ -10,6 +10,8 @@ Story Tests (E2E流程) → Runbook + Newman Collection
 Card Tests (端点级) → curl + Newman
 ```
 
+> **Runbook 规范**: 详见 `references/runbook.md`
+
 ## Test Commands
 
 | Command | Purpose |
@@ -118,3 +120,5 @@ postman/auto-generated/
 - [ ] `npm test` passes (no regression)
 - [ ] Coverage updated in `docs/test-coverage/_index.yaml`
 - [ ] API contract verified (Card = Code = OpenAPI)
+- [ ] Runbook created/updated for Story (see `references/runbook.md`)
+- [ ] Runbook TC status updated (pending → passed/failed)

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
+import { buildCardToRunbookTCMap, RunbookTestCase, getRunbookStats, loadAllRunbooks } from './runbookParser';
 
 // Test result from Newman XML
 export interface TestResult {
@@ -43,6 +44,14 @@ export interface AcceptanceCriteria {
   testId?: string;
   testStatus?: 'passed' | 'failed' | 'pending';
   testCase?: TestCase;  // Associated test case from Newman Collection
+  // Runbook test case information
+  runbookTC?: {
+    id: string;           // TC-CAT-001
+    name: string;         // 测试用例名称
+    status: 'passed' | 'failed' | 'pending' | 'skipped';
+    checkpoints: string[];
+    storyId?: string;     // 关联的 Story ID
+  };
 }
 
 export interface CardAC {
@@ -58,6 +67,14 @@ export interface CardAC {
   }[];
   totalACs: number;
   testedACs: number;
+  // Runbook 统计
+  runbookTCs?: RunbookTestCase[];
+  runbookStats?: {
+    total: number;
+    passed: number;
+    failed: number;
+    pending: number;
+  };
 }
 
 export interface PRDCoverage {
@@ -77,6 +94,14 @@ export interface PRDCoverage {
   };
   // All test cases for this PRD
   testCases?: TestCase[];
+  // Runbook 统计 (E2E 测试)
+  runbookStats?: {
+    totalTCs: number;
+    passedTCs: number;
+    failedTCs: number;
+    pendingTCs: number;
+    runbookCount: number;
+  };
 }
 
 /**
@@ -85,8 +110,9 @@ export interface PRDCoverage {
 function parseACSection(content: string): { categories: { name: string; acs: AcceptanceCriteria[] }[] } {
   const categories: { name: string; acs: AcceptanceCriteria[] }[] = [];
 
-  // Find the Acceptance section (flexible section number: 7, 8, etc.)
-  const acceptanceMatch = content.match(/##\s*\d+\)\s*Acceptance[^\n]*\n([\s\S]*?)(?=##\s*\d+\)|$)/i);
+  // Find the Acceptance section (supports: "## 7) Acceptance" or "## Acceptance")
+  // Terminates at next ## section (but not ### subsections)
+  const acceptanceMatch = content.match(/##\s*(?:\d+\)\s*)?Acceptance[^\n]*\n([\s\S]*?)(?=\n##\s[^#]|$)/i);
   if (!acceptanceMatch) {
     return { categories };
   }
@@ -624,6 +650,92 @@ export function loadPRDCoverageWithTests(): PRDCoverage[] {
   for (const prd of coverage) {
     const testCases = allTestCases.get(prd.prdId) || [];
     prd.testCases = testCases;
+  }
+
+  // === 集成 Runbook 测试数据 ===
+  const cardToRunbookTCs = buildCardToRunbookTCMap();
+  const runbooks = loadAllRunbooks();
+
+  // 按 Story 统计 Runbook，然后映射到 PRD
+  const prdRunbookStats = new Map<string, { totalTCs: number; passedTCs: number; failedTCs: number; pendingTCs: number; runbookCount: number }>();
+
+  for (const runbook of runbooks) {
+    const storyId = runbook.metadata.storyId;
+    const prdId = mapStoryToPRD(storyId);
+
+    if (!prdId) continue;
+
+    if (!prdRunbookStats.has(prdId)) {
+      prdRunbookStats.set(prdId, { totalTCs: 0, passedTCs: 0, failedTCs: 0, pendingTCs: 0, runbookCount: 0 });
+    }
+
+    const stats = prdRunbookStats.get(prdId)!;
+    stats.runbookCount++;
+    stats.totalTCs += runbook.totalTestCases;
+    stats.passedTCs += runbook.passedTestCases;
+    stats.failedTCs += runbook.failedTestCases;
+    stats.pendingTCs += runbook.pendingTestCases;
+  }
+
+  // 将 Runbook TC 映射到 Card 和 AC
+  for (const prd of coverage) {
+    // 添加 PRD 级别的 Runbook 统计
+    const prdStats = prdRunbookStats.get(prd.prdId);
+    if (prdStats) {
+      prd.runbookStats = prdStats;
+    }
+
+    // 将 Runbook TC 映射到每个 Card
+    for (const card of prd.cards) {
+      const runbookTCs = cardToRunbookTCs.get(card.cardSlug) || [];
+
+      if (runbookTCs.length > 0) {
+        card.runbookTCs = runbookTCs;
+
+        // 计算 Card 级别的 Runbook 统计
+        let passed = 0, failed = 0, pending = 0;
+        for (const tc of runbookTCs) {
+          if (tc.status === 'passed') passed++;
+          else if (tc.status === 'failed') failed++;
+          else pending++;
+        }
+
+        card.runbookStats = {
+          total: runbookTCs.length,
+          passed,
+          failed,
+          pending
+        };
+
+        // 将 Runbook TC 映射到具体的 AC
+        for (const category of card.categories) {
+          for (const ac of category.acs) {
+            // 查找匹配的 Runbook TC (通过 AC Reference)
+            const matchingTC = runbookTCs.find(tc => tc.acId === ac.id);
+
+            if (matchingTC) {
+              // 查找对应的 Story ID
+              const tcRunbook = runbooks.find(rb =>
+                rb.modules.some(m => m.testCases.some(t => t.id === matchingTC.id))
+              );
+
+              ac.runbookTC = {
+                id: matchingTC.id,
+                name: matchingTC.name,
+                status: matchingTC.status,
+                checkpoints: matchingTC.checkpoints,
+                storyId: tcRunbook?.metadata.storyId
+              };
+
+              // 如果 Runbook TC 是 passed，更新 AC 状态
+              if (matchingTC.status === 'passed' && ac.testStatus !== 'passed') {
+                ac.testStatus = 'passed';
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   return coverage;

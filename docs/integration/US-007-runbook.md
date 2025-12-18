@@ -1,239 +1,244 @@
-# US-007: Ticket Cancellation and Refund - Integration Runbook
+# US-007: Ticket Cancellation and Refund Runbook
 
-## Overview
-Complete end-to-end flow for ticket cancellation and refund processing, including business policies, cancellation logic, and payment refunds.
+票券取消退款完整测试：查看政策 → 取消票券 → 退款处理 → 幂等性验证
 
-## Prerequisites
-```bash
-# 1. Start server
-npm run build
-PORT=8080 npm start
+---
 
-# 2. Verify health
-curl http://localhost:8080/healthz
-# Expected: {"status":"ok"}
+## 📋 Metadata
+
+| 字段 | 值 |
+|------|-----|
+| **Story** | US-007 |
+| **PRD** | PRD-001 |
+| **Status** | Done |
+| **Last Updated** | 2025-12-17 |
+| **Test Type** | API (Newman) + Manual |
+| **Automation** | ✅ 全自动化 |
+
+### 关联测试资产
+
+| 资产类型 | 路径/命令 |
+|---------|----------|
+| Newman Collection | `postman/auto-generated/us-007-*.json` |
+| Newman Command | `npm run test:story 007` |
+| Related Cards | `ticket-cancellation`, `refund-processing` |
+
+---
+
+## 🎯 Business Context
+
+### 用户旅程
+
+```
+用户查看票券
+  → 决定取消
+  → 查看退款政策
+  → 提交取消请求
+  → 系统计算退款
+  → 退款到账
 ```
 
-## Complete Story Flow
+### 测试目标
 
-### Step 1: Check Cancellation Policies
-```bash
-curl http://localhost:8080/cancellation-policies
-```
+- [ ] 验证退款政策查询
+- [ ] 验证票券取消流程
+- [ ] 验证退款金额计算
+- [ ] 验证幂等性处理
 
-**Expected Response:**
-```json
-{
-  "policies": [
-    {
-      "rule_type": "redemption_based",
-      "description": "Refund percentage based on ticket usage",
-      "refund_percentage": 1,
-      "conditions": {
-        "unused": {"percentage": 1, "description": "100% refund for unused tickets"},
-        "partial_use_low": {"percentage": 0.5, "usage_threshold": 0.5, "description": "50% refund if ≤50% used"},
-        "partial_use_high": {"percentage": 0.25, "usage_threshold": 1, "description": "25% refund if 51-99% used"},
-        "fully_used": {"percentage": 0, "description": "No refund for fully used tickets"}
-      }
-    }
-  ],
-  "examples": [...]
-}
-```
+---
 
-### Step 2: Get User's Tickets
-```bash
-curl -H "Authorization: Bearer user123" \
-     http://localhost:8080/my/tickets
-```
+## 🔧 Prerequisites
 
-**Expected Response:**
-```json
-{
-  "tickets": [
-    {
-      "ticket_code": "TKT-123-001",
-      "product_name": "3-in-1 Transport Pass",
-      "status": "active",
-      "entitlements": [
-        {"function_code": "bus", "remaining_uses": 2},
-        {"function_code": "ferry", "remaining_uses": 1},
-        {"function_code": "metro", "remaining_uses": 1}
-      ]
-    }
-  ]
-}
-```
+| 项目 | 值 | 说明 |
+|------|-----|------|
+| **Base URL** | `http://localhost:8080` | 本地开发环境 |
+| **用户 Token** | `user123` | 测试用户 |
+| **测试票券** | 需要已购票券 | 前置条件 |
 
-### Step 3: Cancel a Ticket
-```bash
-curl -X POST \
-     -H "Authorization: Bearer user123" \
-     -H "Content-Type: application/json" \
-     -d '{"reason": "Plans changed"}' \
-     http://localhost:8080/tickets/TKT-123-001/cancel
-```
+---
 
-**Expected Response:**
-```json
-{
-  "ticket_status": "void",
-  "refund_amount": 0,
-  "refund_id": "NO_REFUND",
-  "cancelled_at": "2025-10-20T16:01:58.320Z"
-}
-```
+## 🧪 Test Scenarios
 
-### Step 4: Verify Idempotency
-```bash
-# Same request again
-curl -X POST \
-     -H "Authorization: Bearer user123" \
-     -H "Content-Type: application/json" \
-     -d '{"reason": "Plans changed"}' \
-     http://localhost:8080/tickets/TKT-123-001/cancel
-```
+### Module 1: 退款政策
 
-**Expected Response:**
-```json
-{
-  "ticket_status": "void",
-  "refund_amount": 0,
-  "refund_id": "ALREADY_CANCELLED",
-  "cancelled_at": "2025-10-20T16:01:58.320Z"
-}
-```
+**Related Card**: `ticket-cancellation`
+**Coverage**: 2/2 ACs (100%)
 
-### Step 5: Check Refund History
-```bash
-curl -H "Authorization: Bearer user123" \
-     http://localhost:8080/my/refunds
-```
+#### TC-CAN-001: 查看退款政策
 
-**Expected Response:**
-```json
-{
-  "refunds": []
-}
-```
+**AC Reference**: `ticket-cancellation.AC-1`
 
-### Step 6: Test Error Cases
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 系统配置了退款政策 | GET /cancellation-policies | 返回 200，包含政策列表 |
 
-**6a. Unauthorized cancellation:**
-```bash
-curl -X POST \
-     -H "Authorization: Bearer user456" \
-     -H "Content-Type: application/json" \
-     -d '{"reason": "Not my ticket"}' \
-     http://localhost:8080/tickets/TKT-123-001/cancel
-```
+**验证点**:
+- [ ] 返回状态码 200
+- [ ] 返回 policies 数组
+- [ ] 包含 refund_percentage 规则
+- [ ] 包含 conditions 说明
 
-**Expected Response:** `404 NOT_FOUND`
+---
 
-**6b. Missing authentication:**
-```bash
-curl -X POST \
-     -H "Content-Type: application/json" \
-     -d '{"reason": "No auth"}' \
-     http://localhost:8080/tickets/TKT-123-001/cancel
-```
+#### TC-CAN-002: 政策包含使用率规则
 
-**Expected Response:** `401 UNAUTHORIZED`
+**AC Reference**: `ticket-cancellation.AC-2`
 
-### Step 7: Verify Updated Ticket Status
-```bash
-curl -H "Authorization: Bearer user123" \
-     http://localhost:8080/my/tickets
-```
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 基于使用率的退款政策 | GET /cancellation-policies | 包含不同使用率的退款比例 |
 
-**Expected Response:** Ticket should show `"status": "void"`
+**验证点**:
+- [ ] unused: 100% 退款
+- [ ] partial_use_low (≤50%): 50% 退款
+- [ ] partial_use_high (51-99%): 25% 退款
+- [ ] fully_used: 0% 退款
 
-## Business Logic Validation
+---
 
-### Refund Calculation Tests
-The system calculates refunds based on usage:
-- **0% used**: 100% refund
-- **1-50% used**: 50% refund
-- **51-99% used**: 25% refund
-- **100% used**: 0% refund
+### Module 2: 票券取消
 
-### State Transition Tests
-Valid cancellation states:
+**Related Card**: `ticket-cancellation`
+**Coverage**: 4/4 ACs (100%)
+
+#### TC-CAN-003: 取消活跃票券
+
+**AC Reference**: `ticket-cancellation.AC-3`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 用户有活跃票券 | POST /tickets/:code/cancel | 返回 200，票券变为 void |
+
+**验证点**:
+- [ ] 返回状态码 200
+- [ ] ticket_status = void
+- [ ] 返回 refund_amount
+- [ ] 返回 cancelled_at
+
+---
+
+#### TC-CAN-004: 幂等性 - 重复取消
+
+**AC Reference**: `ticket-cancellation.AC-4`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 已取消的票券 | POST /tickets/:code/cancel | 返回 200，refund_id = ALREADY_CANCELLED |
+
+**验证点**:
+- [ ] 返回状态码 200
+- [ ] 不重复处理退款
+- [ ] refund_id = ALREADY_CANCELLED
+
+---
+
+#### TC-CAN-005: 非本人票券被拒绝
+
+**AC Reference**: `ticket-cancellation.AC-5`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 其他用户的票券 | POST /tickets/:code/cancel | 返回 404 |
+
+**验证点**:
+- [ ] 返回状态码 404
+- [ ] 不泄露票券存在
+
+---
+
+#### TC-CAN-006: 无认证取消被拒绝
+
+**AC Reference**: `ticket-cancellation.AC-6`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 无 Authorization header | POST /tickets/:code/cancel | 返回 401 |
+
+**验证点**:
+- [ ] 返回状态码 401
+- [ ] 提示需要认证
+
+---
+
+### Module 3: 退款处理
+
+**Related Card**: `refund-processing`
+**Coverage**: 3/3 ACs (100%)
+
+#### TC-CAN-007: 查看退款历史
+
+**AC Reference**: `refund-processing.AC-1`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 用户有退款记录 | GET /my/refunds | 返回退款列表 |
+
+**验证点**:
+- [ ] 返回状态码 200
+- [ ] 返回 refunds 数组
+- [ ] 每条记录包含金额和状态
+
+---
+
+#### TC-CAN-008: 退款金额计算
+
+**AC Reference**: `refund-processing.AC-2`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 未使用票券取消 | POST /tickets/:code/cancel | refund_amount = 原价 × 100% |
+
+**验证点**:
+- [ ] 退款金额计算正确
+- [ ] 符合政策规则
+
+---
+
+#### TC-CAN-009: 已核销票券取消
+
+**AC Reference**: `refund-processing.AC-3`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 已全部核销的票券 | POST /tickets/:code/cancel | refund_amount = 0 |
+
+**验证点**:
+- [ ] 返回 refund_amount = 0
+- [ ] 票券仍可取消（状态变 void）
+
+---
+
+## 📊 Summary
+
+| Module | Test Cases | Status |
+|--------|-----------|--------|
+| 退款政策 | 2 | pending |
+| 票券取消 | 4 | pending |
+| 退款处理 | 3 | pending |
+| **Total** | **9** | **0/9 通过** |
+
+---
+
+## 🔗 Related Documentation
+
+- [ticket-cancellation](../cards/ticket-cancellation.md)
+- [refund-processing](../cards/refund-processing.md)
+
+## Business Rules
+
+### 退款计算规则
+
+| 使用率 | 退款比例 |
+|--------|---------|
+| 0% (未使用) | 100% |
+| 1-50% | 50% |
+| 51-99% | 25% |
+| 100% (全部使用) | 0% |
+
+### 状态转换规则
+
 - ✅ `active` → `void`
 - ✅ `partially_redeemed` → `void`
-- ❌ `redeemed` → Cannot cancel
-- ❌ `expired` → Cannot cancel
-- ❌ `void` → Idempotent return
-
-## Integration Points
-
-### 1. Authentication
-- Mock JWT tokens: `user123`, `user456`
-- Production: Real JWT validation
-
-### 2. Payment Gateway
-- Mock: Simulated refund processing
-- Production: Real payment gateway integration
-
-### 3. Data Persistence
-- Mock: In-memory store
-- Production: Database with transactions
-
-## Success Criteria
-- [x] Policies endpoint returns business rules
-- [x] Users can view their tickets
-- [x] Users can cancel their own tickets
-- [x] Cancelled tickets show void status
-- [x] Refund records are created
-- [x] Idempotency works correctly
-- [x] Error handling for unauthorized access
-- [x] Error handling for invalid states
-
-## Consumer Integration
-
-### Frontend Usage
-```typescript
-// 1. Get cancellation policies
-const policies = await fetch('/cancellation-policies').then(r => r.json());
-
-// 2. Show user their tickets
-const tickets = await fetch('/my/tickets', {
-  headers: { Authorization: `Bearer ${userToken}` }
-}).then(r => r.json());
-
-// 3. Cancel ticket
-const result = await fetch(`/tickets/${ticketCode}/cancel`, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${userToken}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ reason: 'User provided reason' })
-}).then(r => r.json());
-
-// 4. Check refund history
-const refunds = await fetch('/my/refunds', {
-  headers: { Authorization: `Bearer ${userToken}` }
-}).then(r => r.json());
-```
-
-### Backend Integration
-```typescript
-// Internal refund processing
-const refund = await fetch('/payments/refund', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    order_id: 1001,
-    amount: 25.50,
-    reason: 'ticket_cancellation',
-    ticket_id: 123
-  })
-}).then(r => r.json());
-```
-
-## Notes
-- Refund amounts show as 0 in mock because test orders lack pricing data
-- Production implementation would include real payment amounts
-- Gateway integration happens asynchronously with status updates
-- All cancellation events are logged for audit trail
+- ❌ `redeemed` → 无法取消
+- ❌ `expired` → 无法取消
+- ℹ️ `void` → 幂等返回

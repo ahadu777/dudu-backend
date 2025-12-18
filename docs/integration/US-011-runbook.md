@@ -1,363 +1,299 @@
-# US-011: Complex Pricing System - Integration Runbook
+# US-011: Complex Pricing System Runbook
 
-**Story**: Dynamic Multi-Variable Pricing System
-**Status**: Approved
-**Implementation Date**: 2025-11
-**Business Requirement**: PRD-001 (Complex Pricing Extension)
-
-## Overview
-
-This runbook validates the complex pricing system that supports dynamic pricing based on multiple variables:
-- Time periods (weekdays vs weekends/holidays)
-- Customer types (adult, child, elderly)
-- Package tiers (Premium, Pet, Deluxe)
-- Add-on products (token packages)
-- Special event dates
-
-## Business Context
-
-**Use Case**: Cruise/tour operators offer dynamic pricing that maximizes revenue while providing transparent pricing for different customer segments.
-
-**Products with Complex Pricing**:
-- Product 106: Premium Plan ($288 weekday / $318 weekend)
-- Product 107: Pet Plan ($188 flat rate)
-- Product 108: Deluxe Tea Set ($758 weekday / $788 weekend)
-
-## Prerequisites
-
-```bash
-# Start the server (if not running)
-npm run build && PORT=8080 npm start
-
-# Wait for server startup
-sleep 3
-
-# Verify server health
-curl http://localhost:8080/healthz
-```
+复杂定价系统完整测试：定价规则 → 多变量计算 → 附加产品 → 错误处理
 
 ---
 
-## Copy-Paste Command Flow
+## 📋 Metadata
 
-### 1. Get Pricing Rules for Product
+| 字段 | 值 |
+|------|-----|
+| **Story** | US-011 |
+| **PRD** | PRD-001 |
+| **Status** | Done |
+| **Last Updated** | 2025-12-17 |
+| **Test Type** | API (Newman) + Manual |
+| **Automation** | ✅ 全自动化 |
 
-```bash
-# Get pricing rules for Premium Plan (Product 106)
-curl -s http://localhost:8080/pricing/rules/106 | python3 -m json.tool
+### 关联测试资产
 
-# Expected: base_prices, time_rules, customer_rules, special_dates, available_addons
-# - Adult base: $288
-# - Child/Elderly: $188
-# - Weekend premium: +$30/person
-# - Special dates: 2025-12-31, 2026-02-18
-```
-
-### 2. Test Weekday Pricing (Adult)
-
-```bash
-# Calculate price for 2 adults on a weekday (Monday 2025-12-15)
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 106,
-    "booking_dates": ["2025-12-15"],
-    "customer_breakdown": [{"customer_type": "adult", "count": 2}]
-  }' | python3 -m json.tool
-
-# Expected:
-# - base_price: 576 (2 × $288)
-# - adjustments: []
-# - final_total: 576
-```
-
-### 3. Test Weekend Pricing (Premium)
-
-```bash
-# Calculate price for 2 adults on a Saturday (2025-12-20)
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 106,
-    "booking_dates": ["2025-12-20"],
-    "customer_breakdown": [{"customer_type": "adult", "count": 2}]
-  }' | python3 -m json.tool
-
-# Expected:
-# - base_price: 576 (2 × $288)
-# - adjustments: [+$60 weekend premium (2 × $30)]
-# - final_total: 636
-```
-
-### 4. Test Mixed Customer Types
-
-```bash
-# Calculate for family: 2 adults + 2 children + 1 elderly on weekend
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 106,
-    "booking_dates": ["2025-12-20"],
-    "customer_breakdown": [
-      {"customer_type": "adult", "count": 2},
-      {"customer_type": "child", "count": 2},
-      {"customer_type": "elderly", "count": 1}
-    ]
-  }' | python3 -m json.tool
-
-# Expected breakdown:
-# - Adults: 2 × $288 = $576
-# - Children: 2 × $188 = $376
-# - Elderly: 1 × $188 = $188
-# - Base total: $1,140
-# - Weekend premium: 5 × $30 = $150
-# - Final total: $1,290
-```
-
-### 5. Test Pet Plan (Flat Rate)
-
-```bash
-# Pet Plan has flat rate pricing regardless of day type
-curl -s http://localhost:8080/pricing/rules/107 | python3 -m json.tool
-
-# Calculate price
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 107,
-    "booking_dates": ["2025-12-20"],
-    "customer_breakdown": [{"customer_type": "adult", "count": 1}]
-  }' | python3 -m json.tool
-
-# Expected: $188 flat rate (no weekend premium)
-```
-
-### 6. Test Deluxe Tea Set (Premium Package)
-
-```bash
-# Get Deluxe pricing rules
-curl -s http://localhost:8080/pricing/rules/108 | python3 -m json.tool
-
-# Calculate for 2 adults (designed for couples)
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 108,
-    "booking_dates": ["2025-12-15"],
-    "customer_breakdown": [{"customer_type": "adult", "count": 2}]
-  }' | python3 -m json.tool
-
-# Expected: $758 × 2 = $1,516 (weekday)
-```
-
-### 7. Test Add-on Products
-
-```bash
-# Calculate with token add-on
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 106,
-    "booking_dates": ["2025-12-15"],
-    "customer_breakdown": [{"customer_type": "adult", "count": 2}],
-    "addons": [{"addon_id": "tokens-plan-b", "quantity": 1}]
-  }' | python3 -m json.tool
-
-# Expected:
-# - base_price: 576 (2 × $288)
-# - addons_total: 180 (Plan B: 20 tokens)
-# - final_total: 756
-```
-
-### 8. Test Multiple Add-ons
-
-```bash
-# Multiple add-on packages
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 106,
-    "booking_dates": ["2025-12-20"],
-    "customer_breakdown": [
-      {"customer_type": "adult", "count": 2},
-      {"customer_type": "child", "count": 2}
-    ],
-    "addons": [
-      {"addon_id": "tokens-plan-a", "quantity": 2},
-      {"addon_id": "tokens-plan-c", "quantity": 1}
-    ]
-  }' | python3 -m json.tool
-
-# Expected:
-# - Base: 2×288 + 2×188 = 952
-# - Weekend premium: 4×30 = 120
-# - Addons: 2×100 + 1×400 = 600
-# - Final total: 1,672
-```
-
-### 9. Test Validation - Invalid Customer Type
-
-```bash
-# Invalid customer type should return 422
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 106,
-    "booking_dates": ["2025-12-15"],
-    "customer_breakdown": [{"customer_type": "student", "count": 1}]
-  }' | python3 -m json.tool
-
-# Expected: {"code":"INVALID_CUSTOMER_TYPE","message":"Invalid customer_type: student..."}
-```
-
-### 10. Test Validation - Invalid Date Format
-
-```bash
-# Invalid date format should return 422
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 106,
-    "booking_dates": ["15-12-2025"],
-    "customer_breakdown": [{"customer_type": "adult", "count": 1}]
-  }' | python3 -m json.tool
-
-# Expected: {"code":"INVALID_DATE","message":"Invalid date format..."}
-```
-
-### 11. Test Product Not Found
-
-```bash
-# Non-existent product should return 404
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 999,
-    "booking_dates": ["2025-12-15"],
-    "customer_breakdown": [{"customer_type": "adult", "count": 1}]
-  }' | python3 -m json.tool
-
-# Expected: {"code":"PRODUCT_NOT_FOUND","message":"Complex pricing not available for product 999"}
-```
-
-### 12. Test Missing Required Fields
-
-```bash
-# Missing product_id
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "booking_dates": ["2025-12-15"],
-    "customer_breakdown": [{"customer_type": "adult", "count": 1}]
-  }' | python3 -m json.tool
-
-# Expected: {"code":"INVALID_REQUEST","message":"product_id is required"}
-
-# Missing booking_dates
-curl -s -X POST "http://localhost:8080/pricing/calculate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_id": 106,
-    "customer_breakdown": [{"customer_type": "adult", "count": 1}]
-  }' | python3 -m json.tool
-
-# Expected: {"code":"INVALID_REQUEST","message":"booking_dates must be a non-empty array"}
-```
+| 资产类型 | 路径/命令 |
+|---------|----------|
+| Newman Collection | `postman/auto-generated/us-011-*.json` |
+| Newman Command | `npm run test:story 011` |
+| Related Cards | `complex-pricing`, `addon-products` |
 
 ---
 
-## Success Criteria Validation
+## 🎯 Business Context
 
-### Pricing Rules
-- [x] Weekday base pricing working ($288 adult)
-- [x] Weekend premium applied (+$30/person)
-- [x] Child pricing correct ($188 flat)
-- [x] Elderly pricing correct ($188 flat)
-- [x] Special dates identified (2025-12-31, 2026-02-18)
+### 用户旅程
 
-### Package Tiers
-- [x] Premium Plan (106): Complex pricing with addons
-- [x] Pet Plan (107): Flat rate pricing
-- [x] Deluxe Tea Set (108): Premium tier pricing
+```
+用户选择产品
+  → 选择日期（工作日/周末）
+  → 选择人员类型（成人/儿童/老人）
+  → 添加附加产品
+  → 系统计算总价
+  → 用户确认购买
+```
 
-### Add-on Products
-- [x] Plan A: $100 for 10 tokens
-- [x] Plan B: $180 for 20 tokens
-- [x] Plan C: $400 for 50 tokens
+### 测试目标
 
-### Validation & Error Handling
-- [x] Invalid customer type returns 422
-- [x] Invalid date format returns 422
-- [x] Product not found returns 404
-- [x] Missing required fields return 400
-
-### Performance
-- [x] Pricing calculation < 100ms
-- [x] Rules retrieval < 50ms
+- [ ] 验证定价规则查询
+- [ ] 验证工作日/周末差价
+- [ ] 验证不同客户类型价格
+- [ ] 验证附加产品计算
 
 ---
 
-## API Endpoints Summary
+## 🔧 Prerequisites
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/pricing/calculate` | POST | Calculate total price for booking |
-| `/pricing/rules/:product_id` | GET | Get pricing rules for product |
-| `/catalog` | GET | Get products with pricing info |
+| 项目 | 值 | 说明 |
+|------|-----|------|
+| **Base URL** | `http://localhost:8080` | 本地开发环境 |
+| **测试产品** | 106, 107, 108 | 复杂定价产品 |
+| **测试日期** | 2025-12-15 (周一), 2025-12-20 (周六) | 工作日/周末 |
 
 ---
+
+## 🧪 Test Scenarios
+
+### Module 1: 定价规则查询
+
+**Related Card**: `complex-pricing`
+**Coverage**: 2/2 ACs (100%)
+
+#### TC-PRC-001: 获取产品定价规则
+
+**AC Reference**: `complex-pricing.AC-1`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 产品 106 有复杂定价 | GET /pricing/rules/106 | 返回完整定价规则 |
+
+**验证点**:
+- [ ] 返回 base_prices
+- [ ] 返回 time_rules (周末加价)
+- [ ] 返回 customer_rules
+- [ ] 返回 available_addons
+
+---
+
+#### TC-PRC-002: 不存在产品返回 404
+
+**AC Reference**: `complex-pricing.AC-2`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 不存在的产品 ID | GET /pricing/rules/999 | 返回 404 |
+
+**验证点**:
+- [ ] 返回状态码 404
+- [ ] code = PRODUCT_NOT_FOUND
+
+---
+
+### Module 2: 价格计算 - 基础
+
+**Related Card**: `complex-pricing`
+**Coverage**: 3/3 ACs (100%)
+
+#### TC-PRC-003: 工作日成人价格
+
+**AC Reference**: `complex-pricing.AC-3`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 2 成人，周一 (2025-12-15) | POST /pricing/calculate | 返回 576 (2×288) |
+
+**验证点**:
+- [ ] base_price = 576
+- [ ] adjustments = []
+- [ ] final_total = 576
+
+---
+
+#### TC-PRC-004: 周末加价
+
+**AC Reference**: `complex-pricing.AC-4`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 2 成人，周六 (2025-12-20) | POST /pricing/calculate | 返回 636 (576+60) |
+
+**验证点**:
+- [ ] base_price = 576
+- [ ] adjustments 包含 +60 周末加价
+- [ ] final_total = 636
+
+---
+
+#### TC-PRC-005: 混合客户类型
+
+**AC Reference**: `complex-pricing.AC-5`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 2 成人 + 2 儿童 + 1 老人，周末 | POST /pricing/calculate | 返回 1290 |
+
+**验证点**:
+- [ ] 成人: 2×288 = 576
+- [ ] 儿童: 2×188 = 376
+- [ ] 老人: 1×188 = 188
+- [ ] 周末加价: 5×30 = 150
+- [ ] final_total = 1290
+
+---
+
+### Module 3: 产品差异
+
+**Related Card**: `complex-pricing`
+**Coverage**: 2/2 ACs (100%)
+
+#### TC-PRC-006: 宠物套餐固定价
+
+**AC Reference**: `complex-pricing.AC-6`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 产品 107，周末 | POST /pricing/calculate | 返回 188 (无周末加价) |
+
+**验证点**:
+- [ ] final_total = 188
+- [ ] 无周末加价调整
+
+---
+
+#### TC-PRC-007: 豪华茶点套餐
+
+**AC Reference**: `complex-pricing.AC-7`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 产品 108，2 成人，工作日 | POST /pricing/calculate | 返回 1516 (2×758) |
+
+**验证点**:
+- [ ] base_price = 1516
+- [ ] 高端产品定价正确
+
+---
+
+### Module 4: 附加产品
+
+**Related Card**: `addon-products`
+**Coverage**: 2/2 ACs (100%)
+
+#### TC-PRC-008: 单个附加产品
+
+**AC Reference**: `addon-products.AC-1`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 2 成人 + Plan B 代币 | POST /pricing/calculate | 返回 756 (576+180) |
+
+**验证点**:
+- [ ] base_price = 576
+- [ ] addons_total = 180
+- [ ] final_total = 756
+
+---
+
+#### TC-PRC-009: 多个附加产品
+
+**AC Reference**: `addon-products.AC-2`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 家庭套餐 + 多个代币包，周末 | POST /pricing/calculate | 返回 1672 |
+
+**验证点**:
+- [ ] 基础: 952
+- [ ] 周末: +120
+- [ ] 附加: 600 (2×100 + 400)
+- [ ] final_total = 1672
+
+---
+
+### Module 5: 验证与错误
+
+**Related Card**: `complex-pricing`
+**Coverage**: 3/3 ACs (100%)
+
+#### TC-PRC-010: 无效客户类型
+
+**AC Reference**: `complex-pricing.AC-8`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | customer_type = student | POST /pricing/calculate | 返回 422 |
+
+**验证点**:
+- [ ] 返回状态码 422
+- [ ] code = INVALID_CUSTOMER_TYPE
+
+---
+
+#### TC-PRC-011: 无效日期格式
+
+**AC Reference**: `complex-pricing.AC-9`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 日期格式 15-12-2025 | POST /pricing/calculate | 返回 422 |
+
+**验证点**:
+- [ ] 返回状态码 422
+- [ ] code = INVALID_DATE
+
+---
+
+#### TC-PRC-012: 缺少必填字段
+
+**AC Reference**: `complex-pricing.AC-10`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 缺少 product_id | POST /pricing/calculate | 返回 400 |
+
+**验证点**:
+- [ ] 返回状态码 400
+- [ ] 提示 product_id required
+
+---
+
+## 📊 Summary
+
+| Module | Test Cases | Status |
+|--------|-----------|--------|
+| 定价规则查询 | 2 | pending |
+| 价格计算 - 基础 | 3 | pending |
+| 产品差异 | 2 | pending |
+| 附加产品 | 2 | pending |
+| 验证与错误 | 3 | pending |
+| **Total** | **12** | **0/12 通过** |
+
+---
+
+## 🔗 Related Documentation
+
+- [complex-pricing](../cards/complex-pricing.md)
+- [addon-products](../cards/addon-products.md)
 
 ## Pricing Matrix Reference
 
 ### Product 106 (Premium Plan)
-| Customer Type | Weekday | Weekend/Holiday |
-|---------------|---------|-----------------|
+
+| Customer Type | Weekday | Weekend |
+|---------------|---------|---------|
 | Adult | $288 | $318 |
 | Child | $188 | $218 |
 | Elderly | $188 | $218 |
 
 ### Add-on Packages
-| Plan | Price | Tokens | Value/Token |
-|------|-------|--------|-------------|
-| Plan A | $100 | 10 | $10 |
-| Plan B | $180 | 20 | $9 |
-| Plan C | $400 | 50 | $8 |
 
----
-
-## Integration Notes
-
-### For Frontend Integration
-```typescript
-// Example: Calculate family booking price
-const response = await fetch('/pricing/calculate', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    product_id: 106,
-    booking_dates: ['2025-12-20'],
-    customer_breakdown: [
-      { customer_type: 'adult', count: 2 },
-      { customer_type: 'child', count: 2 }
-    ],
-    addons: [{ addon_id: 'tokens-plan-b', quantity: 1 }]
-  })
-});
-
-const { final_total, breakdown } = await response.json();
-// Display breakdown to user before payment
-```
-
-### For Order Creation
-The pricing calculation response should be validated against the order total at checkout to prevent tampering.
-
----
-
-## Related Documentation
-
-- [US-011 Story](../stories/US-011-complex-pricing-system.md)
-- [Product Examples](../PRODUCT_EXAMPLES.md)
-- [PRD-001 Cruise Ticketing](../prd/PRD-001-cruise-ticketing-platform.md)
-
-**Runbook Status**: Validated
-**Last Updated**: 2025-11
+| Plan | Price | Tokens |
+|------|-------|--------|
+| Plan A | $100 | 10 |
+| Plan B | $180 | 20 |
+| Plan C | $400 | 50 |

@@ -331,7 +331,7 @@ coverage_registry:
       total_acceptance_criteria: 27
       tested_acceptance_criteria: 27
       coverage_by_ac: "27/27 = 100%"
-      by_category:
+      by_feature:
         "Customer Ticket Validation": "5/5 = 100%"
         "Contact Verification": "2/2 = 100%"
         "Reservation Slots": "3/3 = 100%"
@@ -364,20 +364,14 @@ coverage_registry:
     frontend_e2e_runbook: "docs/integration/US-010A-frontend-e2e-runbook.md"
     last_updated: "2025-12-16"
     test_statistics:
-      backend_api:
-        total_requests: 25
-        total_assertions: 64
-        passed_assertions: 64
-        failed_assertions: 0
-        skipped_tests: 0
-      frontend_e2e:
-        total_scenarios: 63
-        executed_scenarios: 63
-        passed_scenarios: 62
-        failed_scenarios: 0
-        skipped_scenarios: 1  # Phone validation uses WeChat auth
-        test_rounds: 4
-        test_method: "Manual Testing"
+      total_requests: 25
+      total_assertions: 64
+      passed_assertions: 64
+      failed_assertions: 0
+    frontend_e2e_statistics:  # 前端测试单独记录
+      total_scenarios: 63
+      passed_scenarios: 62
+      skipped_scenarios: 1  # Phone validation uses WeChat auth
     tested_scenarios:
       - "✅ A1.1: Product catalog - direct channel inventory"
       - "✅ A1.2: Product list pagination"
