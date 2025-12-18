@@ -317,3 +317,76 @@
 - [wechat-login](../cards/wechat-login.md)
 - [wechat-phone-binding](../cards/wechat-phone-binding.md)
 - [miniprogram-auth](../cards/miniprogram-auth.md)
+
+---
+
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (7 scenarios)
+
+- [ ] **TC-WX-101**: 首次登录（新用户）
+  - 操作: 打开小程序 → 点击"微信登录"按钮 → 授权
+  - **Expected**: 系统自动创建账号，显示登录成功，可访问购票和订单功能
+
+- [ ] **TC-WX-102**: 再次登录（老用户）
+  - 操作: 已登录用户 → 关闭小程序 → 重新打开 → 点击"微信登录"
+  - **Expected**: 系统识别用户，登录成功，可看到之前的订单和船票
+
+- [ ] **TC-WX-103**: 保持登录状态（7天内）
+  - 操作: 登录后 → 关闭小程序 → 3 天后重新打开
+  - **Expected**: 仍保持登录状态，无需重新登录
+
+- [ ] **TC-WX-104**: 登录过期（超过7天）
+  - 操作: 登录后 → 8 天后打开小程序
+  - **Expected**: 提示重新登录，点击"微信登录"可恢复
+
+- [ ] **TC-WX-105**: 手机号绑定（可选）
+  - 操作: 登录后 → 点击"绑定手机号" → 授权
+  - **Expected**: 获取并保存手机号，显示绑定成功
+
+- [ ] **TC-WX-106**: 跳过手机绑定
+  - 操作: 系统提示绑定手机号 → 点击"跳过"
+  - **Expected**: 可跳过，仍能正常使用系统功能
+
+- [ ] **TC-WX-107**: Token 格式和有效期验证
+  - 操作: 登录成功后 → 检查返回的 JWT Token
+  - **Expected**: Token 格式正确，包含 user_id 和 exp，有效期约 7 天
+
+### Round 2: 异常场景 (4 scenarios)
+
+- [ ] **TC-WX-201**: 登录失败处理
+  - 操作: 模拟网络异常 → 尝试登录
+  - **Expected**: 显示友好错误提示，提供"重试"按钮
+
+- [ ] **TC-WX-202**: 缺少 code 参数
+  - 操作: 发送登录请求时缺少微信 code
+  - **Expected**: 返回 400，提示 "code is required"
+
+- [ ] **TC-WX-203**: 无认证绑定手机号
+  - 操作: 不提供 Authorization header → 尝试绑定手机号
+  - **Expected**: 返回 401，错误码 UNAUTHORIZED
+
+- [ ] **TC-WX-204**: 无效 Token 绑定
+  - 操作: 使用无效或过期的 JWT Token → 尝试绑定手机号
+  - **Expected**: 返回 401，提示 Token 无效
+
+### Round 3: 边界测试 (2 scenarios)
+
+- [ ] **TC-WX-301**: 同一微信账号多次登录
+  - 操作: 使用相同微信账号在不同设备登录
+  - **Expected**: 每个微信用户只有一个系统账号，用户数据在所有设备同步
+
+- [ ] **TC-WX-302**: Mock 模式确定性
+  - 操作: 在 Mock 模式下，使用相同 code 多次登录
+  - **Expected**: 返回相同 openid 和用户信息，确保测试可重复
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 作者 | 变更内容 |
+|------|------|------|----------|
+| 1.1 | 2025-12-18 | Claude | 添加 QA E2E Checklist |
+| 1.0 | 2025-12-17 | System | 初始版本 |

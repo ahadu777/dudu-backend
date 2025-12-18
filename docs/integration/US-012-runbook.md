@@ -404,3 +404,104 @@ OTA 合作伙伴认证
 - [ota-premade-tickets](../cards/ota-premade-tickets.md)
 - [ota-reservation-management](../cards/ota-reservation-management.md)
 - [venue-enhanced-scanning](../cards/venue-enhanced-scanning.md)
+
+---
+
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (10 scenarios)
+
+- [ ] **TC-OTA-101**: OTA 合作伙伴认证
+  - 操作: 使用有效 API Key → 请求 OTA 端点
+  - **Expected**: 认证通过，可访问 OTA 功能
+
+- [ ] **TC-OTA-102**: 查询可用库存
+  - 操作: OTA 查询 /api/ota/inventory
+  - **Expected**: 返回产品 106-108 的可用库存，总计约 5000 套餐
+
+- [ ] **TC-OTA-103**: 创建批量预订
+  - 操作: OTA 提交预订请求（25 units）
+  - **Expected**: 返回 reservation_id，库存减少 25
+
+- [ ] **TC-OTA-104**: 批量生成预售票券
+  - 操作: OTA 使用 Bearer Token → 批量生成 10 张票券
+  - **Expected**: 返回 10 张 PRE_GENERATED 状态票券，每张有唯一 ticket_code
+
+- [ ] **TC-OTA-105**: 为客户激活票券
+  - 操作: OTA 提交激活请求（含客户信息）
+  - **Expected**: 票券状态变为 ACTIVE，返回 order_id 和 qr_code
+
+- [ ] **TC-OTA-106**: 查询客户订单
+  - 操作: OTA 查询 /api/ota/orders/:id/tickets
+  - **Expected**: 返回订单票券列表，含 QR 码和客户信息
+
+- [ ] **TC-OTA-107**: 客户在场馆核销
+  - 操作: 客户到场 → 操作员扫描 QR 码
+  - **Expected**: 核销成功，权益减少，流程与直销票券一致
+
+- [ ] **TC-OTA-108**: 渠道库存隔离验证
+  - 操作: 对比 /catalog (直销) 和 /api/ota/inventory (OTA) 库存
+  - **Expected**: OTA 和直销库存独立，无冲突
+
+- [ ] **TC-OTA-109**: 查询票券列表
+  - 操作: OTA 查询 /api/ota/tickets?status=PRE_GENERATED&page=1&limit=10
+  - **Expected**: 返回分页票券列表，支持状态筛选，仅显示该 OTA 的票券
+
+- [ ] **TC-OTA-110**: 票券使用完毕状态更新
+  - 操作: 核销完所有权益
+  - **Expected**: 票券状态自动更新为 USED
+
+### Round 2: 异常场景 (6 scenarios)
+
+- [ ] **TC-OTA-201**: 无 API Key 访问
+  - 操作: 不提供 X-API-Key header → 请求 OTA 端点
+  - **Expected**: 返回 401，错误码 API_KEY_REQUIRED
+
+- [ ] **TC-OTA-202**: 无效 API Key
+  - 操作: 使用错误的 API Key → 请求 OTA 端点
+  - **Expected**: 返回 403，错误码 INVALID_API_KEY
+
+- [ ] **TC-OTA-203**: 超出单次预订限制
+  - 操作: 尝试预订 150 units（超过限制）
+  - **Expected**: 返回 400，提示单次预订限制 1-100
+
+- [ ] **TC-OTA-204**: 预订不存在产品
+  - 操作: 尝试预订 product_id: 999
+  - **Expected**: 返回 404，错误码 PRODUCT_NOT_FOUND
+
+- [ ] **TC-OTA-205**: 超出批量生成限制
+  - 操作: 尝试批量生成 150 张票券
+  - **Expected**: 返回 400，提示数量超限
+
+- [ ] **TC-OTA-206**: 激活不存在的票券
+  - 操作: 使用无效 ticket_code 尝试激活
+  - **Expected**: 返回 404，错误码 TICKET_NOT_FOUND
+
+### Round 3: 边界测试 (4 scenarios)
+
+- [ ] **TC-OTA-301**: 大批量预订
+  - 操作: OTA 连续创建多个 100 units 预订
+  - **Expected**: 库存正确扣减，无并发冲突
+
+- [ ] **TC-OTA-302**: 批量生成票券上限
+  - 操作: 批量生成 100 张票券（上限）
+  - **Expected**: 成功生成，所有票券状态正确
+
+- [ ] **TC-OTA-303**: 防重复核销跨终端
+  - 操作: 同一 QR 在不同场馆扫描
+  - **Expected**: 第二次扫描返回 ALREADY_REDEEMED
+
+- [ ] **TC-OTA-304**: 价格快照锁定
+  - 操作: 批次生成后 → 修改产品定价 → 激活票券
+  - **Expected**: 使用生成时的价格快照，不受后续价格变动影响
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 作者 | 变更内容 |
+|------|------|------|----------|
+| 1.1 | 2025-12-18 | Claude | 添加 QA E2E Checklist |
+| 1.0 | 2025-12-17 | System | 初始版本 |

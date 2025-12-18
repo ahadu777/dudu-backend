@@ -254,3 +254,68 @@
   }
 }
 ```
+
+---
+
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (5 scenarios)
+
+- [ ] **TC-RPT-101**: 按日期范围查询核销记录
+  - 操作: 管理员登录 → 设置日期范围 (from/to) → 调用 GET /reports/redemptions?from=...&to=...
+  - **Expected**: 返回 200，包含 redemptions 数组，每条记录包含 timestamp、ticket_code、function_code，数据在指定日期范围内
+
+- [ ] **TC-RPT-102**: 按场馆筛选核销数据
+  - 操作: 在报表页面 → 选择场馆 (location_id=52) → 调用 GET /reports/redemptions?location_id=52
+  - **Expected**: 所有返回记录的 location_id = 52，其他场馆数据被正确过滤
+
+- [ ] **TC-RPT-103**: 按功能码筛选核销数据
+  - 操作: 选择功能 (ferry) → 调用 GET /reports/redemptions?function_code=ferry
+  - **Expected**: 所有返回记录的 function_code = ferry，其他功能数据被正确过滤
+
+- [ ] **TC-RPT-104**: 分页查询大量数据
+  - 操作: 查询核销记录 → 使用分页参数 (limit=10, offset=0) → 调用 GET /reports/redemptions?limit=10&offset=0
+  - **Expected**: 返回 redemptions.length <= 10，包含 pagination 对象（total、has_more）
+
+- [ ] **TC-RPT-105**: 实时数据可见性
+  - 操作: 完成一次核销 → 立即查询报表
+  - **Expected**: 最新核销记录立即出现在报表中，无延迟
+
+### Round 2: 异常场景 (3 scenarios)
+
+- [ ] **TC-RPT-201**: 无认证访问被拒绝
+  - 操作: 不携带 Authorization header → 调用 GET /reports/redemptions
+  - **Expected**: 返回 401，提示需要认证
+
+- [ ] **TC-RPT-202**: 无效日期格式被拒绝
+  - 操作: 使用错误日期格式 (from=invalid) → 调用 GET /reports/redemptions?from=invalid
+  - **Expected**: 返回 400，提示日期格式错误
+
+- [ ] **TC-RPT-203**: 缺少必需参数
+  - 操作: 不提供 from/to 参数 → 调用 GET /reports/redemptions
+  - **Expected**: 返回 400，提示缺少必需的日期参数
+
+### Round 3: 边界测试 (3 scenarios)
+
+- [ ] **TC-RPT-301**: 多条件组合筛选
+  - 操作: 同时使用 location_id + function_code + product_id 筛选
+  - **Expected**: 返回同时满足所有条件的记录，过滤逻辑正确
+
+- [ ] **TC-RPT-302**: 分页遍历所有数据
+  - 操作: 使用 offset=0 获取第一页 → offset=10 获取第二页 → 持续遍历
+  - **Expected**: 数据不重复不遗漏，offset 正确生效，has_more 准确标识是否有更多数据
+
+- [ ] **TC-RPT-303**: 空结果集
+  - 操作: 查询不存在记录的日期范围或条件
+  - **Expected**: 返回 200，redemptions 数组为空，pagination.total = 0
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 作者 | 变更内容 |
+|------|------|------|----------|
+| 1.1 | 2025-12-18 | AI | 添加 QA E2E Checklist |
+| 1.0 | 2025-12-17 | Initial | 初始版本 |

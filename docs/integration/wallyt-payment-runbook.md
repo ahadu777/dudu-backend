@@ -277,6 +277,68 @@ curl -s -X POST http://localhost:8080/payments/refund \
 
 官方文档: https://openapi.wallyt.com/openapi?code=wallyt
 
+---
+
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Runbook 已有内容生成。
+
+### Round 1: 核心功能 (5 scenarios)
+
+- [ ] **TC-PAY-001**: 创建预支付订单
+  - 操作: 获取用户 token 和 openid → 提交预支付创建请求
+  - **Expected**: 返回 payParams（包含 appId、timeStamp、nonceStr、package、signType、paySign），支付记录创建成功
+
+- [ ] **TC-PAY-002**: 小程序调起支付
+  - 操作: 使用 payParams 调用 wx.requestPayment
+  - **Expected**: 微信支付界面正常打开，用户可完成支付
+
+- [ ] **TC-PAY-003**: 支付回调处理
+  - 操作: 模拟 Wallyt 服务器回调（XML 格式）
+  - **Expected**: 签名验证通过，订单状态更新为 CONFIRMED，库存状态更新（reserved → sold），票券自动生成
+
+- [ ] **TC-PAY-004**: 查询支付状态
+  - 操作: 使用 order_id 查询支付状态
+  - **Expected**: 返回 status: CONFIRMED，包含 paidAt 时间和 transactionId
+
+- [ ] **TC-REFUND-001**: 申请全额退款
+  - 操作: 提交全额退款请求（不指定 refundAmount）
+  - **Expected**: 退款成功，支付记录状态变为 REFUNDED，订单状态变为 CANCELLED，票券状态变为 CANCELLED
+
+### Round 2: 异常场景 (5 scenarios)
+
+- [ ] **TC-PAY-005**: 未认证请求预支付
+  - 操作: 不带 Authorization header 请求预支付
+  - **Expected**: 返回 401 Unauthorized
+
+- [ ] **TC-PAY-006**: 订单不存在
+  - 操作: 使用不存在的 orderId 查询支付状态
+  - **Expected**: 返回 404，错误信息包含 "not found"
+
+- [ ] **TC-PAY-007**: 订单状态不允许支付
+  - 操作: 对已支付或已取消订单创建预支付
+  - **Expected**: 返回 400，错误信息说明订单状态不符
+
+- [ ] **TC-REFUND-002**: 退款金额超限
+  - 操作: 提交退款金额大于订单实付金额的退款请求
+  - **Expected**: 返回 400，错误信息包含 "退款金额超限"
+
+- [ ] **TC-REFUND-003**: 部分退款
+  - 操作: 提交部分退款请求（refundAmount: 50.00）
+  - **Expected**: 退款成功，订单状态保持 CONFIRMED，支付记录包含部分退款记录
+
+### Round 3: 环境验证 (2 scenarios)
+
+- [ ] **TC-ENV-001**: Wallyt 环境变量检查
+  - 操作: 检查 WALLYT_API_URL、WALLYT_MCH_ID、WALLYT_SECRET_KEY 等配置
+  - **Expected**: 所有必需环境变量已配置且有效
+
+- [ ] **TC-ENV-002**: 签名验证机制
+  - 操作: 模拟回调使用错误签名
+  - **Expected**: 签名验证失败，返回错误，订单状态不变
+
+---
+
 ## 故障排查
 
 ### 预支付失败

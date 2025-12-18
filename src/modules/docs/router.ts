@@ -22,7 +22,11 @@ import {
   handleCardsList,
   handleCardDetail,
   handleStoriesList,
-  handleStoryDetail
+  handleStoryDetail,
+  handleSitemap,
+  handleGraph,
+  handleCompliance,
+  handleArchitecture
 } from './handlers';
 
 // Generate detailed test cases for QA - loads from YAML files
@@ -244,1399 +248,13 @@ router.get('/stories/:storyId', handleStoryDetail);
 
 // ============ Visualization Routes ============
 
-router.get('/sitemap', (_req: Request, res: Response) => {
-      try {
-        const sitemap = buildSitemap();
+router.get('/sitemap', handleSitemap);
 
-        let html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Documentation Sitemap</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    h1 {
-      color: #2c3e50;
-      border-bottom: 3px solid #3498db;
-      padding-bottom: 10px;
-    }
-    .nav-links {
-      display: flex;
-      gap: 15px;
-      font-size: 0.9em;
-    }
-    .nav-links a {
-      color: #3498db;
-      text-decoration: none;
-      padding: 5px 10px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-    .nav-links a:hover {
-      background: #e8f4f8;
-    }
-    .subtitle {
-      color: #7f8c8d;
-      margin-bottom: 30px;
-    }
-    .tree {
-      margin-top: 20px;
-    }
-    .prd-node {
-      margin-bottom: 25px;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .prd-header {
-      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-      color: white;
-      padding: 15px 20px;
-      font-size: 1.1em;
-      font-weight: 600;
-      cursor: pointer;
-      user-select: none;
-    }
-    .prd-header:hover {
-      background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
-    }
-    .prd-header a {
-      color: white;
-      text-decoration: none;
-    }
-    .prd-header a:hover {
-      text-decoration: underline;
-    }
-    .prd-content {
-      padding: 20px;
-      background: #fafafa;
-    }
-    .story-node {
-      margin-bottom: 15px;
-      border-left: 3px solid #3498db;
-      padding-left: 15px;
-    }
-    .story-header {
-      font-size: 1em;
-      font-weight: 600;
-      color: #2c3e50;
-      margin-bottom: 8px;
-    }
-    .story-header a {
-      color: #3498db;
-      text-decoration: none;
-    }
-    .story-header a:hover {
-      text-decoration: underline;
-    }
-    .card-list {
-      margin-left: 20px;
-      margin-top: 8px;
-    }
-    .card-item {
-      padding: 6px 12px;
-      margin-bottom: 4px;
-      background: white;
-      border-radius: 4px;
-      font-size: 0.9em;
-      display: inline-block;
-      margin-right: 8px;
-    }
-    .card-item a {
-      color: #27ae60;
-      text-decoration: none;
-    }
-    .card-item a:hover {
-      text-decoration: underline;
-    }
-    .status-badge {
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 0.75em;
-      font-weight: 600;
-      margin-left: 6px;
-    }
-    .status-badge.Done {
-      background: #d4edda;
-      color: #155724;
-    }
-    .status-badge.Ready {
-      background: #cce5ff;
-      color: #004085;
-    }
-    .status-badge.Unknown {
-      background: #e0e0e0;
-      color: #666;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div>
-        <h1>🗺️ Documentation Sitemap</h1>
-        <p class="subtitle">Hierarchical view of PRD → Story → Card relationships</p>
-      </div>
-      <div class="nav-links">
-        <a href="/project-docs">← Project Docs</a>
-        <a href="/prd">PRDs</a>
-        <a href="/stories">Stories</a>
-        <a href="/cards">Cards</a>
-      </div>
-    </div>
+router.get('/graph', handleGraph);
 
-    <div class="tree">`;
+router.get('/compliance', handleCompliance);
 
-        sitemap.forEach(prd => {
-          html += `
-      <details class="prd-node" open>
-        <summary class="prd-header">
-          📋 <a href="/prd/${prd.prd_id}">${prd.prd_id}: ${prd.title}</a>
-          <span class="status-badge ${prd.status}">${prd.status}</span>
-        </summary>
-        <div class="prd-content">`;
-
-          if (prd.stories.length === 0) {
-            html += `<p style="color: #7f8c8d; font-style: italic;">No stories yet</p>`;
-          } else {
-            prd.stories.forEach(story => {
-              html += `
-          <div class="story-node">
-            <div class="story-header">
-              📖 <a href="/stories/${story.id}">${story.id}: ${story.title}</a>
-              <span class="status-badge ${story.status}">${story.status}</span>
-            </div>`;
-
-              if (story.cards.length > 0) {
-                html += `<div class="card-list">`;
-                story.cards.forEach(card => {
-                  html += `<div class="card-item">🎯 <a href="/cards/${card.slug}">${card.slug}</a> <span class="status-badge ${card.status}">${card.status}</span></div>`;
-                });
-                html += `</div>`;
-              } else {
-                html += `<div class="card-list" style="color: #7f8c8d; font-size: 0.85em; font-style: italic;">No cards yet</div>`;
-              }
-
-              html += `
-          </div>`;
-            });
-          }
-
-          html += `
-        </div>
-      </details>`;
-        });
-
-        html += `
-    </div>
-  </div>
-</body>
-</html>`;
-
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
-      } catch (error) {
-        logger.error('Error building sitemap:', error);
-        res.status(500).json({ error: 'Failed to build sitemap' });
-      }
-});
-
-router.get('/graph', (_req: Request, res: Response) => {
-      try {
-        const sitemap = buildSitemap();
-
-        let html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relationship Graph</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1800px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    h1 {
-      color: #2c3e50;
-      border-bottom: 3px solid #3498db;
-      padding-bottom: 10px;
-    }
-    .nav-links {
-      display: flex;
-      gap: 15px;
-      font-size: 0.9em;
-    }
-    .nav-links a {
-      color: #3498db;
-      text-decoration: none;
-      padding: 5px 10px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-    .nav-links a:hover {
-      background: #e8f4f8;
-    }
-    .subtitle {
-      color: #7f8c8d;
-      margin-bottom: 30px;
-    }
-    .controls {
-      margin-bottom: 20px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      display: flex;
-      gap: 15px;
-      align-items: center;
-    }
-    .controls label {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-    .controls select {
-      padding: 5px 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 0.9em;
-    }
-    .graph-container {
-      display: flex;
-      gap: 40px;
-      overflow-x: auto;
-      padding: 30px;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      border-radius: 8px;
-      min-height: 600px;
-    }
-    .column {
-      flex: 0 0 auto;
-      min-width: 280px;
-    }
-    .column-header {
-      text-align: center;
-      font-size: 1.2em;
-      font-weight: 700;
-      color: #2c3e50;
-      margin-bottom: 20px;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 6px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .node {
-      background: white;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      transition: all 0.3s ease;
-      cursor: pointer;
-      position: relative;
-    }
-    .node:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 12px rgba(0,0,0,0.15);
-    }
-    .node.highlighted {
-      background: #fff3cd;
-      border: 2px solid #ffc107;
-      box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
-    }
-    .node.dimmed {
-      opacity: 0.3;
-    }
-    .prd-node {
-      border-left: 5px solid #3498db;
-      background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
-    }
-    .story-node {
-      border-left: 5px solid #2ecc71;
-      background: linear-gradient(135deg, #ffffff 0%, #e8f5e9 100%);
-    }
-    .card-node {
-      border-left: 5px solid #e74c3c;
-      background: linear-gradient(135deg, #ffffff 0%, #ffebee 100%);
-    }
-    .node-title {
-      font-weight: 700;
-      color: #2c3e50;
-      margin-bottom: 5px;
-      font-size: 1em;
-    }
-    .node-subtitle {
-      font-size: 0.85em;
-      color: #7f8c8d;
-      margin-bottom: 8px;
-    }
-    .node-status {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-size: 0.75em;
-      font-weight: 600;
-      margin-top: 5px;
-    }
-    .status-Done, .status-Complete {
-      background: #d4edda;
-      color: #155724;
-    }
-    .status-In.Progress {
-      background: #fff3cd;
-      color: #856404;
-    }
-    .status-Draft, .status-Ready {
-      background: #d1ecf1;
-      color: #0c5460;
-    }
-    .node-connections {
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid #e0e0e0;
-      font-size: 0.8em;
-      color: #7f8c8d;
-    }
-    .stats-box {
-      margin-top: 30px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-    }
-    .stat-item {
-      text-align: center;
-    }
-    .stat-number {
-      font-size: 2em;
-      font-weight: 700;
-      color: #3498db;
-    }
-    .stat-label {
-      font-size: 0.9em;
-      color: #7f8c8d;
-    }
-    .legend {
-      margin-top: 20px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 6px;
-    }
-    .legend-title {
-      font-weight: 700;
-      margin-bottom: 10px;
-      color: #2c3e50;
-    }
-    .legend-items {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .legend-color {
-      width: 20px;
-      height: 20px;
-      border-radius: 4px;
-    }
-    .prd-color { background: #3498db; }
-    .story-color { background: #2ecc71; }
-    .card-color { background: #e74c3c; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>📊 Relationship Graph</h1>
-      <div class="nav-links">
-        <a href="/project-docs">← Hub</a>
-        <a href="/prd">PRDs</a>
-        <a href="/stories">Stories</a>
-        <a href="/cards">Cards</a>
-        <a href="/sitemap">Sitemap</a>
-      </div>
-    </div>
-    <p class="subtitle">Visual representation of PRD → Story → Card relationships</p>
-
-    <div class="controls">
-      <label>Filter by PRD:</label>
-      <select id="prdFilter" onchange="filterByPRD(this.value)">
-        <option value="">All PRDs</option>`;
-
-        sitemap.forEach(prd => {
-          html += `<option value="${prd.prd_id}">${prd.prd_id}: ${prd.title}</option>`;
-        });
-
-        html += `
-      </select>
-      <button onclick="resetFilter()" style="padding: 5px 15px; border: 1px solid #3498db; background: white; color: #3498db; border-radius: 4px; cursor: pointer; font-weight: 600;">Reset</button>
-      <span style="margin-left: auto; color: #7f8c8d; font-size: 0.9em;">Click any node to highlight its connections</span>
-    </div>
-
-    <div class="graph-container">
-      <div class="column">
-        <div class="column-header">📋 PRDs</div>
-        <div id="prd-column">`;
-
-        sitemap.forEach(prd => {
-          const storyCount = prd.stories.length;
-          const cardCount = prd.stories.reduce((sum, story) => sum + story.cards.length, 0);
-
-          html += `
-          <div class="node prd-node" data-type="prd" data-id="${prd.prd_id}" onclick="highlightConnections('prd', '${prd.prd_id}')">
-            <div class="node-title">${prd.prd_id}</div>
-            <div class="node-subtitle">${prd.title}</div>
-            <span class="node-status status-${prd.status.replace(/ /g, '.')}">${prd.status}</span>
-            <div class="node-connections">
-              ${storyCount} ${storyCount === 1 ? 'story' : 'stories'}, ${cardCount} ${cardCount === 1 ? 'card' : 'cards'}
-            </div>
-          </div>`;
-        });
-
-        html += `
-        </div>
-      </div>
-
-      <div class="column">
-        <div class="column-header">📖 User Stories</div>
-        <div id="story-column">`;
-
-        sitemap.forEach(prd => {
-          prd.stories.forEach(story => {
-            const cardCount = story.cards.length;
-            html += `
-          <div class="node story-node" data-type="story" data-id="${story.id}" data-prd="${prd.prd_id}" onclick="highlightConnections('story', '${story.id}')">
-            <div class="node-title">${story.id}</div>
-            <div class="node-subtitle">${story.title}</div>
-            <span class="node-status status-${story.status.replace(/ /g, '.')}">${story.status}</span>
-            <div class="node-connections">
-              PRD: ${prd.prd_id} → ${cardCount} ${cardCount === 1 ? 'card' : 'cards'}
-            </div>
-          </div>`;
-          });
-        });
-
-        html += `
-        </div>
-      </div>
-
-      <div class="column">
-        <div class="column-header">🎯 Implementation Cards</div>
-        <div id="card-column">`;
-
-        sitemap.forEach(prd => {
-          prd.stories.forEach(story => {
-            story.cards.forEach(card => {
-              html += `
-          <div class="node card-node" data-type="card" data-id="${card.slug}" data-story="${story.id}" data-prd="${prd.prd_id}" onclick="highlightConnections('card', '${card.slug}')">
-            <div class="node-title">${card.slug}</div>
-            <div class="node-subtitle">${card.title}</div>
-            <span class="node-status status-${card.status.replace(/ /g, '.')}">${card.status}</span>
-            <div class="node-connections">
-              Story: ${story.id}
-            </div>
-          </div>`;
-            });
-          });
-        });
-
-        html += `
-        </div>
-      </div>
-    </div>
-
-    <div class="legend">
-      <div class="legend-title">Legend</div>
-      <div class="legend-items">
-        <div class="legend-item">
-          <div class="legend-color prd-color"></div>
-          <span>PRD (Product Requirements Document)</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color story-color"></div>
-          <span>User Story</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color card-color"></div>
-          <span>Implementation Card</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="stats-box">
-      <div class="stat-item">
-        <div class="stat-number">${sitemap.length}</div>
-        <div class="stat-label">PRDs</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-number">${sitemap.reduce((sum, prd) => sum + prd.stories.length, 0)}</div>
-        <div class="stat-label">Stories</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-number">${sitemap.reduce((sum, prd) => sum + prd.stories.reduce((s, story) => s + story.cards.length, 0), 0)}</div>
-        <div class="stat-label">Cards</div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let currentHighlight = null;
-
-    function highlightConnections(type, id) {
-      const allNodes = document.querySelectorAll('.node');
-
-      // If clicking the same node, reset
-      if (currentHighlight && currentHighlight.type === type && currentHighlight.id === id) {
-        resetFilter();
-        return;
-      }
-
-      currentHighlight = { type, id };
-
-      allNodes.forEach(node => {
-        node.classList.remove('highlighted', 'dimmed');
-        node.classList.add('dimmed');
-      });
-
-      if (type === 'prd') {
-        // Highlight PRD itself
-        const prdNode = document.querySelector('.prd-node[data-id="' + id + '"]');
-        if (prdNode) {
-          prdNode.classList.remove('dimmed');
-          prdNode.classList.add('highlighted');
-        }
-
-        // Highlight related stories and cards
-        document.querySelectorAll('.story-node[data-prd="' + id + '"]').forEach(node => {
-          node.classList.remove('dimmed');
-          node.classList.add('highlighted');
-        });
-        document.querySelectorAll('.card-node[data-prd="' + id + '"]').forEach(node => {
-          node.classList.remove('dimmed');
-          node.classList.add('highlighted');
-        });
-      } else if (type === 'story') {
-        const storyNode = document.querySelector('.story-node[data-id="' + id + '"]');
-        if (!storyNode) return;
-
-        const prdId = storyNode.dataset.prd;
-
-        // Highlight story itself
-        storyNode.classList.remove('dimmed');
-        storyNode.classList.add('highlighted');
-
-        // Highlight parent PRD
-        const prdNode = document.querySelector('.prd-node[data-id="' + prdId + '"]');
-        if (prdNode) {
-          prdNode.classList.remove('dimmed');
-          prdNode.classList.add('highlighted');
-        }
-
-        // Highlight related cards
-        document.querySelectorAll('.card-node[data-story="' + id + '"]').forEach(node => {
-          node.classList.remove('dimmed');
-          node.classList.add('highlighted');
-        });
-      } else if (type === 'card') {
-        const cardNode = document.querySelector('.card-node[data-id="' + id + '"]');
-        if (!cardNode) return;
-
-        const storyId = cardNode.dataset.story;
-        const prdId = cardNode.dataset.prd;
-
-        // Highlight card itself
-        cardNode.classList.remove('dimmed');
-        cardNode.classList.add('highlighted');
-
-        // Highlight parent story
-        const storyNodeEl = document.querySelector('.story-node[data-id="' + storyId + '"]');
-        if (storyNodeEl) {
-          storyNodeEl.classList.remove('dimmed');
-          storyNodeEl.classList.add('highlighted');
-        }
-
-        // Highlight parent PRD
-        const prdNodeEl = document.querySelector('.prd-node[data-id="' + prdId + '"]');
-        if (prdNodeEl) {
-          prdNodeEl.classList.remove('dimmed');
-          prdNodeEl.classList.add('highlighted');
-        }
-      }
-    }
-
-    function filterByPRD(prdId) {
-      const allNodes = document.querySelectorAll('.node');
-
-      if (!prdId) {
-        resetFilter();
-        return;
-      }
-
-      currentHighlight = null;
-
-      allNodes.forEach(node => {
-        node.classList.remove('highlighted', 'dimmed');
-        node.classList.add('dimmed');
-      });
-
-      // Highlight selected PRD
-      const prdNode = document.querySelector('.prd-node[data-id="' + prdId + '"]');
-      if (prdNode) {
-        prdNode.classList.remove('dimmed');
-      }
-
-      // Highlight related stories and cards
-      document.querySelectorAll('.story-node[data-prd="' + prdId + '"]').forEach(node => {
-        node.classList.remove('dimmed');
-      });
-      document.querySelectorAll('.card-node[data-prd="' + prdId + '"]').forEach(node => {
-        node.classList.remove('dimmed');
-      });
-    }
-
-    function resetFilter() {
-      currentHighlight = null;
-      document.getElementById('prdFilter').value = '';
-      const allNodes = document.querySelectorAll('.node');
-      allNodes.forEach(node => {
-        node.classList.remove('highlighted', 'dimmed');
-      });
-    }
-  </script>
-</body>
-</html>`;
-
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
-      } catch (error) {
-        logger.error('Error building relationship graph:', error);
-        res.status(500).json({ error: 'Failed to build relationship graph' });
-      }
-});
-
-router.get('/compliance', (_req: Request, res: Response) => {
-      try {
-        const report = runComplianceAudit();
-
-        let html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Documentation Compliance Dashboard</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 3px solid #3498db;
-    }
-    h1 {
-      color: #2c3e50;
-      font-size: 2em;
-    }
-    .back-link {
-      color: #3498db;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .back-link:hover {
-      text-decoration: underline;
-    }
-    .score-card {
-      text-align: center;
-      padding: 40px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 12px;
-      margin-bottom: 30px;
-      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
-    }
-    .score-number {
-      font-size: 5em;
-      font-weight: 700;
-      line-height: 1;
-      margin-bottom: 10px;
-    }
-    .score-label {
-      font-size: 1.2em;
-      opacity: 0.9;
-    }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-    .stat-box {
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      border-left: 4px solid #3498db;
-    }
-    .stat-box.error { border-left-color: #e74c3c; }
-    .stat-box.warning { border-left-color: #f39c12; }
-    .stat-box.success { border-left-color: #2ecc71; }
-    .stat-title {
-      font-size: 0.9em;
-      color: #7f8c8d;
-      margin-bottom: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .stat-value {
-      font-size: 2.5em;
-      font-weight: 700;
-      color: #2c3e50;
-    }
-    .stat-subtitle {
-      font-size: 0.9em;
-      color: #7f8c8d;
-      margin-top: 5px;
-    }
-    .section {
-      margin-bottom: 30px;
-    }
-    .section-title {
-      font-size: 1.5em;
-      color: #2c3e50;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e0e0e0;
-    }
-    .quick-wins {
-      background: #e8f5e9;
-      border-left: 4px solid #2ecc71;
-      padding: 20px;
-      border-radius: 6px;
-      margin-bottom: 30px;
-    }
-    .quick-wins h3 {
-      color: #27ae60;
-      margin-bottom: 10px;
-    }
-    .quick-wins ul {
-      list-style: none;
-      padding: 0;
-    }
-    .quick-wins li {
-      padding: 8px 0;
-      padding-left: 25px;
-      position: relative;
-    }
-    .quick-wins li:before {
-      content: "✓";
-      position: absolute;
-      left: 0;
-      color: #27ae60;
-      font-weight: bold;
-    }
-    .violations-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .violations-table th {
-      background: #34495e;
-      color: white;
-      padding: 15px;
-      text-align: left;
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.85em;
-      letter-spacing: 0.5px;
-    }
-    .violations-table td {
-      padding: 15px;
-      border-bottom: 1px solid #ecf0f1;
-    }
-    .violations-table tr:last-child td {
-      border-bottom: none;
-    }
-    .violations-table tr:hover {
-      background: #f8f9fa;
-    }
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 0.75em;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .badge.error {
-      background: #ffebee;
-      color: #c62828;
-    }
-    .badge.warning {
-      background: #fff3e0;
-      color: #ef6c00;
-    }
-    .file-path {
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 0.9em;
-      color: #7f8c8d;
-      background: #f8f9fa;
-      padding: 2px 6px;
-      border-radius: 3px;
-    }
-    .fix-suggestion {
-      background: #e3f2fd;
-      padding: 10px;
-      border-radius: 4px;
-      margin-top: 8px;
-      font-size: 0.9em;
-    }
-    .fix-suggestion strong {
-      color: #1976d2;
-    }
-    .impact {
-      color: #e74c3c;
-      font-style: italic;
-      margin-top: 5px;
-      font-size: 0.9em;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #95a5a6;
-    }
-    .empty-state h3 {
-      font-size: 2em;
-      margin-bottom: 10px;
-    }
-    .timestamp {
-      text-align: right;
-      color: #95a5a6;
-      font-size: 0.9em;
-      margin-top: 30px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>📊 Documentation Compliance Dashboard</h1>
-      <a href="/project-docs" class="back-link">← Back to Docs Hub</a>
-    </div>
-
-    <div class="score-card">
-      <div class="score-number">${report.overall_score}%</div>
-      <div class="score-label">Overall Compliance Score</div>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-title">Total Files</div>
-        <div class="stat-value">${report.total_files}</div>
-        <div class="stat-subtitle">${report.stats.prds.total} PRDs · ${report.stats.stories.total} Stories · ${report.stats.cards.total} Cards</div>
-      </div>
-      <div class="stat-box error">
-        <div class="stat-title">Critical Issues</div>
-        <div class="stat-value">${report.summary.critical_issues}</div>
-        <div class="stat-subtitle">Errors that must be fixed</div>
-      </div>
-      <div class="stat-box warning">
-        <div class="stat-title">Warnings</div>
-        <div class="stat-value">${report.summary.warnings}</div>
-        <div class="stat-subtitle">Issues to address</div>
-      </div>
-      <div class="stat-box success">
-        <div class="stat-title">Compliant Files</div>
-        <div class="stat-value">${report.stats.prds.compliant + report.stats.stories.compliant + report.stats.cards.compliant}</div>
-        <div class="stat-subtitle">Following all rules</div>
-      </div>
-    </div>`;
-
-        if (report.summary.quick_wins.length > 0) {
-          html += `
-    <div class="quick-wins">
-      <h3>🚀 Quick Wins (Fix These First)</h3>
-      <ul>`;
-          report.summary.quick_wins.forEach(win => {
-            html += `<li>${win}</li>`;
-          });
-          html += `
-      </ul>
-    </div>`;
-        }
-
-        if (report.violations.length > 0) {
-          html += `
-    <div class="section">
-      <h2 class="section-title">Compliance Violations (${report.violations.length})</h2>
-      <table class="violations-table">
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>Category</th>
-            <th>File</th>
-            <th>Issue & Fix</th>
-          </tr>
-        </thead>
-        <tbody>`;
-
-          report.violations.forEach(v => {
-            html += `
-          <tr>
-            <td><span class="badge ${v.type}">${v.type}</span></td>
-            <td>${v.category}</td>
-            <td><span class="file-path">${v.file}</span></td>
-            <td>
-              <strong>Issue:</strong> ${v.issue}
-              <div class="fix-suggestion">
-                <strong>Fix:</strong> ${v.fix}
-              </div>
-              <div class="impact">⚠️ Impact: ${v.impact}</div>
-            </td>
-          </tr>`;
-          });
-
-          html += `
-        </tbody>
-      </table>
-    </div>`;
-        } else {
-          html += `
-    <div class="empty-state">
-      <h3>🎉 Perfect Compliance!</h3>
-      <p>All documentation follows the standards. Great work!</p>
-    </div>`;
-        }
-
-        html += `
-    <div class="timestamp">
-      Last updated: ${new Date(report.timestamp).toLocaleString()}
-    </div>
-  </div>
-</body>
-</html>`;
-
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
-      } catch (error) {
-        logger.error('Error generating compliance report:', error);
-        res.status(500).json({ error: 'Failed to generate compliance report' });
-      }
-});
-
-router.get('/architecture', (_req: Request, res: Response) => {
-      try {
-        const filePath = path.join(process.cwd(), 'docs', 'product-architecture-flowchart.md');
-
-        if (!fs.existsSync(filePath)) {
-          return res.status(404).json({ error: 'Architecture document not found' });
-        }
-
-        const content = fs.readFileSync(filePath, 'utf-8');
-
-        // Extract title from first H1
-        const titleMatch = content.match(/^# (.+)$/m);
-        const title = titleMatch ? titleMatch[1] : 'Product Architecture';
-
-        // Convert markdown to HTML with Mermaid support
-        let htmlContent = content;
-
-        // Extract and preserve code blocks first
-        const codeBlocks: string[] = [];
-        let mermaidBlockCount = 0;
-        htmlContent = htmlContent.replace(/```(\w+)?\n([\s\S]*?)```/g, (_match, lang, code) => {
-          const index = codeBlocks.length;
-          if (lang === 'mermaid') {
-            mermaidBlockCount++;
-            const mermaidCode = code.trim();
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/73d11adb-3f0a-41a0-938a-bc91c91fadce',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.ts:2970',message:'Mermaid block extracted',data:{blockIndex:index,mermaidBlockCount,codeLength:mermaidCode.length,codePreview:mermaidCode.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
-            codeBlocks.push(`<div class="mermaid">\n${mermaidCode}\n</div>`);
-          } else {
-            codeBlocks.push(`<pre><code class="language-${lang || 'text'}">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`);
-          }
-          return `\n__CODE_BLOCK_${index}__\n`;
-        });
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/73d11adb-3f0a-41a0-938a-bc91c91fadce',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.ts:2976',message:'Total mermaid blocks found',data:{totalMermaidBlocks:mermaidBlockCount,totalCodeBlocks:codeBlocks.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-
-        // Escape remaining HTML
-        htmlContent = htmlContent
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-
-        // Headers
-        htmlContent = htmlContent.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
-        htmlContent = htmlContent.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-        htmlContent = htmlContent.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-        htmlContent = htmlContent.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-        // Bold and Italic
-        htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        htmlContent = htmlContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-        // Inline code
-        htmlContent = htmlContent.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-        // Links
-        htmlContent = htmlContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-
-        // Blockquotes
-        htmlContent = htmlContent.replace(/^&gt; (.*$)/gim, '<blockquote>$1</blockquote>');
-
-        // Horizontal rules
-        htmlContent = htmlContent.replace(/^---$/gim, '<hr>');
-
-        // Tables
-        htmlContent = htmlContent.replace(/^\|(.+)\|$/gim, (match) => {
-          const cells = match.split('|').filter(c => c.trim());
-          if (cells.every(c => /^[-:]+$/.test(c.trim()))) {
-            return ''; // Skip separator row
-          }
-          const row = cells.map(c => `<td>${c.trim()}</td>`).join('');
-          return `<tr>${row}</tr>`;
-        });
-        htmlContent = htmlContent.replace(/(<tr>.*<\/tr>\n?)+/g, '<table class="data-table">$&</table>');
-
-        // Paragraphs - but not around code block placeholders
-        htmlContent = htmlContent.replace(/\n\n(?!__CODE_BLOCK)/g, '</p>\n<p>');
-        htmlContent = '<p>' + htmlContent + '</p>';
-        htmlContent = htmlContent.replace(/<p>\s*<(h[1-4]|table|blockquote|hr)/g, '<$1');
-        htmlContent = htmlContent.replace(/<\/(h[1-4]|table|blockquote)>\s*<\/p>/g, '</$1>');
-        htmlContent = htmlContent.replace(/<p>\s*__CODE_BLOCK_/g, '__CODE_BLOCK_');
-        htmlContent = htmlContent.replace(/__CODE_BLOCK_(\d+)__\s*<\/p>/g, '__CODE_BLOCK_$1__');
-        htmlContent = htmlContent.replace(/<p>\s*<\/p>/g, '');
-
-        // Restore code blocks AFTER all other processing
-        codeBlocks.forEach((block, index) => {
-          htmlContent = htmlContent.replace(`__CODE_BLOCK_${index}__`, block);
-          // #region agent log
-          if (block.includes('class="mermaid"')) {
-            const blockPreview = block.substring(0, 200).replace(/\n/g, '\\n');
-            const hasNewlines = block.includes('\n');
-            fetch('http://127.0.0.1:7242/ingest/73d11adb-3f0a-41a0-938a-bc91c91fadce',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.ts:3036',message:'Mermaid block restored to HTML',data:{blockIndex:index,blockLength:block.length,hasMermaidClass:block.includes('class="mermaid"'),hasNewlines,blockPreview},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          }
-          // #endregion
-        });
-
-        const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js" onload="window.mermaidScriptLoaded = true;"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .nav-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    .nav-links a {
-      color: #3498db;
-      text-decoration: none;
-      margin-left: 15px;
-    }
-    .nav-links a:hover { text-decoration: underline; }
-    h1 { color: #2c3e50; margin-bottom: 20px; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-    h2 { color: #34495e; margin: 30px 0 15px; padding-top: 20px; border-top: 1px solid #eee; }
-    h3 { color: #7f8c8d; margin: 20px 0 10px; }
-    h4 { color: #95a5a6; margin: 15px 0 10px; }
-    p { margin: 10px 0; }
-    .mermaid {
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-      overflow-x: auto;
-    }
-    pre {
-      background: #f4f4f4;
-      padding: 15px;
-      border-radius: 4px;
-      overflow-x: auto;
-      margin: 15px 0;
-    }
-    code {
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 0.9em;
-    }
-    :not(pre) > code {
-      background: #f4f4f4;
-      padding: 2px 6px;
-      border-radius: 3px;
-      color: #c7254e;
-    }
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-    }
-    .data-table td, .data-table th {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
-    .data-table tr:nth-child(1) {
-      background: #3498db;
-      color: white;
-      font-weight: bold;
-    }
-    .data-table tr:nth-child(even) { background: #f9f9f9; }
-    blockquote {
-      border-left: 4px solid #3498db;
-      padding-left: 15px;
-      margin: 15px 0;
-      color: #666;
-      background: #f8f9fa;
-      padding: 10px 15px;
-      border-radius: 0 4px 4px 0;
-    }
-    hr { border: none; border-top: 1px solid #eee; margin: 30px 0; }
-    a { color: #3498db; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="nav-bar">
-      <div></div>
-      <div class="nav-links">
-        <a href="/project-docs">← Project Docs</a>
-        <a href="/prd">PRDs</a>
-        <a href="/stories">Stories</a>
-        <a href="/cards">Cards</a>
-        <a href="/sitemap">Sitemap</a>
-      </div>
-    </div>
-
-    ${htmlContent}
-  </div>
-
-  <script>
-    // #region agent log
-    console.log('[DEBUG] Script execution started');
-    console.log('[DEBUG] Document ready state:', document.readyState);
-    console.log('[DEBUG] Mermaid divs found:', document.querySelectorAll('.mermaid').length);
-    // #endregion
-    
-    function initMermaid() {
-      // #region agent log
-      console.log('[DEBUG] initMermaid called');
-      console.log('[DEBUG] typeof mermaid:', typeof mermaid);
-      console.log('[DEBUG] window.mermaidScriptLoaded:', window.mermaidScriptLoaded);
-      const mermaidDivs = document.querySelectorAll('.mermaid');
-      console.log('[DEBUG] Mermaid divs found:', mermaidDivs.length);
-      if (mermaidDivs.length > 0) {
-        console.log('[DEBUG] First mermaid div content preview:', mermaidDivs[0].textContent.substring(0, 100));
-      }
-      // #endregion
-      
-      if (typeof mermaid !== 'undefined') {
-        try {
-          // #region agent log
-          console.log('[DEBUG] Initializing Mermaid...');
-          // #endregion
-          // Initialize without startOnLoad since we'll manually run
-          mermaid.initialize({ startOnLoad: false, theme: 'default' });
-          // #region agent log
-          console.log('[DEBUG] Mermaid initialized, now running render...');
-          // #endregion
-          
-          // Manually run to render all diagrams
-          mermaid.run({
-            querySelector: '.mermaid',
-            postRenderCallback: function(id) {
-              // #region agent log
-              console.log('[DEBUG] Mermaid diagram rendered:', id);
-              // #endregion
-            }
-          }).then(function() {
-            // #region agent log
-            const rendered = document.querySelectorAll('.mermaid svg').length;
-            console.log('[DEBUG] Mermaid.run() completed. Rendered diagrams:', rendered);
-            // #endregion
-          }).catch(function(error) {
-            // #region agent log
-            console.error('[DEBUG] Mermaid.run() error:', error);
-            // #endregion
-          });
-          
-          return true;
-        } catch (error) {
-          // #region agent log
-          console.error('[DEBUG] Mermaid initialization error:', error);
-          // #endregion
-          return false;
-        }
-      } else {
-        // #region agent log
-        console.error('[DEBUG] Mermaid library not loaded yet');
-        // #endregion
-        return false;
-      }
-    }
-    
-    function waitForMermaidAndInit() {
-      // #region agent log
-      console.log('[DEBUG] waitForMermaidAndInit called');
-      console.log('[DEBUG] typeof mermaid:', typeof mermaid);
-      console.log('[DEBUG] window.mermaidScriptLoaded:', window.mermaidScriptLoaded);
-      // #endregion
-      
-      if (typeof mermaid !== 'undefined' || window.mermaidScriptLoaded) {
-        if (initMermaid()) {
-          // #region agent log
-          console.log('[DEBUG] Mermaid initialized successfully');
-          // #endregion
-          return;
-        }
-      }
-      
-      // Poll until Mermaid is loaded
-      const maxAttempts = 50;
-      let attempts = 0;
-      const pollInterval = setInterval(function() {
-        attempts++;
-        // #region agent log
-        if (attempts % 10 === 0) {
-          console.log('[DEBUG] Polling attempt', attempts, 'typeof mermaid:', typeof mermaid);
-        }
-        // #endregion
-        
-        if (typeof mermaid !== 'undefined') {
-          clearInterval(pollInterval);
-          initMermaid();
-        } else if (attempts >= maxAttempts) {
-          clearInterval(pollInterval);
-          // #region agent log
-          console.error('[DEBUG] Mermaid failed to load after', maxAttempts, 'attempts');
-          // #endregion
-        }
-      }, 100);
-    }
-    
-    // Wait for DOM to be ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        // #region agent log
-        console.log('[DEBUG] DOMContentLoaded fired');
-        // #endregion
-        waitForMermaidAndInit();
-      });
-    } else {
-      // DOM already loaded
-      // #region agent log
-      console.log('[DEBUG] DOM already loaded');
-      // #endregion
-      waitForMermaidAndInit();
-    }
-    
-    // Also listen for script load event as backup
-    window.addEventListener('load', function() {
-      // #region agent log
-      console.log('[DEBUG] window.load event fired');
-      // #endregion
-      if (typeof mermaid !== 'undefined' && document.querySelectorAll('.mermaid svg').length === 0) {
-        // #region agent log
-        console.log('[DEBUG] Window loaded but diagrams not rendered, retrying');
-        // #endregion
-        initMermaid();
-      }
-});
-  </script>
-</body>
-</html>`;
-
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
-      } catch (error) {
-        logger.error('Error loading architecture document:', error);
-        res.status(500).json({ error: 'Failed to load architecture document' });
-      }
-});
+router.get('/architecture', handleArchitecture);
 
 router.get('/coverage', (req: Request, res: Response) => {
       try {
@@ -2171,6 +789,61 @@ router.get('/coverage', (req: Request, res: Response) => {
       line-height: 1.5;
     }
 
+    .tc-request {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 12px 0;
+      padding: 10px;
+      background: #f0f5ff;
+      border-radius: 6px;
+      font-family: monospace;
+    }
+    .tc-request .method {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.85em;
+      color: white;
+    }
+    .tc-request .method.get { background: #52c41a; }
+    .tc-request .method.post { background: #1890ff; }
+    .tc-request .method.put { background: #fa8c16; }
+    .tc-request .method.delete { background: #ff4d4f; }
+    .tc-request .method.patch { background: #722ed1; }
+    .tc-request .endpoint {
+      color: #262626;
+      font-size: 0.9em;
+    }
+
+    .tc-body {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .request-body {
+      margin: 0;
+      font-size: 0.85em;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .steps-list {
+      margin: 0;
+      padding-left: 20px;
+      color: #555;
+    }
+    .steps-list li {
+      margin: 4px 0;
+      line-height: 1.5;
+    }
+
     /* AC Reference */
     .ac-ref {
       background: #e6f7ff;
@@ -2263,13 +936,13 @@ router.get('/coverage', (req: Request, res: Response) => {
     <!-- Tab 导航 -->
     <div class="tabs">
       <a href="/coverage?tab=prd" class="tab ${isPrdTab ? 'active' : ''}">PRD Coverage</a>
-      <a href="/coverage?tab=story" class="tab ${isStoryTab ? 'active' : ''}">Story E2E</a>
+      <a href="/coverage?tab=story" class="tab ${isStoryTab ? 'active' : ''}">测试用例</a>
     </div>
 
     <!-- Header Banner -->
     <div class="header-banner">
-      <h1>${isPrdTab ? '🤖 PRD 自动化测试' : '📖 Story E2E 测试'}</h1>
-      <p>${isPrdTab ? 'Newman 自动执行的 API 测试，基于 PRD 验收标准' : 'Runbook 定义的端到端测试场景，包含 Given-When-Then'}</p>
+      <h1>${isPrdTab ? '🤖 PRD 自动化测试' : '📝 QA E2E 测试清单'}</h1>
+      <p>${isPrdTab ? 'Newman 自动执行的 API 测试，基于 PRD 验收标准' : 'QA 手动端到端测试清单，按 Round 分组'}</p>
     </div>
 
     <!-- 统计卡片 -->
@@ -2286,44 +959,32 @@ router.get('/coverage', (req: Request, res: Response) => {
       </div>
       <div class="stat-card">
         <div class="number">${prdStats.total}</div>
-        <div class="label">Test Requests</div>
-      </div>
-      <div class="stat-card">
-        <div class="number">${prdStats.passed + prdStats.failed}</div>
         <div class="label">Assertions</div>
       </div>
       <div class="stat-card ${prdStats.total > 0 && prdStats.failed === 0 ? 'success' : 'danger'}">
         <div class="number">${prdStats.total > 0 ? ((prdStats.passed / prdStats.total * 100).toFixed(1)) : 0}%</div>
         <div class="label">Success Rate</div>
       </div>
-      <div class="stat-card primary">
-        <div class="number">&lt;500ms</div>
-        <div class="label">Response Time</div>
-      </div>
       ` : `
       <div class="stat-card">
         <div class="number">${storyTestData.length}</div>
-        <div class="label">Total Stories</div>
-      </div>
-      <div class="stat-card success">
-        <div class="number">${storyTestData.filter(s => s.stats.failed === 0 && s.stats.pending === 0).length}</div>
-        <div class="label">Fully Covered</div>
+        <div class="label">Stories</div>
       </div>
       <div class="stat-card">
         <div class="number">${storyStats.total}</div>
-        <div class="label">Test Scenarios</div>
+        <div class="label">Test Cases</div>
       </div>
       <div class="stat-card success">
         <div class="number">${storyStats.passed}</div>
-        <div class="label">Passed</div>
+        <div class="label">Checked</div>
       </div>
       <div class="stat-card warning">
         <div class="number">${storyStats.pending}</div>
-        <div class="label">Pending</div>
+        <div class="label">Unchecked</div>
       </div>
-      <div class="stat-card danger">
-        <div class="number">${storyStats.failed}</div>
-        <div class="label">Failed</div>
+      <div class="stat-card ${storyStats.total > 0 ? (storyStats.passed / storyStats.total * 100 >= 80 ? 'success' : 'warning') : ''}">
+        <div class="number">${storyStats.total > 0 ? ((storyStats.passed / storyStats.total * 100).toFixed(0)) : 0}%</div>
+        <div class="label">Progress</div>
       </div>
       `}
     </div>
@@ -2373,8 +1034,24 @@ router.get('/coverage', (req: Request, res: Response) => {
               <span class="tc-priority ${tc.priority.toLowerCase()}">${tc.priority}</span>
               <span class="tc-status ${tc.status}">${tc.status === 'passed' ? '✅' : tc.status === 'failed' ? '❌' : '⏸️'}</span>
             </div>
+            ${tc.method && tc.endpoint ? `
+            <div class="tc-request">
+              <span class="method ${tc.method.toLowerCase()}">${tc.method}</span>
+              <code class="endpoint">${tc.endpoint}</code>
+            </div>
+            ` : ''}
+            ${tc.requestBody ? `
+            <div class="tc-section tc-body">
+              <h5>📤 请求体</h5>
+              <pre class="request-body">${tc.requestBody.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+            </div>
+            ` : ''}
             <div class="tc-section">
-              <h5>✅ 断言 (${tc.expected.length})</h5>
+              <h5>🧪 测试步骤 (${tc.steps.length})</h5>
+              <ol class="steps-list">${tc.steps.map(s => `<li>${s}</li>`).join('')}</ol>
+            </div>
+            <div class="tc-section">
+              <h5>✅ 断言结果 (${tc.expected.length})</h5>
               <ul class="assertions-list">${tc.expected.map(e => `<li>${e}</li>`).join('')}</ul>
             </div>
           </div>
@@ -2384,11 +1061,11 @@ router.get('/coverage', (req: Request, res: Response) => {
     </div>
     `).join('') : '<div class="empty-state"><div class="icon">📭</div><p>暂无 PRD 测试数据，请先运行 Newman 测试</p></div>') : ''}
 
-    <!-- Story E2E 测试 (Runbook) -->
+    <!-- QA E2E Checklist -->
     ${isStoryTab ? `
     <div class="section-header">
-      <h2>Story Test Scenarios</h2>
-      <p>End-to-end test scenarios with Given-When-Then format</p>
+      <h2>QA E2E Checklist</h2>
+      <p>Runbook E2E test scenarios defined in QA checklist format</p>
     </div>
     ` : ''}
     ${isStoryTab ? (storyTestData.length > 0 ? storyTestData.map((story: StoryTestData, idx: number) => `
@@ -2399,51 +1076,36 @@ router.get('/coverage', (req: Request, res: Response) => {
           <h3>${story.storyId} ${story.storyTitle}</h3>
         </div>
         <div class="test-group-meta">
-          <span class="badge badge-blue">${story.stats.total} 用例</span>
-          <span class="badge ${story.stats.pending > 0 ? 'badge-gray' : 'badge-green'}">${story.stats.passed}/${story.stats.total} 通过</span>
-          <code class="run-cmd">${story.runCommand}</code>
-          <button class="copy-btn" data-cmd="${story.runCommand}">复制</button>
+          <span class="badge badge-blue">${story.qaE2eChecklist?.stats.total || 0} test cases</span>
+          <span class="badge ${(story.qaE2eChecklist?.stats.unchecked || 0) > 0 ? 'badge-gray' : 'badge-green'}">${story.qaE2eChecklist?.stats.checked || 0}/${story.qaE2eChecklist?.stats.total || 0} checked</span>
         </div>
       </div>
       <div class="test-group-body" id="body-story-${idx}">
         <div class="test-cases-list">
-          ${story.modules.map(mod => mod.testCases.map((tc: RunbookTestCase) => `
-          <div class="test-case-card ${tc.priority.toLowerCase()} ${tc.status}" data-priority="${tc.priority}" data-name="${tc.name}">
-            <div class="tc-header">
-              <span class="tc-id">${tc.id}</span>
-              <span class="tc-name">${tc.name}</span>
-              <span class="ac-ref">${tc.acReference}</span>
-              <span class="tc-priority ${tc.priority.toLowerCase()}">${tc.priority}</span>
-              <span class="tc-status ${tc.status}">${tc.status === 'passed' ? '✅ 通过' : tc.status === 'failed' ? '❌ 失败' : '⏸️ 待测'}</span>
-            </div>
-            <div class="tc-section">
-              <h5>📋 测试场景</h5>
-              <div class="gwt-block">
-                <div class="gwt-given"><strong>Given:</strong> ${tc.given}</div>
-                <div class="gwt-when"><strong>When:</strong> ${tc.when}</div>
-                <div class="gwt-then"><strong>Then:</strong> ${tc.then}</div>
+          ${(story.qaE2eChecklist?.rounds || []).map((round: { name: string; scenarioCount: number; testCases: Array<{ id: string; name: string; operation: string; expected: string; checked: boolean }> }) => `
+          <div class="round-section">
+            <div class="round-header"><strong>${round.name}</strong> <span class="badge badge-outline">${round.testCases.length} cases</span></div>
+            ${round.testCases.map((tc: { id: string; name: string; operation: string; expected: string; checked: boolean }) => `
+            <div class="test-case-card ${tc.checked ? 'passed' : 'pending'}">
+              <div class="tc-header">
+                <span class="tc-id">${tc.id}</span>
+                <span class="tc-name">${tc.name}</span>
+                <span class="tc-status ${tc.checked ? 'passed' : 'pending'}">${tc.checked ? 'Checked' : 'Unchecked'}</span>
               </div>
+              ${tc.operation || tc.expected ? `
+              <div class="tc-section">
+                ${tc.operation ? `<div class="tc-detail"><strong>Operation:</strong> ${tc.operation}</div>` : ''}
+                ${tc.expected ? `<div class="tc-detail"><strong>Expected:</strong> ${tc.expected}</div>` : ''}
+              </div>
+              ` : ''}
             </div>
-            ${tc.command ? `
-            <div class="tc-section">
-              <h5>🔧 执行命令</h5>
-              <pre class="command-block"><code>${tc.command.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
-            </div>
-            ` : ''}
-            ${tc.checkpoints.length > 0 ? `
-            <div class="tc-section">
-              <h5>✅ 预期结果（${tc.checkpoints.length} 个验证点）</h5>
-              <ul class="assertions-list">
-                ${tc.checkpoints.map(cp => `<li>${cp}</li>`).join('')}
-              </ul>
-            </div>
-            ` : ''}
+            `).join('')}
           </div>
-          `).join('')).join('')}
+          `).join('')}
         </div>
       </div>
     </div>
-    `).join('') : '<div class="empty-state"><div class="icon">📭</div><p>暂无 Story 测试数据，请先创建 Runbook</p></div>') : ''}
+    `).join('') : '<div class="empty-state"><div class="icon">📭</div><p>No QA E2E Checklist found. Please add checklist to your Runbooks.</p></div>') : ''}
 
   </div>
 

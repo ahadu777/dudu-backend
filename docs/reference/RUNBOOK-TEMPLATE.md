@@ -334,6 +334,121 @@ curl -s -X POST http://localhost:8080/orders \
 
 ---
 
+## QA E2E Checklist 格式
+
+### 概述
+
+除了基于 Card AC 的 Test Scenarios，Runbook 还可以包含 **QA E2E Checklist** 部分，专门用于 QA 手动端到端测试。
+
+**两种测试内容的区别：**
+
+| 维度 | Test Scenarios (Card AC) | QA E2E Checklist |
+|------|-------------------------|------------------|
+| **来源** | Card 验收标准 | Story 业务流程 |
+| **格式** | Module + TC 表格 | Round + Checklist |
+| **用途** | API 级别验证 | 端到端手动测试 |
+| **执行者** | 可自动化（Newman） | QA 手动执行 |
+| **页面展示** | PRD Coverage Tab | 测试用例 Tab |
+
+### QA E2E Checklist 结构
+
+```markdown
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (N scenarios)
+
+- [ ] **TC-{MODULE}-{NNN}**: {测试名称}
+  - 操作: {具体步骤，用 → 连接}
+  - **Expected**: {预期结果}
+
+### Round 2: 异常场景 (N scenarios)
+
+- [ ] **TC-{MODULE}-{NNN}**: {测试名称}
+  - 操作: {异常操作步骤}
+  - **Expected**: {错误处理预期}
+
+### Round 3: 边界测试 (N scenarios)  <!-- 可选 -->
+
+- [ ] **TC-{MODULE}-{NNN}**: {测试名称}
+  - 操作: {边界条件操作}
+  - **Expected**: {边界处理预期}
+```
+
+### Round 分类标准
+
+| Round | 内容 | 必需 |
+|-------|------|------|
+| **Round 1: 核心功能** | Happy path，正常业务流程 | ✅ 必需 |
+| **Round 2: 异常场景** | 错误处理、网络异常、权限问题 | ✅ 必需 |
+| **Round 3: 边界测试** | 边界值、并发、性能 | ⚠️ 可选 |
+
+### TC ID 命名规则
+
+| 部分 | 规则 | 示例 |
+|------|------|------|
+| `TC-` | 固定前缀 | TC- |
+| `{MODULE}` | 功能模块缩写（2-4字母大写） | LOGIN, PAY, ORDER, VERIFY |
+| `{NNN}` | 3位序号，从 001 开始 | 001, 002, 003 |
+
+**常用 MODULE 缩写**:
+- `LOGIN` - 登录相关
+- `ORDER` - 订单相关
+- `PAY` - 支付相关
+- `VERIFY` - 核销相关
+- `PROD` - 产品/商品相关
+- `USER` - 用户相关
+
+### QA E2E Checklist 示例
+
+```markdown
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (4 scenarios)
+
+- [ ] **TC-PROD-001**: 浏览商品列表
+  - 操作: 打开小程序 → 进入商品列表页
+  - **Expected**: 显示所有可购买商品，包含价格和库存状态
+
+- [ ] **TC-ORDER-001**: 创建订单
+  - 操作: 选择商品 → 填写联系人信息 → 点击"去支付"
+  - **Expected**: 订单创建成功，跳转支付页面
+
+- [ ] **TC-PAY-001**: 完成支付
+  - 操作: 确认订单信息 → 完成微信支付
+  - **Expected**: 支付成功，订单状态变为 paid
+
+- [ ] **TC-VERIFY-001**: 核销票券
+  - 操作: 商家扫描用户二维码 → 点击确认核销
+  - **Expected**: 核销成功，票券状态变为已使用
+
+### Round 2: 异常场景 (2 scenarios)
+
+- [ ] **TC-PAY-002**: 支付取消
+  - 操作: 在支付界面点击取消
+  - **Expected**: 返回订单页，订单状态保持 pending
+
+- [ ] **TC-VERIFY-002**: 重复核销
+  - 操作: 扫描已核销的票券二维码
+  - **Expected**: 提示"该票券已核销"，不允许重复核销
+```
+
+### 生成流程
+
+1. 读取对应的 Story 文档（`docs/stories/US-xxx.md`）
+2. 从 Story 的 Given-When-Then 提取业务流程
+3. 生成 QA E2E 测试用例：
+   - Round 1: 核心功能（正常流程）
+   - Round 2: 异常场景（错误处理）
+   - Round 3: 边界测试（可选）
+4. 追加到 Runbook 文件的 `## 🧪 QA E2E Checklist` 部分
+5. 人工审核/完善
+
+---
+
 ## 与 /coverage 页面的集成
 
 ### AC 映射规则

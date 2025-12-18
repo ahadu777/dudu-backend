@@ -187,3 +187,54 @@ curl -X POST $BASE_URL/api/ota/tickets/bulk-generate \
 6. **Multi-Partner Support**: Partner isolation ensures data security
 
 This runbook validates complete B2B2C reseller billing functionality with real database persistence and comprehensive error handling.
+
+---
+
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Runbook 已有内容生成。
+
+### Round 1: 核心功能 (5 scenarios)
+
+- [ ] **TC-OTA-001**: 生成 B2B2C Reseller 批次
+  - 操作: 提交批量生成请求（包含 reseller_metadata 和 batch_metadata）
+  - **Expected**: 返回 201，包含 batch_id 和 5 张预生成票券及二维码
+
+- [ ] **TC-OTA-002**: 验证数据库持久化
+  - 操作: 在数据库中查询 ota_ticket_batches 表
+  - **Expected**: 找到对应批次记录，reseller_metadata 正确存储
+
+- [ ] **TC-OTA-003**: 验证 JSON 索引性能
+  - 操作: 使用 JSON_EXTRACT 查询 campaign_type = 'flash_sale'
+  - **Expected**: 查询成功返回包含新批次的统计数量
+
+- [ ] **TC-OTA-004**: 激活票券（工作日定价）
+  - 操作: 激活票券，customer_type=adult，visit_date 为工作日（2025-11-19）
+  - **Expected**: 返回 200，status: ACTIVE，ticket_price: 288 HKD（工作日成人价）
+
+- [ ] **TC-OTA-005**: 激活票券（周末定价）
+  - 操作: 激活票券，customer_type=child，visit_date 为周末（2025-11-23）
+  - **Expected**: 返回 200，ticket_price: 218 HKD（儿童价 188 + 周末溢价 30）
+
+### Round 2: 异常场景 (3 scenarios)
+
+- [ ] **TC-OTA-006**: 缺少 API Key 认证
+  - 操作: 不带 X-API-Key header 提交批量生成请求
+  - **Expected**: 返回 401，错误信息 "API_KEY_REQUIRED"
+
+- [ ] **TC-OTA-007**: 无效票券码激活
+  - 操作: 使用不存在的票券码进行激活
+  - **Expected**: 返回 404 或 400，错误信息包含票券不存在提示
+
+- [ ] **TC-OTA-008**: Mock 模式行为验证
+  - 操作: 切换到 USE_DATABASE=false，提交相同批量生成请求
+  - **Expected**: 返回可预测的票券码（如 CRUISE-2025-PREMIUM-50001），无数据库持久化
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 作者 | 变更内容 |
+|------|------|------|----------|
+| 1.1 | 2025-12-18 | Claude | 新增 QA E2E Checklist |
+| 1.0 | 2024-12-06 | System | 初始版本 |

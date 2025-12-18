@@ -5,6 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { loadAllPrdCollections, findRequestByTestName } from './postmanParser';
 
 export interface NewmanTestCase {
   name: string;
@@ -326,6 +327,11 @@ export interface TestCaseDetail {
   feature: string;      // Feature 1: Ticket Activation
   priority: 'P0' | 'P1' | 'P2';
   status: 'passed' | 'failed' | 'pending';
+  // 请求信息
+  method?: string;      // GET, POST, PUT, DELETE
+  endpoint?: string;    // /api/tickets/:id
+  requestBody?: string; // JSON body (if any)
+  // 测试信息
   preconditions: string[];
   steps: string[];
   expected: string[];
@@ -365,6 +371,9 @@ export function extractPrdTestData(reportsDir: string): PrdTestData[] {
   const reports = parseAllNewmanReports(reportsDir);
   const prdDataList: PrdTestData[] = [];
 
+  // 加载所有 Postman Collections 获取请求详情
+  const collections = loadAllPrdCollections();
+
   for (const report of reports) {
     // 只处理真正的 PRD 测试，跳过 Story 测试（US-xxx）
     if (!report.prdId) {
@@ -373,6 +382,7 @@ export function extractPrdTestData(reportsDir: string): PrdTestData[] {
 
     const prdId = report.prdId;
     const prdNum = prdId.replace(/\D/g, '').padStart(3, '0');
+    const collection = collections.get(prdId);
 
     const testCases: TestCaseDetail[] = [];
     let tcIndex = 1;
@@ -390,6 +400,9 @@ export function extractPrdTestData(reportsDir: string): PrdTestData[] {
             ? matchingSuite.testCases.map(tc => tc.passed ? `✓ ${tc.name}` : `✗ ${tc.name}`)
             : [ac.passed ? '响应状态码正确' : '测试失败，需修复', '数据格式符合预期'];
 
+          // 查找对应的请求信息
+          const request = collection ? findRequestByTestName(collection, ac.description) : undefined;
+
           testCases.push({
             id: `TC-${prdNum}-${String(tcIndex++).padStart(2, '0')}`,
             name: ac.description,
@@ -397,6 +410,9 @@ export function extractPrdTestData(reportsDir: string): PrdTestData[] {
             feature: feature.name,
             priority: inferPriority(ac.acId),
             status: ac.passed ? 'passed' : 'failed',
+            method: request?.method,
+            endpoint: request?.url,
+            requestBody: request?.body,
             preconditions: ['服务已启动', '测试数据已准备'],
             steps: assertions,
             expected: expectedResults
@@ -411,6 +427,9 @@ export function extractPrdTestData(reportsDir: string): PrdTestData[] {
         // 从测试用例名称生成更详细的预期结果
         const assertions = suite.testCases.map(tc => `✓ ${tc.name}`);
 
+        // 查找对应的请求信息
+        const request = collection ? findRequestByTestName(collection, suite.name) : undefined;
+
         testCases.push({
           id: `TC-${prdNum}-${String(tcIndex++).padStart(2, '0')}`,
           name: suite.name,
@@ -418,6 +437,9 @@ export function extractPrdTestData(reportsDir: string): PrdTestData[] {
           feature: report.name,
           priority: 'P1',
           status: suitePassed ? 'passed' : 'failed',
+          method: request?.method,
+          endpoint: request?.url,
+          requestBody: request?.body,
           preconditions: ['服务已启动', '测试数据已准备'],
           steps: suite.testCases.map(tc => `验证: ${tc.name}`),
           expected: assertions

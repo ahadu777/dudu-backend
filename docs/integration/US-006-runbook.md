@@ -239,9 +239,52 @@
 - **审计日志**: 所有认证事件都会记录
 - **速率限制**: 生产环境需考虑实现
 
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (3 scenarios)
+
+- [ ] **TC-AUTH-E2E-001**: 操作员登录成功
+  - 操作: 提供有效凭证 (alice/secret123) → POST /operators/login
+  - **Expected**: 返回 200，包含有效的 JWT operator_token
+
+- [ ] **TC-AUTH-E2E-002**: 带 Token 的扫描操作
+  - 操作: 使用有效 operator_token → POST /venue/scan 扫描票券
+  - **Expected**: Token 被系统接受，扫描操作执行（可能返回 QR 相关错误，但不应返回认证错误）
+
+- [ ] **TC-AUTH-E2E-003**: Token 有效性维持
+  - 操作: 使用相同 Token 进行多次扫描操作 → 验证 Token 在有效期内持续可用
+  - **Expected**: 所有扫描请求都不返回 401，Token 在班次期间保持有效
+
+### Round 2: 异常场景 (3 scenarios)
+
+- [ ] **TC-AUTH-E2E-004**: 错误凭证被拒绝
+  - 操作: 提供错误密码 (alice/wrongpassword) → POST /operators/login
+  - **Expected**: 返回 401，不提供 Token，提示凭证无效
+
+- [ ] **TC-AUTH-E2E-005**: 无效 Token 被拒绝
+  - 操作: 使用伪造或无效的 Token → POST /venue/scan
+  - **Expected**: 返回 401，提示 Token 无效，拒绝扫描操作
+
+- [ ] **TC-AUTH-E2E-006**: 缺少认证信息
+  - 操作: 不提供 Authorization header → POST /venue/scan
+  - **Expected**: 返回错误，提示需要 operator token
+
+---
+
 ## API Reference
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/operators/login` | POST | None | 操作员认证 |
 | `/venue/scan` | POST | Operator Token | 扫描核销票券 |
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| v1.1 | 2025-12-18 | 添加 QA E2E Checklist |
+| v1.0 | 2025-12-17 | 初始版本 |

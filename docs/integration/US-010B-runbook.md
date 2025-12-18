@@ -488,6 +488,56 @@ chmod +x docs/integration/scripts/us-010b-test.sh
 
 ---
 
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (6 scenarios)
+
+- [ ] **TC-ADMIN-001**: 创建套票模板
+  - 操作: 管理员登录 → 提交套票模板创建请求（包含权益和定价配置）
+  - **Expected**: 返回 template_id，权益和定价配置正确保存
+
+- [ ] **TC-ADMIN-002**: 配置线路票价
+  - 操作: 提交线路票价更新请求（包含票价和黑名单日期）
+  - **Expected**: 返回成功，revision 递增，配置立即生效
+
+- [ ] **TC-DAEMON-001**: 执行生命周期守护任务
+  - 操作: 触发生命周期守护任务 → 查询处理统计
+  - **Expected**: 返回 expiredProcessed 和 refundTriggered 统计，过期票券状态更新为 EXPIRED
+
+- [ ] **TC-NOTIFY-001**: 发送通知事件
+  - 操作: 提交通知事件（如 ticket.expired）
+  - **Expected**: 通知加入队列，queued 为 true
+
+- [ ] **TC-VERIFY-001**: 操作员登录并核销
+  - 操作: 操作员登录 → 获取 operator_token → 扫码核销有效票券
+  - **Expected**: 登录成功获取 token，核销返回 success，核销日志已记录
+
+- [ ] **TC-REPORT-001**: 查询核销报表
+  - 操作: 查询指定时间范围内的核销报表
+  - **Expected**: 返回核销事件列表，包含最新核销记录
+
+### Round 2: 异常场景 (4 scenarios)
+
+- [ ] **TC-VERIFY-002**: 无效票券核销
+  - 操作: 使用无效票券码（invalid-token）进行核销
+  - **Expected**: 返回错误状态，包含具体错误码和清晰错误信息
+
+- [ ] **TC-VERIFY-003**: 重复核销防护
+  - 操作: 对同一票券重复执行核销操作
+  - **Expected**: 返回错误，错误码为 ALREADY_REDEEMED，不产生重复核销记录
+
+- [ ] **TC-NOTIFY-002**: 通知重试机制
+  - 操作: 模拟通知发送失败 → 查询通知队列状态
+  - **Expected**: 失败通知进入重试队列，遵循指数退避策略
+
+- [ ] **TC-ADMIN-003**: 未授权配置操作
+  - 操作: 不带或使用无效 admin-token 访问配置 API
+  - **Expected**: 返回 401 Unauthorized
+
+---
+
 ## 📎 相关资产
 
 | 资产 | 路径 |
@@ -497,3 +547,12 @@ chmod +x docs/integration/scripts/us-010b-test.sh
 | Newman Collection | `reports/collections/us-010b-operations-backbone.json` |
 | 前置依赖 | `docs/integration/US-010A-runbook.md` |
 | 扫码核销参考 | `docs/integration/US-013-runbook.md` |
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 作者 | 变更内容 |
+|------|------|------|----------|
+| 1.1 | 2025-12-18 | Claude | 新增 QA E2E Checklist |
+| 1.0 | 2025-12-18 | Claude | 初始版本 |

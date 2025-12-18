@@ -461,6 +461,122 @@ export function getRunbookStats(): {
 }
 
 // ============================================
+// QA E2E Checklist 数据结构
+// ============================================
+
+// QA E2E 单个测试用例
+export interface QaE2eTestCase {
+  id: string;           // TC-PROD-001
+  name: string;         // 浏览商品目录
+  operation: string;    // 操作步骤
+  expected: string;     // 预期结果
+  checked: boolean;     // 是否已完成 [x] vs [ ]
+}
+
+// QA E2E Round（测试轮次）
+export interface QaE2eRound {
+  name: string;         // Round 1: 核心功能
+  scenarioCount: number; // N scenarios
+  testCases: QaE2eTestCase[];
+}
+
+// QA E2E Checklist 完整数据
+export interface QaE2eChecklist {
+  rounds: QaE2eRound[];
+  stats: {
+    total: number;
+    checked: number;
+    unchecked: number;
+  };
+}
+
+/**
+ * 解析 QA E2E Checklist 部分
+ * 支持两种标题格式：
+ * - ## 🧪 QA E2E Checklist
+ * - ## 🧪 Test Execution Checklist
+ */
+function parseQaE2eChecklist(content: string): QaE2eChecklist {
+  const rounds: QaE2eRound[] = [];
+
+  // 查找 QA E2E Checklist 部分
+  const checklistMatch = content.match(/##\s*🧪\s*(QA E2E Checklist|Test Execution Checklist)([\s\S]*?)(?=\n## [^#]|$)/);
+  if (!checklistMatch) {
+    return { rounds: [], stats: { total: 0, checked: 0, unchecked: 0 } };
+  }
+
+  const checklistContent = checklistMatch[2];
+
+  // 匹配所有 Round 部分
+  const roundRegex = /###\s*(Round\s*\d+[^(\n]*)\s*\((\d+)\s*scenarios?\)/g;
+  let roundMatch;
+  const roundPositions: { name: string; count: number; start: number }[] = [];
+
+  while ((roundMatch = roundRegex.exec(checklistContent)) !== null) {
+    roundPositions.push({
+      name: roundMatch[1].trim(),
+      count: parseInt(roundMatch[2], 10),
+      start: roundMatch.index
+    });
+  }
+
+  // 解析每个 Round 的测试用例
+  for (let i = 0; i < roundPositions.length; i++) {
+    const round = roundPositions[i];
+    const nextStart = roundPositions[i + 1]?.start ?? checklistContent.length;
+    const roundContent = checklistContent.substring(round.start, nextStart);
+
+    const testCases: QaE2eTestCase[] = [];
+
+    // 匹配测试用例：- [ ] **TC-XXX-NNN**: 名称 或 - [x] **TC-XXX-NNN**: 名称
+    const tcRegex = /-\s*\[([ x])\]\s*\*\*([^*]+)\*\*:\s*([^\n]+)([\s\S]*?)(?=-\s*\[[ x]\]|\n###|\n##|$)/g;
+    let tcMatch;
+
+    while ((tcMatch = tcRegex.exec(roundContent)) !== null) {
+      const checked = tcMatch[1].toLowerCase() === 'x';
+      const id = tcMatch[2].trim();
+      const name = tcMatch[3].trim();
+      const details = tcMatch[4];
+
+      // 提取操作步骤
+      const opMatch = details.match(/[-*]\s*操作[:：]\s*([^\n]+)/);
+      const operation = opMatch ? opMatch[1].trim() : '';
+
+      // 提取预期结果
+      const expMatch = details.match(/[-*]\s*\*\*Expected\*\*[:：]\s*([^\n]+)/);
+      const expected = expMatch ? expMatch[1].trim() : '';
+
+      testCases.push({ id, name, operation, expected, checked });
+    }
+
+    rounds.push({
+      name: round.name,
+      scenarioCount: round.count,
+      testCases
+    });
+  }
+
+  // 计算统计
+  let total = 0;
+  let checked = 0;
+  for (const round of rounds) {
+    for (const tc of round.testCases) {
+      total++;
+      if (tc.checked) checked++;
+    }
+  }
+
+  return {
+    rounds,
+    stats: {
+      total,
+      checked,
+      unchecked: total - checked
+    }
+  };
+}
+
+// ============================================
 // Dashboard 用 Story 测试数据接口
 // ============================================
 
@@ -470,6 +586,7 @@ export interface StoryTestData {
   prdId: string;
   runCommand: string;   // npm run test:story 001
   modules: RunbookModule[];
+  qaE2eChecklist: QaE2eChecklist;  // QA E2E 测试清单
   stats: {
     total: number;
     passed: number;
@@ -482,31 +599,62 @@ export interface StoryTestData {
  * 提取 Dashboard 用的 Story 测试数据
  */
 export function extractStoryTestData(): StoryTestData[] {
-  const runbooks = loadAllRunbooks();
+  const runbooksDir = path.resolve(process.cwd(), 'docs', 'integration');
   const storyDataList: StoryTestData[] = [];
 
-  for (const runbook of runbooks) {
-    const storyId = runbook.metadata.storyId || 'Unknown';
-    const storyNum = storyId.replace(/\D/g, '').padStart(3, '0');
+  if (!fs.existsSync(runbooksDir)) {
+    return storyDataList;
+  }
 
-    // 使用 metadata.title，如果没有则从文件名生成
-    const storyTitle = runbook.metadata.title ||
-      runbook.fileName.replace('-runbook.md', '').replace(/^US-\d+[A-Z]?-?/i, '').replace(/-/g, ' ').trim() ||
-      storyId;
+  const files = fs.readdirSync(runbooksDir)
+    .filter(f => f.endsWith('-runbook.md'))
+    .sort();
 
-    storyDataList.push({
-      storyId,
-      storyTitle,
-      prdId: runbook.metadata.prdId || '',
-      runCommand: `npm run test:story ${storyNum}`,
-      modules: runbook.modules,
-      stats: {
-        total: runbook.totalTestCases,
-        passed: runbook.passedTestCases,
-        failed: runbook.failedTestCases,
-        pending: runbook.pendingTestCases
+  for (const file of files) {
+    const filePath = path.join(runbooksDir, file);
+
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+
+      // 解析 QA E2E Checklist
+      const qaE2eChecklist = parseQaE2eChecklist(content);
+
+      // 只处理有 QA E2E Checklist 的 runbook
+      if (qaE2eChecklist.stats.total === 0) {
+        continue;
       }
-    });
+
+      // 提取 Story ID
+      const storyMatch = file.match(/(US-\d+[A-Z]?)/i);
+      const storyId = storyMatch ? storyMatch[1].toUpperCase() : 'Unknown';
+      const storyNum = storyId.replace(/\D/g, '').padStart(3, '0');
+
+      // 提取标题
+      const titleMatch = content.match(/^#\s+(?:US-\d+[A-Z]?:?\s*)?(.+?)(?:\s+Runbook)?$/m);
+      const storyTitle = titleMatch ? titleMatch[1].trim() :
+        file.replace('-runbook.md', '').replace(/^US-\d+[A-Z]?-?/i, '').replace(/-/g, ' ').trim();
+
+      // 提取 PRD ID
+      const prdMatch = content.match(/\*\*PRD\*\*\s*\|\s*([^\n|]+)/);
+      const prdId = prdMatch ? prdMatch[1].trim() : '';
+
+      storyDataList.push({
+        storyId,
+        storyTitle,
+        prdId,
+        runCommand: `npm run test:story ${storyNum}`,
+        modules: [], // 不再需要 Card AC 测试模块
+        qaE2eChecklist,
+        stats: {
+          total: qaE2eChecklist.stats.total,
+          passed: qaE2eChecklist.stats.checked,
+          failed: 0,
+          pending: qaE2eChecklist.stats.unchecked
+        }
+      });
+    } catch (error) {
+      console.error(`Error parsing runbook ${filePath}:`, error);
+    }
   }
 
   return storyDataList;

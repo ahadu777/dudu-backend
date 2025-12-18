@@ -230,3 +230,70 @@
 | `TOKEN_EXPIRED` | 422 | QR token expired |
 | `INVALID_TOKEN` | 422 | QR token malformed or invalid |
 | `TICKET_NOT_FOUND` | 422 | Ticket does not exist |
+
+---
+
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (5 scenarios)
+
+- [ ] **TC-OPR-101**: 操作员登录成功
+  - 操作: 使用有效凭证 (alice/secret123) → 调用 POST /operators/login
+  - **Expected**: 返回 200，获得 operator_token，可用于后续核销操作
+
+- [ ] **TC-VERIFY-101**: 扫码核销成功
+  - 操作: 顾客出示有效票券二维码 → 操作员扫描并选择权益 (ferry) → 调用 POST /venue/scan
+  - **Expected**: 显示"核销成功"，返回 ticket_code 和剩余权益，权益剩余次数减 1
+
+- [ ] **TC-VERIFY-102**: 核销记录审计
+  - 操作: 核销成功后 → 查询 redemption_events 表
+  - **Expected**: 记录包含操作员 ID、时间戳、地点、设备信息、jti + function_code 组合
+
+- [ ] **TC-VERIFY-103**: 查看票券状态
+  - 操作: 核销后 → 查询票券详情
+  - **Expected**: 票券状态显示为 ACTIVATED，权益剩余次数正确更新
+
+- [ ] **TC-VERIFY-104**: 不同权益独立核销
+  - 操作: 扫描同一二维码 → 核销 ferry → 再次扫描 → 核销 sky100
+  - **Expected**: 两次核销都成功，不同权益独立计数
+
+### Round 2: 异常场景 (7 scenarios)
+
+- [ ] **TC-OPR-201**: 操作员登录失败
+  - 操作: 使用错误密码 (alice/wrong_password) → 调用 POST /operators/login
+  - **Expected**: 返回 401，提示"用户名或密码错误"，不返回 token
+
+- [ ] **TC-OPR-202**: 无认证扫描被拒绝
+  - 操作: 不携带 Authorization header → 调用 POST /venue/scan
+  - **Expected**: 返回 401，提示需要 operator token
+
+- [ ] **TC-VERIFY-201**: 重复核销被拒绝
+  - 操作: 扫描同一二维码 → 核销 ferry → 立即再次扫描 → 尝试再次核销 ferry
+  - **Expected**: 第二次返回 reject，reason = ALREADY_REDEEMED，提示"该权益已核销"
+
+- [ ] **TC-VERIFY-202**: 权益不匹配被拒绝
+  - 操作: 扫描不包含 airplane 权益的票券 → 尝试核销 airplane
+  - **Expected**: 返回 reject，reason = WRONG_FUNCTION，提示"票券不包含此权益"
+
+- [ ] **TC-VERIFY-203**: 权益次数用完被拒绝
+  - 操作: 扫描已核销完所有 ferry 次数的票券 → 尝试核销 ferry
+  - **Expected**: 返回 reject，reason = NO_REMAINING，提示"该权益已用完"
+
+- [ ] **TC-VERIFY-204**: 小程序二维码过期
+  - 操作: 等待 30 分钟 → 扫描小程序生成的旧二维码
+  - **Expected**: 返回 reject，reason = TOKEN_EXPIRED，提示"二维码已过期，请刷新"
+
+- [ ] **TC-VERIFY-205**: 二维码被取代失效
+  - 操作: 用户重新生成新二维码 → 操作员扫描旧二维码
+  - **Expected**: 返回 reject，提示"二维码已失效，请使用最新二维码"（current_jti 校验失败）
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 作者 | 变更内容 |
+|------|------|------|----------|
+| 1.1 | 2025-12-18 | AI | 添加 QA E2E Checklist |
+| 1.0 | 2025-12-17 | Initial | 初始版本 |
