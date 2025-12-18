@@ -133,22 +133,177 @@ grep -r "related-function" src/modules/
 
 > 详细检查清单见 `.claude/skills/code-review/` 目录
 
-### Step 3: Verify Completion
+### Step 3: Test & Verify（测试与验证）
+
+**开发完成不测试 = 未完成。测试是强制步骤，不是可选项。**
+
+#### 测试金字塔
+
+```
+PRD Tests (业务规则)     → Newman + PRD Acceptance Criteria
+    ↓
+Story Tests (E2E流程)    → Runbook + Newman Collection
+    ↓
+Card Tests (端点级)      → curl + Newman
+```
+
+| 层级 | 工具 | 集合位置 | 运行命令 |
+|------|------|----------|----------|
+| PRD | Newman | `postman/auto-generated/prd-{NNN}-*.json` | `npm run test:prd [N]` |
+| Story | Newman | `postman/auto-generated/us-{NNN}-*.json` | `npm run test:story [N]` |
+| Card | curl | - | 直接 curl 验证 |
+
+#### Newman 简介
+
+**Newman = Postman 命令行工具**，自动运行 API 测试集合。
 
 ```bash
-# Endpoint test
-curl http://localhost:8080/[endpoint]
+# Newman 底层命令（了解即可，通常用 npm scripts）
+npx newman run postman/auto-generated/prd-006-*.json
 
-# Run related tests
-npm run test:prd [N]    # PRD test
-npm run test:story [N]  # Story test
+# 推荐使用封装好的命令
+npm run test:prd 006      # 运行 PRD-006 测试
+npm run test:story 012    # 运行 US-012 测试
+npm test                  # 运行全部测试
+```
 
-# Document consistency
+**Newman 集合命名规范**:
+```
+postman/auto-generated/
+├── prd-{NNN}-{description}.postman_collection.json   # PRD 测试
+├── us-{NNN}-{description}.postman_collection.json    # Story 测试
+└── _archived/                                         # 过时测试存档
+```
+
+#### 3.1 运行相关测试
+
+```bash
+# 确保服务运行中
+curl http://localhost:8080/healthz
+
+# 检查测试集合是否存在
+ls postman/auto-generated/prd-*.json
+ls postman/auto-generated/us-*.json
+
+# 运行相关测试
+npm run test:prd [N]    # PRD 测试
+npm run test:story [N]  # Story 测试
+
+# 或运行全部测试确保无回归
+npm test
+```
+
+**何时需要创建 Newman 集合？**
+
+| 场景 | 是否需要创建 |
+|------|-------------|
+| 新 PRD 实现 | ✅ 创建 `prd-{NNN}-*.json` |
+| 新 Story 实现 | ✅ 创建 `us-{NNN}-*.json` |
+| Card 级改动 | ⚠️ 更新现有集合或用 curl |
+| Bug 修复 | ❌ 通常不需要新集合 |
+
+#### 3.2 测试失败处理
+
+```bash
+# 1. 识别失败的断言
+npm run test:prd [N] 2>&1 | grep -A 5 "AssertionError"
+
+# 2. 对比 API 响应与 Card 规范
+curl http://localhost:8080/[endpoint] | jq .
+grep -A 20 "Response" docs/cards/[related-card].md
+
+# 3. 确定根因并修复
+#    - 代码 bug → 修复代码 → 返回 Step 2
+#    - 规范不匹配 → 更新 Card 或代码
+#    - 测试过时 → 更新测试
+```
+
+**测试未通过 → 不能进入下一步**
+
+#### 3.3 测试通过验证
+
+测试通过后，仍需验证：
+
+| 检查项 | 动作 |
+|--------|------|
+| API 响应与 Card 一致？ | 对比实际响应与 Card 规范 |
+| OpenAPI 需要更新？ | 如有 API 变更，更新 `openapi/openapi.json` |
+| 覆盖率需要更新？ | 更新 `docs/test-coverage/_index.yaml` |
+| 业务验收？ | 简单 bug → 可标 Done；业务逻辑 → 需产品确认 |
+
+```bash
+# API 契约验证（三者必须一致）
+# 1. Card 规范
+grep -A 30 "endpoint" docs/cards/[card].md
+
+# 2. 实际响应
+curl http://localhost:8080/[endpoint] | jq .
+
+# 3. OpenAPI 规范
+grep -A 20 "[endpoint]" openapi/openapi.json
+```
+
+#### 3.4 Runbook 创建/更新
+
+**Story 实现完成后，必须有对应 Runbook。**
+
+| 场景 | 是否需要 Runbook |
+|------|-----------------|
+| 新 Story 创建 | ✅ 必须创建 |
+| Story 状态变为 Done | ✅ 必须有 Runbook |
+| 纯 Card 级改动 | ❌ 用 curl 验证即可 |
+
+**Runbook 位置**: `docs/integration/US-{NNN}-runbook.md`
+
+**最小结构**:
+```markdown
+# US-{NNN}: {Title} Runbook
+
+## 📋 Metadata
+| Story | PRD | Status | Last Updated |
+
+## 🧪 Test Scenarios
+### Module 1: {模块名称}
+#### TC-{XXX}-001: {测试用例}
+| 状态 | Given | When | Then |
+| pending | ... | ... | ... |
+
+**执行命令**: curl ...
+**验证点**: - [ ] ...
+```
+
+**TC 命名**: `TC-{XXX}-{NNN}` (如 TC-CAT-001, TC-ORD-002)
+**状态值**: `pending` / `passed` / `failed` / `skipped`
+
+#### 3.5 更新测试覆盖率
+
+```bash
+# 更新覆盖率注册表
+vim docs/test-coverage/_index.yaml
+
+# 检查覆盖缺口
+grep -L "test:" docs/cards/*.md
+```
+
+#### 3.6 文档一致性验证
+
+```bash
+# 运行文档校验
 npm run validate:docs
 
-# Update status
+# 更新 Card 状态
 # Card: "In Progress" → "Done"
 ```
+
+#### Step 3 完成检查清单
+
+- [ ] 相关测试全部通过
+- [ ] API 契约一致（Card = Code = OpenAPI）
+- [ ] Newman collection 创建/更新
+- [ ] Runbook 创建/更新（Story 级别）
+- [ ] 覆盖率更新 `docs/test-coverage/_index.yaml`
+- [ ] `npm run validate:docs` 无错误
+- [ ] Card 状态更新为 "Done"
 
 ### Step 4: Experience Learning (经验学习) - 可选
 
@@ -215,10 +370,11 @@ echo "**Learning**: [CLAUDE.md 应该如何改进]" >> docs/cases/CASE-DISCOVER-
 
 ### Testing Workflow
 
-**Test execution triggers workflow:**
-- Test failed → Load `references/testing.md` + `references/troubleshooting.md`
-- Test passed → Verify if Card status can change to Done
-- Coverage gap → Check if new tests needed
+**测试是 Step 3 的强制组成部分，详见 Step 3: Test & Verify。**
+
+- 测试失败 → 修复后重测（不能跳过）
+- 测试通过 → 仍需验证 API 契约一致性
+- Story 完成 → 必须有对应 Runbook
 
 ### Status Updates
 
@@ -238,22 +394,27 @@ echo "**Learning**: [CLAUDE.md 应该如何改进]" >> docs/cases/CASE-DISCOVER-
 | 假设而不询问 | 有歧义时询问确认 |
 | 跳过 Reality Check | 每次都先验证现状 |
 | 跳过代码审查直接测试 | Step 2.5 先审查代码质量 |
+| 开发完不运行测试 | Step 3 测试是强制步骤 |
 | 测试通过就标 Done | 验证业务需求是否满足 |
+| Story 完成无 Runbook | Step 3.4 必须创建 Runbook |
 | 遇到问题不记录 | Step 4 记录经验教训 |
 
 ---
 
 ## References
 
-Load these as needed based on task type:
+按需加载的详细参考文档：
 
+**核心流程已整合到主工作流：**
+- `references/testing.md` - 测试详细指南（核心已整合到 Step 3）
+- `references/runbook.md` - Runbook 完整规范（核心已整合到 Step 3.4）
+
+**其他参考文档：**
 - `references/natural-language.md` - Structured prompt templates
 - `references/duplicate-prevention.md` - Three-layer search pattern
 - `references/document-layer.md` - PRD vs Story vs Card decision
 - `references/api-change.md` - Breaking vs non-breaking changes
 - `references/troubleshooting.md` - Common issues and fixes
-- `references/testing.md` - Test execution, failure handling, coverage
-- `references/runbook.md` - Runbook 格式规范、命名规则、GWT 编写指南
 - `docs/reference/EXPERIENCE-LEARNING.md` - Experience-based improvement
 
 ### Code Review Skill
