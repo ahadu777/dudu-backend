@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: express-api
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      # Database Configuration (set these in Render dashboard)
+      - key: USE_DATABASE
+        value: true
+      - key: DB_HOST
+        sync: false  # Set in Render dashboard
+      - key: DB_PORT
+        value: 3306
+      - key: DB_USERNAME
+        sync: false  # Set in Render dashboard
+      - key: DB_PASSWORD
+        sync: false  # Set in Render dashboard (use secret)
+      - key: DB_DATABASE
+        sync: false  # Set in Render dashboard
+      # JWT Configuration
+      - key: JWT_SECRET
+        sync: false  # Set in Render dashboard (use secret)
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # QR Configuration
+      - key: QR_SIGNER_SECRET
+        sync: false  # Set in Render dashboard (use secret)
+      - key: QR_ENCRYPTION_KEY
+        sync: false  # Set in Render dashboard (use secret, generate with: openssl rand -hex 32)
+      # WeChat Configuration
+      - key: WECHAT_APPID
+        sync: false  # Set in Render dashboard
+      - key: WECHAT_APP_SECRET
+        sync: false  # Set in Render dashboard (use secret)
+      # Wallyt Payment Configuration
+      - key: WALLYT_API_URL
+        value: https://gateway.wepayez.com/pay/gateway
+      - key: WALLYT_MCH_ID
+        sync: false  # Set in Render dashboard
+      - key: WALLYT_SECRET_KEY
+        sync: false  # Set in Render dashboard (use secret)
+      - key: WALLYT_SIGN_TYPE
+        value: MD5
+      - key: WALLYT_NOTIFY_URL
+        sync: false  # Set in Render dashboard (e.g., https://your-app.onrender.com/api/payments/wallyt/notify)
+      # Directus Configuration (optional)
+      - key: USE_DIRECTUS
+        value: false
+      - key: DIRECTUS_URL
+        sync: false  # Set in Render dashboard if using Directus
+      - key: DIRECTUS_ACCESS_TOKEN
+        sync: false  # Set in Render dashboard if using Directus (use secret)
+
