@@ -3,7 +3,7 @@ services:
     name: express-api
     env: node
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: node ./dist/index.js
     envVars:
       - key: NODE_ENV
         value: production

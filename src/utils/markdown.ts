@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 /**
  * Validate URL to prevent XSS via javascript: protocol
  * Only allows safe protocols: http, https, mailto, tel, and relative URLs
@@ -78,4 +81,18 @@ export function markdownToHtml(markdown: string): string {
   html = html.replace(/\n/g, '<br>');
 
   return html;
+}
+
+/**
+ * Read and render a markdown file to HTML
+ */
+export function renderMarkdownFile(filePath: string): string {
+  try {
+    const fullPath = path.join(process.cwd(), filePath);
+    const markdown = fs.readFileSync(fullPath, 'utf-8');
+    return markdownToHtml(markdown);
+  } catch (error) {
+    console.error(`Error reading markdown file ${filePath}:`, error);
+    return `<p>Error loading markdown file: ${filePath}</p>`;
+  }
 }
