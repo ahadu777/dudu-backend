@@ -741,6 +741,195 @@ export class TicketService extends BaseOTAService {
       }
     };
   }
+
+  // ============== PDF 导出 ==============
+
+  /**
+   * 生成票券 PDF
+   *
+   * @param ticketCode 票券代码
+   * @param partnerId Partner ID（用于权限验证）
+   * @returns PDF Buffer
+   */
+  async getTicketPDF(ticketCode: string, partnerId: string): Promise<Buffer> {
+    this.log('ota.ticket.pdf_export.requested', {
+      ticket_code: ticketCode,
+      partner_id: partnerId
+    });
+
+    // 获取票券
+    let ticket: TicketEntity | null = null;
+
+    if (await this.isDatabaseAvailable()) {
+      const repo = await this.getOTARepository();
+      ticket = await repo.findPreGeneratedTicket(ticketCode);
+    } else {
+      // Mock 模式：从 mockDataStore 获取
+      const mockTicket = mockDataStore.preGeneratedTickets.get(ticketCode);
+      if (mockTicket) {
+        ticket = {
+          ticket_code: mockTicket.code,
+          partner_id: mockTicket.partner_id,
+          status: mockTicket.status,
+          qr_code: mockTicket.qr_code
+        } as TicketEntity;
+      }
+    }
+
+    // 验证票券存在
+    if (!ticket) {
+      throw {
+        code: 'TICKET_NOT_FOUND',
+        message: `Ticket ${ticketCode} not found`
+      };
+    }
+
+    // 验证票券归属
+    if (ticket.partner_id !== partnerId) {
+      this.log('ota.ticket.pdf_export.unauthorized', {
+        ticket_code: ticketCode,
+        requested_by: partnerId,
+        owned_by: ticket.partner_id
+      }, 'warn');
+
+      throw {
+        code: 'UNAUTHORIZED',
+        message: 'Ticket does not belong to this partner'
+      };
+    }
+
+    // 验证票券状态（仅 PRE_GENERATED 和 ACTIVATED 可导出）
+    const validStatuses = ['PRE_GENERATED', 'ACTIVATED'];
+    if (!validStatuses.includes(ticket.status)) {
+      throw {
+        code: 'INVALID_STATUS',
+        message: `Cannot export PDF for ticket with status ${ticket.status}`
+      };
+    }
+
+    // 生成 QR 码（如果票券已有 QR 码则使用，否则重新生成）
+    let qrImage: string;
+    if (ticket.qr_code) {
+      qrImage = ticket.qr_code;
+    } else {
+      // 重新生成 QR 码
+      const qrResult = await generateSecureQR(ticketCode, 52560000);  // 100 年有效
+      qrImage = qrResult.qr_image;
+    }
+
+    // 动态导入 PDF 生成器（避免循环依赖）
+    const { createTicketPDF } = await import('../../../utils/ticket-pdf-generator');
+
+    // 生成 PDF
+    const pdfBuffer = await createTicketPDF(ticketCode, qrImage);
+
+    this.log('ota.ticket.pdf_export.success', {
+      ticket_code: ticketCode,
+      partner_id: partnerId,
+      pdf_size_bytes: pdfBuffer.length
+    });
+
+    return pdfBuffer;
+  }
+
+  /**
+   * 批量导出票券 PDF（一个批次所有票券合并到一个 PDF）
+   *
+   * @param batchId 批次 ID
+   * @param partnerId Partner ID（用于权限验证）
+   * @returns PDF Buffer
+   */
+  async getBatchPDF(batchId: string, partnerId: string): Promise<Buffer> {
+    this.log('ota.batch.pdf_export.requested', {
+      batch_id: batchId,
+      partner_id: partnerId
+    });
+
+    // 获取批次信息
+    if (!await this.isDatabaseAvailable()) {
+      throw {
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database is not available for batch PDF export'
+      };
+    }
+
+    const repo = await this.getOTARepository();
+    const batch = await repo.findBatchById(batchId);
+
+    // 验证批次存在
+    if (!batch) {
+      throw {
+        code: 'BATCH_NOT_FOUND',
+        message: `Batch ${batchId} not found`
+      };
+    }
+
+    // 验证批次归属
+    if (batch.partner_id !== partnerId) {
+      this.log('ota.batch.pdf_export.unauthorized', {
+        batch_id: batchId,
+        requested_by: partnerId,
+        owned_by: batch.partner_id
+      }, 'warn');
+
+      throw {
+        code: 'UNAUTHORIZED',
+        message: 'Batch does not belong to this partner'
+      };
+    }
+
+    // 获取批次下所有票券
+    const ticketRepo = this.getRepository(TicketEntity);
+    const tickets = await ticketRepo.find({
+      where: { batch_id: batchId },
+      order: { created_at: 'ASC' }
+    });
+
+    if (tickets.length === 0) {
+      throw {
+        code: 'NO_TICKETS',
+        message: `No tickets found in batch ${batchId}`
+      };
+    }
+
+    this.log('ota.batch.pdf_export.tickets_found', {
+      batch_id: batchId,
+      ticket_count: tickets.length
+    });
+
+    // 准备票券数据（确保每张票都有 QR 码）
+    const ticketConfigs = await Promise.all(
+      tickets.map(async (ticket) => {
+        let qrImage: string;
+        if (ticket.qr_code) {
+          qrImage = ticket.qr_code;
+        } else {
+          // 重新生成 QR 码
+          const qrResult = await generateSecureQR(ticket.ticket_code, 52560000);
+          qrImage = qrResult.qr_image;
+        }
+        return {
+          ticketCode: ticket.ticket_code,
+          qrImageBase64: qrImage
+        };
+      })
+    );
+
+    // 动态导入 PDF 生成器
+    const { generateBatchPDF } = await import('../../../utils/ticket-pdf-generator');
+
+    // 生成批量 PDF
+    const pdfBuffer = await generateBatchPDF(batchId, ticketConfigs);
+
+    this.log('ota.batch.pdf_export.success', {
+      batch_id: batchId,
+      partner_id: partnerId,
+      ticket_count: tickets.length,
+      pdf_size_bytes: pdfBuffer.length
+    });
+
+    return pdfBuffer;
+  }
 }
 
 // 单例

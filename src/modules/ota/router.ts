@@ -342,6 +342,90 @@ router.post('/tickets/:code/activate', otaAuthMiddleware('tickets:activate'), as
   }
 });
 
+// GET /api/ota/tickets/:code/pdf - Export ticket as PDF
+router.get('/tickets/:code/pdf', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ticketCode = req.params.code;
+    const partnerId = getPartnerIdWithFallback(req);
+
+    logger.info('ota.ticket.pdf_export.api_request', {
+      ticket_code: ticketCode,
+      partner_id: partnerId,
+      partner_name: req.ota_partner?.name
+    });
+
+    // 调用服务生成 PDF
+    const pdfBuffer = await otaService.getTicketPDF(ticketCode, partnerId);
+
+    // 设置响应头
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${ticketCode}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    // 发送 PDF
+    res.send(pdfBuffer);
+
+  } catch (error: any) {
+    logger.error('ota.ticket.pdf_export.failed', {
+      partner: req.ota_partner?.name,
+      ticket_code: req.params.code,
+      error: error.message,
+      error_code: error.code
+    });
+
+    const statusCode = error.code === 'TICKET_NOT_FOUND' ? 404 :
+                      error.code === 'UNAUTHORIZED' ? 403 :
+                      error.code === 'INVALID_STATUS' ? 400 : 500;
+
+    res.status(statusCode).json({
+      code: error.code || 'INTERNAL_ERROR',
+      message: error.message || 'Failed to export ticket PDF'
+    });
+  }
+});
+
+// GET /api/ota/batches/:id/pdf - Export all tickets in a batch as a single PDF
+router.get('/batches/:id/pdf', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const batchId = req.params.id;
+    const partnerId = getPartnerIdWithFallback(req);
+
+    logger.info('ota.batch.pdf_export.api_request', {
+      batch_id: batchId,
+      partner_id: partnerId,
+      partner_name: req.ota_partner?.name
+    });
+
+    // 调用服务生成批量 PDF
+    const pdfBuffer = await otaService.getBatchPDF(batchId, partnerId);
+
+    // 设置响应头
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${batchId}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    // 发送 PDF
+    res.send(pdfBuffer);
+
+  } catch (error: any) {
+    logger.error('ota.batch.pdf_export.failed', {
+      partner: req.ota_partner?.name,
+      batch_id: req.params.id,
+      error: error.message,
+      error_code: error.code
+    });
+
+    const statusCode = error.code === 'BATCH_NOT_FOUND' ? 404 :
+                      error.code === 'UNAUTHORIZED' ? 403 :
+                      error.code === 'NO_TICKETS' ? 400 : 500;
+
+    res.status(statusCode).json({
+      code: error.code || 'INTERNAL_ERROR',
+      message: error.message || 'Failed to export batch PDF'
+    });
+  }
+});
+
 // GET /api/ota/batches - List all batches with pagination and filters
 router.get('/batches', paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
   try {
