@@ -49,9 +49,15 @@ OTA 合作伙伴认证
 
 ## 🔧 Prerequisites
 
+> 📍 **环境配置**: 详见 [_environments.md](./_environments.md)
+
+| 环境 | Base URL |
+|------|----------|
+| 本地开发 | `http://localhost:8080` |
+| 线上开发 | `https://mesh.synque.ai` |
+
 | 项目 | 值 | 说明 |
 |------|-----|------|
-| **Base URL** | `http://localhost:8080` | 本地开发环境 |
 | **OTA API Key** | `ota_test_key_12345` | 测试用 API Key |
 | **Bearer Token** | `test-api-key` | 预生成票券用 |
 

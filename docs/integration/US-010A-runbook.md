@@ -59,13 +59,21 @@
 
 ## 🔧 Prerequisites
 
+> 📍 **环境配置**: 详见 [_environments.md](./_environments.md)
+
+### 环境地址
+
+| 环境 | Base URL |
+|------|----------|
+| 本地开发 | `http://localhost:8080` |
+| 线上开发 | `https://mesh.synque.ai` |
+
 ### 环境准备
 
-| 项目 | 值 | 说明 |
-|------|-----|------|
-| **Base URL** | `http://localhost:8080` | 本地开发环境 |
-| **启动命令** | `npm run build && npm start` | 编译并启动服务 |
-| **健康检查** | `curl http://localhost:8080/healthz` | 验证服务运行中 |
+| 项目 | 本地 | 线上 |
+|------|------|------|
+| **启动命令** | `npm run build && npm start` | - |
+| **健康检查** | `curl http://localhost:8080/healthz` | `curl https://mesh.synque.ai/healthz` |
 
 ### 测试账号
 

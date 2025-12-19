@@ -49,9 +49,15 @@
 
 ## 🔧 Prerequisites
 
+> 📍 **环境配置**: 详见 [_environments.md](./_environments.md)
+
+| 环境 | Base URL |
+|------|----------|
+| 本地开发 | `http://localhost:8080` |
+| 线上开发 | `https://mesh.synque.ai` |
+
 | 项目 | 值 | 说明 |
 |------|-----|------|
-| **Base URL** | `http://localhost:8080` | 本地开发环境 |
 | **操作员账号** | `alice / secret123` | 测试操作员 |
 | **场馆代码** | `central-pier`, `cheung-chau` | 测试场馆 |
 
