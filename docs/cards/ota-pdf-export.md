@@ -21,12 +21,6 @@ relationships:
 
 # OTA Ticket PDF Export — Dev Notes
 
-## Status & Telemetry
-- Status: Draft
-- Readiness: mvp
-- Spec Paths: /api/ota/tickets/:code/pdf
-- Last Update: 2025-12-18T10:00:00+08:00
-
 ## 0) Prerequisites
 - ota-premade-tickets card implemented (ticket management)
 - qr-generation-api card implemented (QR code generation)
