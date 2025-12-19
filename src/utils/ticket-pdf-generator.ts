@@ -173,7 +173,7 @@ export async function generateTicketPDF(config: PDFConfig): Promise<Buffer> {
         size: [PAGE_WIDTH, PAGE_HEIGHT],
         margin: 20,
         info: {
-          Title: `电子票券 - ${config.ticketCode}`,
+          Title: `E-Ticket - ${config.ticketCode}`,
           Author: 'Express Ticket System',
           Subject: 'Electronic Ticket',
           Keywords: 'ticket, e-ticket, QR code'
@@ -203,21 +203,8 @@ export async function generateTicketPDF(config: PDFConfig): Promise<Buffer> {
         reject(error);
       });
 
-      // 尝试加载中文字体
-      const fontPath = getFontPath();
-      let useChineseTitle = false;
-
-      if (fontPath) {
-        try {
-          doc.font(fontPath);
-          useChineseTitle = true;
-        } catch (fontError) {
-          logger.warn('pdf.font.load_failed', {
-            path: fontPath,
-            error: fontError instanceof Error ? fontError.message : 'Unknown error'
-          });
-        }
-      }
+      // 强制使用英文标题（统一格式）
+      const useChineseTitle = false;
 
       // 渲染票券页面
       renderTicketPage(doc, {
@@ -246,7 +233,7 @@ export async function createTicketPDF(
   qrImageBase64: string
 ): Promise<Buffer> {
   return generateTicketPDF({
-    title: '【电子票券】',
+    title: '[ E-Ticket ]',
     ticketCode,
     qrImageBase64
   });
@@ -279,7 +266,7 @@ export async function generateBatchPDF(
         margin: 20,
         autoFirstPage: false,
         info: {
-          Title: `批次票券 - ${batchId}`,
+          Title: `Batch Tickets - ${batchId}`,
           Author: 'Express Ticket System',
           Subject: 'Batch Electronic Tickets',
           Keywords: 'ticket, e-ticket, QR code, batch'

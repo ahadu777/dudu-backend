@@ -57,9 +57,9 @@ paths:
       summary: Export ticket as PDF
       description: |
         Generates a PDF document for a single ticket containing:
-        - Title: 【电子票券】
+        - Title: [ E-Ticket ]
         - Ticket code
-        - Red QR code
+        - QR code
       security:
         - ApiKeyAuth: []
       parameters:
@@ -152,8 +152,7 @@ paths:
 
 ## 3) Invariants
 - Only OTA partners can export their own tickets
-- PDF contains: title【电子票券】, ticket code, QR code
-- QR code is red color (#CC0000)
+- PDF contains: title [ E-Ticket ], Ticket Code, QR code
 - Supports PRE_GENERATED and ACTIVATED status tickets
 
 ## 4) Validations
@@ -209,13 +208,13 @@ curl -X GET http://localhost:8080/api/ota/tickets/OTHER-PARTNER-xxx/pdf \
 
 ```
 +---------------------------+
-|     【电子票券】           |  ← Title (bold)
+|       [ E-Ticket ]        |  ← Title (bold)
 +---------------------------+
 |                           |
-|    票券代码：DT-xxxx      |  ← Ticket code
+|   Ticket Code: DT-xxxx    |  ← Ticket code
 |                           |
 |      +-------------+      |
-|      |   QR Code   |      |  ← Red QR code
+|      |   QR Code   |      |  ← QR code
 |      +-------------+      |
 |                           |
 +---------------------------+
