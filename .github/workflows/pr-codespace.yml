@@ -89,75 +89,102 @@ jobs:
           }
           EOF
 
-      - name: Create Codespace via GitHub API
+      - name: Try automatic Codespace creation (if PAT available)
         id: create_codespace
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            try {
-              // Create codespace using repository endpoint
-              // Note: This requires the GITHUB_TOKEN to have codespace:write permission
-              // which may need to be configured in repository settings
-              const { data: codespace } = await github.rest.codespaces.createWithRepoForAuthenticatedUser({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: '${{ github.event.pull_request.head.ref }}',
-                display_name: `Express-PR-${{ github.event.pull_request.number }}`,
-                machine: 'basicLinux32gb',
-                devcontainer_path: '.devcontainer/devcontainer.json',
-                idle_timeout_minutes: 30
-              });
-              
-              console.log('✅ Codespace created:', codespace.name);
-              console.log('🔗 Web URL:', codespace.web_url);
-              
-              return codespace.web_url;
-            } catch (error) {
-              console.error('❌ Error creating codespace via API:', error.message);
-              console.log('⚠️ Falling back to manual creation link');
-              // Fallback: provide a link to create codespace manually
-              const createUrl = `https://github.com/codespaces/new?template_repo=${context.repo.owner}/${context.repo.repo}&ref=${{ github.event.pull_request.head.ref }}&devcontainer_path=.devcontainer/devcontainer.json`;
-              return createUrl;
-            }
-
-      - name: Wait for Codespace to be ready
+        if: ${{ secrets.CODESPACE_CREATION_TOKEN != '' }}
+        continue-on-error: true
         run: |
-          echo "⏳ Waiting for codespace to initialize..."
-          sleep 30
+          # Install GitHub CLI
+          type gh >/dev/null 2>&1 || curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          type gh >/dev/null 2>&1 || echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          type gh >/dev/null 2>&1 || sudo apt update && sudo apt install gh -y
+          
+          # Authenticate with PAT
+          echo "${{ secrets.CODESPACE_CREATION_TOKEN }}" | gh auth login --with-token
+          
+          # Try to create codespace
+          CODESPACE_NAME="express-pr-${{ github.event.pull_request.number }}"
+          CODESPACE_OUTPUT=$(gh api \
+            "repos/${{ github.repository }}/codespaces" \
+            -X POST \
+            -f "ref=${{ github.event.pull_request.head.ref }}" \
+            -f "machine=basicLinux32gb" \
+            -f "display_name=${CODESPACE_NAME}" \
+            -f "devcontainer_path=.devcontainer/devcontainer.json" \
+            --jq '.web_url' 2>&1) || CODESPACE_OUTPUT=""
+          
+          if [ -n "$CODESPACE_OUTPUT" ] && [[ "$CODESPACE_OUTPUT" == http* ]]; then
+            echo "codespace_url=${CODESPACE_OUTPUT}" >> $GITHUB_OUTPUT
+            echo "codespace_created=true" >> $GITHUB_OUTPUT
+            echo "✅ Codespace created automatically: ${CODESPACE_OUTPUT}"
+          else
+            echo "codespace_created=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Automatic creation failed, will use manual link"
+          fi
+
+      - name: Generate Codespace creation URL (fallback)
+        id: codespace_url
+        if: ${{ steps.create_codespace.outputs.codespace_created != 'true' }}
+        run: |
+          # Create a direct link to create codespace for this PR
+          # GitHub will use the devcontainer.json from the PR branch
+          CODESPACE_URL="https://github.com/codespaces/new?repo=${{ github.repository }}&ref=${{ github.event.pull_request.head.ref }}&devcontainer_path=.devcontainer/devcontainer.json&machine=basicLinux32gb"
+          echo "codespace_create_url=${CODESPACE_URL}" >> $GITHUB_OUTPUT
+          echo "codespace_url=${CODESPACE_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Codespace creation URL generated"
 
       - name: Comment PR with Codespace link
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const codespaceUrl = '${{ steps.create_codespace.outputs.result }}';
+            // Get codespace URL (either created automatically or manual link)
+            const codespaceUrl = '${{ steps.create_codespace.outputs.codespace_url }}' || '${{ steps.codespace_url.outputs.codespace_url }}';
+            const codespaceCreated = '${{ steps.create_codespace.outputs.codespace_created }}' === 'true';
+            const codespaceCreateUrl = '${{ steps.codespace_url.outputs.codespace_create_url }}' || codespaceUrl;
+            const prNumber = '${{ github.event.pull_request.number }}';
+            const prBranch = '${{ github.event.pull_request.head.ref }}';
+            const repo = '${{ github.repository }}';
+            
+            let codespaceSection;
+            if (codespaceCreated && codespaceUrl) {
+              codespaceSection = `**🚀 Live Codespace:** [${codespaceUrl}](${codespaceUrl})\n\n✅ Codespace created automatically and ready to use!`;
+            } else {
+              codespaceSection = `**Create Codespace:** [Click here to create Codespace](${codespaceCreateUrl})\n\n💡 *Tip: Add a \`CODESPACE_CREATION_TOKEN\` secret with codespace permissions for automatic creation*`;
+            }
             
             const commentBody = `## 🚀 Express PR Environment Ready!
 
-**Live Codespace:** ${codespaceUrl}
+${codespaceSection}
 
 **Environment:**
 - Node.js: \`${{ steps.extract-env.outputs.node_version }}\`
 - npm: \`${{ steps.extract-env.outputs.npm_version }}\`
 - Package Manager: \`${{ steps.extract-env.outputs.package_manager }}\`
+- Branch: \`${prBranch}\`
 
-**Access:**
-1. Click the link above to open the Codespace
+**Quick Start:**
+1. Click the "Create Codespace" link above
 2. Wait for environment to build (~2-3 minutes)
 3. App runs automatically on port **8080**
 4. API will be available at: \`https://[your-codespace-url]-8080.app.github.dev\`
 
-**Auto-started:**
+**Auto-started Commands:**
+- \`npm ci\` - Installs dependencies
 - \`npm run build\` - Compiles TypeScript
 - \`npm run dev\` - Starts Express server
 
-**Port Visibility:** Public (port 8080)
+**Port Configuration:**
+- Port **8080** is configured as **public** for easy testing
+- Access via: \`https://[codespace-name]-8080.app.github.dev\`
 
-**Note:** Codespace auto-stops after 30 minutes of inactivity. You can restart it from the GitHub Codespaces page.
+**Note:** 
+- Codespace auto-stops after 30 minutes of inactivity
+- You can restart it from the [GitHub Codespaces page](https://github.com/codespaces)
+- The devcontainer.json is automatically configured for this PR
 
 ---
-*This codespace was automatically created for PR #${{ github.event.pull_request.number }}*`;
+*Automatically configured for PR #${prNumber}*`;
 
             // Check if comment already exists
             const { data: comments } = await github.rest.issues.listComments({
