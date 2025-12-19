@@ -1,0 +1,193 @@
+name: Express PR Codespace
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  codespaces: write
+
+jobs:
+  create-express-codespace:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Extract environment info
+        id: extract-env
+        run: |
+          # Capture Node version
+          NODE_VERSION=$(node --version | sed 's/v//')
+          echo "node_version=${NODE_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Capture npm version
+          NPM_VERSION=$(npm --version)
+          echo "npm_version=${NPM_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Check for package-lock.json
+          if [ -f "package-lock.json" ]; then
+            echo "package_manager=npm" >> $GITHUB_OUTPUT
+          else
+            echo "package_manager=npm" >> $GITHUB_OUTPUT
+          fi
+          
+          # Extract Node major version for devcontainer
+          NODE_MAJOR=$(echo $NODE_VERSION | cut -d. -f1)
+          echo "node_major=${NODE_MAJOR}" >> $GITHUB_OUTPUT
+
+      - name: Create devcontainer directory
+        run: mkdir -p .devcontainer
+
+      - name: Generate devcontainer.json
+        run: |
+          cat > .devcontainer/devcontainer.json << EOF
+          {
+            "name": "Express PR #${{ github.event.pull_request.number }}",
+            "image": "mcr.microsoft.com/devcontainers/javascript-node:0-${{ steps.extract-env.outputs.node_major }}",
+            "features": {
+              "ghcr.io/devcontainers/features/node:1": {
+                "version": "${{ steps.extract-env.outputs.node_major }}",
+                "npmVersion": "${{ steps.extract-env.outputs.npm_version }}"
+              },
+              "ghcr.io/devcontainers/features/github-cli:1": {}
+            },
+            "forwardPorts": [8080],
+            "portsAttributes": {
+              "8080": {
+                "label": "Express API",
+                "onAutoForward": "openPreview",
+                "visibility": "public"
+              }
+            },
+            "postCreateCommand": "npm ci",
+            "postStartCommand": "npm run build && npm run dev",
+            "customizations": {
+              "codespaces": {
+                "openFiles": ["README.md", "src/index.ts"]
+              },
+              "vscode": {
+                "extensions": [
+                  "dbaeumer.vscode-eslint",
+                  "esbenp.prettier-vscode",
+                  "ms-azuretools.vscode-docker"
+                ]
+              }
+            }
+          }
+          EOF
+
+      - name: Create Codespace via GitHub API
+        id: create_codespace
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              // Create codespace using repository endpoint
+              // Note: This requires the GITHUB_TOKEN to have codespace:write permission
+              // which may need to be configured in repository settings
+              const { data: codespace } = await github.rest.codespaces.createWithRepoForAuthenticatedUser({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: '${{ github.event.pull_request.head.ref }}',
+                display_name: `Express-PR-${{ github.event.pull_request.number }}`,
+                machine: 'basicLinux32gb',
+                devcontainer_path: '.devcontainer/devcontainer.json',
+                idle_timeout_minutes: 30
+              });
+              
+              console.log('✅ Codespace created:', codespace.name);
+              console.log('🔗 Web URL:', codespace.web_url);
+              
+              return codespace.web_url;
+            } catch (error) {
+              console.error('❌ Error creating codespace via API:', error.message);
+              console.log('⚠️ Falling back to manual creation link');
+              // Fallback: provide a link to create codespace manually
+              const createUrl = `https://github.com/codespaces/new?template_repo=${context.repo.owner}/${context.repo.repo}&ref=${{ github.event.pull_request.head.ref }}&devcontainer_path=.devcontainer/devcontainer.json`;
+              return createUrl;
+            }
+
+      - name: Wait for Codespace to be ready
+        run: |
+          echo "⏳ Waiting for codespace to initialize..."
+          sleep 30
+
+      - name: Comment PR with Codespace link
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const codespaceUrl = '${{ steps.create_codespace.outputs.result }}';
+            
+            const commentBody = `## 🚀 Express PR Environment Ready!
+
+**Live Codespace:** ${codespaceUrl}
+
+**Environment:**
+- Node.js: \`${{ steps.extract-env.outputs.node_version }}\`
+- npm: \`${{ steps.extract-env.outputs.npm_version }}\`
+- Package Manager: \`${{ steps.extract-env.outputs.package_manager }}\`
+
+**Access:**
+1. Click the link above to open the Codespace
+2. Wait for environment to build (~2-3 minutes)
+3. App runs automatically on port **8080**
+4. API will be available at: \`https://[your-codespace-url]-8080.app.github.dev\`
+
+**Auto-started:**
+- \`npm run build\` - Compiles TypeScript
+- \`npm run dev\` - Starts Express server
+
+**Port Visibility:** Public (port 8080)
+
+**Note:** Codespace auto-stops after 30 minutes of inactivity. You can restart it from the GitHub Codespaces page.
+
+---
+*This codespace was automatically created for PR #${{ github.event.pull_request.number }}*`;
+
+            // Check if comment already exists
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🚀 Express PR Environment Ready!')
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: commentBody
+              });
+              console.log('✅ Updated existing comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+              console.log('✅ Created new comment');
+            }
+
