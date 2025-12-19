@@ -4,11 +4,12 @@ slug: catalog-endpoint
 team: "A - Commerce"
 oas_paths: ["/catalog"]
 migrations: ["db/migrations/0001_baseline.sql"]
-status: "Done"   # Ready | In Progress | PR | Done
+status: "Done"
 branch: "feat/a-catalog-real"
 pr: ""
 newman_report: "reports/newman/catalog.json"
 last_update: "2025-10-19T22:21:00+0800"
+related_stories: ["US-001"]
 ---
 
 # Catalog endpoint (real) — Dev Notes

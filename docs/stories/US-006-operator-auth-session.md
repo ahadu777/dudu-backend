@@ -2,9 +2,12 @@
 id: US-006
 title: Operator authentication and validator session lifecycle
 owner: Product
-status: Approved
+status: "Done"
 priority: Medium
 last_update: 2025-10-19T23:44:00+0800
+business_requirement: "PRD-003"
+cards:
+  - operators-login
 ---
 
 ## Business goal
@@ -15,22 +18,25 @@ Authenticate operators and bind scans to a device/location via short-lived sessi
 - Operator API
 
 ## Scope (in)
-- POST /operators/login → POST /validators/sessions → use session_id on scans → session expiry
+- Operator login → Session binding → Authenticated scans → Session expiry
 
 ## Acceptance (Given/When/Then)
 **Story A — Login**
-- Given valid credentials
-- When POST /operators/login
-- Then 200 { operator_token }
+- Given the operator has valid credentials
+- When the operator logs in
+- Then they receive an authentication token
 
-**Story B — Start session**
-- Given a valid operator_token
-- When POST /validators/sessions { device_id, location_id? }
-- Then 200 { session_id, expires_in }
+**Story B — Scan with operator auth**
+- Given the operator has a valid session
+- When the operator scans a ticket
+- Then the scan is recorded with the operator's context
 
-**Story C — Invalid session**
-- When POST /tickets/scan with an expired/unknown session_id
-- Then 401
+**Story C — Invalid auth**
+- Given the operator's session has expired or is invalid
+- When the operator attempts to scan a ticket
+- Then access is denied
 
 ## Links
-- Cards: operators-login, validators-sessions
+- Cards: operators-login, venue-enhanced-scanning
+
+> **Deprecated**: `/validators/sessions` has been replaced by operator JWT authentication. Session context is now embedded in the JWT token.

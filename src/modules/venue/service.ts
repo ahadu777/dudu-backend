@@ -27,6 +27,7 @@ interface OperatorInfo {
 interface ValidationRequest {
   qrToken: string;
   functionCode: string;
+  venueCode?: string;  // 可选的场馆代码（新增 2025-11-25）
   operator: OperatorInfo;
 }
 
@@ -47,6 +48,15 @@ export interface VenueOperationsResponse {
     venue_code: string;
     venue_name: string;
     terminal_device?: string;
+  };
+  customer_info?: {
+    customer_name: string | null;
+    customer_phone: string | null;
+    customer_email: string | null;
+  };
+  product_info?: {
+    product_id: number | null;
+    product_name: string | null;
   };
   performance_metrics: {
     response_time_ms: number;
@@ -93,6 +103,20 @@ export class VenueOperationsService {
    */
   async validateAndRedeem(request: ValidationRequest): Promise<VenueOperationsResponse> {
     const startTime = Date.now();
+    let venueId: number = 0;  // 场馆ID，用于记录核销事件
+
+    // 额外信息，用于记录核销事件的 additional_data
+    const additionalInfo: {
+      ticketType?: string;
+      venueCode?: string;
+      venueName?: string;
+      productId?: number;
+      productName?: string;
+      customerName?: string;
+      customerPhone?: string;
+      customerEmail?: string;
+      customerType?: string;
+    } = {};
 
     logger.info('venue.scan.started', {
       function_code: request.functionCode,
@@ -106,19 +130,12 @@ export class VenueOperationsService {
       // ========================================
       const decryptResult = await decryptAndVerifyQR(request.qrToken);
 
-      // OTA票券不进行时间过期校验（QR码长期有效）
-      // QR加密仍然保留用于防篡改，但不强制过期时间
-      logger.info('venue.scan.qr_decryption_success', {
-        operator_id: request.operator.operator_id,
-        qr_expired: decryptResult.is_expired,
-        note: 'OTA tickets do not enforce QR expiry validation'
-      });
-
       const { ticket_code: ticketCode, jti } = decryptResult.data;
 
       logger.info('venue.scan.qr_decrypted', {
         ticket_code: ticketCode,
         jti,
+        qr_expired: decryptResult.is_expired,
         operator_id: request.operator.operator_id
       });
 
@@ -145,7 +162,9 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'ALREADY_REDEEMED'
+          reason: 'ALREADY_REDEEMED',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('ALREADY_REDEEMED', startTime, request.operator, false);
@@ -168,10 +187,93 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'TICKET_NOT_FOUND'
+          reason: 'TICKET_NOT_FOUND',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request.operator, true);
+      }
+
+      // ========================================
+      // Step 3.1: 小程序票券 QR 过期检查
+      // - OTA 票券：QR 码长期有效，不检查过期
+      // - 小程序票券：QR 码有 30 分钟有效期，过期后需重新生成
+      // ========================================
+      if (ticket.ticket_type === 'MINIPROGRAM' && decryptResult.is_expired) {
+        logger.warn('venue.scan.qr_expired', {
+          ticket_code: ticketCode,
+          ticket_type: ticket.ticket_type,
+          qr_expires_at: decryptResult.data.expires_at,
+          operator_id: request.operator.operator_id,
+          reason: 'Miniprogram QR code has expired'
+        });
+
+        await this.recordRedemption({
+          ticketCode,
+          jti,
+          functionCode: request.functionCode,
+          operator: request.operator,
+          result: 'reject',
+          reason: 'QR_EXPIRED',
+          venueId,
+          additionalInfo
+        });
+
+        return this.createRejectResponse('QR_EXPIRED', startTime, request.operator, true);
+      }
+
+      // 收集票券相关的额外信息
+      additionalInfo.ticketType = ticket.ticket_type;
+      additionalInfo.productId = ticket.product_id;
+      additionalInfo.customerName = ticket.customer_name;
+      additionalInfo.customerPhone = ticket.customer_phone;
+      additionalInfo.customerEmail = ticket.customer_email;
+      additionalInfo.customerType = ticket.customer_type;
+
+      // 获取产品名称
+      if (ticket.product_id) {
+        additionalInfo.productName = await this.repository.getProductNameById(ticket.product_id) || undefined;
+      }
+
+      // ========================================
+      // Step 3.1: JTI 匹配验证（一码失效机制）
+      // - OTA 票券：current_jti 存储在 raw.jti.current_jti
+      // - 小程序票券：current_jti 存储在 extra.current_jti
+      // ========================================
+      let currentJti: string | undefined;
+
+      // OTA 票券：检查 raw.jti.current_jti
+      if (ticket.raw?.jti?.current_jti) {
+        currentJti = ticket.raw.jti.current_jti;
+      }
+      // 小程序票券：检查 extra.current_jti
+      else if (ticket.extra?.current_jti) {
+        currentJti = ticket.extra.current_jti;
+      }
+
+      if (currentJti && currentJti !== jti) {
+        logger.warn('venue.scan.jti_mismatch', {
+          ticket_code: ticketCode,
+          qr_jti: jti,
+          current_jti: currentJti,
+          ticket_type: ticket.ticket_type,
+          operator_id: request.operator.operator_id,
+          reason: 'QR code superseded by newer one'
+        });
+
+        await this.recordRedemption({
+          ticketCode,
+          jti,
+          functionCode: request.functionCode,
+          operator: request.operator,
+          result: 'reject',
+          reason: 'QR_SUPERSEDED',
+          venueId,
+          additionalInfo
+        });
+
+        return this.createRejectResponse('QR_SUPERSEDED', startTime, request.operator, false);
       }
 
       logger.info('venue.scan.ticket_found', {
@@ -181,8 +283,10 @@ export class VenueOperationsService {
         operator_id: request.operator.operator_id
       });
 
-      // 验证票据状态 - OTA票券必须先激活才能核销
-      const validStatuses = ['ACTIVE'];  // 只允许已激活的票券核销
+      // 验证票据状态 - 票券必须先激活才能核销
+      // 统一状态：OTA 和小程序票券均使用 'ACTIVATED'
+      // RESERVED 状态也允许核销（预订票券可直接使用）
+      const validStatuses = ['ACTIVATED', 'RESERVED'];
       if (!validStatuses.includes(ticket.status)) {
         logger.warn('venue.scan.invalid_status', {
           ticket_code: ticketCode,
@@ -198,10 +302,83 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'TICKET_INVALID_STATUS'
+          reason: 'TICKET_INVALID_STATUS',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('TICKET_INVALID_STATUS', startTime, request.operator, true);
+      }
+
+      // ========================================
+      // Step 3.5: 验证场馆（如果提供了 venue_code）
+      // ========================================
+      if (request.venueCode) {
+        logger.info('venue.scan.venue_validation_started', {
+          venue_code: request.venueCode,
+          function_code: request.functionCode,
+          operator_id: request.operator.operator_id
+        });
+
+        const venue = await this.repository.findVenueByCode(request.venueCode);
+
+        if (!venue) {
+          logger.warn('venue.scan.venue_not_found', {
+            venue_code: request.venueCode,
+            operator_id: request.operator.operator_id
+          });
+
+          await this.recordRedemption({
+            ticketCode,
+            jti,
+            functionCode: request.functionCode,
+            operator: request.operator,
+            result: 'reject',
+            reason: 'VENUE_NOT_FOUND',
+            venueId,
+            additionalInfo
+          });
+
+          return this.createRejectResponse('VENUE_NOT_FOUND', startTime, request.operator, true);
+        }
+
+        // 验证场馆是否支持该功能
+        const supportedFunctions = venue.supported_functions || [];
+        if (!supportedFunctions.includes(request.functionCode)) {
+          logger.warn('venue.scan.wrong_venue_function', {
+            venue_code: request.venueCode,
+            venue_name: venue.venue_name,
+            function_code: request.functionCode,
+            supported_functions: supportedFunctions,
+            operator_id: request.operator.operator_id
+          });
+
+          await this.recordRedemption({
+            ticketCode,
+            jti,
+            functionCode: request.functionCode,
+            operator: request.operator,
+            result: 'reject',
+            reason: 'WRONG_VENUE_FUNCTION',
+            venueId,
+            additionalInfo
+          });
+
+          return this.createRejectResponse('WRONG_VENUE_FUNCTION', startTime, request.operator, true);
+        }
+
+        // 保存场馆信息用于记录核销事件
+        venueId = venue.venue_id;
+        additionalInfo.venueCode = venue.venue_code;
+        additionalInfo.venueName = venue.venue_name;
+
+        logger.info('venue.scan.venue_validation_passed', {
+          venue_code: request.venueCode,
+          venue_id: venueId,
+          venue_name: venue.venue_name,
+          function_code: request.functionCode,
+          operator_id: request.operator.operator_id
+        });
       }
 
       // ========================================
@@ -225,7 +402,9 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'WRONG_FUNCTION'
+          reason: 'WRONG_FUNCTION',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('WRONG_FUNCTION', startTime, request.operator, true);
@@ -245,7 +424,9 @@ export class VenueOperationsService {
           functionCode: request.functionCode,
           operator: request.operator,
           result: 'reject',
-          reason: 'NO_REMAINING'
+          reason: 'NO_REMAINING',
+          venueId,
+          additionalInfo
         });
 
         return this.createRejectResponse('NO_REMAINING', startTime, request.operator, true);
@@ -277,7 +458,9 @@ export class VenueOperationsService {
         functionCode: request.functionCode,
         operator: request.operator,
         result: 'success',
-        remainingUsesAfter
+        remainingUsesAfter,
+        venueId,
+        additionalInfo
       });
 
       // ========================================
@@ -305,6 +488,15 @@ export class VenueOperationsService {
         operator_info: {
           operator_id: request.operator.operator_id,
           username: request.operator.username
+        },
+        customer_info: {
+          customer_name: additionalInfo.customerName || null,
+          customer_phone: additionalInfo.customerPhone || null,
+          customer_email: additionalInfo.customerEmail || null
+        },
+        product_info: {
+          product_id: additionalInfo.productId || null,
+          product_name: additionalInfo.productName || null
         },
         performance_metrics: {
           response_time_ms: responseTime,
@@ -370,19 +562,42 @@ export class VenueOperationsService {
     result: 'success' | 'reject';
     reason?: string;
     remainingUsesAfter?: number;
+    venueId?: number;
+    // 额外信息（存入 additional_data）
+    additionalInfo?: {
+      ticketType?: string;      // OTA / MINIPROGRAM
+      venueCode?: string;       // 场馆代码
+      venueName?: string;       // 场馆名称
+      productId?: number;       // 产品ID
+      productName?: string;     // 产品名称
+      customerName?: string;    // 顾客姓名
+      customerPhone?: string;   // 顾客手机号
+      customerEmail?: string;   // 顾客邮箱
+      customerType?: string;    // 顾客类型
+    };
   }): Promise<void> {
     try {
       await this.repository.recordRedemption({
         ticketCode: params.ticketCode,
         functionCode: params.functionCode,
-        venueId: 0, // 默认场馆ID（无session情况）
+        venueId: params.venueId || 0,
         operatorId: params.operator.operator_id,
-        sessionCode: '', // 无session code
+        sessionCode: '',
         terminalDeviceId: undefined,
         jti: params.jti,
         result: params.result,
         reason: params.reason,
-        remainingUsesAfter: params.remainingUsesAfter
+        remainingUsesAfter: params.remainingUsesAfter,
+        additionalData: {
+          operator_name: params.operator.username,
+          ticket_type: params.additionalInfo?.ticketType,
+          venue_code: params.additionalInfo?.venueCode,
+          venue_name: params.additionalInfo?.venueName,
+          product_id: params.additionalInfo?.productId,
+          product_name: params.additionalInfo?.productName,
+          customer_name: params.additionalInfo?.customerName,
+          customer_type: params.additionalInfo?.customerType
+        }
       });
     } catch (error) {
       // 记录失败不应该影响主流程
@@ -438,18 +653,31 @@ export class VenueOperationsService {
       operator_name: sessionData.operatorName,
       expires_at: expiresAt.toISOString(),
       supported_functions: venue?.supported_functions || [
-        'ferry_boarding',
-        'gift_redemption',
-        'playground_token'
+        'ferry',
+        'gift',
+        'tokens',
+        'park_admission'
       ]
     };
   }
 
   // ============================================================================
-  // Analytics
+  // Analytics (PRD-003)
   // ============================================================================
 
-  async getVenueAnalytics(venueCode: string, hours: number = 24) {
+  /**
+   * Get venue analytics with optional terminal breakdown
+   *
+   * @param venueCode - Venue identifier
+   * @param hours - Time window in hours (default: 24)
+   * @param options - Analytics options
+   * @param options.includeTerminalBreakdown - Include per-terminal metrics for cross-terminal fraud detection
+   */
+  async getVenueAnalytics(
+    venueCode: string,
+    hours: number = 24,
+    options?: { includeTerminalBreakdown?: boolean }
+  ) {
     const venue = await this.repository.findVenueByCode(venueCode);
 
     if (!venue) {
@@ -459,7 +687,184 @@ export class VenueOperationsService {
     const endDate = new Date();
     const startDate = new Date(endDate.getTime() - hours * 60 * 60 * 1000);
 
-    return this.repository.getVenueAnalytics(venue.venue_id, startDate, endDate);
+    return this.repository.getVenueAnalytics(venue.venue_id, startDate, endDate, options);
+  }
+
+  /**
+   * Get venues list
+   * - With partnerId: return only that partner's venues (OTA)
+   * - Without partnerId: return all venues (miniprogram)
+   */
+  async getAllVenues(options: { includeInactive?: boolean; partnerId?: string } | boolean = false) {
+    // Support legacy boolean parameter for backward compatibility
+    const opts = typeof options === 'boolean'
+      ? { includeInactive: options }
+      : options;
+
+    const venues = await this.repository.findAllVenues(opts);
+
+    return {
+      venues: venues.map(v => ({
+        venue_id: v.venue_id,
+        venue_code: v.venue_code,
+        venue_name: v.venue_name,
+        venue_type: v.venue_type,
+        location_address: v.location_address,
+        supported_functions: v.supported_functions || [],
+        is_active: v.is_active,
+        partner_id: v.partner_id,
+        created_at: v.created_at,
+        updated_at: v.updated_at
+      }))
+    };
+  }
+
+  // ============================================================================
+  // Venue CRUD Operations
+  // ============================================================================
+
+  /**
+   * Create a new venue
+   */
+  async createVenue(venueData: {
+    venue_code: string;
+    venue_name: string;
+    venue_type: string;
+    location_address?: string;
+    supported_functions?: string[];
+    is_active?: boolean;
+    partner_id?: string | null;
+  }) {
+    logger.info('venue.create.started', { venue_code: venueData.venue_code });
+
+    // Check venue_code uniqueness
+    const isUnique = await this.repository.isVenueCodeUnique(venueData.venue_code);
+    if (!isUnique) {
+      throw new Error(`Venue code '${venueData.venue_code}' already exists`);
+    }
+
+    const venue = await this.repository.createVenue({
+      venue_code: venueData.venue_code,
+      venue_name: venueData.venue_name,
+      venue_type: venueData.venue_type,
+      location_address: venueData.location_address,
+      supported_functions: venueData.supported_functions || [],
+      is_active: venueData.is_active !== false,
+      partner_id: venueData.partner_id ?? null
+    });
+
+    logger.info('venue.create.success', { venue_id: venue.venue_id, venue_code: venue.venue_code });
+
+    return {
+      venue_id: venue.venue_id,
+      venue_code: venue.venue_code,
+      venue_name: venue.venue_name,
+      venue_type: venue.venue_type,
+      location_address: venue.location_address,
+      supported_functions: venue.supported_functions || [],
+      is_active: venue.is_active,
+      partner_id: venue.partner_id,
+      created_at: venue.created_at,
+      updated_at: venue.updated_at
+    };
+  }
+
+  /**
+   * Get venue by ID
+   */
+  async getVenueById(venueId: number) {
+    const venue = await this.repository.findVenueById(venueId);
+
+    if (!venue) {
+      return null;
+    }
+
+    return {
+      venue_id: venue.venue_id,
+      venue_code: venue.venue_code,
+      venue_name: venue.venue_name,
+      venue_type: venue.venue_type,
+      location_address: venue.location_address,
+      supported_functions: venue.supported_functions || [],
+      is_active: venue.is_active,
+      partner_id: venue.partner_id,
+      created_at: venue.created_at,
+      updated_at: venue.updated_at
+    };
+  }
+
+  /**
+   * Update venue
+   */
+  async updateVenue(venueId: number, updateData: {
+    venue_code?: string;
+    venue_name?: string;
+    venue_type?: string;
+    location_address?: string;
+    supported_functions?: string[];
+    is_active?: boolean;
+  }) {
+    logger.info('venue.update.started', { venue_id: venueId });
+
+    // Check if venue exists
+    const existing = await this.repository.findVenueById(venueId);
+    if (!existing) {
+      return null;
+    }
+
+    // If venue_code is being changed, check uniqueness
+    if (updateData.venue_code && updateData.venue_code !== existing.venue_code) {
+      const isUnique = await this.repository.isVenueCodeUnique(updateData.venue_code, venueId);
+      if (!isUnique) {
+        throw new Error(`Venue code '${updateData.venue_code}' already exists`);
+      }
+    }
+
+    // Filter out undefined values to only update provided fields
+    const filteredData: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updateData)) {
+      if (value !== undefined) {
+        filteredData[key] = value;
+      }
+    }
+
+    const venue = await this.repository.updateVenue(venueId, filteredData);
+
+    if (!venue) {
+      return null;
+    }
+
+    logger.info('venue.update.success', { venue_id: venue.venue_id, venue_code: venue.venue_code });
+
+    return {
+      venue_id: venue.venue_id,
+      venue_code: venue.venue_code,
+      venue_name: venue.venue_name,
+      venue_type: venue.venue_type,
+      location_address: venue.location_address,
+      supported_functions: venue.supported_functions || [],
+      is_active: venue.is_active,
+      partner_id: venue.partner_id,
+      created_at: venue.created_at,
+      updated_at: venue.updated_at
+    };
+  }
+
+  /**
+   * Delete venue (soft delete)
+   */
+  async deleteVenue(venueId: number) {
+    logger.info('venue.delete.started', { venue_id: venueId });
+
+    const success = await this.repository.deleteVenue(venueId);
+
+    if (success) {
+      logger.info('venue.delete.success', { venue_id: venueId });
+    } else {
+      logger.warn('venue.delete.not_found', { venue_id: venueId });
+    }
+
+    return success;
   }
 }
 

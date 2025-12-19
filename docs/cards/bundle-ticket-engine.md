@@ -4,17 +4,17 @@ slug: bundle-ticket-engine
 team: "B - Fulfillment"
 oas_paths: []
 migrations: ["db/migrations/0012_ticket_entitlements.sql"]
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""
 newman_report: "reports/newman/bundle-ticket-engine.json"
-last_update: "2025-10-24T18:28:44+08:00"
-related_stories: ["US-010"]
+last_update: "2025-12-04T15:00:00+08:00"
+related_stories: ["US-010", "US-010A"]
 ---
 
 ## Status & Telemetry
-- Status: Ready
+- Status: Done
 - Readiness: mvp（发券逻辑覆盖多人套票权益）
 - Spec Paths: 内部 service（扩展 tickets-issuance）
 - Migrations: db/migrations/0012_ticket_entitlements.sql
@@ -22,7 +22,7 @@ related_stories: ["US-010"]
 - Last Update: 2025-10-24T18:28:44+08:00
 
 ## 0) Prerequisites
-- order-create-idempotent 已记录 `passengerSnapshot` 与 `ticketBundleSnapshot`。
+- order-create 已记录 `passengerSnapshot` 与 `ticketBundleSnapshot`。
 - 套票模板（admin-package-config）提供权益定义、实名需求、有效期策略。
 - wechat-payment-session + payment-webhook 确保订单状态准确。
 - QR token 加密密钥与 tickets-issuance 现有实现可复用。

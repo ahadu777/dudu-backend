@@ -8,8 +8,9 @@ owner: "Product Management"
 status: "Draft"
 created_date: "2025-11-04"
 last_updated: "2025-11-19"
-related_stories: ["US-001", "US-002", "US-004", "US-005", "US-006", "US-013"]
-implementation_cards: ["tickets-scan", "operators-login", "validators-sessions", "reports-redemptions"]
+related_stories: ["US-002", "US-005", "US-006", "US-013"]
+enhances_stories: ["US-001", "US-004"]  # Stories from PRD-001 that are enhanced by this PRD
+implementation_cards: ["venue-enhanced-scanning", "operators-login", "operator-validation-scanner", "reports-redemptions"]
 ```
 
 ## Executive Summary

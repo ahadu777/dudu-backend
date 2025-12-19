@@ -1,0 +1,578 @@
+{
+  "info": {
+    "name": "OTA Batch List API Tests",
+    "description": "Tests for GET /api/ota/batches - Batch list with pagination and filters",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "ota-batch-list-001"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "ota_test_key_12345",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Test 1: Basic batch list (default pagination)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has pagination metadata', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response).to.have.property('items');",
+              "  pm.expect(response).to.have.property('total');",
+              "  pm.expect(response).to.have.property('page');",
+              "  pm.expect(response).to.have.property('page_size');",
+              "  pm.expect(response).to.have.property('has_more');",
+              "});",
+              "",
+              "pm.test('Items is an array', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.items).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Default page is 1', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page).to.equal(1);",
+              "});",
+              "",
+              "pm.test('Default page_size is 20', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page_size).to.equal(20);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 2: Batch list with custom pagination",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?page=1&limit=5",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns correct page_size', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page_size).to.equal(5);",
+              "});",
+              "",
+              "pm.test('Items array length <= page_size', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.items.length).to.be.at.most(5);",
+              "});",
+              "",
+              "pm.test('Batch item has required fields', () => {",
+              "  const response = pm.response.json();",
+              "  if (response.items.length > 0) {",
+              "    const batch = response.items[0];",
+              "    pm.expect(batch).to.have.property('batch_id');",
+              "    pm.expect(batch).to.have.property('product_id');",
+              "    pm.expect(batch).to.have.property('distribution_mode');",
+              "    pm.expect(batch).to.have.property('status');",
+              "    pm.expect(batch).to.have.property('total_quantity');",
+              "    pm.expect(batch).to.have.property('tickets_activated');",
+              "    pm.expect(batch).to.have.property('tickets_redeemed');",
+              "    pm.expect(batch).to.have.property('created_at');",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 3: Filter by status=active",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?status=active&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "status",
+              "value": "active"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('All returned batches have status=active', () => {",
+              "  const response = pm.response.json();",
+              "  response.items.forEach(batch => {",
+              "    pm.expect(batch.status).to.equal('active');",
+              "  });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 4: Filter by product_id",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?product_id=107&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "product_id",
+              "value": "107"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('All returned batches have product_id=107', () => {",
+              "  const response = pm.response.json();",
+              "  response.items.forEach(batch => {",
+              "    pm.expect(batch.product_id).to.equal(107);",
+              "  });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 5: Combined filters (status + product_id)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?status=active&product_id=107&limit=5",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "status",
+              "value": "active"
+            },
+            {
+              "key": "product_id",
+              "value": "107"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('All batches match both filters', () => {",
+              "  const response = pm.response.json();",
+              "  response.items.forEach(batch => {",
+              "    pm.expect(batch.status).to.equal('active');",
+              "    pm.expect(batch.product_id).to.equal(107);",
+              "  });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 6: Pagination - Page 2",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?page=2&limit=5",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "page",
+              "value": "2"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns page 2', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page).to.equal(2);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 7: Large limit capped at 100",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?limit=500",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "500"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Limit capped at 100', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.page_size).to.be.at.most(100);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 8: Missing API key returns 401",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 401 Unauthorized', () => {",
+              "  pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Error indicates missing API key', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.error).to.equal('API_KEY_REQUIRED');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 9: Invalid API key returns 401",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "invalid_key_12345",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 401 Unauthorized', () => {",
+              "  pm.response.to.have.status(401);",
+              "});",
+              "",
+              "pm.test('Error indicates invalid API key', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.error).to.equal('INVALID_API_KEY');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 10: Invalid product_id parameter",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?product_id=abc",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "product_id",
+              "value": "abc"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 400 Bad Request', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Error message indicates invalid product_id', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.error).to.equal('INVALID_REQUEST');",
+              "  pm.expect(response.message).to.include('product_id');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 11: Empty result for non-existent product_id",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?product_id=99999",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "product_id",
+              "value": "99999"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Returns empty items array', () => {",
+              "  const response = pm.response.json();",
+              "  pm.expect(response.items).to.be.an('array').that.is.empty;",
+              "  pm.expect(response.total).to.equal(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test 12: has_more flag is correct",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ota/batches?limit=1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ota", "batches"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Should return 200 OK', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('has_more is true when total > page * limit', () => {",
+              "  const response = pm.response.json();",
+              "  if (response.total > 1) {",
+              "    pm.expect(response.has_more).to.be.true;",
+              "  } else {",
+              "    pm.expect(response.has_more).to.be.false;",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

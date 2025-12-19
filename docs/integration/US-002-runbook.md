@@ -1,16 +1,24 @@
-# US-002 — Operator scan & redemption
+# US-002 — Operator Scan & Redemption
 
-Operator workflow: Login → Create session → Scan tickets → Validate redemptions
+Operator workflow: Login → Scan tickets → Validate redemptions
+
+**Updated**: 2025-11 (API migrated from `/tickets/scan` to `/venue/scan`)
 
 ## Prerequisites
 - **Base URL**: `http://localhost:8080`
 - **Operator credentials**: alice/secret123 (seeded)
-- **Existing QR tokens**: Use US-001 flow to generate test QR codes
 - **Server running**: `npm run build && PORT=8080 npm start`
+
+## Current API Endpoint
+
+| Old (Deprecated) | New (Current) |
+|------------------|---------------|
+| `POST /tickets/scan` | `POST /venue/scan` |
 
 ## Step-by-Step Flow
 
 ### 1. Operator Authentication
+
 Login as gate operator:
 ```bash
 curl -s -X POST http://localhost:8080/operators/login \
@@ -26,210 +34,207 @@ curl -s -X POST http://localhost:8080/operators/login \
 {"operator_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
 ```
 
-### 2. Create Validator Session
-Bind operator to specific gate device and location:
+**Save token for next steps:**
 ```bash
-# Replace OPERATOR_TOKEN with token from step 1
-OPERATOR_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+export OPERATOR_TOKEN="<token_from_response>"
+```
 
-curl -s -X POST http://localhost:8080/validators/sessions \
+### 2. Scan Ticket (Current API)
+
+**Endpoint**: `POST /venue/scan`
+
+**Required Authentication**: `Authorization: Bearer <operator_token>`
+
+```bash
+curl -s -X POST http://localhost:8080/venue/scan \
   -H "Authorization: Bearer $OPERATOR_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
-    "device_id": "gate-01",
-    "location_id": 52
+    "qr_token": "<QR_TOKEN>",
+    "function_code": "ferry",
+    "venue_code": "central-pier"
   }'
 ```
 
-**Expected Result:**
-```json
-{"session_id":"sess-abc123...","expires_in":28800}
-```
+**Parameters:**
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `qr_token` | Yes | JWT token from QR code |
+| `function_code` | Yes | Function to validate (ferry, bus, gift, etc.) |
+| `venue_code` | No | Venue identifier for function validation |
 
-### 3. Generate User QR Token (for testing)
-Generate a QR token for an existing ticket:
-```bash
-# Get user token
-USER_TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/demo-token \
-  -H 'Content-Type: application/json' \
-  -d '{"user_id": 123, "email": "test@example.com"}' | \
-  grep -o '"token":"[^"]*"' | cut -d'"' -f4)
-
-# Generate QR token for test ticket TKT-123-001
-curl -s -X POST http://localhost:8080/tickets/TKT-123-001/qr-token \
-  -H "Authorization: Bearer $USER_TOKEN"
-```
-
-**Expected Result:**
-```json
-{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","expires_in":60}
-```
-
-### 4. Scan Valid Ticket
-Scan a QR code and redeem function:
-```bash
-# Replace QR_TOKEN and SESSION_ID with actual values from steps above
-QR_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-SESSION_ID="sess-abc123..."
-
-curl -s -X POST http://localhost:8080/tickets/scan \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "'$QR_TOKEN'",
-    "function_code": "bus",
-    "session_id": "'$SESSION_ID'",
-    "location_id": 52
-  }' | jq '.'
-```
-
-**Expected Result:**
+**Success Response (200):**
 ```json
 {
   "result": "success",
-  "ticket_status": "partially_redeemed",
-  "entitlements": [
-    {"function_code": "bus", "label": "Bus Ride", "remaining_uses": 1},
-    {"function_code": "ferry", "label": "Ferry Ride", "remaining_uses": 1},
-    {"function_code": "metro", "label": "Metro Entry", "remaining_uses": 1}
-  ],
-  "ts": "2025-10-30T05:53:42.292Z"
+  "ticket_code": "TKT-123-001",
+  "function_code": "ferry",
+  "remaining_uses": 0,
+  "ticket_status": "fully_redeemed",
+  "performance_metrics": {
+    "response_time_ms": 2,
+    "fraud_checks_passed": true
+  },
+  "ts": "2025-11-28T10:00:00.000Z"
 }
+```
+
+**Reject Response (422):**
+```json
+{
+  "result": "reject",
+  "reason": "ALREADY_REDEEMED",
+  "performance_metrics": {
+    "response_time_ms": 1,
+    "fraud_checks_passed": false
+  },
+  "ts": "2025-11-28T10:00:00.000Z"
+}
+```
+
+### 3. Generate QR Token for Testing
+
+**Option A: Use existing ticket from US-001 flow**
+```bash
+# Get demo user token
+USER_TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/wechat/login \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"test_code_001"}' | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+# Generate QR for ticket
+curl -s http://localhost:8080/qr/TKT-123-001 \
+  -H "Authorization: Bearer $USER_TOKEN"
+```
+
+**Option B: Generate test QR token directly**
+```bash
+cat > generate-qr.js << 'EOF'
+const jwt = require('jsonwebtoken');
+const payload = {
+  tid: 'TKT-123-001',
+  jti: 'test-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+  iat: Math.floor(Date.now() / 1000),
+  exp: Math.floor(Date.now() / 1000) + 300
+};
+console.log(jwt.sign(payload, 'qr-signing-secret-change-in-production'));
+EOF
+
+export QR_TOKEN=$(node generate-qr.js)
+echo "QR Token: $QR_TOKEN"
+```
+
+### 4. Complete Scan Flow
+
+```bash
+# Step 1: Login
+echo "=== Operator Login ==="
+OP_RESP=$(curl -s -X POST http://localhost:8080/operators/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"secret123"}')
+OPERATOR_TOKEN=$(echo $OP_RESP | grep -o '"operator_token":"[^"]*"' | cut -d'"' -f4)
+echo "Token: ${OPERATOR_TOKEN:0:50}..."
+
+# Step 2: Generate QR
+echo "=== Generate QR Token ==="
+QR_TOKEN=$(node generate-qr.js)
+echo "QR: ${QR_TOKEN:0:50}..."
+
+# Step 3: Scan
+echo "=== Scan Ticket ==="
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $OPERATOR_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"qr_token\": \"$QR_TOKEN\",
+    \"function_code\": \"ferry\",
+    \"venue_code\": \"central-pier\"
+  }" | python3 -m json.tool
 ```
 
 ### 5. Test Error Scenarios
 
-**Replay Attack (using same QR token twice):**
+**Replay Attack (same QR twice):**
 ```bash
-# Use same QR_TOKEN and SESSION_ID again
-curl -s -X POST http://localhost:8080/tickets/scan \
+# First scan - should succeed
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $OPERATOR_TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "'$QR_TOKEN'",
-    "function_code": "bus",
-    "session_id": "'$SESSION_ID'"
-  }'
+  -d "{\"qr_token\":\"$QR_TOKEN\",\"function_code\":\"ferry\"}"
+
+# Second scan - should fail
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $OPERATOR_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{\"qr_token\":\"$QR_TOKEN\",\"function_code\":\"ferry\"}"
+
+# Expected: {"result":"reject","reason":"ALREADY_REDEEMED",...}
 ```
 
-**Expected:** `{"error":"REPLAY","message":"QR code already used"}`
-
-**Wrong Function Code:**
+**Invalid Function Code:**
 ```bash
-# Generate fresh QR token and test invalid function
-curl -s -X POST http://localhost:8080/tickets/scan \
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $OPERATOR_TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "'$NEW_QR_TOKEN'",
-    "function_code": "airplane",
-    "session_id": "'$SESSION_ID'"
-  }'
+  -d "{\"qr_token\":\"$(node generate-qr.js)\",\"function_code\":\"airplane\"}"
+
+# Expected: {"result":"reject","reason":"WRONG_FUNCTION",...}
 ```
 
-**Expected:** `{"error":"WRONG_FUNCTION","message":"Function airplane not available on this ticket"}`
-
-### 4. Handle Different Function Codes
-Test scanning for different transport modes:
+**Missing Authentication:**
 ```bash
-# Ferry
-curl -s -X POST http://localhost:8080/tickets/scan \
+curl -s -X POST http://localhost:8080/venue/scan \
   -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "<QR_TOKEN>",
-    "function_code": "ferry",
-    "session_id": "<SESSION_ID>",
-    "location_id": 52
-  }' | jq '.'
+  -d '{"qr_token":"test","function_code":"ferry"}'
 
-# Bus
-curl -s -X POST http://localhost:8080/tickets/scan \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "<QR_TOKEN>",
-    "function_code": "bus",
-    "session_id": "<SESSION_ID>",
-    "location_id": 52
-  }' | jq '.'
-
-# MRT
-curl -s -X POST http://localhost:8080/tickets/scan \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "<QR_TOKEN>",
-    "function_code": "mrt",
-    "session_id": "<SESSION_ID>",
-    "location_id": 52
-  }' | jq '.'
+# Expected: {"code":"INTERNAL_ERROR","message":"No operator token provided"}
 ```
 
-### 5. Test Edge Cases
+**Invalid Operator Token:**
 ```bash
-# Expired QR (should fail)
-curl -s -X POST http://localhost:8080/tickets/scan \
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer invalid_token" \
   -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "expired.jwt.token",
-    "function_code": "ferry",
-    "session_id": "<SESSION_ID>",
-    "location_id": 52
-  }' | jq '.'
+  -d '{"qr_token":"test","function_code":"ferry"}'
 
-# Replay protection (scan same QR twice)
-curl -s -X POST http://localhost:8080/tickets/scan \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "<USED_QR_TOKEN>",
-    "function_code": "ferry",
-    "session_id": "<SESSION_ID>",
-    "location_id": 52
-  }' | jq '.'
+# Expected: 401 Unauthorized
 ```
 
-## Complete Operator Workflow
-```bash
-export BASE=http://localhost:8080
+## Error Codes Reference
 
-# Step 1: Operator login
-echo "=== Operator Login ==="
-OP_RESP=$(curl -s -X POST $BASE/operators/login -H 'Content-Type: application/json' -d '{"username":"alice","password":"secret123"}')
-OP_TOKEN=$(echo $OP_RESP | jq -r '.operator_token')
-echo "Operator authenticated: ${OP_TOKEN:0:50}..."
+| Reason | HTTP Code | Description |
+|--------|-----------|-------------|
+| `ALREADY_REDEEMED` | 422 | QR token already used |
+| `NO_REMAINING` | 422 | No remaining uses for this function |
+| `WRONG_FUNCTION` | 422 | Function not available on ticket |
+| `TOKEN_EXPIRED` | 422 | QR token expired |
+| `INVALID_TOKEN` | 422 | QR token malformed or invalid |
+| `TICKET_NOT_FOUND` | 422 | Ticket does not exist |
+| `INTERNAL_ERROR` | 500 | Server error |
 
-# Step 2: Create session
-echo "=== Create Validator Session ==="
-SESS_RESP=$(curl -s -X POST $BASE/validators/sessions -H "Authorization: Bearer $OP_TOKEN" -H 'Content-Type: application/json' -d '{"device_id":"gate-01","location_id":52}')
-SESSION_ID=$(echo $SESS_RESP | jq -r '.session_id')
-echo "Session created: $SESSION_ID"
+## Function Codes
 
-# Step 3: Ready for scanning
-echo "=== Ready for Ticket Scanning ==="
-echo "Session ID: $SESSION_ID"
-echo "Use this session_id to scan QR codes"
+| Code | Description | Typical Uses |
+|------|-------------|--------------|
+| `ferry` | Ferry boarding | Unlimited or counted |
+| `bus` | Bus ride | Counted |
+| `metro` | Metro entry | Counted |
+| `gift` | Gift redemption | Single use |
+| `playground_token` | Playground token | Counted (e.g., 10) |
 
-# Example scan (requires actual QR token from US-001 flow)
-echo "=== Example Scan Command ==="
-echo "curl -s -X POST $BASE/tickets/scan -H 'Content-Type: application/json' -d '{\"qr_token\":\"<QR_TOKEN>\",\"function_code\":\"ferry\",\"session_id\":\"$SESSION_ID\",\"location_id\":52}'"
-```
+## Integration with Other Stories
 
-## Expected Results
-- ✅ **Login**: Valid operator_token received
-- ✅ **Session**: session_id created for gate-01 at location 52
-- ✅ **Valid scan**: `result: "success"` with usage decremented
-- ✅ **Invalid scan**: Proper error codes and messages
-- ✅ **Replay protection**: 409 Conflict on duplicate scans
-- ✅ **Function validation**: Only valid function_codes accepted
+| Story | Integration Point |
+|-------|-------------------|
+| US-001 | Generate tickets with QR tokens |
+| US-013 | Advanced venue operations (analytics, multi-terminal) |
+| US-015/016 | OTA ticket activation and redemption |
 
-## Error Scenarios
-| Scenario | Expected Response |
-|----------|-------------------|
-| Invalid credentials | `401 Unauthorized` |
-| Expired QR token | `400 Bad Request` with error_code |
-| Invalid function_code | `400 Bad Request` |
-| QR already used | `409 Conflict` |
-| Invalid session | `401 Unauthorized` |
-| Location mismatch | `400 Bad Request` |
+## Related Runbooks
 
-## Integration with US-001
-To test complete flow:
-1. Run US-001 steps 1-5 to generate valid QR token
-2. Run US-002 steps 1-2 to get operator session
-3. Use QR from US-001 in US-002 step 3 for scanning
-4. Verify redemption success and proper state updates
+- **US-013-runbook.md**: Complete venue operations with analytics
+- **US-015-runbook.md**: OTA ticket activation flow
+- **US-016-runbook.md**: Reservation validation flow
+
+---
+
+**Note**: The old `/tickets/scan` endpoint has been deprecated. All scanning should use `/venue/scan` with operator authentication.

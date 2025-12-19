@@ -4,13 +4,13 @@ slug: reports-redemptions
 team: "B - Tickets"
 oas_paths: ["/reports/redemptions"]
 migrations: ["db/migrations/0007_redemptions_indexes.sql"]
-status: "Ready"
+status: "Done"
 readiness: "prototype"
 branch: ""
 pr: ""
 newman_report: "reports/newman/reports-redemptions.json"
 last_update: "2025-10-20T00:12:44+0800"
-related_stories: ["US-005"]
+related_stories: ["US-001", "US-005"]
 ---
 
 ## Status & Telemetry

@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="US-012 Complete Coverage - OTA Platform Integration" tests="13" time="9.391">
+  <testsuite name="1. Channel Allocation Verification / Partner A: Get Inventory - Initial State" id="224353b3-6247-46a0-8a24-f6cd94201364" timestamp="2025-11-28T07:39:07.466Z" tests="6" failures="3" errors="0" time="0.010">
+    <testcase name="Response time under 2 seconds (Performance Requirement)" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Status code is 200" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Channel Allocation: Product 106 ~2000 units" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected undefined to be a number">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Channel Allocation Verification / Partner A: Get Inventory - Initial State.]]>
+        <![CDATA[Test description: Channel Allocation: Product 106 ~2000 units.]]>
+        <![CDATA[Error message: expected undefined to be a number.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be a number
+   at Object.eval sandbox-script.js:3:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Channel Allocation: Product 107 ~1500 units" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected undefined to be a number">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Channel Allocation Verification / Partner A: Get Inventory - Initial State.]]>
+        <![CDATA[Test description: Channel Allocation: Product 107 ~1500 units.]]>
+        <![CDATA[Error message: expected undefined to be a number.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be a number
+   at Object.eval sandbox-script.js:4:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Channel Allocation: Product 108 ~1500 units" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected undefined to be a number">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Channel Allocation Verification / Partner A: Get Inventory - Initial State.]]>
+        <![CDATA[Test description: Channel Allocation: Product 108 ~1500 units.]]>
+        <![CDATA[Error message: expected undefined to be a number.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to be a number
+   at Object.eval sandbox-script.js:5:1).]]>
+      </failure>
+    </testcase>
+    <testcase name="Pricing context includes customer discounts" time="0.010" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="1. Channel Allocation Verification / Partner B: Get Same Inventory View" id="9ebdfa5a-fb4f-4cc3-aa12-605a431b9529" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="1" errors="0" time="0.001">
+    <testcase name="Partner B sees identical inventory (Shared Pool)" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected 400 to equal NaN">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 1. Channel Allocation Verification / Partner B: Get Same Inventory View.]]>
+        <![CDATA[Test description: Partner B sees identical inventory (Shared Pool).]]>
+        <![CDATA[Error message: expected 400 to equal NaN.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 400 to equal NaN
+   at Object.eval sandbox-script.js:1:2).]]>
+      </failure>
+    </testcase>
+    <testcase name="Response time under 2 seconds" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="2. Reservation Management Flow / Partner A: Create Reservation" id="75b622b3-e4b4-48d4-bcaf-8bc39e79a0f1" timestamp="2025-11-28T07:39:07.466Z" tests="4" failures="4" errors="0" time="0.003">
+    <testcase name="Reservation created successfully" time="0.003" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected response to have status code 201 but got 500">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Partner A: Create Reservation.]]>
+        <![CDATA[Test description: Reservation created successfully.]]>
+        <![CDATA[Error message: expected response to have status code 201 but got 500.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 500
+   at Object.eval sandbox-script.js:1:3).]]>
+      </failure>
+    </testcase>
+    <testcase name="Reservation ID provided" time="0.003" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reservation_id'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Partner A: Create Reservation.]]>
+        <![CDATA[Test description: Reservation ID provided.]]>
+        <![CDATA[Error message: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reservation_id'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reservation_id'
+   at Object.eval sandbox-script.js:2:3).]]>
+      </failure>
+    </testcase>
+    <testcase name="Expiry time is 24 hours from now" time="0.003" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reserved_until'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Partner A: Create Reservation.]]>
+        <![CDATA[Test description: Expiry time is 24 hours from now.]]>
+        <![CDATA[Error message: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reserved_until'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'reserved_until'
+   at Object.eval sandbox-script.js:3:3).]]>
+      </failure>
+    </testcase>
+    <testcase name="Pricing snapshot captured" time="0.003" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'pricing_snapshot'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Partner A: Create Reservation.]]>
+        <![CDATA[Test description: Pricing snapshot captured.]]>
+        <![CDATA[Error message: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'pricing_snapshot'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected { code: 'CHANNEL_NOT_AVAILABLE', …(1) } to have property 'pricing_snapshot'
+   at Object.eval sandbox-script.js:4:3).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="2. Reservation Management Flow / Verify Inventory Decreased After Reservation" id="4870e915-8d55-47a8-8974-86a20f160fbd" timestamp="2025-11-28T07:39:07.466Z" tests="1" failures="1" errors="0" time="0.002">
+    <testcase name="Inventory decreased by reserved amount" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected NaN to equal 10">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 2. Reservation Management Flow / Verify Inventory Decreased After Reservation.]]>
+        <![CDATA[Test description: Inventory decreased by reserved amount.]]>
+        <![CDATA[Error message: expected NaN to equal 10.]]>
+        <![CDATA[Stacktrace: AssertionError: expected NaN to equal 10
+   at Object.eval sandbox-script.js:1:4).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="3. Multi-Partner Isolation Tests / Partner B: Cannot Access Partner A's Reservations" id="2783e0a9-46e1-43b1-81a4-34fb684fb19b" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Partner B cannot see Partner A's reservations" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Partner B has own reservations list" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="3. Multi-Partner Isolation Tests / Partner B: Sees Same Reduced Inventory" id="f3431c19-6407-4590-b32e-fd21b32728af" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="1" errors="0" time="0.001">
+    <testcase name="Partner B sees same inventory reduction" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected 400 to equal NaN">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 3. Multi-Partner Isolation Tests / Partner B: Sees Same Reduced Inventory.]]>
+        <![CDATA[Test description: Partner B sees same inventory reduction.]]>
+        <![CDATA[Error message: expected 400 to equal NaN.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 400 to equal NaN
+   at Object.eval sandbox-script.js:1:6).]]>
+      </failure>
+    </testcase>
+    <testcase name="Shared inventory pool working correctly" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="4. Complete OTA Workflow Validation / Create Order from Reservation" id="e46fa629-5d7c-4002-91ea-bfe8c70ce508" timestamp="2025-11-28T07:39:07.466Z" tests="3" failures="3" errors="0" time="0.002">
+    <testcase name="Order created from reservation" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected response to have status code 201 but got 404">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Create Order from Reservation.]]>
+        <![CDATA[Test description: Order created from reservation.]]>
+        <![CDATA[Error message: expected response to have status code 201 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 201 but got 404
+   at Object.eval sandbox-script.js:1:7).]]>
+      </failure>
+    </testcase>
+    <testcase name="Order ID provided" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Create Order from Reservation.]]>
+        <![CDATA[Test description: Order ID provided.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+   at Object.eval sandbox-script.js:2:7).]]>
+      </failure>
+    </testcase>
+    <testcase name="Payment required amount specified" time="0.002" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Create Order from Reservation.]]>
+        <![CDATA[Test description: Payment required amount specified.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+   at Object.eval sandbox-script.js:3:7).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="4. Complete OTA Workflow Validation / Activate Order After Payment" id="47737249-c7c7-4194-be94-c2fba7574192" timestamp="2025-11-28T07:39:07.466Z" tests="3" failures="3" errors="0" time="0.001">
+    <testcase name="Order activated successfully" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 404">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Activate Order After Payment.]]>
+        <![CDATA[Test description: Order activated successfully.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 404.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 404
+   at Object.eval sandbox-script.js:1:8).]]>
+      </failure>
+    </testcase>
+    <testcase name="Tickets issued with QR codes" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Activate Order After Payment.]]>
+        <![CDATA[Test description: Tickets issued with QR codes.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+   at Object.eval sandbox-script.js:2:8).]]>
+      </failure>
+    </testcase>
+    <testcase name="Activation status is success" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="Unexpected token '&lt;' at 1:1&#xA;&lt;!DOCTYPE html>&#xA;^">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 4. Complete OTA Workflow Validation / Activate Order After Payment.]]>
+        <![CDATA[Test description: Activation status is success.]]>
+        <![CDATA[Error message: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^.]]>
+        <![CDATA[Stacktrace: JSONError: Unexpected token '<' at 1:1
+<!DOCTYPE html>
+^
+   at Object.eval sandbox-script.js:3:8).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="5. B2B2C Bulk Generation Tests / Generate Reseller Batch" id="ef51d12b-8d19-4255-b7a9-5acfd3c0dfc4" timestamp="2025-11-28T07:39:07.466Z" tests="4" failures="0" errors="0" time="9.361">
+    <testcase name="Bulk generation successful" time="9.361" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Batch ID and tickets provided" time="9.361" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Reseller metadata preserved" time="9.361" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Extended expiry for reseller batches" time="9.361" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="5. B2B2C Bulk Generation Tests / Query Generated Tickets" id="199f6866-81aa-44f9-b8f1-32f63668a62a" timestamp="2025-11-28T07:39:07.466Z" tests="3" failures="0" errors="0" time="0.005">
+    <testcase name="Ticket query successful" time="0.005" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Batch tickets filtered correctly" time="0.005" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Pagination working" time="0.005" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="6. Security &amp; Error Handling / Invalid API Key - Unauthorized" id="1bb2b488-b442-4446-85a9-bfd0e6a1f1ff" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Invalid API key rejected" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Proper error message" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+  </testsuite>
+  <testsuite name="6. Security &amp; Error Handling / Overselling Prevention" id="ac3c273f-2337-4214-a6be-271fda7b686e" timestamp="2025-11-28T07:39:07.466Z" tests="2" failures="2" errors="0" time="0.001">
+    <testcase name="Overselling attempt prevented" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected response to have status code 409 but got 422">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 6. Security & Error Handling / Overselling Prevention.]]>
+        <![CDATA[Test description: Overselling attempt prevented.]]>
+        <![CDATA[Error message: expected response to have status code 409 but got 422.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 409 but got 422
+   at Object.eval sandbox-script.js:1:12).]]>
+      </failure>
+    </testcase>
+    <testcase name="Insufficient inventory error" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected undefined to equal 'INSUFFICIENT_INVENTORY'">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 6. Security & Error Handling / Overselling Prevention.]]>
+        <![CDATA[Test description: Insufficient inventory error.]]>
+        <![CDATA[Error message: expected undefined to equal 'INSUFFICIENT_INVENTORY'.]]>
+        <![CDATA[Stacktrace: AssertionError: expected undefined to equal 'INSUFFICIENT_INVENTORY'
+   at Object.eval sandbox-script.js:2:12).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="7. Performance &amp; Scale Validation / 5000 Unit Allocation Verification" id="3af60844-ab95-46f4-8299-244c2fd0a7e8" timestamp="2025-11-28T07:39:07.466Z" tests="3" failures="2" errors="0" time="0.001">
+    <testcase name="Total OTA allocation meets 5000 unit requirement" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected NaN to be at least 4500">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 7. Performance & Scale Validation / 5000 Unit Allocation Verification.]]>
+        <![CDATA[Test description: Total OTA allocation meets 5000 unit requirement.]]>
+        <![CDATA[Error message: expected NaN to be at least 4500.]]>
+        <![CDATA[Stacktrace: AssertionError: expected NaN to be at least 4500
+   at Object.eval sandbox-script.js:1:13).]]>
+      </failure>
+    </testcase>
+    <testcase name="Performance: Response under 2 seconds" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration"/>
+    <testcase name="Business requirement: Nov 15 deadline readiness" time="0.001" classname="Us012CompleteCoverageOtaPlatformIntegration">
+      <failure type="AssertionFailure" message="expected 2025-11-28T07:39:17.012Z to be below 2025-11-15T00:00:00.000Z">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: 742ee517-e6f6-460a-b114-dfe2421b0455.]]>
+        <![CDATA[Collection name: US-012 Complete Coverage - OTA Platform Integration.]]>
+        <![CDATA[Request name: 7. Performance & Scale Validation / 5000 Unit Allocation Verification.]]>
+        <![CDATA[Test description: Business requirement: Nov 15 deadline readiness.]]>
+        <![CDATA[Error message: expected 2025-11-28T07:39:17.012Z to be below 2025-11-15T00:00:00.000Z.]]>
+        <![CDATA[Stacktrace: AssertionError: expected 2025-11-28T07:39:17.012Z to be below 2025-11-15T00:00:00.000Z
+   at Object.eval sandbox-script.js:3:13).]]>
+      </failure>
+    </testcase>
+  </testsuite>
+</testsuites>

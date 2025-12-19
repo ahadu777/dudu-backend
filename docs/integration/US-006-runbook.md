@@ -1,11 +1,21 @@
-# US-006 — Operator auth & session lifecycle
+# US-006 — Operator Authentication
 
-Operator authentication and session management: Login → Create sessions → Manage lifecycle
+Operator authentication workflow: Login → Use token for scanning operations
+
+**Updated**: 2025-11 (Session management deprecated, simplified to token-based auth)
 
 ## Prerequisites
 - **Base URL**: `http://localhost:8080`
 - **Operator credentials**: alice/secret123, bob/secret456 (seeded)
 - **Server running**: `npm run build && PORT=8080 npm start`
+
+## Architecture Change Notice
+
+> **Important**: The `/validators/sessions` endpoint has been **deprecated**.
+>
+> **Old Flow**: Login → Create Session → Use session_id for scanning
+>
+> **New Flow**: Login → Use operator_token directly for scanning
 
 ## Step-by-Step Flow
 
@@ -20,244 +30,197 @@ curl -s -X POST http://localhost:8080/operators/login \
   }' | jq '.'
 ```
 
-**Expected**: Returns operator_token with proper claims and expiration
+**Expected Response**:
+```json
+{
+  "operator_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
 
-### 2. Create Validator Session
-Bind operator to gate device and location:
+**Save token for subsequent operations**:
 ```bash
-# Replace <OPERATOR_TOKEN> with token from step 1
-curl -s -X POST http://localhost:8080/validators/sessions \
-  -H "Authorization: Bearer <OPERATOR_TOKEN>" \
+export OPERATOR_TOKEN="<token_from_response>"
+```
+
+### 2. Verify Token
+Test token validity with a venue scan (dry run):
+```bash
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $OPERATOR_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
-    "device_id": "gate-01",
-    "location_id": 52
+    "qr_token": "test-invalid-token",
+    "function_code": "ferry"
   }' | jq '.'
 ```
 
-**Expected**: Returns session_id for scanning operations
+**Expected**: Error response (invalid QR), but confirms operator token is valid (not 401)
 
-### 3. Multiple Sessions
-Create additional sessions for different devices:
-```bash
-# Same operator, different device
-curl -s -X POST http://localhost:8080/validators/sessions \
-  -H "Authorization: Bearer <OPERATOR_TOKEN>" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "device_id": "gate-02",
-    "location_id": 52
-  }' | jq '.'
-
-# Same operator, different location
-curl -s -X POST http://localhost:8080/validators/sessions \
-  -H "Authorization: Bearer <OPERATOR_TOKEN>" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "device_id": "gate-03",
-    "location_id": 53
-  }' | jq '.'
-```
-
-### 4. Session Information
-Get details about active session:
-```bash
-# If session info endpoint exists
-curl -s -X GET http://localhost:8080/validators/sessions/<SESSION_ID> \
-  -H "Authorization: Bearer <OPERATOR_TOKEN>" | jq '.'
-```
-
-### 5. Session Termination
-End session when operator finishes shift:
-```bash
-# If session termination endpoint exists
-curl -s -X DELETE http://localhost:8080/validators/sessions/<SESSION_ID> \
-  -H "Authorization: Bearer <OPERATOR_TOKEN>" | jq '.'
-```
-
-### 6. Multiple Operators
+### 3. Multiple Operators
 Test with different operator credentials:
 ```bash
-# Second operator login
-curl -s -X POST http://localhost:8080/operators/login \
+# Alice login
+ALICE_RESP=$(curl -s -X POST http://localhost:8080/operators/login \
   -H 'Content-Type: application/json' \
-  -d '{
-    "username": "bob",
-    "password": "secret456"
-  }' | jq '.'
+  -d '{"username":"alice","password":"secret123"}')
+ALICE_TOKEN=$(echo $ALICE_RESP | jq -r '.operator_token')
+echo "Alice Token: ${ALICE_TOKEN:0:50}..."
 
-# Bob creates his own session
-# Replace <BOB_TOKEN> with token from bob's login
-curl -s -X POST http://localhost:8080/validators/sessions \
-  -H "Authorization: Bearer <BOB_TOKEN>" \
+# Bob login
+BOB_RESP=$(curl -s -X POST http://localhost:8080/operators/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"bob","password":"secret456"}')
+BOB_TOKEN=$(echo $BOB_RESP | jq -r '.operator_token')
+echo "Bob Token: ${BOB_TOKEN:0:50}..."
+```
+
+### 4. Use Token for Scanning
+Once authenticated, use token for venue scanning:
+```bash
+# Generate test QR (see US-002/US-013 for full flow)
+# Then scan with operator token
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H "Authorization: Bearer $OPERATOR_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
-    "device_id": "gate-04",
-    "location_id": 54
+    "qr_token": "<QR_TOKEN>",
+    "function_code": "ferry",
+    "venue_code": "central-pier"
   }' | jq '.'
 ```
 
-## Complete Session Lifecycle Example
+## Complete Authentication Flow
 ```bash
 export BASE=http://localhost:8080
 
-# Step 1: Operator login
-echo "=== Alice Login ==="
-ALICE_RESP=$(curl -s -X POST $BASE/operators/login -H 'Content-Type: application/json' -d '{"username":"alice","password":"secret123"}')
-ALICE_TOKEN=$(echo $ALICE_RESP | jq -r '.operator_token')
-echo "Alice authenticated: ${ALICE_TOKEN:0:50}..."
+echo "=== Operator Authentication Test ==="
 
-# Step 2: Create multiple sessions
-echo "=== Create Sessions for Alice ==="
-
-# Gate 1 session
-SESS1_RESP=$(curl -s -X POST $BASE/validators/sessions -H "Authorization: Bearer $ALICE_TOKEN" -H 'Content-Type: application/json' -d '{"device_id":"gate-01","location_id":52}')
-SESS1_ID=$(echo $SESS1_RESP | jq -r '.session_id')
-echo "Session 1 (gate-01): $SESS1_ID"
-
-# Gate 2 session
-SESS2_RESP=$(curl -s -X POST $BASE/validators/sessions -H "Authorization: Bearer $ALICE_TOKEN" -H 'Content-Type: application/json' -d '{"device_id":"gate-02","location_id":52}')
-SESS2_ID=$(echo $SESS2_RESP | jq -r '.session_id')
-echo "Session 2 (gate-02): $SESS2_ID"
-
-# Step 3: Bob login and session
-echo "=== Bob Login and Session ==="
-BOB_RESP=$(curl -s -X POST $BASE/operators/login -H 'Content-Type: application/json' -d '{"username":"bob","password":"secret456"}')
-BOB_TOKEN=$(echo $BOB_RESP | jq -r '.operator_token')
-echo "Bob authenticated: ${BOB_TOKEN:0:50}..."
-
-BOB_SESS_RESP=$(curl -s -X POST $BASE/validators/sessions -H "Authorization: Bearer $BOB_TOKEN" -H 'Content-Type: application/json' -d '{"device_id":"gate-03","location_id":53}')
-BOB_SESS_ID=$(echo $BOB_SESS_RESP | jq -r '.session_id')
-echo "Bob session (gate-03): $BOB_SESS_ID"
-
-# Step 4: Show active sessions summary
-echo "=== Active Sessions Summary ==="
-echo "Alice sessions: $SESS1_ID (gate-01), $SESS2_ID (gate-02)"
-echo "Bob sessions: $BOB_SESS_ID (gate-03)"
-echo "All sessions ready for ticket scanning"
-
-# Step 5: Simulate scanning activity
-echo "=== Ready for Operations ==="
-echo "Each session can now be used for ticket scanning"
-echo "Use session IDs in US-002 ticket scanning flow"
-```
-
-## Session Management Scenarios
-
-### Concurrent Sessions
-```bash
-# Operator managing multiple gates simultaneously
-export OPERATOR_TOKEN="<ALICE_TOKEN>"
-
-# Create sessions for all gates at location
-for GATE in gate-01 gate-02 gate-03; do
-  echo "Creating session for $GATE"
-  curl -s -X POST $BASE/validators/sessions \
-    -H "Authorization: Bearer $OPERATOR_TOKEN" \
-    -H 'Content-Type: application/json' \
-    -d "{\"device_id\":\"$GATE\",\"location_id\":52}" | \
-    jq '{session_id, device_id, location_id}'
-done
-```
-
-### Shift Handover
-```bash
-# Morning operator ends shift
-echo "=== Morning Shift End ==="
-curl -s -X DELETE $BASE/validators/sessions/$MORNING_SESSION_ID \
-  -H "Authorization: Bearer $MORNING_OPERATOR_TOKEN"
-
-# Afternoon operator starts shift
-echo "=== Afternoon Shift Start ==="
-AFTERNOON_RESP=$(curl -s -X POST $BASE/operators/login -H 'Content-Type: application/json' -d '{"username":"afternoon_operator","password":"secret789"}')
-AFTERNOON_TOKEN=$(echo $AFTERNOON_RESP | jq -r '.operator_token')
-
-# Create new session for same device
-curl -s -X POST $BASE/validators/sessions \
-  -H "Authorization: Bearer $AFTERNOON_TOKEN" \
+# Step 1: Alice login
+echo "Step 1: Alice Login"
+ALICE_RESP=$(curl -s -X POST $BASE/operators/login \
   -H 'Content-Type: application/json' \
-  -d '{"device_id":"gate-01","location_id":52}' | jq '.'
+  -d '{"username":"alice","password":"secret123"}')
+ALICE_TOKEN=$(echo $ALICE_RESP | jq -r '.operator_token')
+
+if [ "$ALICE_TOKEN" != "null" ] && [ -n "$ALICE_TOKEN" ]; then
+  echo "✅ Alice authenticated: ${ALICE_TOKEN:0:30}..."
+else
+  echo "❌ Alice login failed"
+  exit 1
+fi
+
+# Step 2: Bob login
+echo "Step 2: Bob Login"
+BOB_RESP=$(curl -s -X POST $BASE/operators/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"bob","password":"secret456"}')
+BOB_TOKEN=$(echo $BOB_RESP | jq -r '.operator_token')
+
+if [ "$BOB_TOKEN" != "null" ] && [ -n "$BOB_TOKEN" ]; then
+  echo "✅ Bob authenticated: ${BOB_TOKEN:0:30}..."
+else
+  echo "❌ Bob login failed"
+  exit 1
+fi
+
+# Step 3: Test invalid credentials
+echo "Step 3: Test Invalid Credentials"
+INVALID_RESP=$(curl -s -X POST $BASE/operators/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"wrongpassword"}')
+INVALID_TOKEN=$(echo $INVALID_RESP | jq -r '.operator_token')
+
+if [ "$INVALID_TOKEN" = "null" ] || [ -z "$INVALID_TOKEN" ]; then
+  echo "✅ Invalid credentials correctly rejected"
+else
+  echo "❌ Security issue: invalid credentials accepted"
+fi
+
+# Step 4: Verify tokens work for scanning
+echo "Step 4: Verify Token Works"
+SCAN_TEST=$(curl -s -X POST $BASE/venue/scan \
+  -H "Authorization: Bearer $ALICE_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"qr_token":"test","function_code":"ferry"}')
+
+# Should get validation error, not auth error
+if echo "$SCAN_TEST" | grep -q "INTERNAL_ERROR\|No operator token"; then
+  echo "❌ Token not working for scanning"
+else
+  echo "✅ Token accepted for scanning (QR validation error expected)"
+fi
+
+echo "=== Authentication Test Complete ==="
+echo ""
+echo "Tokens ready for use:"
+echo "  ALICE_TOKEN=$ALICE_TOKEN"
+echo "  BOB_TOKEN=$BOB_TOKEN"
 ```
 
-## Expected Response Formats
+## Error Scenarios
 
-### Operator Login Response
-```json
-{
-  "operator_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-  "operator_id": "alice",
-  "expires_at": "2025-10-20T18:00:00+08:00",
-  "permissions": ["scan_tickets", "create_sessions"],
-  "locations": [52, 53, 54]
-}
-```
+| Scenario | Request | Expected Response |
+|----------|---------|-------------------|
+| Invalid username | `{"username":"unknown","password":"x"}` | `401 Unauthorized` |
+| Invalid password | `{"username":"alice","password":"wrong"}` | `401 Unauthorized` |
+| Missing credentials | `{}` | `400 Bad Request` |
+| Expired token | Use old token after expiry | `401 Unauthorized` |
+| Malformed token | `Authorization: Bearer invalid` | `401 Unauthorized` |
 
-### Session Creation Response
-```json
-{
-  "session_id": "sess_abc123",
-  "device_id": "gate-01",
-  "location_id": 52,
-  "operator_id": "alice",
-  "created_at": "2025-10-20T10:00:00+08:00",
-  "expires_at": "2025-10-20T18:00:00+08:00",
-  "status": "active"
-}
+## Testing Error Cases
+```bash
+# Invalid credentials
+curl -s -X POST http://localhost:8080/operators/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"wrongpassword"}'
+# Expected: 401 or error response
+
+# Missing password
+curl -s -X POST http://localhost:8080/operators/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice"}'
+# Expected: 400 Bad Request
+
+# No authorization header
+curl -s -X POST http://localhost:8080/venue/scan \
+  -H 'Content-Type: application/json' \
+  -d '{"qr_token":"test","function_code":"ferry"}'
+# Expected: {"code":"INTERNAL_ERROR","message":"No operator token provided"}
 ```
 
 ## Expected Results
 - ✅ **Authentication**: Valid operator tokens issued
-- ✅ **Authorization**: Tokens contain proper permissions
-- ✅ **Session binding**: Device/location associations created
-- ✅ **Concurrent sessions**: Multiple sessions per operator
-- ✅ **Session isolation**: Each session independent
-- ✅ **Proper expiration**: Tokens and sessions expire correctly
+- ✅ **Token format**: JWT with proper claims
+- ✅ **Invalid credentials**: Properly rejected with 401
+- ✅ **Token usage**: Can be used directly for `/venue/scan`
 
-## Security Considerations
+## API Reference
 
-### Token Security
-```bash
-# Verify token expiration
-echo "=== Token Validation ==="
-# After token expires, requests should fail
-sleep 3600  # Wait for expiration
-curl -s -X POST $BASE/validators/sessions \
-  -H "Authorization: Bearer $EXPIRED_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"device_id":"gate-01","location_id":52}'
-# Expected: 401 Unauthorized
-```
-
-### Session Security
-```bash
-# Verify session isolation
-echo "=== Session Isolation Test ==="
-# Alice's token should not access Bob's session
-curl -s -X GET $BASE/validators/sessions/$BOB_SESSION_ID \
-  -H "Authorization: Bearer $ALICE_TOKEN"
-# Expected: 403 Forbidden or 404 Not Found
-```
-
-## Error Scenarios
-| Scenario | Expected Response |
-|----------|-------------------|
-| Invalid credentials | `401 Unauthorized` |
-| Expired token | `401 Unauthorized` |
-| Invalid device_id | `400 Bad Request` |
-| Invalid location_id | `400 Bad Request` |
-| Duplicate session | `409 Conflict` |
-| Session not found | `404 Not Found` |
-| Unauthorized access | `403 Forbidden` |
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/operators/login` | POST | None | Authenticate operator |
+| `/venue/scan` | POST | Operator Token | Scan and redeem tickets |
 
 ## Integration with Other Stories
-- **US-002**: Sessions created here used for ticket scanning
-- **US-005**: Operator IDs appear in redemption reports
-- **US-001**: Complete flow uses sessions for final redemption
+- **US-001**: Operator login for final redemption step
+- **US-002**: Operator authentication for scanning
+- **US-013**: Venue operations with operator context
 
-## Operational Notes
+## Security Notes
 - **Token duration**: 8 hours (typical shift length)
-- **Session duration**: Tied to token expiration
-- **Concurrent limits**: No limit on sessions per operator
-- **Device binding**: One active session per device
-- **Location permissions**: Operators restricted to authorized locations
-- **Audit trail**: All login and session events logged
+- **Token storage**: Client should store securely, clear on logout
+- **Audit trail**: All authentication events are logged
+- **Rate limiting**: Consider implementing for production
+
+---
+
+## Deprecated Features
+
+> **The following features have been deprecated:**
+>
+> - `POST /validators/sessions` - No longer needed
+> - `GET /validators/sessions/:id` - Removed
+> - `DELETE /validators/sessions/:id` - Removed
+> - `session_id` parameter in scanning - No longer used
+>
+> **Migration**: Simply use the `operator_token` from login directly in the `Authorization` header for all authenticated requests.

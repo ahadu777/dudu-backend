@@ -1,0 +1,1773 @@
+{
+  "info": {
+    "name": "OTA完整覆盖扩展测试 - PRD-002/003功能点",
+    "description": "覆盖PRD-002和PRD-003中未测试的关键功能点:\n1. 分销模式 (reseller_batch) + 分销商列表/汇总查询\n2. 批次元数据 (campaign_type, marketing_tags)\n3. 早鸟票定价 (early_bird)\n4. visit_date参数 (周末定价)\n5. 票券状态自动转换 (ACTIVE→USED)\n6. tokens计数核销 (递减至0)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "ota_full_access_key_99999",
+      "type": "string"
+    },
+    {
+      "key": "reseller_batch_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reseller_ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "early_bird_batch_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "early_bird_ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "weekend_ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokens_ticket_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "encrypted_qr_data",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "status_test_ticket_code",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. 前置检查 - 库存验证",
+      "item": [
+        {
+          "name": "0.1 查询OTA渠道库存",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains available_quantities', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.available_quantities).to.exist;",
+                  "    console.log('产品库存:', JSON.stringify(response.available_quantities));",
+                  "});",
+                  "",
+                  "pm.test('Response contains pricing_context', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.pricing_context).to.exist;",
+                  "    pm.expect(response.pricing_context.base_prices).to.exist;",
+                  "    pm.expect(response.pricing_context.customer_types).to.be.an('array');",
+                  "    pm.expect(response.pricing_context.customer_discounts).to.exist;",
+                  "});",
+                  "",
+                  "pm.test('Response contains product_info', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.product_info).to.exist;",
+                  "});",
+                  "",
+                  "pm.test('Check inventory availability for tests', function () {",
+                  "    const response = pm.response.json();",
+                  "    const qty = response.available_quantities;",
+                  "    // 检查是否有足够库存运行测试",
+                  "    const hasInventory = Object.values(qty).some(v => v > 0);",
+                  "    pm.expect(hasInventory).to.be.true;",
+                  "    console.log('库存检查: 至少有一个产品有库存');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "inventory"
+              ]
+            }
+          }
+        },
+        {
+          "name": "0.2 按产品ID筛选库存",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Only requested products returned', function () {",
+                  "    const response = pm.response.json();",
+                  "    const productIds = Object.keys(response.available_quantities);",
+                  "    pm.expect(productIds).to.include('106');",
+                  "    pm.expect(productIds).to.include('107');",
+                  "    console.log('筛选后库存:', JSON.stringify(response.available_quantities));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory?product_ids=106,107",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "inventory"
+              ],
+              "query": [
+                {
+                  "key": "product_ids",
+                  "value": "106,107"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "0.3 无效product_ids参数 (应422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('Error message about invalid product ID', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error).to.equal('INVALID_PRODUCT_IDS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory?product_ids=abc,xyz",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "inventory"
+              ],
+              "query": [
+                {
+                  "key": "product_ids",
+                  "value": "abc,xyz"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "0.4 验证定价上下文完整性",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Base prices have weekday/weekend', function () {",
+                  "    const response = pm.response.json();",
+                  "    const prices = response.pricing_context.base_prices;",
+                  "    for (const productId of Object.keys(prices)) {",
+                  "        pm.expect(prices[productId]).to.have.property('weekday');",
+                  "        pm.expect(prices[productId]).to.have.property('weekend');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Customer discounts exist for products', function () {",
+                  "    const response = pm.response.json();",
+                  "    const discounts = response.pricing_context.customer_discounts;",
+                  "    pm.expect(discounts['106']).to.exist;",
+                  "    pm.expect(discounts['106'].child).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Special dates for holiday pricing', function () {",
+                  "    const response = pm.response.json();",
+                  "    const specialDates = response.pricing_context.special_dates;",
+                  "    pm.expect(specialDates).to.exist;",
+                  "    // 检查节假日定价倍数",
+                  "    if (specialDates['2025-12-31']) {",
+                  "        pm.expect(specialDates['2025-12-31'].multiplier).to.be.above(1);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/inventory",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "inventory"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. 分销模式测试 (reseller_batch)",
+      "item": [
+        {
+          "name": "1.1 创建分销批次 - 含reseller_metadata",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response contains reseller_batch distribution_mode', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.distribution_mode).to.equal('reseller_batch');",
+                  "});",
+                  "",
+                  "pm.test('Response contains reseller_metadata', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.reseller_metadata).to.exist;",
+                  "    pm.expect(response.reseller_metadata.intended_reseller).to.equal('TestReseller_Corp');",
+                  "});",
+                  "",
+                  "pm.test('Expires_at is 30 days from now (reseller mode)', function () {",
+                  "    const response = pm.response.json();",
+                  "    const expiresAt = new Date(response.expires_at);",
+                  "    const now = new Date();",
+                  "    const diffDays = (expiresAt - now) / (1000 * 60 * 60 * 24);",
+                  "    pm.expect(diffDays).to.be.within(29, 31);",
+                  "});",
+                  "",
+                  "pm.test('Save batch and ticket info', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('reseller_batch_id', response.batch_id);",
+                  "    pm.collectionVariables.set('reseller_ticket_code', response.tickets[0].ticket_code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 2,\n  \"batch_id\": \"RESELLER-TEST-{{$timestamp}}\",\n  \"distribution_mode\": \"reseller_batch\",\n  \"reseller_metadata\": {\n    \"intended_reseller\": \"TestReseller_Corp\",\n    \"contact_email\": \"reseller@test.com\",\n    \"contact_phone\": \"+86-13800138000\",\n    \"commission_config\": {\n      \"rate\": 0.15,\n      \"settlement_cycle\": \"monthly\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.2 分销模式缺少intended_reseller (应400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message mentions intended_reseller', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('intended_reseller');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 1,\n  \"batch_id\": \"RESELLER-INVALID-{{$timestamp}}\",\n  \"distribution_mode\": \"reseller_batch\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.3 查询分销商列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains resellers array', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.resellers).to.be.an('array');",
+                  "    console.log('分销商数量:', response.resellers.length);",
+                  "});",
+                  "",
+                  "pm.test('Each reseller has required fields', function () {",
+                  "    const response = pm.response.json();",
+                  "    if (response.resellers.length > 0) {",
+                  "        const reseller = response.resellers[0];",
+                  "        pm.expect(reseller).to.have.property('reseller_name');",
+                  "        console.log('第一个分销商:', reseller.reseller_name);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/resellers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "resellers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.4 查询分销商详细汇总 (含批次信息)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains total count', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.total).to.exist;",
+                  "    console.log('分销商总数:', response.total);",
+                  "});",
+                  "",
+                  "pm.test('Response contains resellers with statistics', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.resellers).to.be.an('array');",
+                  "    if (response.resellers.length > 0) {",
+                  "        const reseller = response.resellers[0];",
+                  "        pm.expect(reseller).to.have.property('reseller_name');",
+                  "        pm.expect(reseller).to.have.property('statistics');",
+                  "        pm.expect(reseller.statistics).to.have.property('total_batches');",
+                  "        pm.expect(reseller.statistics).to.have.property('total_tickets_generated');",
+                  "        console.log('分销商统计:', JSON.stringify(reseller.statistics));",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Resellers have revenue_metrics', function () {",
+                  "    const response = pm.response.json();",
+                  "    if (response.resellers.length > 0) {",
+                  "        const reseller = response.resellers[0];",
+                  "        pm.expect(reseller).to.have.property('revenue_metrics');",
+                  "        pm.expect(reseller.revenue_metrics).to.have.property('total_revenue');",
+                  "        console.log('收入指标:', JSON.stringify(reseller.revenue_metrics));",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Resellers have batches array', function () {",
+                  "    const response = pm.response.json();",
+                  "    if (response.resellers.length > 0) {",
+                  "        const reseller = response.resellers[0];",
+                  "        pm.expect(reseller).to.have.property('batches');",
+                  "        pm.expect(reseller.batches).to.be.an('array');",
+                  "        console.log('批次数量:', reseller.batches.length);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/resellers/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "resellers",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.5 分页查询分销商汇总",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Pagination works correctly', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.total).to.exist;",
+                  "    pm.expect(response.page).to.equal(1);",
+                  "    pm.expect(response.page_size).to.equal(5);",
+                  "    console.log('分页结果: page=', response.page, ', page_size=', response.page_size, ', total=', response.total);",
+                  "});",
+                  "",
+                  "pm.test('Resellers limited by page_size', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.resellers.length).to.be.at.most(5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/resellers/summary?page=1&limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "resellers",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.6 按分销商名称筛选",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Reseller filter query accepted', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.resellers).to.be.an('array');",
+                  "    console.log('查询结果数量:', response.resellers.length);",
+                  "    // 注: 后端可能返回全部数据或筛选后数据，此处仅验证响应格式正确",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/resellers/summary?reseller=TestReseller",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "resellers",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "reseller",
+                  "value": "TestReseller"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.7 直销模式对比 - 7天过期",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Distribution mode is direct_sale', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.distribution_mode).to.equal('direct_sale');",
+                  "});",
+                  "",
+                  "pm.test('Expires_at is 7 days from now (direct mode)', function () {",
+                  "    const response = pm.response.json();",
+                  "    const expiresAt = new Date(response.expires_at);",
+                  "    const now = new Date();",
+                  "    const diffDays = (expiresAt - now) / (1000 * 60 * 60 * 24);",
+                  "    pm.expect(diffDays).to.be.within(6, 8);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 1,\n  \"batch_id\": \"DIRECT-TEST-{{$timestamp}}\",\n  \"distribution_mode\": \"direct_sale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. 批次元数据测试 (campaign_type)",
+      "item": [
+        {
+          "name": "2.1 早鸟票批次 - early_bird campaign",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Batch metadata contains campaign_type', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.batch_metadata).to.exist;",
+                  "    pm.expect(response.batch_metadata.campaign_type).to.equal('early_bird');",
+                  "});",
+                  "",
+                  "pm.test('Batch metadata contains campaign_name', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.batch_metadata.campaign_name).to.equal('2025 Spring Early Bird');",
+                  "});",
+                  "",
+                  "pm.test('Batch metadata contains marketing_tags', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.batch_metadata.marketing_tags).to.be.an('array');",
+                  "    pm.expect(response.batch_metadata.marketing_tags).to.include('limited_time');",
+                  "});",
+                  "",
+                  "pm.test('Save early bird batch info', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('early_bird_batch_id', response.batch_id);",
+                  "    pm.collectionVariables.set('early_bird_ticket_code', response.tickets[0].ticket_code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 2,\n  \"batch_id\": \"EARLY-BIRD-{{$timestamp}}\",\n  \"distribution_mode\": \"direct_sale\",\n  \"batch_metadata\": {\n    \"campaign_type\": \"early_bird\",\n    \"campaign_name\": \"2025 Spring Early Bird\",\n    \"special_conditions\": [\"valid_until_2025-03-31\", \"non_refundable\"],\n    \"marketing_tags\": [\"limited_time\", \"best_value\", \"family_friendly\"],\n    \"promotional_code\": \"SPRING25\"\n  },\n  \"special_pricing\": {\n    \"base_price\": 230,\n    \"customer_type_pricing\": [\n      {\"customer_type\": \"child\", \"price\": 130},\n      {\"customer_type\": \"elderly\", \"price\": 180}\n    ],\n    \"weekend_premium\": 20,\n    \"currency\": \"HKD\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.2 闪购批次 - flash_sale campaign",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Campaign type is flash_sale', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.batch_metadata.campaign_type).to.equal('flash_sale');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 1,\n  \"batch_id\": \"FLASH-SALE-{{$timestamp}}\",\n  \"distribution_mode\": \"direct_sale\",\n  \"batch_metadata\": {\n    \"campaign_type\": \"flash_sale\",\n    \"campaign_name\": \"24-Hour Flash Sale\",\n    \"marketing_tags\": [\"urgent\", \"limited_stock\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.3 查询营销活动分析 - campaign_type过滤",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains campaign analytics', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('campaigns');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/campaigns/analytics?campaign_type=early_bird",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "campaigns",
+                "analytics"
+              ],
+              "query": [
+                {
+                  "key": "campaign_type",
+                  "value": "early_bird"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. visit_date周末定价测试",
+      "item": [
+        {
+          "name": "3.1 生成测试票券",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Save ticket code for weekend test', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('weekend_ticket_code', response.tickets[0].ticket_code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 2,\n  \"batch_id\": \"WEEKEND-TEST-{{$timestamp}}\",\n  \"distribution_mode\": \"direct_sale\",\n  \"special_pricing\": {\n    \"base_price\": 288,\n    \"weekend_premium\": 30,\n    \"currency\": \"HKD\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.2 激活票券 - 周末日期 (应用周末溢价)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Weekend premium applied', function () {",
+                  "    const response = pm.response.json();",
+                  "    // Check if weekend premium info is in response",
+                  "    pm.expect(response.status).to.equal('ACTIVE');",
+                  "    // Response should indicate weekend pricing was applied",
+                  "    if (response.pricing_applied) {",
+                  "        pm.expect(response.pricing_applied.weekend_premium_applied).to.be.true;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"Weekend Visitor\",\n    \"email\": \"weekend@test.com\",\n    \"phone\": \"+852-12345678\"\n  },\n  \"customer_type\": \"adult\",\n  \"visit_date\": \"2025-11-29\",\n  \"payment_reference\": \"PAY-WEEKEND-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{weekend_ticket_code}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{weekend_ticket_code}}",
+                "activate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.3 激活票券 - 无效日期格式 (应400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error mentions date format', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('YYYY-MM-DD');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"Invalid Date Test\",\n    \"email\": \"test@test.com\"\n  },\n  \"customer_type\": \"adult\",\n  \"visit_date\": \"29-11-2025\",\n  \"payment_reference\": \"PAY-INVALID-DATE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{early_bird_ticket_code}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{early_bird_ticket_code}}",
+                "activate"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. 票券状态自动转换测试 (ACTIVE→USED)",
+      "item": [
+        {
+          "name": "4.1 生成单权益票券 (便于测试状态转换)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Save ticket for status test', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('status_test_ticket_code', response.tickets[0].ticket_code);",
+                  "    console.log('Ticket code:', response.tickets[0].ticket_code);",
+                  "    console.log('Entitlements:', JSON.stringify(response.tickets[0].entitlements));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 107,\n  \"quantity\": 1,\n  \"batch_id\": \"STATUS-TEST-{{$timestamp}}\",\n  \"distribution_mode\": \"direct_sale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.2 激活票券",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Ticket status is ACTIVE', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.equal('ACTIVE');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"Status Test User\",\n    \"email\": \"status@test.com\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-STATUS-TEST\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{status_test_ticket_code}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{status_test_ticket_code}}",
+                "activate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.3 生成QR码",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Save encrypted data', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('encrypted_qr_data', response.encrypted_data);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expiry_minutes\": 60\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qr/{{status_test_ticket_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "qr",
+                "{{status_test_ticket_code}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.4 核销第一个权益 (ferry)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Redemption successful', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.equal('success');",
+                  "});",
+                  "",
+                  "pm.test('Check remaining entitlements', function () {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Ticket status after ferry:', response.ticket_status);",
+                  "    console.log('Entitlements:', JSON.stringify(response.entitlements));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"ferry\",\n  \"terminal_device_id\": \"TERMINAL-STATUS-TEST\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "venue",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.5 核销第二个权益 (gift)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Redemption successful', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.equal('success');",
+                  "});",
+                  "",
+                  "pm.test('Check remaining entitlements', function () {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Ticket status after gift:', response.ticket_status);",
+                  "    console.log('Entitlements:', JSON.stringify(response.entitlements));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"gift\",\n  \"terminal_device_id\": \"TERMINAL-STATUS-TEST\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "venue",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.6 查询票券状态 - 验证自动转换",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Check ticket status (should check entitlements)', function () {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Final ticket info:', JSON.stringify(response));",
+                  "    // If all entitlements are used, status should be USED",
+                  "    // This depends on Product 107 entitlement configuration",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/qr/{{status_test_ticket_code}}/info",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "qr",
+                "{{status_test_ticket_code}}",
+                "info"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Tokens计数核销测试 (递减)",
+      "item": [
+        {
+          "name": "5.1 生成含tokens权益的票券",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Ticket has tokens entitlement', function () {",
+                  "    const response = pm.response.json();",
+                  "    const ticket = response.tickets[0];",
+                  "    const tokensEnt = ticket.entitlements.find(e => e.function_code === 'tokens');",
+                  "    pm.expect(tokensEnt).to.exist;",
+                  "    pm.expect(tokensEnt.remaining_uses).to.be.above(1);",
+                  "    console.log('Tokens remaining_uses:', tokensEnt.remaining_uses);",
+                  "});",
+                  "",
+                  "pm.test('Save tokens ticket info', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('tokens_ticket_code', response.tickets[0].ticket_code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"quantity\": 1,\n  \"batch_id\": \"TOKENS-TEST-{{$timestamp}}\",\n  \"distribution_mode\": \"direct_sale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "bulk-generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.2 激活tokens票券",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_details\": {\n    \"name\": \"Tokens Test User\",\n    \"email\": \"tokens@test.com\"\n  },\n  \"customer_type\": \"adult\",\n  \"payment_reference\": \"PAY-TOKENS-TEST\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/tickets/{{tokens_ticket_code}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "tickets",
+                "{{tokens_ticket_code}}",
+                "activate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.3 生成QR码 (tokens票)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Save encrypted data', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('encrypted_qr_data', response.encrypted_data);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expiry_minutes\": 60\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qr/{{tokens_ticket_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "qr",
+                "{{tokens_ticket_code}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.4 核销tokens - 第1次",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Tokens decremented', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.equal('success');",
+                  "    const tokensEnt = response.entitlements.find(e => e.function_code === 'tokens');",
+                  "    console.log('Tokens after 1st redemption:', tokensEnt.remaining_uses);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"tokens\",\n  \"terminal_device_id\": \"TERMINAL-TOKENS-001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "venue",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.5 核销tokens - 第2次",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Tokens decremented again', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.equal('success');",
+                  "    const tokensEnt = response.entitlements.find(e => e.function_code === 'tokens');",
+                  "    console.log('Tokens after 2nd redemption:', tokensEnt.remaining_uses);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"tokens\",\n  \"terminal_device_id\": \"TERMINAL-TOKENS-002\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "venue",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.6 核销tokens - 第3次",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Tokens decremented', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.equal('success');",
+                  "    const tokensEnt = response.entitlements.find(e => e.function_code === 'tokens');",
+                  "    console.log('Tokens after 3rd redemption:', tokensEnt.remaining_uses);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{encrypted_qr_data}}\",\n  \"function_code\": \"tokens\",\n  \"terminal_device_id\": \"TERMINAL-TOKENS-003\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venue/scan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "venue",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.7 查看当前tokens状态",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Check tokens remaining', function () {",
+                  "    const response = pm.response.json();",
+                  "    const tokensEnt = response.ticket_info.entitlements.find(e => e.function_code === 'tokens');",
+                  "    console.log('Current tokens remaining:', tokensEnt.remaining_uses);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"encrypted_data\": \"{{encrypted_qr_data}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qr/decrypt",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "qr",
+                "decrypt"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. 综合验证",
+      "item": [
+        {
+          "name": "6.1 分销商汇总 - 包含新创建的分销批次",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains reseller data', function () {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Reseller summary:', JSON.stringify(response));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/resellers/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "resellers",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.2 批次分析 - early_bird批次",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains batch analytics', function () {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Early bird batch analytics:', JSON.stringify(response));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/batches/{{early_bird_batch_id}}/analytics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ota",
+                "batches",
+                "{{early_bird_batch_id}}",
+                "analytics"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

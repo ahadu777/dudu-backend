@@ -534,7 +534,6 @@ echo "✅ 无需再调用 GET /qr/:code/info / No need to call GET /qr/:code/inf
 
 echo ""
 echo "⚠️  重要: POST /qr/decrypt 不会消耗权益 / Important: POST /qr/decrypt does NOT consume entitlements"
-echo "⚠️  重要: GET /qr/verify 不是OTA核销流程的一部分 / Important: GET /qr/verify is NOT part of OTA redemption"
 
 # 步骤 4: 实际在场馆核销
 # Step 4: Actual redemption at venue
@@ -606,10 +605,7 @@ echo ""
 echo "   3. POST /venue/scan 使用 qr_token=encrypted_data 实际核销"
 echo "      POST /venue/scan uses qr_token=encrypted_data for actual redemption"
 echo ""
-echo "   4. GET /qr/verify 不用于OTA核销（仅微信查看）"
-echo "      GET /qr/verify NOT used in OTA redemption (WeChat viewing only)"
-echo ""
-echo "   5. 同一QR可核销不同功能，但同一功能只能核销一次"
+echo "   4. 同一QR可核销不同功能，但同一功能只能核销一次"
 echo "      Same QR can redeem different functions, but each function only once"
 ```
 
@@ -634,12 +630,10 @@ Activate → Generate QR → [Optional: Decrypt Preview] → Venue Scan Redeem
 ```
 
 **⚠️ 常见误区 / Common Mistakes:**
-- ❌ 认为 GET /qr/verify 是核销流程的一部分
 - ❌ 混淆查询端点（GET /qr/:code/info、POST /qr/decrypt）和核销端点（POST /venue/scan）
 - ❌ 直接使用 ticket_code 进行核销（应该使用 encrypted_data）
 
 **✅ 正确理解 / Correct Understanding:**
-- GET /qr/verify 仅用于终端消费者在微信中查看票券
 - POST /qr/decrypt ⭐ **增强版**（2025-11-17）：一次调用返回完整信息，无需再调用 GET /qr/:code/info
 - GET /qr/:code/info 现在主要用于已知 ticket_code 直接查询的场景（非QR扫描）
 - POST /venue/scan 是唯一的核销端点

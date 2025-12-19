@@ -1,11 +1,12 @@
 import { Request } from 'express';
 import { mockDataStore } from '../../core/mock/data';
-import { generateSecureQR, EncryptedQRResult } from '../../utils/qr-crypto';
+import { generateSecureQR, EncryptedQRResult, QRColorConfig } from '../../utils/qr-crypto';
 import { logger } from '../../utils/logger';
 import { getAuthContext } from '../../middlewares/unified-auth';
 import { AppDataSource } from '../../config/database';
 import { dataSourceConfig } from '../../config/data-source';
 import { OTARepository } from '../ota/domain/ota.repository';
+import { ProductEntity } from '../../models';
 
 /**
  * Ticket type detection result
@@ -90,8 +91,8 @@ export class UnifiedQRService {
           product_id: otaTicket.product_id,
           status: otaTicket.status,
           ticket_type: 'OTA',
-          owner_id: otaTicket.partner_id,
-          order_id: otaTicket.order_id,
+          owner_id: otaTicket.partner_id || 'unknown',
+          order_id: otaTicket.order_no,  // 使用统一的 order_no
           batch_id: otaTicket.batch_id,
           channel_id: 'ota',
           partner_id: otaTicket.partner_id
@@ -109,12 +110,12 @@ export class UnifiedQRService {
         }
 
         return {
-          ticket_code: otaTicket.ticket_code,
+          ticket_code: otaTicket.code,
           product_id: otaTicket.product_id,
           status: otaTicket.status,
           ticket_type: 'OTA',
-          owner_id: otaTicket.partner_id,
-          order_id: otaTicket.order_id,
+          owner_id: otaTicket.partner_id || 'unknown',
+          order_id: otaTicket.order_id,  // Mock 数据结构保持不变
           batch_id: otaTicket.batch_id,
           channel_id: 'ota',
           partner_id: otaTicket.partner_id
@@ -174,8 +175,8 @@ export class UnifiedQRService {
    */
   private validateStatus(ticket: TicketInfo): void {
     const validStatuses: Record<'OTA' | 'NORMAL', string[]> = {
-      OTA: ['PRE_GENERATED', 'ACTIVE'],
-      NORMAL: ['active', 'partially_redeemed']
+      OTA: ['PRE_GENERATED', 'ACTIVATED'],  // 使用统一内部状态
+      NORMAL: ['active', 'partially_redeemed', 'ACTIVATED']  // 兼容两种状态格式
     };
 
     const valid = validStatuses[ticket.ticket_type];
@@ -185,20 +186,55 @@ export class UnifiedQRService {
   }
 
   /**
+   * Get QR color configuration from product
+   * @param productId - Product ID
+   * @returns QR color config or undefined
+   */
+  private async getProductQRConfig(productId: number): Promise<QRColorConfig | undefined> {
+    if (!productId || productId <= 0) {
+      return undefined;
+    }
+
+    try {
+      if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
+        const productRepo = AppDataSource.getRepository(ProductEntity);
+        const product = await productRepo.findOne({ where: { id: productId } });
+
+        if (product?.qr_config) {
+          logger.debug('qr.service.product_qr_config_found', {
+            product_id: productId,
+            qr_config: product.qr_config
+          });
+          return {
+            dark_color: product.qr_config.dark_color,
+            light_color: product.qr_config.light_color
+          };
+        }
+      }
+    } catch (error) {
+      logger.warn('qr.service.product_qr_config_error', {
+        product_id: productId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
+    return undefined;
+  }
+
+  /**
    * Generate QR token for a ticket (unified for both OTA and normal tickets)
+   * No authentication required - ticket_code itself is the credential
+   *
    * @param ticketCode - Ticket code
-   * @param authContext - Authentication context from request
    * @param expiryMinutes - Optional custom expiry time
    * @returns Encrypted QR result with image
    */
   async generateQRToken(
     ticketCode: string,
-    authContext: AuthContext,
     expiryMinutes?: number
   ): Promise<EncryptedQRResult> {
     logger.info('qr.service.generate_started', {
-      ticket_code: ticketCode,
-      auth_type: authContext.authType
+      ticket_code: ticketCode
     });
 
     // Step 1: Detect ticket type
@@ -214,11 +250,11 @@ export class UnifiedQRService {
       throw new Error('TICKET_NOT_FOUND: No ticket found with this code');
     }
 
-    // Step 3: Verify ownership
-    this.verifyOwnership(ticket, authContext);
-
-    // Step 4: Validate status
+    // Step 3: Validate status (ownership verification removed - ticket_code is sufficient credential)
     this.validateStatus(ticket);
+
+    // Step 4: Get product QR color config
+    const qrColorConfig = await this.getProductQRConfig(ticket.product_id);
 
     // Step 5: Generate encrypted QR code with appropriate expiry time
     // OTA tickets: Permanent QR codes (100 years = 52,560,000 minutes)
@@ -229,7 +265,9 @@ export class UnifiedQRService {
 
     const qrResult = await generateSecureQR(
       ticket.ticket_code,
-      qrExpiryMinutes
+      qrExpiryMinutes,
+      undefined, // logoBuffer
+      qrColorConfig
     );
 
     logger.info('qr.service.generate_success', {
@@ -243,7 +281,8 @@ export class UnifiedQRService {
 
   /**
    * Generate QR token from Express request (convenience method)
-   * @param req - Express request with auth context
+   * @deprecated No longer uses authentication - use generateQRToken directly
+   * @param req - Express request (for logging only)
    * @param ticketCode - Ticket code
    * @param expiryMinutes - Optional custom expiry time
    * @returns Encrypted QR result
@@ -253,21 +292,14 @@ export class UnifiedQRService {
     ticketCode: string,
     expiryMinutes?: number
   ): Promise<EncryptedQRResult> {
-    // Extract auth context from request
-    const authContext: AuthContext = {
-      authType: req.authType!,
-      userId: req.user?.id,
-      partnerId: req.ota_partner?.id
-    };
-
     logger.info('qr.service.request_received', {
-      ...getAuthContext(req),
       ticket_code: ticketCode,
       ip: req.ip,
       user_agent: req.headers['user-agent']
     });
 
-    return this.generateQRToken(ticketCode, authContext, expiryMinutes);
+    // No authentication required - just pass through to generateQRToken
+    return this.generateQRToken(ticketCode, expiryMinutes);
   }
 }
 

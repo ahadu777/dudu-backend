@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(node scripts/progress-report.js:*)",
+      "Bash(xargs cat:*)",
+      "Bash(done)",
+      "Bash(find src/modules -name \"router.ts\" -exec sh -c 'echo \"\"=== {} ===\"\" && grep -E \"\"router\\.(get|post|put|delete)\"\" \"\"{}\"\"' ;)",
+      "Bash(cat:*)",
+      "Bash(python -m json.tool)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npm start)",
+      "Bash(npx newman run:*)",
+      "Bash(find:*)",
+      "Bash(pkill:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python3:*)",
+      "Bash(node -e:*)",
+      "Bash(netstat:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(npm run test:prd006:*)",
+      "Bash(npm run validate:docs:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

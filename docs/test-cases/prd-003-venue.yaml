@@ -1,0 +1,61 @@
+prd_id: PRD-003
+feature: 场馆扫码核销
+description: 操作员登录、QR码生成解码、扫码核销、防欺诈
+test_command: npm run test:prd 003
+
+test_cases:
+  - id: TC-003-01
+    name: 操作员登录
+    priority: P0
+    preconditions:
+      - 操作员账号已创建
+      - 场馆已配置
+    steps:
+      - 输入操作员账号密码
+      - 发送 POST 请求到 /api/venue/login
+      - 验证登录响应
+    expected:
+      - 登录成功
+      - 返回 JWT Token
+      - 包含操作员权限信息
+
+  - id: TC-003-02
+    name: 扫码核销有效票券
+    priority: P0
+    preconditions:
+      - 操作员已登录
+      - 票券已激活且未使用
+    steps:
+      - 扫描票券二维码
+      - 发送核销请求
+      - 验证核销结果
+    expected:
+      - 核销成功
+      - 票券状态变为"已使用"
+      - 记录核销时间和操作员
+
+  - id: TC-003-03
+    name: 防欺诈检测 - 重复使用
+    priority: P0
+    preconditions:
+      - 票券已被核销
+    steps:
+      - 再次扫描同一票券
+      - 发送核销请求
+    expected:
+      - 核销失败
+      - 提示"票券已使用"
+      - 显示首次使用时间
+
+  - id: TC-003-04
+    name: 核销未激活票券
+    priority: P1
+    preconditions:
+      - 操作员已登录
+      - 票券未激活
+    steps:
+      - 扫描未激活票券
+      - 发送核销请求
+    expected:
+      - 核销失败
+      - 提示"票券未激活"

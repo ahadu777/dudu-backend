@@ -1,0 +1,542 @@
+{
+  "info": {
+    "name": "小程序用户资料 - Complete Test Coverage",
+    "description": "miniprogram-profile 卡片的完整测试覆盖\n\n测试场景:\n- GET /miniprogram/profile 获取用户资料\n- POST /miniprogram/profile 更新用户资料\n- 认证校验\n- 参数校验",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "jwt_secret",
+      "value": "your-secret-key-change-in-production"
+    },
+    {
+      "key": "test_user_id",
+      "value": "1"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 生成 JWT token 用于测试",
+          "const jwt_secret = pm.variables.get('jwt_secret');",
+          "const user_id = parseInt(pm.variables.get('test_user_id'));",
+          "",
+          "// 简单的 JWT 生成 (HS256)",
+          "function base64url(source) {",
+          "    let encodedSource = CryptoJS.enc.Base64.stringify(source);",
+          "    encodedSource = encodedSource.replace(/=+$/, '');",
+          "    encodedSource = encodedSource.replace(/\\+/g, '-');",
+          "    encodedSource = encodedSource.replace(/\\//g, '_');",
+          "    return encodedSource;",
+          "}",
+          "",
+          "const header = { alg: 'HS256', typ: 'JWT' };",
+          "const payload = {",
+          "    id: user_id,",
+          "    email: 'test@test.com',",
+          "    iat: Math.floor(Date.now() / 1000),",
+          "    exp: Math.floor(Date.now() / 1000) + 3600",
+          "};",
+          "",
+          "const stringifiedHeader = CryptoJS.enc.Utf8.parse(JSON.stringify(header));",
+          "const encodedHeader = base64url(stringifiedHeader);",
+          "",
+          "const stringifiedPayload = CryptoJS.enc.Utf8.parse(JSON.stringify(payload));",
+          "const encodedPayload = base64url(stringifiedPayload);",
+          "",
+          "const signature = CryptoJS.HmacSHA256(encodedHeader + '.' + encodedPayload, jwt_secret);",
+          "const encodedSignature = base64url(signature);",
+          "",
+          "const token = encodedHeader + '.' + encodedPayload + '.' + encodedSignature;",
+          "pm.variables.set('auth_token', token);"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "GET /miniprogram/profile - 获取用户资料",
+      "item": [
+        {
+          "name": "1.1 获取用户资料（已认证）",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('返回用户资料', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('user_id');",
+                  "    pm.expect(data).to.have.property('name');",
+                  "    pm.expect(data).to.have.property('nickname');",
+                  "    pm.expect(data).to.have.property('phone');",
+                  "    pm.expect(data).to.have.property('updated_at');",
+                  "});",
+                  "",
+                  "pm.test('user_id 为数字', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.user_id).to.be.a('number');",
+                  "});",
+                  "",
+                  "// 保存原始值供后续测试恢复",
+                  "var data = pm.response.json();",
+                  "pm.environment.set('original_name', data.name);",
+                  "pm.environment.set('original_nickname', data.nickname);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 未认证访问（返回401）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 401 状态码', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('返回错误信息', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 无效 token（返回401）",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid_token_here"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 401 状态码', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('返回 Invalid token 错误', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "POST /miniprogram/profile - 更新用户资料",
+      "item": [
+        {
+          "name": "2.1 更新 name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"测试更新名称\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('name 更新成功', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.name).to.equal('测试更新名称');",
+                  "});",
+                  "",
+                  "pm.test('返回完整用户资料', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('user_id');",
+                  "    pm.expect(data).to.have.property('name');",
+                  "    pm.expect(data).to.have.property('nickname');",
+                  "    pm.expect(data).to.have.property('phone');",
+                  "    pm.expect(data).to.have.property('updated_at');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 更新 nickname",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nickname\": \"测试昵称\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('nickname 更新成功', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.nickname).to.equal('测试昵称');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 同时更新 name 和 nickname",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"新名字\", \"nickname\": \"新昵称\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('name 和 nickname 都更新成功', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data.name).to.equal('新名字');",
+                  "    pm.expect(data.nickname).to.equal('新昵称');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 空 body 校验（返回400）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 400 状态码', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('返回 INVALID_REQUEST 错误', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "    pm.expect(data.code).to.equal('INVALID_REQUEST');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.5 空 name 校验（返回422）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"   \"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 422 状态码', function() {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('返回 INVALID_NAME 错误', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "    pm.expect(data.code).to.equal('INVALID_NAME');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.6 name 超长校验（返回422）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"这是一个超过五十个字符的名称用于测试超长校验这是一个超过五十个字符的名称用于测试超长校验再加一些文字确保超过五十个字符限制\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 422 状态码', function() {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('返回 INVALID_NAME 错误', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "    pm.expect(data.code).to.equal('INVALID_NAME');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.7 未认证更新（返回401）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"测试\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 401 状态码', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('返回认证错误', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.8 恢复原始数据",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"测试用户\", \"nickname\": \"小明同学\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/profile",
+              "host": ["{{base_url}}"],
+              "path": ["miniprogram", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('返回 200 状态码', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('数据恢复成功', function() {",
+                  "    var data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('user_id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

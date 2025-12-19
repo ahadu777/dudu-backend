@@ -2,6 +2,8 @@
 
 Complete end-to-end flow: Browse catalog → Create order → Payment notify → View tickets → Generate QR → Operator scan → Redeem
 
+**Updated**: 2025-11 (API migrated to `/venue/scan`)
+
 ## Prerequisites
 - **Base URL**: `http://localhost:8080`
 - **User token**: `user123` (mock authentication)
@@ -26,7 +28,7 @@ curl -s -X POST http://localhost:8080/orders \
   -d '{
     "items": [{"product_id": 101, "qty": 1}],
     "channel_id": 1,
-    "out_trade_no": "demo-001-$(date +%s)"
+    "out_trade_no": "demo-001-'$(date +%s)'"
   }' | jq '.'
 ```
 
@@ -81,40 +83,26 @@ curl -s -X POST http://localhost:8080/operators/login \
   }' | jq '.'
 ```
 
-**Expected**: Returns `{operator_token}` only (operator details are in JWT claims)
+**Expected**: Returns `{operator_token}` - save this for scanning
 
-### 7. Create Validator Session
-Bind operator to gate device:
+### 7. Scan and Redeem
+Perform actual ticket redemption using `/venue/scan`:
 ```bash
+# Replace <QR_TOKEN> with token from step 5
 # Replace <OPERATOR_TOKEN> with token from step 6
-curl -s -X POST http://localhost:8080/validators/sessions \
+curl -s -X POST http://localhost:8080/venue/scan \
   -H "Authorization: Bearer <OPERATOR_TOKEN>" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "device_id": "gate-01",
-    "location_id": 52
-  }' | jq '.'
-```
-
-**Expected**: Returns session_id for scanning operations
-
-### 8. Scan and Redeem
-Perform actual ticket redemption:
-```bash
-# Replace <QR_TOKEN> and <SESSION_ID> with values from steps 5 and 7
-curl -s -X POST http://localhost:8080/tickets/scan \
   -H 'Content-Type: application/json' \
   -d '{
     "qr_token": "<QR_TOKEN>",
     "function_code": "ferry",
-    "session_id": "<SESSION_ID>",
-    "location_id": 52
+    "venue_code": "central-pier"
   }' | jq '.'
 ```
 
 **Expected**:
-- First scan: `{"result": "success", "entitlements": [...]}` (check remaining_uses in entitlements array)
-- Replay attempt: `409 Conflict` (idempotency protection)
+- First scan: `{"result": "success", "remaining_uses": N, ...}`
+- Replay attempt: `{"result": "reject", "reason": "ALREADY_REDEEMED"}`
 
 ## Complete Flow Example
 ```bash
@@ -147,15 +135,20 @@ OP_RESP=$(curl -s -X POST $BASE/operators/login -H 'Content-Type: application/js
 OP_TOKEN=$(echo $OP_RESP | jq -r '.operator_token')
 echo "Operator Token: ${OP_TOKEN:0:50}..."
 
-# 7. Create session
-SESS_RESP=$(curl -s -X POST $BASE/validators/sessions -H "Authorization: Bearer $OP_TOKEN" -H 'Content-Type: application/json' -d '{"device_id":"gate-01","location_id":52}')
-SESSION_ID=$(echo $SESS_RESP | jq -r '.session_id')
-echo "Session ID: $SESSION_ID"
-
-# 8. Scan redeem (response includes entitlements[] array)
-SCAN_RESP=$(curl -s -X POST $BASE/tickets/scan -H 'Content-Type: application/json' -d "{\"qr_token\":\"$QR_TOKEN\",\"function_code\":\"ferry\",\"session_id\":\"$SESSION_ID\",\"location_id\":52}")
+# 7. Scan redeem using /venue/scan
+SCAN_RESP=$(curl -s -X POST $BASE/venue/scan \
+  -H "Authorization: Bearer $OP_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{\"qr_token\":\"$QR_TOKEN\",\"function_code\":\"ferry\",\"venue_code\":\"central-pier\"}")
 echo $SCAN_RESP | jq '.'
-echo "Ferry remaining uses: $(echo $SCAN_RESP | jq '.entitlements[] | select(.function_code=="ferry") | .remaining_uses')"
+
+# Check result
+RESULT=$(echo $SCAN_RESP | jq -r '.result')
+if [ "$RESULT" = "success" ]; then
+  echo "✅ Scan successful! Remaining uses: $(echo $SCAN_RESP | jq -r '.remaining_uses')"
+else
+  echo "❌ Scan failed: $(echo $SCAN_RESP | jq -r '.reason')"
+fi
 ```
 
 ## Expected Results Summary
@@ -164,9 +157,20 @@ echo "Ferry remaining uses: $(echo $SCAN_RESP | jq '.entitlements[] | select(.fu
 - ✅ **Tickets**: N tickets issued with entitlements
 - ✅ **QR**: Valid JWT token generated
 - ✅ **Operator**: Authentication successful
-- ✅ **Session**: Device binding successful
 - ✅ **Scan**: `result: "success"` with decremented usage
-- ✅ **Replay**: `409 Conflict` on duplicate scan
+- ✅ **Replay**: `result: "reject"` with `reason: "ALREADY_REDEEMED"`
+
+## API Reference
+
+| Step | Endpoint | Method | Auth |
+|------|----------|--------|------|
+| 1 | `/catalog` | GET | None |
+| 2 | `/orders` | POST | None |
+| 3 | `/payments/notify` | POST | None |
+| 4 | `/my/tickets` | GET | User |
+| 5 | `/tickets/:code/qr-token` | POST | User |
+| 6 | `/operators/login` | POST | None |
+| 7 | `/venue/scan` | POST | Operator |
 
 ## Troubleshooting
 - **Server not responding**: Check `curl $BASE/healthz`
@@ -174,4 +178,8 @@ echo "Ferry remaining uses: $(echo $SCAN_RESP | jq '.entitlements[] | select(.fu
 - **Order not found**: Ensure order_id is numeric, not string
 - **No tickets**: Check payment notification was successful
 - **QR expired**: Regenerate QR token (5min TTL)
-- **Scan fails**: Verify session_id and location_id match
+- **Scan fails**: Check operator token is valid and function_code exists on ticket
+
+---
+
+**Note**: The old `/tickets/scan` and `/validators/sessions` endpoints have been deprecated. Use `/venue/scan` with operator token authentication.

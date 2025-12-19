@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, DeleteDateColumn } from 'typeorm';
 import { VenueSession } from './venue-session.entity';
 import { RedemptionEvent } from './redemption-event.entity';
 
@@ -20,16 +20,22 @@ export class Venue {
   location_address!: string;
 
   @Column({ type: 'json', nullable: true })
-  supported_functions!: string[]; // ['ferry_boarding', 'gift_redemption', 'playground_token']
+  supported_functions!: string[]; // 与产品权益类型一致: ['ferry', 'gift', 'tokens', 'park_admission', 'pet_area', 'vip', 'exclusive']
 
   @Column({ type: 'boolean', default: true })
   is_active!: boolean;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  partner_id!: string | null;
 
   @CreateDateColumn()
   created_at!: Date;
 
   @UpdateDateColumn()
   updated_at!: Date;
+
+  @DeleteDateColumn()
+  deleted_at!: Date | null;
 
   @OneToMany(() => VenueSession, session => session.venue)
   sessions!: VenueSession[];

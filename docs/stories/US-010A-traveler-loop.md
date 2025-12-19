@@ -2,9 +2,10 @@
 id: US-010A
 title: DeepTravel 旅客闭环体验
 owner: Product
-status: Draft
+status: "Done"
 priority: High
-last_update: 2025-10-26T19:45:00+08:00
+last_update: 2025-12-11T15:00:00+08:00
+business_requirement: "PRD-008"
 enhances:
   - US-001
   - US-003
@@ -12,10 +13,16 @@ enhances:
 depends_on:
   - US-001
 cards:
-  - travel-search-hub
-  - seat-lock-service
-  - wechat-payment-session
-  - bundle-ticket-engine
+  # Phase 1 - 已完成
+  - miniprogram-product-catalog    # Done - 商品列表/详情/库存
+  - miniprogram-order              # Done - 订单创建/列表/详情
+  # 支付 - 已完成
+  - wallyt-payment                 # Done - 微信支付（替代 wechat-payment-session）
+  - bundle-ticket-engine           # Done - 票券生成（已在 miniprogram/order.service.ts 实现）
+  # DEPRECATED
+  # - travel-search-hub            # DEPRECATED - 线路/套票搜索 (模块已删除，功能整合到 miniprogram-product-catalog)
+  # - seat-lock-service            # DEPRECATED - 锁座服务 (模块已删除，功能整合到 miniprogram-order)
+  # - wechat-payment-session       # DEPRECATED - 被 wallyt-payment 替代
 related_features:
   - tickets-issuance
   - my-tickets
@@ -39,23 +46,23 @@ related_features:
 ## Acceptance (Given / When / Then)
 **A. 查询与缓存**
 - Given 管理后台已发布可售线路与套票
-- When 旅客调用 `/travel/search`
-- Then 返回包含余票、阶梯定价与退改摘要的组合结果，并命中 24h 热门缓存或年度黑名单缓存策略
+- When 旅客搜索线路与套票
+- Then 系统展示余票数量、阶梯定价与退改摘要，热门搜索结果优先加载
 
 **B. 锁座成功**
 - Given 旅客选择具体班次与人数
-- When 调用 `POST /reservations`
-- Then 生成锁座记录并获得 `lockExpireAt`（默认 10 分钟），同时返回库存快照供订单用
+- When 旅客提交锁座请求
+- Then 系统显示锁定成功并显示 10 分钟倒计时，所选席位被保留
 
 **C. 订单建单与支付前置**
-- Given 已存在锁座记录
-- When 调用 `POST /orders`
-- Then 订单进入 `PENDING_PAYMENT`，并触发微信支付参数生成接口返回预支付信息
+- Given 旅客已完成锁座
+- When 旅客确认订单并选择微信支付
+- Then 系统生成待支付订单，并跳转至微信支付界面
 
 **D. 支付回调与票券生成**
 - Given 订单仍在锁座有效期内
-- When 收到微信支付成功通知
-- Then 更新订单为 `PAID`，调用票券引擎创建多乘客票券，并将快照同步至 `my-tickets`/`qr-token`
+- When 旅客完成微信支付
+- Then 系统显示支付成功，自动生成所有乘客的电子票券，旅客可在"我的票券"中查看
 
 ## Business rules
 1. 锁座默认保留 10 分钟，可按线路配置；过期必须释放库存。
@@ -73,3 +80,30 @@ related_features:
 - 执行 `npm run validate:integration` 需新增旅客闭环场景脚本。
 - `reports/newman/travel-search-hub.json`、`.../seat-lock-service.json`、`.../wechat-payment-session.json`、`.../bundle-ticket-engine.json` 覆盖关键 API。
 - Story 完成后运行 `node scripts/story-coverage.mjs` 验证对 US-001/US-004 的增强状态。
+
+## Implementation Progress
+
+### Phase 1: 商品浏览与订单创建 ✅
+| Card | Status | Description |
+|------|--------|-------------|
+| miniprogram-product-catalog | Done | 商品列表、详情、库存查询 |
+| miniprogram-order | Done | 订单创建、列表、详情查询 |
+
+**Database Tables Created**:
+- `orders` - 订单主表
+- `order_payments` - 支付记录表
+- `tickets` (extended) - 票券表扩展
+
+### Phase 2: 搜索与锁座 ⏭️ (DEPRECATED)
+| Card | Status | Description |
+|------|--------|-------------|
+| travel-search-hub | DEPRECATED | 功能整合到 miniprogram-product-catalog |
+| seat-lock-service | DEPRECATED | 功能整合到 miniprogram-order（订单超时自动释放库存） |
+
+> **Note**: 搜索与锁座功能已简化并整合到 Phase 1 的 API 中，无需单独模块。
+
+### Phase 3: 支付与票券 ✅
+| Card | Status | Description |
+|------|--------|-------------|
+| wallyt-payment | Done | 微信支付集成 (替代 wechat-payment-session) |
+| bundle-ticket-engine | Done | 多乘客票券批量生成（已在 miniprogram/order.service.ts 实现） |

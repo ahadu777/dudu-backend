@@ -5,11 +5,11 @@
 prd_id: "PRD-001"
 product_area: "Commerce"
 owner: "Product Manager"
-status: "Implemented"
+status: "Done"
 created_date: "2025-10-27"
 last_updated: "2025-11-19"
-related_stories: ["US-001", "US-003", "US-007", "US-008", "US-009", "US-011"]
-implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engine", "tickets-issuance", "my-tickets", "qr-token"]
+related_stories: ["US-001", "US-003", "US-004", "US-007", "US-008", "US-009", "US-011"]
+implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engine", "tickets-issuance", "my-tickets", "qr-generation-api"]
 ```
 
 ## Executive Summary

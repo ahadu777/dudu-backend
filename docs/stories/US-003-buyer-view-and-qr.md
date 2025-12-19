@@ -2,9 +2,15 @@
 id: US-003
 title: Buyer views tickets and generates a short-lived QR token
 owner: Product
-status: Approved
+status: "Done"
 priority: Medium
 last_update: 2025-10-19T23:44:00+0800
+business_requirement: "PRD-001"
+depends_on:
+  - US-001  # Must have purchased ticket first
+cards:
+  - my-tickets
+  - qr-generation-api
 ---
 
 ## Business goal
@@ -20,13 +26,13 @@ Let buyers see their tickets and generate a rotating QR token for entry, without
 ## Acceptance (Given/When/Then)
 **Story A — List tickets**
 - Given the buyer has at least one assigned ticket
-- When GET /my/tickets
-- Then 200 with tickets[] and entitlements[] including remaining_uses
+- When the buyer views their tickets
+- Then they see a list of tickets with entitlements and remaining uses
 
 **Story B — Generate QR token**
-- Given the buyer owns ticket CODE and it is valid
-- When POST /tickets/{code}/qr-token
-- Then 200 with { token, expires_in } (TTL ≤ 60s)
+- Given the buyer owns a valid ticket
+- When the buyer requests a QR code for entry
+- Then they receive a temporary QR code (expires within 60 seconds)
 
 ## Non-functional constraints
 - Token must include ticket id/hash and jti (nonce) and be signed (HS256)

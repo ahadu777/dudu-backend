@@ -2,52 +2,59 @@
 stories:
   - id: US-001
     title: Buy package and redeem via QR
-    status: Approved
+    status: Done
     cards:
       - catalog-endpoint
       - order-create
       - payment-webhook
       - tickets-issuance
       - my-tickets
-      - qr-token
-      - tickets-scan
+      - qr-generation-api
+      - venue-enhanced-scanning
+      - operators-login
+      - reports-redemptions
     # Sequence dependencies for temporal relationships
     sequence:
       - catalog-endpoint → order-create
       - order-create → payment-webhook
       - payment-webhook → tickets-issuance
       - tickets-issuance → my-tickets
-      - tickets-issuance → qr-token
-      - [operators-login, qr-token] → tickets-scan
+      - tickets-issuance → qr-generation-api
+      - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
     # Cross-story relationships
     enhances: []
     enhanced_by: [US-011]
+    # Business requirements
+    business_requirement: "PRD-001"
   - id: US-002
     title: Operator scan & redemption
-    status: Approved
+    status: Done
     cards:
       - operators-login
-      - validators-sessions
-      - tickets-scan
+      - venue-enhanced-scanning
     sequence:
-      - operators-login → validators-sessions
-      - [validators-sessions, qr-token] → tickets-scan
+      - operators-login → venue-enhanced-scanning
+      - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
     enhances: [US-001]
-    
+    # Business requirements
+    business_requirement: "PRD-003"
+
   - id: US-003
     title: Buyer views tickets & QR
-    status: Approved
+    status: Done
     cards:
       - my-tickets
-      - qr-token
+      - qr-generation-api
     sequence:
       - tickets-issuance → my-tickets
-      - my-tickets → qr-token
+      - my-tickets → qr-generation-api
     enhances: [US-001]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-004
     title: Payment notify → issue tickets (sync)
-    status: Approved
+    status: Done
     cards:
       - payment-webhook
       - tickets-issuance
@@ -55,29 +62,35 @@ stories:
       - order-create → payment-webhook
       - payment-webhook → tickets-issuance
     enhances: [US-001]
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-005
     title: Reporting — redemptions list
-    status: Approved
+    status: Done
     cards:
       - reports-redemptions
     sequence:
-      - tickets-scan → reports-redemptions
+      - venue-enhanced-scanning → reports-redemptions
       - refund-processing → reports-redemptions
     enhances: [US-001, US-002, US-007]
-    
+    # Business requirements
+    business_requirement: "PRD-003"
+
   - id: US-006
     title: Operator auth & session lifecycle
-    status: Approved
+    status: Done
     cards:
       - operators-login
-      - validators-sessions
     sequence:
-      - operators-login → validators-sessions
+      - operators-login → venue-enhanced-scanning
     enhances: [US-002]
-    
+    # Business requirements
+    business_requirement: "PRD-003"
+
   - id: US-007
     title: Ticket cancellation and refund
-    status: Approved
+    status: Done
     cards:
       - ticket-cancellation
       - refund-processing
@@ -87,45 +100,54 @@ stories:
       - ticket-cancellation → refund-processing
       - refund-processing → payment-webhook
     enhances: [US-001, US-004]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-008
     title: Promotion detail view for dashboard
-    status: Approved
+    status: Done
     cards:
       - promotion-detail-endpoint
     sequence:
       - catalog-endpoint → promotion-detail-endpoint
     enhances: [US-001]
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-009
     title: User profile and settings management
-    status: Approved
+    status: Done
     cards:
       - user-profile-endpoint
       - user-settings-endpoint
       - user-activity-endpoint
+      - miniprogram-profile
     sequence:
       - user-profile-endpoint → user-settings-endpoint
       - user-settings-endpoint → user-activity-endpoint
     enhances: []
-    
+    # Business requirements
+    business_requirement: "PRD-001"
+
   - id: US-010
     title: DeepTravel 小程序全链路购票与核销体验
     status: Draft
     cards:
-      - travel-search-hub
-      - seat-lock-service
-      - wechat-payment-session
       - bundle-ticket-engine
-      - ticket-lifecycle-daemon
       - merchant-redemption-console
       - admin-package-config
       - notification-orchestrator
+      - route-schedule-management
+      - schedule-pricing-rules
+      - wallyt-payment
+    # deprecated: [travel-search-hub, seat-lock-service, wechat-payment-session, ticket-lifecycle-daemon]
     decomposed_into:
       - US-010A
       - US-010B
     enhances: [US-001, US-002, US-004, US-007]
-    
+    # Business requirements
+    business_requirement: "PRD-008"
+
     validation_assets:
       runbook: docs/integration/US-010-runbook.md
       newman:
@@ -133,12 +155,17 @@ stories:
         - reports/collections/us-010b-operations-backbone.json
   - id: US-010A
     title: DeepTravel 旅客闭环体验
-    status: Draft
+    status: In Progress
     cards:
       - travel-search-hub
       - seat-lock-service
       - wechat-payment-session
       - bundle-ticket-engine
+      - route-schedule-management
+      - schedule-pricing-rules
+      - miniprogram-product-catalog
+      - miniprogram-order
+      - wallyt-payment
     sequence:
       - catalog-endpoint → travel-search-hub
       - travel-search-hub → seat-lock-service
@@ -148,7 +175,9 @@ stories:
       - order-create → wechat-payment-session
       - wechat-payment-session → payment-webhook
     enhances: [US-001, US-003, US-004]
-    
+    # Business requirements
+    business_requirement: "PRD-008"
+
     validation_assets:
       runbook: docs/integration/US-010A-runbook.md
       newman:
@@ -158,25 +187,26 @@ stories:
     status: Draft
     cards:
       - admin-package-config
-      - ticket-lifecycle-daemon
       - notification-orchestrator
       - merchant-redemption-console
+      - route-schedule-management
+      - schedule-pricing-rules
+    # deprecated: [ticket-lifecycle-daemon]
     sequence:
-      - admin-package-config → ticket-lifecycle-daemon
       - admin-package-config → merchant-redemption-console
-      - tickets-issuance → ticket-lifecycle-daemon
-      - ticket-lifecycle-daemon → notification-orchestrator
       - refund-processing → notification-orchestrator
-      - [operators-login, validators-sessions] → merchant-redemption-console
+      - "[operators-login] → merchant-redemption-console"
     enhances: [US-002, US-005, US-006, US-007]
-    
+    # Business requirements
+    business_requirement: "PRD-008"
+
     validation_assets:
       runbook: docs/integration/US-010B-runbook.md
       newman:
         - reports/collections/us-010b-operations-backbone.json
   - id: US-011
     title: Complex multi-variable pricing system
-    status: Approved
+    status: Done
     cards:
       - complex-pricing-engine
       - order-create
@@ -186,19 +216,20 @@ stories:
     # Cross-story relationships
     enhances: [US-001]
     enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-001"
   - id: US-012
     title: OTA Platform Integration for Bulk Ticket Reservation
     status: Done
     cards:
-      - ota-channel-management
       - ota-premade-tickets
       - ota-reservation-management
       - ota-order-retrieval
       - qr-generation-api
+      - venue-enhanced-scanning
+    # deprecated: [ota-channel-management, ota-reseller-management]
     # Sequence dependencies
     sequence:
-      - ota-channel-management → ota-premade-tickets
-      - ota-channel-management → ota-reservation-management
       - ota-premade-tickets → qr-generation-api
       - qr-generation-api → ota-order-retrieval
     # Cross-story relationships
@@ -221,12 +252,12 @@ stories:
     title: Event Venue Operations Platform
     status: Done
     cards:
-      - venue-session-management
+      - venue-management-crud
       - venue-enhanced-scanning
       - venue-analytics-reporting
     # Sequence dependencies
     sequence:
-      - venue-session-management → venue-enhanced-scanning
+      - operators-login → venue-enhanced-scanning
       - venue-enhanced-scanning → venue-analytics-reporting
     # Cross-story relationships
     enhances: [US-001, US-002]
@@ -235,7 +266,7 @@ stories:
     business_requirement: "PRD-003"
     deadline: "2025-11-04"
     implementation_date: "2025-11-03"
-    implicit_dependencies: [qr-token, tickets-issuance]
+    implicit_dependencies: [qr-generation-api, tickets-issuance]
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-013-runbook.md
@@ -265,4 +296,53 @@ stories:
       runbook: docs/integration/US-014-runbook.md
       newman:
         - reports/collections/us-014-wechat-auth.json
+  - id: US-015
+    title: Ticket Reservation & Validation System
+    status: Draft
+    cards:
+      - reservation-slot-management
+      - customer-reservation-portal
+      - operator-validation-scanner
+    # Sequence dependencies
+    sequence:
+      - tickets-issuance → reservation-slot-management
+      - reservation-slot-management → customer-reservation-portal
+      - "[operators-login, customer-reservation-portal] → operator-validation-scanner"
+    # Cross-story relationships
+    enhances: [US-001, US-002]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-007"
+    deadline: "2025-12-31"
+    implicit_dependencies: [tickets-issuance, order-create, operators-login]
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-015-runbook.md
+      newman:
+        - reports/collections/us-015-reservation-validation.json
+  - id: US-016
+    title: Ticket Activation and Time-Slot Reservation System
+    status: Draft
+    cards:
+      - reservation-slot-management
+      - customer-reservation-portal
+      - operator-validation-scanner
+    # deprecated: [ticket-lifecycle-daemon]
+    # Sequence dependencies
+    sequence:
+      - tickets-issuance → ticket-activation
+      - ticket-activation → time-slot-reservation
+      - "[operators-login, time-slot-reservation] → reservation-validation-scanning"
+    # Cross-story relationships
+    enhances: [US-001, US-002, US-003]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-006"
+    deadline: "2025-12-31"
+    implicit_dependencies: [tickets-issuance, order-create, operators-login]
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-016-runbook.md
+      newman:
+        - reports/collections/us-016-activation-reservation.json
 

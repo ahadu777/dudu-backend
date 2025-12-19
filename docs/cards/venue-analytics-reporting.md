@@ -4,12 +4,12 @@ slug: venue-analytics-reporting
 team: "C - Gate"
 oas_paths: ["/venue/{venue_code}/analytics"]
 migrations: []
-status: "Pending"
+status: "Done"
 readiness: "production"
 branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/venue-analytics-reporting-result.json"
-last_update: "2025-11-14T20:30:00+08:00"
+last_update: "2025-12-11T17:00:00+08:00"
 related_stories: ["US-013"]
 relationships:
   enhances: ["reports-redemptions"]
@@ -18,21 +18,21 @@ relationships:
   data_dependencies: ["RedemptionEvent", "Venue"]
   integration_points:
     data_stores: ["venue.service.ts", "venue.repository.ts"]
-notes: "Venue architecture under review. Venue entity preserved but may be refactored to use terminal-based analytics instead of venue-based."
+notes: "Hybrid architecture implemented: Venue-based primary grouping with optional terminal-level breakdown for cross-terminal fraud detection."
 ---
 
-## ⚠️ STATUS: PENDING REDESIGN
+## Architecture Decision (2025-12-11)
 
-**This card is under review as of 2025-11-14.**
+**Decision: Hybrid Analytics Architecture**
 
-**Reason:**
-- Venue architecture is being reconsidered
-- May shift from venue-based analytics to terminal-based analytics
-- Waiting for venue entity design decisions
+After review, the following architecture was adopted:
+- **Primary grouping**: `venue_code` (preserved - simpler, aligns with business operations)
+- **Optional drill-down**: `terminal_device_id` breakdown (for cross-terminal fraud detection)
+- **Venue entity**: **Preserved** - Required for partner_id association and multi-tenant isolation
 
-**Open Questions:**
-- Should analytics be grouped by venue_code or terminal_device_id?
-- Is Venue entity necessary or can we use static configuration?
+**Resolved Questions:**
+- Q: "Should analytics group by venue_code or terminal_device_id?" → **Both** (hybrid approach)
+- Q: "Is Venue entity necessary?" → **Yes** (partner_id, supported_functions require entity)
 
 ---
 
@@ -57,39 +57,67 @@ notes: "Venue architecture under review. Venue entity preserved but may be refac
 
 #### Get Venue Analytics
 ```http
-GET /venue/{venue_code}/analytics?hours=24
+GET /venue/{venue_code}/analytics?hours=24&include_terminals=true
 ```
 
 **Query Parameters:**
 - `hours`: Time window for analytics (default: 24, max: 168 for 7 days)
+- `include_terminals`: Include per-terminal breakdown for cross-terminal fraud detection (default: false)
 
 **Response:**
 ```json
 {
-  "venue_code": "central-pier",
-  "period": {"hours": 24},
+  "venue_id": 1,
+  "period": {
+    "start": "2025-12-10T17:00:00.000Z",
+    "end": "2025-12-11T17:00:00.000Z"
+  },
   "metrics": {
     "total_scans": 92,
     "successful_scans": 78,
     "fraud_attempts": 2,
     "success_rate": 84.78,
+    "fraud_rate": 2.17,
     "function_breakdown": {
-      "ferry_boarding": 28,
-      "gift_redemption": 19,
-      "playground_token": 21
+      "ferry": 28,
+      "gift": 19,
+      "tokens": 21,
+      "park_admission": 10,
+      "pet_area": 8,
+      "vip": 5,
+      "exclusive": 3
     },
-    "performance": {
-      "avg_response_time_ms": 15.2,
-      "max_response_time_ms": 89,
-      "p95_response_time_ms": 45
+    "package_breakdown": {
+      "premium_plan": 68,
+      "pet_package": 18,
+      "deluxe": 94
     },
-    "hourly_distribution": [
-      {"hour": "2025-11-03T09:00:00Z", "scans": 12, "success_rate": 91.7},
-      {"hour": "2025-11-03T10:00:00Z", "scans": 18, "success_rate": 88.9}
+    "terminal_breakdown": [
+      {
+        "terminal_id": "terminal-A1",
+        "total_scans": 45,
+        "successful_scans": 40,
+        "fraud_attempts": 1,
+        "success_rate": 88.89,
+        "fraud_rate": 2.22
+      },
+      {
+        "terminal_id": "terminal-B2",
+        "total_scans": 47,
+        "successful_scans": 38,
+        "fraud_attempts": 1,
+        "success_rate": 80.85,
+        "fraud_rate": 2.13
+      }
     ]
   }
 }
 ```
+
+**Package Definitions (PRD-003):**
+- `premium_plan`: ferry + gift + tokens
+- `pet_package`: park_admission + pet_area
+- `deluxe`: All functions combined
 
 ### Analytics Categories
 
@@ -106,10 +134,14 @@ GET /venue/{venue_code}/analytics?hours=24
 - **Venue comparison**: Cross-venue performance
 
 #### 3. Function Breakdown
-- **Ferry boarding**: Unlimited use function metrics
-- **Gift redemption**: Single-use function metrics
-- **Playground tokens**: Counted-use function metrics
-- **Custom functions**: Additional venue-specific functions
+All supported function codes (aligned with product entitlements):
+- **ferry**: Ferry boarding (unlimited use)
+- **gift**: Gift redemption (single use)
+- **tokens**: Playground tokens (counted use)
+- **park_admission**: Park entry (single use)
+- **pet_area**: Pet zone access (single use)
+- **vip**: VIP lounge access (single use)
+- **exclusive**: Exclusive experience (single use)
 
 #### 4. Performance Monitoring
 - **Response times**: Average, max, percentiles
@@ -191,17 +223,30 @@ ORDER BY total_scans DESC;
 **Mock Response Example:**
 ```json
 {
-  "venue_code": "cheung-chau",
-  "period": {"hours": 1},
+  "venue_id": 2,
+  "period": {
+    "start": "2025-12-11T16:00:00.000Z",
+    "end": "2025-12-11T17:00:00.000Z"
+  },
   "metrics": {
-    "total_scans": 12,
-    "successful_scans": 15,
-    "fraud_attempts": 2,
-    "success_rate": 89.92,
+    "total_scans": 21,
+    "successful_scans": 18,
+    "fraud_attempts": 1,
+    "success_rate": 85.71,
+    "fraud_rate": 4.76,
     "function_breakdown": {
-      "ferry_boarding": 3,
-      "gift_redemption": 12,
-      "playground_token": 6
+      "ferry": 3,
+      "gift": 8,
+      "tokens": 4,
+      "park_admission": 2,
+      "pet_area": 1,
+      "vip": 0,
+      "exclusive": 0
+    },
+    "package_breakdown": {
+      "premium_plan": 15,
+      "pet_package": 3,
+      "deluxe": 18
     }
   }
 }

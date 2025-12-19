@@ -415,7 +415,8 @@ class MockDataStore {
 
   getTicketByCode(code: string): MockTicket | undefined {
     for (const ticket of this.tickets.values()) {
-      if (ticket.code === code) {
+      // Support both 'code' and 'ticket_code' fields for compatibility
+      if (ticket.code === code || (ticket as any).ticket_code === code) {
         return ticket;
       }
     }

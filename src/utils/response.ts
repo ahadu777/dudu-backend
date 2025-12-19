@@ -21,12 +21,12 @@ export class ResponseUtil {
     return this.success(res, data, message || 'Created successfully', 201);
   }
 
-  static error(res: Response, message: string, statusCode: number = 500): Response {
-    const response: ApiResponse = {
-      success: false,
-      error: message,
-    };
-    return res.status(statusCode).json(response);
+  static error(res: Response, message: string, statusCode: number = 500, code: string = 'INTERNAL_ERROR'): Response {
+    // Standardized error format: { code: string, message: string }
+    return res.status(statusCode).json({
+      code,
+      message,
+    });
   }
 }
 

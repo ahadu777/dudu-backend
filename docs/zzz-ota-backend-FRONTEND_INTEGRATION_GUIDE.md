@@ -279,6 +279,238 @@ const generateQRToken = async (ticketCode: string, userToken: string): Promise<Q
 };
 ```
 
+#### **3. Generate Public QR Code (No Authentication)**
+```typescript
+// POST /qr/public/:code
+// PUBLIC ENDPOINT - No authentication required
+// For ticket confirmation pages, guest access, print-at-home tickets
+
+interface PublicQRRequest {
+  expiry_minutes?: number;  // Optional: 1-1440 minutes, default: 30
+}
+
+interface PublicQRResponse {
+  success: boolean;
+  qr_image: string;          // Base64-encoded PNG image
+  encrypted_data: string;    // Encrypted JWT token
+  ticket_code: string;
+  expires_at: string;        // ISO 8601 timestamp
+  valid_for_seconds: number;
+  issued_at: string;
+  jti: string;              // Unique QR ID for tracking
+}
+
+const generatePublicQR = async (
+  ticketCode: string,
+  expiryMinutes: number = 30
+): Promise<PublicQRResponse> => {
+  const response = await fetch(`/qr/public/${ticketCode}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      expiry_minutes: expiryMinutes
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to generate public QR code');
+  }
+
+  return response.json();
+};
+```
+
+**Error Responses:**
+```typescript
+// 404 - Ticket not found
+{ error: 'TICKET_NOT_FOUND', message: 'No ticket found with this code' }
+
+// 409 - Invalid ticket status
+{ error: 'INVALID_STATUS', message: 'Ticket status "PENDING_PAYMENT" cannot generate QR code' }
+
+// Valid statuses: RESERVED, ACTIVATED, PRE_GENERATED, ACTIVE, active, partially_redeemed
+```
+
+### **React Component: Public Ticket QR Display**
+
+```typescript
+// Use case: Ticket confirmation pages without login requirement
+const PublicTicketQR = ({ ticketCode }) => {
+  const [qrData, setQRData] = useState<PublicQRResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+
+  // Generate QR code
+  useEffect(() => {
+    loadQRCode();
+  }, [ticketCode]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!qrData) return;
+
+    const interval = setInterval(() => {
+      const expiresAt = new Date(qrData.expires_at).getTime();
+      const now = Date.now();
+      const remaining = Math.floor((expiresAt - now) / 1000);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        setTimeRemaining(0);
+      } else {
+        setTimeRemaining(remaining);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [qrData]);
+
+  const loadQRCode = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await generatePublicQR(ticketCode, 30);
+      setQRData(data);
+      setTimeRemaining(data.valid_for_seconds);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load QR code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="qr-loading">
+        <div className="spinner"></div>
+        <p>Generating QR code...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="qr-error">
+        <span className="error-icon">⚠️</span>
+        <p>{error}</p>
+        <button onClick={loadQRCode} className="retry-button">
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (!qrData) return null;
+
+  const minutes = Math.floor(timeRemaining / 60);
+  const seconds = timeRemaining % 60;
+  const isExpiringSoon = timeRemaining < 300; // Less than 5 minutes
+  const isExpired = timeRemaining === 0;
+
+  return (
+    <div className="public-qr-display">
+      {/* Header */}
+      <div className="qr-header">
+        <h2>Your Ticket</h2>
+        <p className="ticket-code">{qrData.ticket_code}</p>
+      </div>
+
+      {/* QR Code Image */}
+      <div className="qr-image-container">
+        <img
+          src={qrData.qr_image}
+          alt="Ticket QR Code"
+          className="qr-image"
+          style={{ opacity: isExpired ? 0.3 : 1 }}
+        />
+
+        {isExpired && (
+          <div className="expired-overlay">
+            <span className="expired-text">Expired</span>
+          </div>
+        )}
+      </div>
+
+      {/* Timer Display */}
+      <div className={`qr-timer ${
+        isExpired ? 'expired' :
+        isExpiringSoon ? 'expiring-soon' :
+        'valid'
+      }`}>
+        {isExpired ? (
+          <>
+            <span className="timer-icon">❌</span>
+            <p className="timer-text">QR Code Expired</p>
+            <button onClick={loadQRCode} className="refresh-button">
+              Generate New QR Code
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="timer-icon">
+              {isExpiringSoon ? '⚠️' : '✅'}
+            </span>
+            <p className="timer-label">
+              {isExpiringSoon ? 'Expires Soon' : 'Valid'}
+            </p>
+            <div className="countdown">
+              <span className="countdown-time">
+                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+              </span>
+              <span className="countdown-label">minutes remaining</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Instructions */}
+      <div className="qr-instructions">
+        <h3>How to Use</h3>
+        <ol>
+          <li>Show this QR code at venue entrance</li>
+          <li>Operator will scan or enter your ticket code</li>
+          <li>Wait for confirmation to enter</li>
+          <li>Keep screen brightness high for easy scanning</li>
+        </ol>
+      </div>
+
+      {/* Refresh Button */}
+      {!isExpired && (
+        <button onClick={loadQRCode} className="manual-refresh">
+          🔄 Refresh QR Code
+        </button>
+      )}
+
+      {/* QR Metadata */}
+      <div className="qr-metadata">
+        <p>QR ID: {qrData.jti}</p>
+        <p>Generated: {new Date(qrData.issued_at).toLocaleString()}</p>
+        <p>Expires: {new Date(qrData.expires_at).toLocaleString()}</p>
+      </div>
+    </div>
+  );
+};
+```
+
+**Use Cases for Public QR Endpoint:**
+1. **Ticket Confirmation Pages**: Display QR immediately after purchase (no login required)
+2. **Guest Access**: Share ticket link with friends/family who don't have accounts
+3. **Print-at-Home Tickets**: Generate QR for printing without authentication
+4. **Kiosk Systems**: Self-service terminals where users enter ticket codes
+5. **Email Confirmations**: Link directly to QR display page from order confirmation emails
+
+**Security Notes:**
+- Public endpoint still validates ticket ownership via ticket code
+- Only tickets with valid status can generate QR codes
+- QR codes expire in 30 minutes (configurable 1-1440 minutes)
+- Each QR has unique JWT ID (jti) for fraud prevention
+- Encrypted data prevents tampering
+
 ### **React Component: Ticket Viewer**
 
 ```typescript
@@ -732,24 +964,32 @@ const createSession = async (operatorToken: string, deviceId: string): Promise<V
 
 #### **2. Scan and Redeem Ticket**
 ```typescript
-// POST /tickets/scan
+// POST /venue/scan (replaces deprecated /tickets/scan)
 interface ScanRequest {
-  qr_token?: string;      // From QR code scan
-  code?: string;          // Manual ticket code entry
-  function_code: string;  // Which function to redeem
-  session_id: string;     // From validator session
-  location_id?: number;   // Optional location
+  qr_token: string;        // Encrypted QR data from scan
+  function_code: string;   // Which function to redeem (e.g., "ferry_boarding")
+  venue_code?: string;     // Optional venue selection
+  terminal_device_id?: string; // Optional device identifier
 }
 
 interface ScanResponse {
   result: 'success' | 'reject';
   ticket_status: string;
   entitlements: TicketEntitlement[];
+  venue_info?: {
+    venue_code: string;
+    venue_name: string;
+    terminal_device: string;
+  };
+  performance_metrics?: {
+    response_time_ms: number;
+    fraud_checks_passed: boolean;
+  };
   reason?: string; // If result is 'reject'
 }
 
 const scanTicket = async (scanData: ScanRequest, operatorToken: string): Promise<ScanResponse> => {
-  const response = await fetch('/tickets/scan', {
+  const response = await fetch('/venue/scan', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${operatorToken}`,
@@ -761,6 +1001,8 @@ const scanTicket = async (scanData: ScanRequest, operatorToken: string): Promise
   return response.json();
 };
 ```
+
+> **Note**: `/tickets/scan` has been deprecated. Use `/venue/scan` with operator JWT authentication.
 
 ### **React Component: Ticket Scanner**
 

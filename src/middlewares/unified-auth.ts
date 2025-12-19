@@ -3,12 +3,24 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { AppError } from './errorHandler';
+import { UserTokenPayload, OperatorTokenPayload } from './auth';
+
+// Unified JWT payload type for runtime checking
+interface UnifiedJwtPayload {
+  // User fields
+  id?: number;
+  email?: string;
+  // Operator fields
+  sub?: number;
+  username?: string;
+  roles?: string[];
+}
 
 // API Keys store (same as OTA auth)
 const API_KEYS = new Map<string, { partner_id: string, partner_name: string, permissions: string[], rate_limit: number }>([
   ['ota_test_key_12345', { partner_id: 'test_partner', partner_name: 'Test OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 100 }],
   ['ota_prod_key_67890', { partner_id: 'prod_partner', partner_name: 'Production OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create'], rate_limit: 1000 }],
-  ['dudu_key_12345', { partner_id: 'dudu_partner', partner_name: 'DuDu Travel', permissions: ['inventory:read', 'tickets:bulk-generate', 'tickets:activate', 'orders:read'], rate_limit: 500 }],
+  ['dudu_key_12345', { partner_id: 'dudu_partner', partner_name: 'DuDu Travel', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'orders:create', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 500 }],
   ['ota251103_key_67890', { partner_id: 'ota251103_partner', partner_name: 'OTA251103 Travel Group', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 300 }],
   ['ota_full_access_key_99999', { partner_id: 'full_access', partner_name: 'OTA Full Access Partner', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'orders:create', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 500 }]
 ]);
@@ -46,13 +58,13 @@ export const unifiedAuth = () => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.substring(7);
-        const decoded = jwt.verify(token, String(env.JWT_SECRET)) as any;
+        const decoded = jwt.verify(token, String(env.JWT_SECRET)) as unknown as UnifiedJwtPayload;
 
         // Distinguish between User JWT and Operator JWT based on payload
         if (decoded.username && decoded.roles) {
           // Operator JWT (has username and roles)
           req.operator = {
-            operator_id: decoded.sub,
+            operator_id: decoded.sub!,
             username: decoded.username,
             roles: decoded.roles
           };
@@ -68,7 +80,7 @@ export const unifiedAuth = () => {
           return next();
         } else if (decoded.id && decoded.email) {
           // User JWT (has id and email)
-          req.user = decoded;
+          req.user = { id: decoded.id, email: decoded.email };
           req.authType = 'USER';
 
           logger.info('unified.auth.user_success', {
@@ -130,13 +142,8 @@ export const unifiedAuth = () => {
     });
 
     res.status(401).json({
-      error: 'AUTHENTICATION_REQUIRED',
-      message: 'Valid authentication required. Provide Bearer token (user/operator JWT) or X-API-Key header.',
-      details: {
-        user_jwt: 'Authorization: Bearer <user_jwt_token>',
-        operator_jwt: 'Authorization: Bearer <operator_jwt_token>',
-        api_key: 'X-API-Key: <ota_partner_key>'
-      }
+      code: 'AUTHENTICATION_REQUIRED',
+      message: 'Valid authentication required. Provide Bearer token (user/operator JWT) or X-API-Key header.'
     });
   };
 };

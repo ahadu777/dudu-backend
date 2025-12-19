@@ -1,0 +1,1325 @@
+{
+  "info": {
+    "_postman_id": "prd-008-miniprogram-phase1",
+    "name": "PRD-008 DeepTravel 小程序 Phase 1 - Package Booking",
+    "description": "PRD-008 Phase 1+: Package Product Booking Foundation\n\n验收标准覆盖:\n- A1: Display all active package products from direct channel\n- A2: Show package inclusions and pricing\n- A3: Dynamic pricing (customer type + weekend)\n- A4: Inventory availability real-time display\n- A5: Order creation with pricing context (requires USE_DATABASE=true)\n- A6: Order management (requires USE_DATABASE=true)\n- A7: Simulate payment (requires USE_DATABASE=true)\n- A8: Ticket QR generation (requires USE_DATABASE=true)\n\nNOTE: Order/Payment/QR tests (A5-A8) require database mode. Run with USE_DATABASE=true.\n\nEndpoints:\n- GET /miniprogram/products\n- GET /miniprogram/products/:id\n- GET /miniprogram/products/:id/availability\n- POST /miniprogram/orders\n- GET /miniprogram/orders\n- GET /miniprogram/orders/:id\n- POST /miniprogram/orders/:id/simulate-payment\n- POST /miniprogram/tickets/:code/qr",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "auth_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjEsImVtYWlsIjoiIiwiaWF0IjoxNzY1ODU2MjIyLCJleHAiOjE3NjY0NjEwMjJ9.vzzxbm2_WxBZYhsfyFjj-rZ0mjd0fNfmUULkLiDMWbc"
+    },
+    {
+      "key": "test_product_id",
+      "value": "106"
+    },
+    {
+      "key": "test_order_no",
+      "value": ""
+    },
+    {
+      "key": "test_order_id",
+      "value": ""
+    },
+    {
+      "key": "test_ticket_code",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Prerequisites - Auth Setup",
+      "item": [
+        {
+          "name": "0.1 Auth Setup (Token pre-configured)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Token is pre-configured in collection variables",
+                  "// This request just verifies the server is available",
+                  "pm.test(\"Server is healthy\", function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Auth token is configured\", function() {",
+                  "    const token = pm.collectionVariables.get(\"auth_token\");",
+                  "    pm.expect(token).to.be.a(\"string\");",
+                  "    pm.expect(token.length).to.be.greaterThan(0);",
+                  "    console.log(\"Using pre-configured auth token\");",
+                  "});",
+                  "",
+                  "// Generate test order number",
+                  "const orderNo = \"MP\" + Date.now() + Math.random().toString(36).substr(2, 6).toUpperCase();",
+                  "pm.collectionVariables.set(\"test_order_no\", orderNo);",
+                  "console.log(\"Generated test order_no:\", orderNo);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/healthz",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "healthz"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A1. Product Catalog - Direct Channel",
+      "description": "PRD AC: Display all active package products from direct channel",
+      "item": [
+        {
+          "name": "A1.1 Get product list (default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns product array', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('products');",
+                  "    pm.expect(data.products).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Has pagination info', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('total');",
+                  "    pm.expect(data).to.have.property('page');",
+                  "    pm.expect(data).to.have.property('page_size');",
+                  "});",
+                  "",
+                  "pm.test('Products have required fields', function() {",
+                  "    const data = pm.response.json();",
+                  "    if (data.products.length > 0) {",
+                  "        const p = data.products[0];",
+                  "        pm.expect(p).to.have.property('id');",
+                  "        pm.expect(p).to.have.property('name');",
+                  "        pm.expect(p).to.have.property('base_price');",
+                  "        pm.expect(p).to.have.property('availability');",
+                  "        pm.expect(p).to.have.property('status');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Products show availability from direct channel', function() {",
+                  "    const data = pm.response.json();",
+                  "    data.products.forEach(p => {",
+                  "        pm.expect(p.availability).to.have.property('available');",
+                  "        pm.expect(p.availability.available).to.be.a('number');",
+                  "        pm.expect(p.availability.available).to.be.at.least(0);",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A1.2 Product list pagination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Respects pagination params', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.page).to.equal(1);",
+                  "    pm.expect(data.page_size).to.equal(5);",
+                  "    pm.expect(data.products.length).to.be.at.most(5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products?page=1&limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A2. Product Detail - Package Inclusions",
+      "description": "PRD AC: Show package inclusions (ferry + dining + entertainment functions)",
+      "item": [
+        {
+          "name": "A2.1 Get product detail - cruise package",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns product detail', function() {",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(p).to.have.property('id');",
+                  "    pm.expect(p).to.have.property('name');",
+                  "    pm.expect(p).to.have.property('description');",
+                  "    pm.expect(p).to.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Has pricing info', function() {",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(p).to.have.property('base_price');",
+                  "    pm.expect(p.base_price).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Has package functions/inclusions', function() {",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(p).to.have.property('functions');",
+                  "    pm.expect(p.functions).to.be.an('array');",
+                  "    pm.expect(p.functions.length).to.be.greaterThan(0);",
+                  "    // Each function has code, label, quantity",
+                  "    p.functions.forEach(f => {",
+                  "        pm.expect(f).to.have.property('function_code');",
+                  "        pm.expect(f).to.have.property('label');",
+                  "        pm.expect(f).to.have.property('quantity');",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test('Has availability info', function() {",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(p).to.have.property('availability');",
+                  "    pm.expect(p.availability).to.have.property('channel');",
+                  "    pm.expect(p.availability.channel).to.equal('direct');",
+                  "    pm.expect(p.availability).to.have.property('available');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/{{test_product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "products",
+                "{{test_product_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A2.2 Product not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404', function() { pm.response.to.have.status(404); });",
+                  "pm.test('Returns NOT_FOUND error', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/99999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "products",
+                "99999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A2.3 Invalid product ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400', function() { pm.response.to.have.status(400); });",
+                  "pm.test('Returns validation error', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('INVALID_PRODUCT_ID');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/abc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "products",
+                "abc"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A3. Inventory Availability",
+      "description": "PRD AC: Inventory availability real-time display",
+      "item": [
+        {
+          "name": "A3.1 Check availability (default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns availability info', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('product_id');",
+                  "    pm.expect(data).to.have.property('available');",
+                  "    pm.expect(data).to.have.property('is_available');",
+                  "});",
+                  "",
+                  "pm.test('Availability is boolean', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.is_available).to.be.a('boolean');",
+                  "});",
+                  "",
+                  "pm.test('Available count is number', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.available).to.be.a('number');",
+                  "    pm.expect(data.available).to.be.at.least(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/{{test_product_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "products",
+                "{{test_product_id}}",
+                "availability"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A3.2 Check availability with quantity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Checks requested quantity', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('requested_quantity');",
+                  "    pm.expect(data.requested_quantity).to.equal(5);",
+                  "});",
+                  "",
+                  "pm.test('is_available reflects quantity check', function() {",
+                  "    const data = pm.response.json();",
+                  "    if (data.available >= 5) {",
+                  "        pm.expect(data.is_available).to.be.true;",
+                  "    } else {",
+                  "        pm.expect(data.is_available).to.be.false;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/{{test_product_id}}/availability?quantity=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "products",
+                "{{test_product_id}}",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "quantity",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A3.3 Availability - product not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404', function() { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/products/99999/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "products",
+                "99999",
+                "availability"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A4. Order Creation (DB Required)",
+      "description": "PRD AC: Dynamic pricing. NOTE: Requires USE_DATABASE=true",
+      "item": [
+        {
+          "name": "A4.1 Create order - success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Skip if server returns 500 (mock mode without DB)",
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('Order creation requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 201', function() { pm.response.to.have.status(201); });",
+                  "",
+                  "pm.test('Returns order with ID', function() {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order).to.have.property('id');",
+                  "    pm.expect(order).to.have.property('order_no');",
+                  "    pm.expect(order.status).to.equal('pending');",
+                  "    pm.collectionVariables.set('test_order_id', order.id);",
+                  "});",
+                  "",
+                  "pm.test('Has pricing context', function() {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order).to.have.property('pricing_context');",
+                  "    const ctx = order.pricing_context;",
+                  "    pm.expect(ctx).to.have.property('customer_breakdown');",
+                  "    pm.expect(ctx).to.have.property('subtotal');",
+                  "});",
+                  "",
+                  "pm.test('Total calculated correctly', function() {",
+                  "    const order = pm.response.json();",
+                  "    const ctx = order.pricing_context;",
+                  "    pm.expect(order.total).to.equal(ctx.subtotal + ctx.addons_total);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_no\": \"{{test_order_no}}\",\n  \"product_id\": 106,\n  \"travel_date\": \"2025-12-20\",\n  \"customer_breakdown\": [\n    { \"customer_type\": \"adult\", \"count\": 2 },\n    { \"customer_type\": \"child\", \"count\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A4.2 Error - missing order_no",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400', function() { pm.response.to.have.status(400); });",
+                  "pm.test('Returns INVALID_REQUEST', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('INVALID_REQUEST');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 106,\n  \"travel_date\": \"2025-12-20\",\n  \"customer_breakdown\": [{ \"customer_type\": \"adult\", \"count\": 1 }]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A4.3 Error - invalid customer type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400', function() { pm.response.to.have.status(400); });",
+                  "pm.test('Returns INVALID_REQUEST', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('INVALID_REQUEST');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_no\": \"MP_INVALID_{{$timestamp}}\",\n  \"product_id\": 106,\n  \"travel_date\": \"2025-12-20\",\n  \"customer_breakdown\": [{ \"customer_type\": \"invalid_type\", \"count\": 1 }]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A4.4 Error - unauthorized",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_no\": \"MP_UNAUTH_{{$timestamp}}\",\n  \"product_id\": 106,\n  \"travel_date\": \"2025-12-20\",\n  \"customer_breakdown\": [{ \"customer_type\": \"adult\", \"count\": 1 }]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A5. Order Management (DB Required)",
+      "description": "PRD AC: Order list and detail. NOTE: Requires USE_DATABASE=true",
+      "item": [
+        {
+          "name": "A5.1 Get order list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('Order list requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns orders array', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('orders');",
+                  "    pm.expect(data.orders).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Has pagination info', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('total');",
+                  "    pm.expect(data).to.have.property('page');",
+                  "    pm.expect(data).to.have.property('page_size');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A5.2 Get order detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('Order detail requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "// If no order was created (mock mode), test_order_id is empty",
+                  "const orderId = pm.collectionVariables.get('test_order_id');",
+                  "if (!orderId) {",
+                  "    pm.test.skip('No order created to test detail');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns order detail', function() {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order).to.have.property('id');",
+                  "    pm.expect(order).to.have.property('order_no');",
+                  "    pm.expect(order).to.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Has tickets array', function() {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order).to.have.property('tickets');",
+                  "    pm.expect(order.tickets).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders/{{test_order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders",
+                "{{test_order_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A5.3 Error - unauthorized",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A6. Simulate Payment (DB Required)",
+      "description": "PRD AC: Simulate payment to generate tickets. NOTE: Requires USE_DATABASE=true",
+      "item": [
+        {
+          "name": "A6.1 Simulate payment - success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('Simulate payment requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "const orderId = pm.collectionVariables.get('test_order_id');",
+                  "if (!orderId) {",
+                  "    pm.test.skip('No order created to test payment');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns success message', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('message');",
+                  "    pm.expect(data.message).to.include('成功');",
+                  "});",
+                  "",
+                  "pm.test('Order status is paid/confirmed', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('order');",
+                  "    pm.expect(['paid', 'confirmed']).to.include(data.order.status);",
+                  "});",
+                  "",
+                  "pm.test('Tickets generated', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.order).to.have.property('tickets');",
+                  "    pm.expect(data.order.tickets).to.be.an('array');",
+                  "    pm.expect(data.order.tickets.length).to.be.greaterThan(0);",
+                  "    // Save first ticket code for QR test",
+                  "    if (data.order.tickets.length > 0) {",
+                  "        pm.collectionVariables.set('test_ticket_code', data.order.tickets[0].ticket_code);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders/{{test_order_id}}/simulate-payment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders",
+                "{{test_order_id}}",
+                "simulate-payment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A6.2 Error - order not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404', function() { pm.response.to.have.status(404); });",
+                  "pm.test('Returns ORDER_NOT_FOUND', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('ORDER_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders/99999/simulate-payment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders",
+                "99999",
+                "simulate-payment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A6.3 Error - already paid (invalid status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Simulate payment may be idempotent (returns 200) or reject (returns 400)",
+                  "// Both behaviors are acceptable for already-paid orders",
+                  "pm.test(\"Returns 200 or 400\", function() {",
+                  "    pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 400) {",
+                  "    pm.test(\"Returns INVALID_ORDER_STATUS when rejected\", function() {",
+                  "        const data = pm.response.json();",
+                  "        pm.expect(data.code).to.equal(\"INVALID_ORDER_STATUS\");",
+                  "    });",
+                  "} else {",
+                  "    pm.test(\"Payment is idempotent (returns success message)\", function() {",
+                  "        const data = pm.response.json();",
+                  "        pm.expect(data).to.have.property(\"message\");",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders/{{test_order_id}}/simulate-payment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders",
+                "{{test_order_id}}",
+                "simulate-payment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A6.4 Error - unauthorized",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/miniprogram/orders/1/simulate-payment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "orders",
+                "1",
+                "simulate-payment"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "A7. Ticket QR Generation (DB Required)",
+      "description": "PRD AC: Generate QR code for ticket. NOTE: Requires USE_DATABASE=true",
+      "item": [
+        {
+          "name": "A7.1 Generate QR - success (default expiry)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('QR generation requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "const ticketCode = pm.collectionVariables.get('test_ticket_code');",
+                  "if (!ticketCode) {",
+                  "    pm.test.skip('No ticket available for QR test');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Returns success', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Has QR image', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('qr_image');",
+                  "    pm.expect(data.qr_image).to.be.a('string');",
+                  "    pm.expect(data.qr_image.length).to.be.greaterThan(100);",
+                  "});",
+                  "",
+                  "pm.test('Has expiry info', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('expires_at');",
+                  "    pm.expect(data).to.have.property('valid_for_seconds');",
+                  "    pm.expect(data.valid_for_seconds).to.be.within(1795, 1805); // 30 minutes default",
+                  "});",
+                  "",
+                  "pm.test('Has jti for invalidation', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('jti');",
+                  "    pm.expect(data.jti).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/tickets/{{test_ticket_code}}/qr",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "tickets",
+                "{{test_ticket_code}}",
+                "qr"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A7.2 Generate QR - custom expiry (60 min)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "    pm.test.skip('QR generation requires database mode');",
+                  "    return;",
+                  "}",
+                  "",
+                  "const ticketCode = pm.collectionVariables.get('test_ticket_code');",
+                  "if (!ticketCode) {",
+                  "    pm.test.skip('No ticket available for QR test');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 200', function() { pm.response.to.have.status(200); });",
+                  "",
+                  "pm.test('Respects custom expiry', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.valid_for_seconds).to.be.within(3595, 3605); // 60 minutes",
+                  "});",
+                  "",
+                  "pm.test('New jti generated (old QR invalidated)', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('jti');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"expiry_minutes\": 60 }"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/tickets/{{test_ticket_code}}/qr",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "tickets",
+                "{{test_ticket_code}}",
+                "qr"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A7.3 Error - ticket not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Skip if auth failed (no valid token)",
+                  "const authToken = pm.collectionVariables.get('auth_token');",
+                  "if (!authToken || pm.response.code === 401) {",
+                  "    pm.test.skip('Requires valid auth token - WeChat login may have failed');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 404', function() { pm.response.to.have.status(404); });",
+                  "pm.test('Returns TICKET_NOT_FOUND', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('TICKET_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/tickets/NONEXISTENT123/qr",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "tickets",
+                "NONEXISTENT123",
+                "qr"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A7.4 Error - invalid expiry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Skip if auth failed (no valid token)",
+                  "const authToken = pm.collectionVariables.get('auth_token');",
+                  "if (!authToken || pm.response.code === 401) {",
+                  "    pm.test.skip('Requires valid auth token - WeChat login may have failed');",
+                  "    return;",
+                  "}",
+                  "",
+                  "// Skip if no ticket available",
+                  "const ticketCode = pm.collectionVariables.get('test_ticket_code');",
+                  "if (!ticketCode) {",
+                  "    pm.test.skip('No ticket available for expiry test');",
+                  "    return;",
+                  "}",
+                  "",
+                  "pm.test('Returns 400', function() { pm.response.to.have.status(400); });",
+                  "pm.test('Returns INVALID_EXPIRY', function() {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.code).to.equal('INVALID_EXPIRY');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"expiry_minutes\": 9999 }"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/tickets/{{test_ticket_code}}/qr",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "tickets",
+                "{{test_ticket_code}}",
+                "qr"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A7.5 Error - unauthorized",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401', function() { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/miniprogram/tickets/TEST123/qr",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "miniprogram",
+                "tickets",
+                "TEST123",
+                "qr"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

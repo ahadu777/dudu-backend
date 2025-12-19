@@ -10,7 +10,7 @@ branch: "init-ai"
 pr: ""
 newman_report: "reports/newman/operators-login-result.json"
 last_update: "2025-10-30T13:54:00+0800"
-related_stories: ["US-002","US-006"]
+related_stories: ["US-001", "US-002", "US-006"]
 ---
 
 ## Status & Telemetry

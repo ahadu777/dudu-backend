@@ -11,7 +11,7 @@ export enum TicketStatus { MINTED='minted', ASSIGNED='assigned', ACTIVE='active'
 export enum ScanResult { SUCCESS='success', REJECT='reject' }
 export enum ErrorCode { IDEMPOTENCY_CONFLICT='IDEMPOTENCY_CONFLICT', TOKEN_EXPIRED='TOKEN_EXPIRED', WRONG_FUNCTION='WRONG_FUNCTION', NO_REMAINING='NO_REMAINING', TICKET_INVALID='TICKET_INVALID', UNAUTHORIZED='UNAUTHORIZED', FORBIDDEN='FORBIDDEN', NOT_FOUND='NOT_FOUND' }
 
-export interface FunctionSpec { function_code: string; label: string; quantity: number; }
+export interface FunctionSpec { function_code: string; label: string; description?: string; quantity: number; }
 export interface Product { id: number; sku: string; name: string; status: 'draft'|'active'|'archived'; sale_start_at?: ISODate|null; sale_end_at?: ISODate|null; functions: FunctionSpec[]; }
 export interface CatalogResponse { products: Product[]; }
 
@@ -71,7 +71,7 @@ export interface Order {
     quote_id?: string;
   };
 }
-export interface TicketEntitlement { function_code: string; label: string; remaining_uses: number; }
+export interface TicketEntitlement { function_code: string; label: string; description?: string; remaining_uses: number; }
 export interface Ticket { ticket_code: TicketCode; product_id: number; product_name: string; status: TicketStatus; expires_at?: ISODate|null; entitlements: TicketEntitlement[]; user_id: number; order_id: number; cancelled_at?: ISODate|null; cancellation_reason?: string|null; }
 
 // JTI (JWT Token ID) lifecycle tracking for QR code security
@@ -97,6 +97,10 @@ export interface TicketRawMetadata {
 }
 
 export interface QRTokenResponse { token: string; expires_in: number; }
+/**
+ * @deprecated Use Operator from '../models/operator.entity' or import from '../types' instead
+ * This interface is kept for backward compatibility but should be replaced with the TypeORM entity
+ */
 export interface Operator { operator_id: number; username: string; password_hash: string; roles: string[]; }
 export interface ValidatorSession { session_id: SessionId; operator_id: number; device_id: string; location_id?: number|null; created_at: ISODate; expires_at: ISODate; }
 export interface RedemptionEvent { ticket_id: number; function_code: string; operator_id: number; session_id: SessionId; location_id?: number|null; jti?: string|null; result: ScanResult; reason?: string|null; ts: ISODate; }
@@ -381,4 +385,158 @@ export interface RouteFareConfig {
 export interface RouteFareHistoryResponse {
   routeCode: string;
   revisions: RouteFareConfig[];
+}
+
+// Ticket Reservation & Validation System Types (PRD-005)
+export enum TicketReservationStatus {
+  PENDING_PAYMENT = 'PENDING_PAYMENT',
+  ACTIVATED = 'ACTIVATED',
+  RESERVED = 'RESERVED',
+  VERIFIED = 'VERIFIED',
+  EXPIRED = 'EXPIRED'
+}
+
+export enum ReservationSlotStatus {
+  ACTIVE = 'ACTIVE',
+  FULL = 'FULL',
+  CLOSED = 'CLOSED'
+}
+
+export enum CapacityStatus {
+  AVAILABLE = 'AVAILABLE',
+  LIMITED = 'LIMITED',
+  FULL = 'FULL'
+}
+
+export interface TicketValidationRequest {
+  ticket_code: string;
+}
+
+export type ReservationSource = 'direct' | 'ota';
+
+export interface TicketValidationResponse {
+  success: boolean;
+  data?: {
+    ticket_id?: number;        // For direct tickets
+    ticket_code: string;
+    source: ReservationSource; // NEW: ticket source
+    status: TicketReservationStatus; // OTA tickets now use ACTIVATED status (unified)
+    product_id: number;
+    order_id?: number | string; // OTA tickets may have string order_id
+    partner_id?: string;       // For OTA tickets
+  };
+  error?: {
+    code: string;
+    message: string;
+    reserved_date?: string;
+  };
+}
+
+export interface ReservationSlot {
+  id: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  total_capacity: number;
+  booked_count: number;
+  available_count: number;
+  status: ReservationSlotStatus;
+  capacity_status: CapacityStatus;
+}
+
+export interface AvailableSlotsRequest {
+  month?: string; // YYYY-MM
+  orq: number;
+}
+
+export interface AvailableSlotsResponse {
+  success: boolean;
+  data: ReservationSlot[];
+  metadata: {
+    month: string;
+    total_slots: number;
+  };
+}
+
+export interface CreateReservationRequest {
+  ticket_id?: number;          // For direct tickets (optional when using ticket_code)
+  ticket_code?: string;        // For OTA or direct tickets (optional when using ticket_id)
+  slot_id: number;
+  customer_email: string;
+  customer_phone: string;
+  orq?: number;                // Organization ID
+}
+
+export interface CreateReservationResponse {
+  success: boolean;
+  data?: {
+    reservation_id: number;
+    ticket_code: string;
+    source: ReservationSource;      // NEW: ticket source
+    ota_ticket_code?: string;       // NEW: for OTA tickets
+    slot: {
+      date: string;
+      start_time: string;
+      end_time: string;
+    };
+    confirmation_sent: boolean;
+    qr_code?: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+    alternative_slots?: Array<{
+      slot_id: number;
+      date: string;
+      start_time: string;
+    }>;
+  };
+}
+
+export interface OperatorValidateTicketRequest {
+  ticket_code: string;
+}
+
+export interface OperatorValidateTicketResponse {
+  success: boolean;
+  data?: {
+    ticket_id: number;
+    ticket_code: string;
+    status: TicketReservationStatus;
+    customer_email: string;
+    customer_phone: string;
+    reservation?: {
+      date: string;
+      start_time: string;
+      end_time: string;
+      is_today: boolean;
+    };
+    validation_status: 'VALID' | 'INVALID';
+  };
+  error?: {
+    code: 'WRONG_DATE' | 'NO_RESERVATION' | 'ALREADY_VERIFIED' | 'TICKET_NOT_FOUND' | 'TICKET_NOT_ACTIVATED' | 'TICKET_EXPIRED' | 'TICKET_CANCELLED' | 'TICKET_ALREADY_USED';
+    message: string;
+    reservation_date?: string;
+    today?: string;
+    verified_at?: string;
+    verified_by?: number;
+    operator_name?: string;
+    ticket_status?: string;
+  };
+}
+
+export interface OperatorVerifyTicketRequest {
+  ticket_id: number;
+  operator_id: number;
+}
+
+export interface OperatorVerifyTicketResponse {
+  success: boolean;
+  data: {
+    ticket_id: number;
+    ticket_code: string;
+    status: TicketReservationStatus;
+    verified_at: string;
+    verified_by: number;
+  };
 }

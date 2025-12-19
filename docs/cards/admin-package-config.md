@@ -11,13 +11,13 @@ oas_paths: [
   "/admin/routes/fares/{routeCode}/restore"
 ]
 migrations: ["db/migrations/0015_admin_package_tables.sql"]
-status: "In Progress"
+status: "Done"
 readiness: "prototype"
 branch: ""
 pr: ""
 newman_report: "reports/newman/admin-package-config.json"
 last_update: "2025-10-28T12:05:50+08:00"
-related_stories: ["US-010"]
+related_stories: ["US-010", "US-010B"]
 ---
 
 ## Status & Telemetry

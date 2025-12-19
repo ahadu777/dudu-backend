@@ -4,7 +4,7 @@ slug: wechat-phone-binding
 team: "C - Identity & Access"
 oas_paths: ["/auth/wechat/phone"]
 migrations: []  # Reuses wechat_openid migration from wechat-auth-login
-status: "Ready"
+status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""

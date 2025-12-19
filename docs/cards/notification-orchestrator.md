@@ -4,13 +4,13 @@ slug: notification-orchestrator
 team: "B - Fulfillment"
 oas_paths: ["/notifications/preview", "/notifications/templates"]
 migrations: ["db/migrations/0016_notification_templates.sql"]
-status: "Ready"
+status: "Done"
 readiness: "prototype"
 branch: ""
 pr: ""
 newman_report: "reports/newman/notification-orchestrator.json"
 last_update: "2025-10-24T18:28:44+08:00"
-related_stories: ["US-010"]
+related_stories: ["US-010", "US-010B"]
 ---
 
 ## Status & Telemetry

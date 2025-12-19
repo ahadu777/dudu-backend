@@ -30,7 +30,7 @@ class App {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:", "https:"],
           connectSrc: ["'self'"],
@@ -89,13 +89,13 @@ class App {
       }
     });
 
-    // Swagger UI
+    // Swagger UI (keep at /docs as originally)
     if (fs.existsSync(openapiPath)) {
       const swaggerDoc = JSON.parse(fs.readFileSync(openapiPath, 'utf-8'));
       this.app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: true }));
     }
 
-    registerModuleRouters(this.app, env.API_PREFIX);
+    registerModuleRouters(this.app);
 
     // Demo dashboard
     this.app.get('/demo', (_req, res) => {
@@ -151,6 +151,7 @@ class App {
         res.status(404).json({ error: 'Documentation file not found' });
       }
     });
+
 
     // API routes registered via registerModuleRouters
   }

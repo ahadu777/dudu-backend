@@ -1,0 +1,43 @@
+prd_id: PRD-005
+feature: B2B 计费对账
+description: 分销商列表、批次分析、计费汇总、库存查询
+test_command: npm run test:prd 005
+
+test_cases:
+  - id: TC-005-01
+    name: 查询分销商列表
+    priority: P0
+    preconditions:
+      - 管理员已登录
+      - 存在分销商数据
+    steps:
+      - 发送 GET 请求到 /api/resellers
+      - 验证返回列表
+    expected:
+      - 返回分销商列表
+      - 包含账户余额和统计信息
+
+  - id: TC-005-02
+    name: 生成计费汇总报告
+    priority: P1
+    preconditions:
+      - 存在销售记录
+    steps:
+      - 选择时间范围
+      - 请求计费汇总
+    expected:
+      - 返回计费明细
+      - 金额计算正确
+
+  - id: TC-005-03
+    name: 分销商销售统计
+    priority: P1
+    preconditions:
+      - 分销商存在
+      - 有销售记录
+    steps:
+      - 发送 GET 请求到 /api/resellers/{id}/stats
+      - 验证统计数据
+    expected:
+      - 返回销售统计
+      - 包含订单数、销售额、佣金
