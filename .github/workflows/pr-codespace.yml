@@ -133,9 +133,9 @@ jobs:
           echo "codespace_url=${CODESPACE_URL}" >> $GITHUB_OUTPUT
           echo "✅ Codespace creation URL generated: ${CODESPACE_URL}"
 
-      - name: Comment PR with Codespace link
+      - name: Always comment on PR (even on failure)
+        if: always()
         uses: actions/github-script@v7
-        continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -145,11 +145,14 @@ jobs:
             const codespaceCreateUrl = '${{ steps.codespace_url.outputs.codespace_create_url }}' || '${{ steps.codespace_url.outputs.codespace_url }}';
             
             console.log('🔍 Debug Info:');
+            console.log('  PR Number:', '${{ github.event.pull_request.number }}');
+            console.log('  PR Branch:', '${{ github.event.pull_request.head.ref }}');
+            console.log('  Repository:', '${{ github.repository }}');
             console.log('  Codespace URL:', codespaceUrl || '(empty)');
             console.log('  Codespace Created:', codespaceCreated);
             console.log('  Codespace Create URL:', codespaceCreateUrl || '(empty)');
-            console.log('  Node Version:', '${{ steps.extract-env.outputs.node_version }}');
-            console.log('  npm Version:', '${{ steps.extract-env.outputs.npm_version }}');
+            console.log('  Node Version:', '${{ steps.extract-env.outputs.node_version }}' || '(not set)');
+            console.log('  npm Version:', '${{ steps.extract-env.outputs.npm_version }}' || '(not set)');
             const prNumber = '${{ github.event.pull_request.number }}';
             const prBranch = '${{ github.event.pull_request.head.ref }}';
             const repo = '${{ github.repository }}';
