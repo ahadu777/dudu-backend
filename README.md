@@ -10,6 +10,8 @@ A production-ready ticketing system with complete integration proof artifacts th
 
 **🤖 NEW: Complete AI Autonomy** - Fresh AI can now handle raw user stories → complete implementation autonomously using systematic templates and validation.
 
+**🚀 NEW: PR Codespace Automation** - Every PR automatically gets a Codespace environment for easy testing!
+
 ### Quick Start for Integration
 ```bash
 # 1. Test complete user flows
