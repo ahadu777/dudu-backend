@@ -172,43 +172,40 @@ jobs:
             
             let codespaceSection;
             if (codespaceCreated && codespaceUrl) {
-              codespaceSection = `**🚀 Live Codespace:** [${codespaceUrl}](${codespaceUrl})\n\n✅ Codespace created automatically and ready to use!`;
+              codespaceSection = '**🚀 Live Codespace:** [' + codespaceUrl + '](' + codespaceUrl + ')\n\n✅ Codespace created automatically and ready to use!';
             } else {
-              codespaceSection = `**Create Codespace:** [Click here to create Codespace](${finalUrl})\n\n💡 *Tip: Add a \`CODESPACE_CREATION_TOKEN\` secret with codespace permissions for automatic creation*`;
+              codespaceSection = '**Create Codespace:** [Click here to create Codespace](' + finalUrl + ')\n\n💡 *Tip: Add a `CODESPACE_CREATION_TOKEN` secret with codespace permissions for automatic creation*';
             }
             
-            const commentBody = `## 🚀 Express PR Environment Ready!
-
-${codespaceSection}
-
-**Environment:**
-- Node.js: \`${{ steps.extract-env.outputs.node_version }}\`
-- npm: \`${{ steps.extract-env.outputs.npm_version }}\`
-- Package Manager: \`${{ steps.extract-env.outputs.package_manager }}\`
-- Branch: \`${prBranch}\`
-
-**Quick Start:**
-1. Click the "Create Codespace" link above
-2. Wait for environment to build (~2-3 minutes)
-3. App runs automatically on port **8080**
-4. API will be available at: \`https://[your-codespace-url]-8080.app.github.dev\`
-
-**Auto-started Commands:**
-- \`npm ci\` - Installs dependencies
-- \`npm run build\` - Compiles TypeScript
-- \`npm run dev\` - Starts Express server
-
-**Port Configuration:**
-- Port **8080** is configured as **public** for easy testing
-- Access via: \`https://[codespace-name]-8080.app.github.dev\`
-
-**Note:** 
-- Codespace auto-stops after 30 minutes of inactivity
-- You can restart it from the [GitHub Codespaces page](https://github.com/codespaces)
-- The devcontainer.json is automatically configured for this PR
-
----
-*Automatically configured for PR #${prNumber}*`;
+            const nodeVersion = '${{ steps.extract-env.outputs.node_version }}' || 'unknown';
+            const npmVersion = '${{ steps.extract-env.outputs.npm_version }}' || 'unknown';
+            const packageManager = '${{ steps.extract-env.outputs.package_manager }}' || 'npm';
+            
+            const commentBody = '## 🚀 Express PR Environment Ready!\n\n' +
+              codespaceSection + '\n\n' +
+              '**Environment:**\n' +
+              '- Node.js: `' + nodeVersion + '`\n' +
+              '- npm: `' + npmVersion + '`\n' +
+              '- Package Manager: `' + packageManager + '`\n' +
+              '- Branch: `' + prBranch + '`\n\n' +
+              '**Quick Start:**\n' +
+              '1. Click the "Create Codespace" link above\n' +
+              '2. Wait for environment to build (~2-3 minutes)\n' +
+              '3. App runs automatically on port **8080**\n' +
+              '4. API will be available at: `https://[your-codespace-url]-8080.app.github.dev`\n\n' +
+              '**Auto-started Commands:**\n' +
+              '- `npm ci` - Installs dependencies\n' +
+              '- `npm run build` - Compiles TypeScript\n' +
+              '- `npm run dev` - Starts Express server\n\n' +
+              '**Port Configuration:**\n' +
+              '- Port **8080** is configured as **public** for easy testing\n' +
+              '- Access via: `https://[codespace-name]-8080.app.github.dev`\n\n' +
+              '**Note:** \n' +
+              '- Codespace auto-stops after 30 minutes of inactivity\n' +
+              '- You can restart it from the [GitHub Codespaces page](https://github.com/codespaces)\n' +
+              '- The devcontainer.json is automatically configured for this PR\n\n' +
+              '---\n' +
+              '*Automatically configured for PR #' + prNumber + '*';
 
             // Check if comment already exists
             const { data: comments } = await github.rest.issues.listComments({
