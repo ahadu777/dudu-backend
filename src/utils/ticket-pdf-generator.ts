@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import * as fs from 'fs';
+import { PassThrough } from 'stream';
 import { logger } from './logger';
 
 // ============== 常量定义 ==============
@@ -322,4 +323,47 @@ export async function generateBatchPDF(
       reject(error);
     }
   });
+}
+
+/**
+ * 生成单张票券 PDF 流
+ *
+ * 用于流式 ZIP 导出，避免整个 PDF 存入内存。
+ * 返回 PassThrough 流，可直接 pipe 到 archiver。
+ *
+ * @param ticketCode 票券代码
+ * @param qrImageBase64 QR 码 Base64 图片
+ * @returns PassThrough 流
+ */
+export function generateTicketPDFStream(
+  ticketCode: string,
+  qrImageBase64: string
+): PassThrough {
+  const passThrough = new PassThrough();
+
+  const doc = new PDFDocument({
+    size: [PAGE_WIDTH, PAGE_HEIGHT],
+    margin: 20,
+    info: {
+      Title: `E-Ticket - ${ticketCode}`,
+      Author: 'Express Ticket System',
+      Subject: 'Electronic Ticket',
+      Keywords: 'ticket, e-ticket, QR code'
+    }
+  });
+
+  // pipe PDF 输出到 PassThrough 流
+  doc.pipe(passThrough);
+
+  // 渲染票券页面
+  renderTicketPage(doc, {
+    ticketCode,
+    qrImageBase64,
+    useChineseTitle: false
+  });
+
+  // 结束 PDF 文档
+  doc.end();
+
+  return passThrough;
 }

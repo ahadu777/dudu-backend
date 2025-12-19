@@ -89,6 +89,10 @@ export class OTAService {
     return this.ticketService.getBatchPDF(batchId, partnerId);
   }
 
+  async streamBatchZip(batchId: string, partnerId: string, outputStream: NodeJS.WritableStream): Promise<void> {
+    return this.ticketService.streamBatchZip(batchId, partnerId, outputStream);
+  }
+
   // ============== 订单 ==============
 
   async getOrders(partnerId?: string, pagination?: { page?: number; limit?: number }): Promise<{ orders: any[]; total: number }> {

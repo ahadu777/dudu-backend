@@ -2,7 +2,7 @@
 card: "OTA Ticket PDF Export"
 slug: ota-pdf-export
 team: "A - Commerce"
-oas_paths: ["/api/ota/tickets/:code/pdf", "/api/ota/batches/:id/pdf"]
+oas_paths: ["/api/ota/tickets/:code/pdf", "/api/ota/batches/:id/pdf", "/api/ota/batches/:id/export-zip"]
 migrations: []
 status: "Done"
 readiness: "mvp"
@@ -148,6 +148,52 @@ paths:
           description: Unauthorized - batch not owned by partner
         404:
           description: Batch not found
+
+  /api/ota/batches/{id}/export-zip:
+    get:
+      tags: ["OTA Integration"]
+      summary: Export all tickets as individual PDFs in a ZIP
+      description: |
+        Exports all tickets in a batch as individual PDF files,
+        packaged in a ZIP archive. Uses streaming for large batches
+        (5000+ tickets).
+
+        Features:
+        - Each ticket is a separate PDF file
+        - Streaming download (starts immediately)
+        - Supports batches up to 10,000+ tickets
+        - 10-minute timeout for large exports
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Batch ID
+          example: "BATCH-20251218-partner-ABC123"
+      responses:
+        200:
+          description: ZIP archive with PDF files
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              example: 'attachment; filename="BATCH-20251218-partner-ABC123.zip"'
+            Transfer-Encoding:
+              schema:
+                type: string
+              example: 'chunked'
+        403:
+          description: Unauthorized - batch not owned by partner
+        404:
+          description: Batch not found
 ```
 
 ## 3) Invariants
@@ -202,6 +248,16 @@ curl -X GET http://localhost:8080/api/ota/tickets/OTHER-PARTNER-xxx/pdf \
   -H "X-API-Key: ota_full_access_key_99999"
 
 # Expected: 403 {"code": "UNAUTHORIZED", "message": "..."}
+```
+
+**Batch ZIP Export:**
+```bash
+curl -X GET http://localhost:8080/api/ota/batches/BATCH-xxx/export-zip \
+  -H "X-API-Key: ota_full_access_key_99999" \
+  -o batch.zip
+
+# Expected: ZIP file with individual PDF files
+# Performance: ~12 seconds for 5000 tickets
 ```
 
 ## 9) PDF Layout
