@@ -3,6 +3,7 @@ name: Express PR Codespace
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:  # Allow manual triggering for testing
 
 permissions:
   contents: read
@@ -13,11 +14,13 @@ permissions:
 jobs:
   create-express-codespace:
     runs-on: ubuntu-latest
+    # Ensure this job always runs (don't skip)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -55,7 +58,7 @@ jobs:
         run: |
           cat > .devcontainer/devcontainer.json << EOF
           {
-            "name": "Express PR #${{ github.event.pull_request.number }}",
+            "name": "Express PR #${{ github.event.pull_request.number || 'manual' }}",
             "image": "mcr.microsoft.com/devcontainers/javascript-node:0-${{ steps.extract-env.outputs.node_major }}",
             "features": {
               "ghcr.io/devcontainers/features/node:1": {
@@ -128,7 +131,7 @@ jobs:
           # Always generate the URL (will be used if automatic creation fails or isn't configured)
           # Create a direct link to create codespace for this PR
           # GitHub will use the devcontainer.json from the PR branch
-          CODESPACE_URL="https://github.com/codespaces/new?repo=${{ github.repository }}&ref=${{ github.event.pull_request.head.ref }}&devcontainer_path=.devcontainer/devcontainer.json&machine=basicLinux32gb"
+          CODESPACE_URL="https://github.com/codespaces/new?repo=${{ github.repository }}&ref=${{ github.event.pull_request.head.ref || github.ref_name }}&devcontainer_path=.devcontainer/devcontainer.json&machine=basicLinux32gb"
           echo "codespace_create_url=${CODESPACE_URL}" >> $GITHUB_OUTPUT
           echo "codespace_url=${CODESPACE_URL}" >> $GITHUB_OUTPUT
           echo "✅ Codespace creation URL generated: ${CODESPACE_URL}"
@@ -153,8 +156,8 @@ jobs:
             console.log('  Codespace Create URL:', codespaceCreateUrl || '(empty)');
             console.log('  Node Version:', '${{ steps.extract-env.outputs.node_version }}' || '(not set)');
             console.log('  npm Version:', '${{ steps.extract-env.outputs.npm_version }}' || '(not set)');
-            const prNumber = '${{ github.event.pull_request.number }}';
-            const prBranch = '${{ github.event.pull_request.head.ref }}';
+            const prNumber = '${{ github.event.pull_request.number }}' || 'N/A';
+            const prBranch = '${{ github.event.pull_request.head.ref }}' || '${{ github.ref_name }}';
             const repo = '${{ github.repository }}';
             
             // Ensure we have a URL to use - always fallback to manual creation URL
