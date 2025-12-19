@@ -395,4 +395,103 @@ curl 'http://localhost:8080/api/ota/resellers/summary?page=1&limit=3&batches_per
 
 ---
 
-*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns.***
+---
+
+### 2025-12-19: 完整工作流遵循问题 (US-018)
+
+**Problem Identified**: AI 在执行开发任务时，跳过了工作流中的多个关键步骤。
+
+**Scenario**: US-018 OTA 票券 PDF 导出功能实现
+
+**AI Failure Points - 完整遗漏清单**:
+
+| 步骤 | 要求 | 实际执行 | 状态 |
+|------|------|----------|------|
+| **Step 0: Intent Analysis** | 解析意图 → 匹配任务类型 → 加载参考文档 | 完全跳过 | ❌ |
+| **Step 1: Reality Check** | 上下文检查 + 系统状态检查 | 仅做 healthz，未检查文档状态 | ⚠️ |
+| **Step 2: Execute** | 更新 Card 状态 → 按规范执行 | 执行了 | ✅ |
+| **Step 2.5: Code Review** | 开发完成后、测试前审查代码 | 完全跳过 | ❌ |
+| **Step 3: Test & Verify** | 测试 + Runbook + 覆盖率 + 文档校验 | 执行了，但遗漏 `_index.yaml` | ⚠️ |
+| **Step 4: Experience Learning** | 记录经验教训（可选） | 跳过 | ⚠️ |
+
+**具体遗漏项**:
+1. **Step 0 缺失** - 未声明任务类型是 "New Feature"，未加载 `references/duplicate-prevention.md`
+2. **Step 1 不完整** - 未做三层搜索 (PRD → Story → Card → Code)
+3. **Step 2.5 完全跳过** - 代码写完直接测试，未做代码审查
+4. **Step 3 遗漏** - 未更新 `docs/stories/_index.yaml`
+
+**Root Cause Analysis**:
+- AI 倾向于"快速完成任务"而非"按流程完成任务"
+- 工作流步骤在 SKILL.md 中定义，但 AI 未在每个步骤开始时主动对照
+- 缺乏强制性的检查点机制
+
+**Evidence**:
+```bash
+# 用户指出工作流遵循问题
+# "检查这次工作，我发现你还是有很多事情没有遵循ai工作流去做的"
+# "补做 Step 2.5 代码审查"
+```
+
+**Code Review 补做结果**:
+- Phase 1: Quick Scan ✅ 通过（编译、无调试代码）
+- Phase 2: Deep Review ✅ 通过
+  - Card 一致性 ✅
+  - 代码质量 ✅
+  - TypeScript 规范 ✅
+  - 安全检查 ✅
+  - 错误处理 ✅
+- Phase 3: Report ✅ 生成
+  - 发现 1 个 Warning: Card 文档内部状态不一致（已修复）
+  - 最终结果: 🟢 APPROVED
+
+**Improvements Needed**:
+
+1. **每个步骤开始时显式声明**
+   ```markdown
+   ## Step 0: Intent Analysis
+   - 任务类型: New Feature
+   - 参考文档: references/duplicate-prevention.md
+   - 需要完整流程: ✅
+   ```
+
+2. **Step 2.5 Code Review 必须执行**
+   - 开发完成后、测试前，强制执行代码审查
+   - 即使代码简单，至少执行 Quick Scan
+
+3. **Step 3 检查清单作为 todo list 模板**
+   - 进入 Step 3 时，自动加载完整检查清单
+   - 每项完成后标记，确保无遗漏
+
+4. **工作流遵循提示**
+   - 考虑在 SKILL.md 中添加"工作流检查点"
+   - 每个步骤完成时，输出简短确认
+
+**Files Changed** (本次任务 + 补做):
+- 功能实现: 14 files (+1755/-12 lines)
+- Code Review 修复: `docs/cards/ota-pdf-export.md` (删除重复状态信息)
+- 文档补全: `docs/stories/_index.yaml`, `docs/prd/PRD-002-*.md`
+
+**Key Learning**:
+- **工作流每一步都很重要** - 跳过的步骤往往会在后面暴露问题
+- **Code Review 不可省略** - 即使代码能跑，也需要审查质量
+- **显式声明优于隐式执行** - 每个步骤开始时明确说出来
+- **用户反馈是最终验证** - 自我感觉"完成了"不等于真正完成
+
+**Proposed Workflow Enhancement**:
+```markdown
+## 每个步骤开始时，输出步骤声明:
+
+"## Step 0: Intent Analysis
+- 任务类型: [New Feature / API Change / Bug Fix / ...]
+- 参考文档: [references/xxx.md]
+- 需要完整流程: [是/否]"
+
+"## Step 2.5: Code Review
+- Quick Scan: [进行中...]
+- Deep Review: [进行中...]
+- Report: [生成中...]"
+```
+
+---
+
+*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable.***
