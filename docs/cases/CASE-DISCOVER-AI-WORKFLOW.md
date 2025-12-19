@@ -397,99 +397,71 @@ curl 'http://localhost:8080/api/ota/resellers/summary?page=1&limit=3&batches_per
 
 ---
 
-### 2025-12-19: 完整工作流遵循问题 (US-018)
+### 2025-12-19: Step 3 检查清单完整性问题 (US-018)
 
-**Problem Identified**: AI 在执行开发任务时，跳过了工作流中的多个关键步骤。
+**Problem Identified**: 上下文恢复后，AI 继续执行任务但遗漏了 Step 3 检查清单中的多个关键项。
 
 **Scenario**: US-018 OTA 票券 PDF 导出功能实现
 
-**AI Failure Points - 完整遗漏清单**:
-
-| 步骤 | 要求 | 实际执行 | 状态 |
-|------|------|----------|------|
-| **Step 0: Intent Analysis** | 解析意图 → 匹配任务类型 → 加载参考文档 | 完全跳过 | ❌ |
-| **Step 1: Reality Check** | 上下文检查 + 系统状态检查 | 仅做 healthz，未检查文档状态 | ⚠️ |
-| **Step 2: Execute** | 更新 Card 状态 → 按规范执行 | 执行了 | ✅ |
-| **Step 2.5: Code Review** | 开发完成后、测试前审查代码 | 完全跳过 | ❌ |
-| **Step 3: Test & Verify** | 测试 + Runbook + 覆盖率 + 文档校验 | 执行了，但遗漏 `_index.yaml` | ⚠️ |
-| **Step 4: Experience Learning** | 记录经验教训（可选） | 跳过 | ⚠️ |
-
-**具体遗漏项**:
-1. **Step 0 缺失** - 未声明任务类型是 "New Feature"，未加载 `references/duplicate-prevention.md`
-2. **Step 1 不完整** - 未做三层搜索 (PRD → Story → Card → Code)
-3. **Step 2.5 完全跳过** - 代码写完直接测试，未做代码审查
-4. **Step 3 遗漏** - 未更新 `docs/stories/_index.yaml`
+**AI Failure Points**:
+1. **未更新 `docs/stories/_index.yaml`** - 新建 Story 后未在索引中注册
+2. **未更新 `openapi/openapi.json`** - 新增 2 个 API 端点但未更新 OpenAPI 规范
+3. **未执行 API 契约三方一致性验证** - 跳过了 Card = Code = OpenAPI 验证
+4. **未执行 Step 4 经验学习** - 遇到问题但未记录
 
 **Root Cause Analysis**:
-- AI 倾向于"快速完成任务"而非"按流程完成任务"
-- 工作流步骤在 SKILL.md 中定义，但 AI 未在每个步骤开始时主动对照
-- 缺乏强制性的检查点机制
+- 上下文恢复时，AI 从 todo list 继续执行，但 todo list 本身不完整
+- Step 3 检查清单在 SKILL.md 中定义，但 AI 未主动对照完整清单
+- AI 倾向于"做完眼前的事"而非"确保所有事都做完"
 
 **Evidence**:
 ```bash
-# 用户指出工作流遵循问题
-# "检查这次工作，我发现你还是有很多事情没有遵循ai工作流去做的"
-# "补做 Step 2.5 代码审查"
-```
+# 用户运行 validate:docs 发现警告
+npm run validate:docs
+# ⚠️ Story US-018 未被其关联的 PRD (PRD-002) 的 related_stories 列出
+# ⚠️ PRD-002 未列出关联的 US-018
 
-**Code Review 补做结果**:
-- Phase 1: Quick Scan ✅ 通过（编译、无调试代码）
-- Phase 2: Deep Review ✅ 通过
-  - Card 一致性 ✅
-  - 代码质量 ✅
-  - TypeScript 规范 ✅
-  - 安全检查 ✅
-  - 错误处理 ✅
-- Phase 3: Report ✅ 生成
-  - 发现 1 个 Warning: Card 文档内部状态不一致（已修复）
-  - 最终结果: 🟢 APPROVED
+# 用户指出遗漏
+# "index.yaml没有对应的更新"
+# "我发现你还是有很多事情没有遵循ai工作流去做的"
+```
 
 **Improvements Needed**:
 
-1. **每个步骤开始时显式声明**
-   ```markdown
-   ## Step 0: Intent Analysis
-   - 任务类型: New Feature
-   - 参考文档: references/duplicate-prevention.md
-   - 需要完整流程: ✅
-   ```
+1. **Step 3 检查清单应作为 todo list 模板**
+   - 当进入 Step 3 时，自动将完整检查清单加入 todo list
+   - 不依赖 AI 记忆，显式追踪每个检查项
 
-2. **Step 2.5 Code Review 必须执行**
-   - 开发完成后、测试前，强制执行代码审查
-   - 即使代码简单，至少执行 Quick Scan
+2. **OpenAPI 更新应与路由修改联动**
+   - 新增 API 端点 → 自动提示更新 OpenAPI
+   - 可考虑在 Code Review 阶段检查
 
-3. **Step 3 检查清单作为 todo list 模板**
-   - 进入 Step 3 时，自动加载完整检查清单
-   - 每项完成后标记，确保无遗漏
+3. **文档索引更新应作为文档创建的后置步骤**
+   - 创建 Story → 更新 `_index.yaml`
+   - 创建 Card → 检查相关 Story 引用
 
-4. **工作流遵循提示**
-   - 考虑在 SKILL.md 中添加"工作流检查点"
-   - 每个步骤完成时，输出简短确认
-
-**Files Changed** (本次任务 + 补做):
-- 功能实现: 14 files (+1755/-12 lines)
-- Code Review 修复: `docs/cards/ota-pdf-export.md` (删除重复状态信息)
-- 文档补全: `docs/stories/_index.yaml`, `docs/prd/PRD-002-*.md`
+**Files Changed** (补充遗漏):
+- `openapi/openapi.json` - 添加 PDF 导出端点规范
+- `docs/stories/_index.yaml` - 添加 US-018 条目
+- `docs/prd/PRD-002-ota-platform-integration.md` - related_stories 添加 US-018
 
 **Key Learning**:
-- **工作流每一步都很重要** - 跳过的步骤往往会在后面暴露问题
-- **Code Review 不可省略** - 即使代码能跑，也需要审查质量
-- **显式声明优于隐式执行** - 每个步骤开始时明确说出来
-- **用户反馈是最终验证** - 自我感觉"完成了"不等于真正完成
+- **检查清单必须显式化** - 依赖 AI 记忆检查清单不可靠
+- **上下文恢复时重新加载工作流** - 不能假设 todo list 包含所有必要步骤
+- **validate:docs 是最后防线** - 应在提交前强制运行
 
 **Proposed Workflow Enhancement**:
 ```markdown
-## 每个步骤开始时，输出步骤声明:
-
-"## Step 0: Intent Analysis
-- 任务类型: [New Feature / API Change / Bug Fix / ...]
-- 参考文档: [references/xxx.md]
-- 需要完整流程: [是/否]"
-
-"## Step 2.5: Code Review
-- Quick Scan: [进行中...]
-- Deep Review: [进行中...]
-- Report: [生成中...]"
+## Step 3 进入时，自动加载检查清单到 todo list:
+- [ ] 相关测试全部通过
+- [ ] API 契约一致（Card = Code = OpenAPI）
+- [ ] OpenAPI 已更新（如有新端点）
+- [ ] Newman collection 创建/更新
+- [ ] Runbook 创建/更新（Story 级别）
+- [ ] docs/stories/_index.yaml 已更新（如有新 Story）
+- [ ] 覆盖率更新 docs/test-coverage/_index.yaml
+- [ ] npm run validate:docs 无错误
+- [ ] Card 状态更新为 "Done"
 ```
 
 ---
