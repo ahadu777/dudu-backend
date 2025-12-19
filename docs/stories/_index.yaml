@@ -346,3 +346,21 @@ stories:
       newman:
         - reports/collections/us-016-activation-reservation.json
 
+  - id: US-018
+    title: OTA Ticket PDF Export
+    status: Done
+    cards:
+      - ota-pdf-export
+    # Sequence dependencies
+    sequence:
+      - ota-premade-tickets → ota-pdf-export
+    # Cross-story relationships
+    enhances: [US-012]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-002"
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-018-runbook.md
+      newman:
+        - postman/auto-generated/us-018-ota-pdf-export.postman_collection.json
