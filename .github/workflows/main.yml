@@ -1,0 +1,243 @@
+name: Express PR Codespace
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:  # Allow manual triggering for testing
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  codespaces: write
+
+jobs:
+  create-express-codespace:
+    runs-on: ubuntu-latest
+    # Ensure this job always runs (don't skip)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Extract environment info
+        id: extract-env
+        run: |
+          # Capture Node version
+          NODE_VERSION=$(node --version | sed 's/v//')
+          echo "node_version=${NODE_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Capture npm version
+          NPM_VERSION=$(npm --version)
+          echo "npm_version=${NPM_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Check for package-lock.json
+          if [ -f "package-lock.json" ]; then
+            echo "package_manager=npm" >> $GITHUB_OUTPUT
+          else
+            echo "package_manager=npm" >> $GITHUB_OUTPUT
+          fi
+          
+          # Extract Node major version for devcontainer
+          NODE_MAJOR=$(echo $NODE_VERSION | cut -d. -f1)
+          echo "node_major=${NODE_MAJOR}" >> $GITHUB_OUTPUT
+
+      - name: Create devcontainer directory
+        run: mkdir -p .devcontainer
+
+      - name: Generate devcontainer.json
+        run: |
+          cat > .devcontainer/devcontainer.json << EOF
+          {
+            "name": "Express PR #${{ github.event.pull_request.number || 'manual' }}",
+            "image": "mcr.microsoft.com/devcontainers/javascript-node:0-${{ steps.extract-env.outputs.node_major }}",
+            "features": {
+              "ghcr.io/devcontainers/features/node:1": {
+                "version": "${{ steps.extract-env.outputs.node_major }}",
+                "npmVersion": "${{ steps.extract-env.outputs.npm_version }}"
+              },
+              "ghcr.io/devcontainers/features/github-cli:1": {}
+            },
+            "forwardPorts": [8080],
+            "portsAttributes": {
+              "8080": {
+                "label": "Express API",
+                "onAutoForward": "openPreview",
+                "visibility": "public"
+              }
+            },
+            "postCreateCommand": "npm ci",
+            "postStartCommand": "npm run build && npm run dev",
+            "customizations": {
+              "codespaces": {
+                "openFiles": ["README.md", "src/index.ts"]
+              },
+              "vscode": {
+                "extensions": [
+                  "dbaeumer.vscode-eslint",
+                  "esbenp.prettier-vscode",
+                  "ms-azuretools.vscode-docker"
+                ]
+              }
+            }
+          }
+          EOF
+
+      - name: Try automatic Codespace creation (if PAT available)
+        id: create_codespace
+        if: ${{ secrets.CODESPACE_CREATION_TOKEN != '' }}
+        continue-on-error: true
+        run: |
+          # Install GitHub CLI
+          type gh >/dev/null 2>&1 || curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          type gh >/dev/null 2>&1 || echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          type gh >/dev/null 2>&1 || sudo apt update && sudo apt install gh -y
+          
+          # Authenticate with PAT
+          echo "${{ secrets.CODESPACE_CREATION_TOKEN }}" | gh auth login --with-token
+          
+          # Try to create codespace
+          CODESPACE_NAME="express-pr-${{ github.event.pull_request.number }}"
+          CODESPACE_OUTPUT=$(gh api \
+            "repos/${{ github.repository }}/codespaces" \
+            -X POST \
+            -f "ref=${{ github.event.pull_request.head.ref }}" \
+            -f "machine=basicLinux32gb" \
+            -f "display_name=${CODESPACE_NAME}" \
+            -f "devcontainer_path=.devcontainer/devcontainer.json" \
+            --jq '.web_url' 2>&1) || CODESPACE_OUTPUT=""
+          
+          if [ -n "$CODESPACE_OUTPUT" ] && [[ "$CODESPACE_OUTPUT" == http* ]]; then
+            echo "codespace_url=${CODESPACE_OUTPUT}" >> $GITHUB_OUTPUT
+            echo "codespace_created=true" >> $GITHUB_OUTPUT
+            echo "✅ Codespace created automatically: ${CODESPACE_OUTPUT}"
+          else
+            echo "codespace_created=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Automatic creation failed, will use manual link"
+          fi
+
+      - name: Generate Codespace creation URL (fallback)
+        id: codespace_url
+        run: |
+          # Always generate the URL (will be used if automatic creation fails or isn't configured)
+          # Create a direct link to create codespace for this PR
+          # GitHub will use the devcontainer.json from the PR branch
+          CODESPACE_URL="https://github.com/codespaces/new?repo=${{ github.repository }}&ref=${{ github.event.pull_request.head.ref || github.ref_name }}&devcontainer_path=.devcontainer/devcontainer.json&machine=basicLinux32gb"
+          echo "codespace_create_url=${CODESPACE_URL}" >> $GITHUB_OUTPUT
+          echo "codespace_url=${CODESPACE_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Codespace creation URL generated: ${CODESPACE_URL}"
+
+      - name: Always comment on PR (even on failure)
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Get codespace URL (either created automatically or manual link)
+            const codespaceUrl = '${{ steps.create_codespace.outputs.codespace_url }}' || '';
+            const codespaceCreated = '${{ steps.create_codespace.outputs.codespace_created }}' === 'true';
+            const codespaceCreateUrl = '${{ steps.codespace_url.outputs.codespace_create_url }}' || '${{ steps.codespace_url.outputs.codespace_url }}';
+            
+            console.log('🔍 Debug Info:');
+            console.log('  PR Number:', '${{ github.event.pull_request.number }}');
+            console.log('  PR Branch:', '${{ github.event.pull_request.head.ref }}');
+            console.log('  Repository:', '${{ github.repository }}');
+            console.log('  Codespace URL:', codespaceUrl || '(empty)');
+            console.log('  Codespace Created:', codespaceCreated);
+            console.log('  Codespace Create URL:', codespaceCreateUrl || '(empty)');
+            console.log('  Node Version:', '${{ steps.extract-env.outputs.node_version }}' || '(not set)');
+            console.log('  npm Version:', '${{ steps.extract-env.outputs.npm_version }}' || '(not set)');
+            const prNumber = '${{ github.event.pull_request.number }}' || 'N/A';
+            const prBranch = '${{ github.event.pull_request.head.ref }}' || '${{ github.ref_name }}';
+            const repo = '${{ github.repository }}';
+            
+            // Ensure we have a URL to use - always fallback to manual creation URL
+            let finalUrl = codespaceCreated && codespaceUrl ? codespaceUrl : codespaceCreateUrl;
+            
+            // If still no URL, generate a basic one
+            if (!finalUrl) {
+              const repo = '${{ github.repository }}';
+              const ref = '${{ github.event.pull_request.head.ref }}';
+              finalUrl = `https://github.com/codespaces/new?repo=${repo}&ref=${ref}&devcontainer_path=.devcontainer/devcontainer.json`;
+              console.log('⚠️ Generated fallback URL:', finalUrl);
+            }
+            
+            console.log('✅ Final URL to use:', finalUrl);
+            
+            let codespaceSection;
+            if (codespaceCreated && codespaceUrl) {
+              codespaceSection = '**🚀 Live Codespace:** [' + codespaceUrl + '](' + codespaceUrl + ')\n\n✅ Codespace created automatically and ready to use!';
+            } else {
+              codespaceSection = '**Create Codespace:** [Click here to create Codespace](' + finalUrl + ')\n\n💡 *Tip: Add a `CODESPACE_CREATION_TOKEN` secret with codespace permissions for automatic creation*';
+            }
+            
+            const nodeVersion = '${{ steps.extract-env.outputs.node_version }}' || 'unknown';
+            const npmVersion = '${{ steps.extract-env.outputs.npm_version }}' || 'unknown';
+            const packageManager = '${{ steps.extract-env.outputs.package_manager }}' || 'npm';
+            
+            const commentBody = '## 🚀 Express PR Environment Ready!\n\n' +
+              codespaceSection + '\n\n' +
+              '**Environment:**\n' +
+              '- Node.js: `' + nodeVersion + '`\n' +
+              '- npm: `' + npmVersion + '`\n' +
+              '- Package Manager: `' + packageManager + '`\n' +
+              '- Branch: `' + prBranch + '`\n\n' +
+              '**Quick Start:**\n' +
+              '1. Click the "Create Codespace" link above\n' +
+              '2. Wait for environment to build (~2-3 minutes)\n' +
+              '3. App runs automatically on port **8080**\n' +
+              '4. API will be available at: `https://[your-codespace-url]-8080.app.github.dev`\n\n' +
+              '**Auto-started Commands:**\n' +
+              '- `npm ci` - Installs dependencies\n' +
+              '- `npm run build` - Compiles TypeScript\n' +
+              '- `npm run dev` - Starts Express server\n\n' +
+              '**Port Configuration:**\n' +
+              '- Port **8080** is configured as **public** for easy testing\n' +
+              '- Access via: `https://[codespace-name]-8080.app.github.dev`\n\n' +
+              '**Note:** \n' +
+              '- Codespace auto-stops after 30 minutes of inactivity\n' +
+              '- You can restart it from the [GitHub Codespaces page](https://github.com/codespaces)\n' +
+              '- The devcontainer.json is automatically configured for this PR\n\n' +
+              '---\n' +
+              '*Automatically configured for PR #' + prNumber + '*';
+
+            // Check if comment already exists
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🚀 Express PR Environment Ready!')
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: commentBody
+              });
+              console.log('✅ Updated existing comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+              console.log('✅ Created new comment');
+            }
