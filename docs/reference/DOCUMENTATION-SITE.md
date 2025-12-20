@@ -1457,6 +1457,113 @@ The documentation visualization site provides a **zero-maintenance, PM-friendly 
 
 ---
 
-**Last Updated:** 2025-12-15
+## Foundation Evaluation Framework
+
+### Why Evaluate?
+Regular evaluation ensures the documentation system continues to serve the team effectively. Use these questions to assess health from different perspectives.
+
+### Quick Health Check (Run Anytime)
+```bash
+# 1. Compliance Score - Are docs well-structured?
+curl -s http://localhost:8080/compliance | grep -o '<div class="score-number">[^<]*</div>'
+
+# 2. Test Suite - Is the system working?
+npm run test:prd
+
+# 3. Document Counts - Is everything tracked?
+echo "PRDs: $(ls docs/prd/*.md | wc -l)"
+echo "Stories: $(grep '^  - id:' docs/stories/_index.yaml | wc -l)"
+echo "Cards: $(ls docs/cards/*.md | wc -l)"
+```
+
+### Evaluation Questions by Role
+
+#### For Product Managers
+| Question | Where to Check | Target |
+|----------|----------------|--------|
+| Can I see all features at a glance? | `/sitemap` | All PRDs visible with stories |
+| What's the implementation progress? | `/project-docs` | Clear status counts |
+| Are requirements fully covered by tests? | `/coverage` | 100% per PRD |
+| Can I trace a feature from idea to code? | `/prd/:id` → Story → Card | Complete chain |
+
+#### For Developers
+| Question | Where to Check | Target |
+|----------|----------------|--------|
+| Is the API contract clear? | `/cards/:slug` | Complete spec with examples |
+| What stories does my card support? | Card frontmatter | `related_stories` populated |
+| Are my changes breaking anything? | `npm run test:prd` | All tests pass |
+| Is my documentation compliant? | `/compliance` | Score >90% |
+
+#### For QA Engineers
+| Question | Where to Check | Target |
+|----------|----------------|--------|
+| What test collections exist? | `docs/test-coverage/_index.yaml` | All PRDs have collections |
+| Are all acceptance criteria tested? | PRD coverage details | AC coverage = 100% |
+| What's the overall test pass rate? | `npm run test:prd` | 100% pass |
+| Are there manual test runbooks? | `docs/integration/*.md` | E2E flows documented |
+
+#### For Tech Leads
+| Question | Where to Check | Target |
+|----------|----------------|--------|
+| Are PRD→Story→Card relationships intact? | `/compliance` | No broken links |
+| Is the architecture documented? | `/architecture` | Mermaid diagrams current |
+| Are deprecated items clearly marked? | PRD/Card status | `Deprecated` status used |
+| Is test coverage measurable? | `/coverage` | Statistics accurate |
+
+### Evaluation Scorecard Template
+
+Use this template for periodic reviews:
+
+```markdown
+## Foundation Evaluation - [DATE]
+
+### Metrics
+- Compliance Score: ___%
+- PRD Test Pass Rate: ___/___
+- Story Test Pass Rate: ___/___
+- Cards Completed: ___/___
+
+### Health by Layer
+| Layer | Count | Done | In Progress | Issues |
+|-------|-------|------|-------------|--------|
+| PRDs  |       |      |             |        |
+| Stories |     |      |             |        |
+| Cards |       |      |             |        |
+
+### Action Items
+1. [ ] ...
+2. [ ] ...
+
+### Questions for Team Discussion
+1. ...
+2. ...
+```
+
+### Latest Evaluation (2025-12-20)
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| Compliance Score | 92% | ✅ Excellent |
+| PRDs | 8 (4 Done, 1 In Progress, 3 Draft) | ⚠️ 3 drafts |
+| Stories | 19 | ✅ |
+| Cards | 39 (100% Done) | ✅ |
+| PRD Tests | 5/8 passing | ⚠️ PRD-006,007,008 failing |
+| Story Tests | 0/1 passing | ❌ US-018 failing |
+
+**Key Observations:**
+1. Compliance jumped from -26% to 92% (team fixed relationship issues)
+2. PRD-007 deprecated and merged into PRD-006
+3. PRD-008 tests require database mode (`USE_DATABASE=true`)
+4. US-018 (OTA PDF Export) is new - tests need review
+5. Stories now have `sequence` and `enhances` fields for dependency tracking
+
+**Action Items:**
+- [ ] Fix PRD-008 tests for mock mode compatibility
+- [ ] Review US-018 test collection
+- [ ] Move 3 Draft PRDs to In Progress or mark as future
+
+---
+
+**Last Updated:** 2025-12-20
 **Maintainer:** Development Team
 **Related:** [CLAUDE.md](../CLAUDE.md), [KNOWLEDGE-GRAPH.md](KNOWLEDGE-GRAPH.md)

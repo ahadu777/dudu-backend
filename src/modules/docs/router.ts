@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 import { logger } from '../../utils/logger';
 import { markdownToHtml, renderMarkdownFile } from '../../utils/markdown';
 import { loadPRDDocuments, loadStoriesIndex } from '../../utils/prdParser';
@@ -255,6 +256,156 @@ router.get('/graph', handleGraph);
 router.get('/compliance', handleCompliance);
 
 router.get('/architecture', handleArchitecture);
+
+// ============ Foundation Evaluation Route ============
+// Data-driven from docs/reference/evaluation-questions.yaml (zero hardcoding)
+router.get('/evaluation', (_req: Request, res: Response) => {
+  try {
+    // Load evaluation config from YAML
+    const evalConfigPath = path.join(process.cwd(), 'docs/reference/evaluation-questions.yaml');
+    interface EvalQuestion { question: string; check_location: string; target: string; }
+    interface EvalRole { id: string; title: string; icon: string; color: string; questions: EvalQuestion[]; }
+    interface QuickCheck { name: string; description: string; command: string; }
+    interface ActionItem { description: string; status: string; priority: string; }
+    interface EvalConfig { last_updated: string; roles: EvalRole[]; quick_checks: QuickCheck[]; action_items: ActionItem[]; }
+
+    const evalConfig = yaml.load(fs.readFileSync(evalConfigPath, 'utf-8')) as EvalConfig;
+
+    // Load live metrics from actual data
+    const prdStats = { total: loadPRDDocuments().length };
+    const storyStats = { total: loadStoriesIndex().length };
+    const cardStats = getCardStats();
+
+    const pageStyles = `
+      .eval-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+      .eval-header { text-align: center; margin-bottom: 40px; }
+      .eval-header h1 { color: #2c3e50; font-size: 2.2em; }
+      .eval-header p { color: #7f8c8d; font-size: 1.1em; }
+      .eval-header .last-updated { color: #95a5a6; font-size: 0.85em; margin-top: 5px; }
+      .quick-check { background: #f8f9fa; border: 2px solid #3498db; border-radius: 8px; padding: 20px; margin-bottom: 30px; }
+      .quick-check h2 { color: #3498db; margin-bottom: 15px; }
+      .quick-check pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 0.85em; }
+      .quick-check .check-item { margin-bottom: 15px; }
+      .quick-check .check-name { font-weight: 600; color: #2c3e50; }
+      .quick-check .check-desc { color: #7f8c8d; font-size: 0.9em; }
+      .role-section { margin-bottom: 30px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+      .role-header { padding: 15px 20px; font-weight: 600; font-size: 1.1em; color: white; }
+      .role-content { padding: 20px; background: white; }
+      .eval-table { width: 100%; border-collapse: collapse; }
+      .eval-table th, .eval-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+      .eval-table th { background: #f8f9fa; font-weight: 600; color: #2c3e50; }
+      .eval-table tr:hover { background: #f8f9fa; }
+      .target { color: #27ae60; font-weight: 500; }
+      .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+      .metric-card { background: white; border: 2px solid #27ae60; border-radius: 8px; padding: 20px; text-align: center; }
+      .metric-value { font-size: 2.5em; font-weight: 700; color: #2c3e50; }
+      .metric-label { color: #7f8c8d; font-size: 0.9em; margin-top: 5px; }
+      .action-items { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px 20px; margin-top: 30px; border-radius: 4px; }
+      .action-items h3 { color: #856404; margin-bottom: 10px; }
+      .action-items ul { margin: 0; padding-left: 20px; }
+      .action-items li { margin: 8px 0; }
+      .action-items .priority-high { color: #e74c3c; font-weight: 500; }
+      .action-items .priority-medium { color: #f39c12; }
+      .action-items .priority-low { color: #27ae60; }
+      .data-source { text-align: center; margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; border: 1px dashed #3498db; }
+      .data-source code { background: #d4edda; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; }
+    `;
+
+    // Build role sections dynamically from YAML config
+    const roleSectionsHtml = evalConfig.roles.map(role => {
+      const questionsHtml = role.questions.map(q => {
+        const locationHtml = q.check_location.startsWith('/')
+          ? `<a href="${q.check_location}">${q.check_location}</a>`
+          : q.check_location.startsWith('npm')
+            ? `<code>${q.check_location}</code>`
+            : q.check_location;
+        return `<tr><td>${q.question}</td><td>${locationHtml}</td><td class="target">${q.target}</td></tr>`;
+      }).join('');
+
+      return `
+        <div class="role-section">
+          <div class="role-header" style="background: ${role.color}">${role.icon} For ${role.title}</div>
+          <div class="role-content">
+            <table class="eval-table">
+              <tr><th>Question</th><th>Where to Check</th><th>Target</th></tr>
+              ${questionsHtml}
+            </table>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Build quick checks dynamically from YAML
+    const quickChecksHtml = evalConfig.quick_checks.map(check => `
+      <div class="check-item">
+        <div class="check-name">${check.name}</div>
+        <div class="check-desc">${check.description}</div>
+        <pre>${check.command.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\$/g, '&#36;')}</pre>
+      </div>
+    `).join('');
+
+    // Build action items dynamically from YAML
+    const pendingActions = evalConfig.action_items.filter(a => a.status === 'pending');
+    const actionItemsHtml = pendingActions.map(action =>
+      `<li class="priority-${action.priority}">${action.description}</li>`
+    ).join('');
+
+    const content = `
+      <div class="eval-container">
+        <div class="eval-header">
+          <h1>🔍 Foundation Evaluation</h1>
+          <p>Ask the right questions to assess system health. Use this page for team discussions and periodic reviews.</p>
+          <div class="last-updated">Questions last updated: ${evalConfig.last_updated}</div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-value">${prdStats.total}</div>
+            <div class="metric-label">PRDs</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">${storyStats.total}</div>
+            <div class="metric-label">Stories</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">${cardStats.total}</div>
+            <div class="metric-label">Cards (${cardStats.byStatus.Done || 0} Done)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value"><a href="/compliance" style="color: inherit; text-decoration: none;">Check</a></div>
+            <div class="metric-label">Compliance Score</div>
+          </div>
+        </div>
+
+        <div class="quick-check">
+          <h2>⚡ Quick Health Check</h2>
+          ${quickChecksHtml}
+        </div>
+
+        ${roleSectionsHtml}
+
+        ${pendingActions.length > 0 ? `
+        <div class="action-items">
+          <h3>📝 Current Action Items</h3>
+          <ul>${actionItemsHtml}</ul>
+        </div>
+        ` : ''}
+
+        <div class="data-source">
+          <strong>Zero Hardcoding:</strong> All questions loaded from <code>docs/reference/evaluation-questions.yaml</code><br>
+          Add/modify questions there → UI reflects changes automatically
+        </div>
+      </div>
+    `;
+
+    const html = baseLayout({ title: 'Foundation Evaluation', styles: pageStyles }, content);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    logger.error('Error loading evaluation page:', error);
+    res.status(500).json({ error: 'Failed to load evaluation page' });
+  }
+});
 
 router.get('/coverage', (req: Request, res: Response) => {
       try {
@@ -1304,6 +1455,7 @@ router.get('/project-docs', (_req, res) => {
       { href: '/coverage', icon: '📊', title: 'Test Coverage', desc: 'Test coverage metrics and Newman reports', stats: `${coverageStats.complete}/${coverageStats.total_prds} PRDs covered` },
       { href: '/docs', icon: '🔧', title: 'API Documentation', desc: 'Swagger UI with OpenAPI 3.0 specification', stats: 'Interactive explorer' },
       { href: '/architecture', icon: '🏗️', title: 'Product Architecture', desc: 'Multi-platform product flowcharts', stats: 'System overview' },
+      { href: '/evaluation', icon: '🔍', title: 'Foundation Evaluation', desc: 'Ask the right questions to assess system health by role', stats: 'PM / Dev / QA / Tech Lead' },
     ];
 
     const navGridHtml = navCards.map(card => `

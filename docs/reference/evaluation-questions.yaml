@@ -1,0 +1,170 @@
+# Foundation Evaluation Questions
+# These questions help assess system health from different perspectives
+# Data-driven: Add/modify questions here, UI reflects changes automatically
+
+last_updated: "2025-12-20"
+version: "1.0"
+
+# Question categories by role
+roles:
+  - id: pm
+    title: "Product Managers"
+    icon: "📋"
+    color: "#3498db"
+    questions:
+      - question: "Can I see all features at a glance?"
+        check_location: "/sitemap"
+        target: "All PRDs visible with stories"
+        automated_check: null  # Future: could run validation
+
+      - question: "What's the implementation progress?"
+        check_location: "/project-docs"
+        target: "Clear status counts"
+        automated_check: null
+
+      - question: "Are requirements fully covered by tests?"
+        check_location: "/coverage"
+        target: "100% per PRD"
+        automated_check: "coverage_check"
+
+      - question: "Can I trace a feature from idea to code?"
+        check_location: "/prd/:id → Story → Card"
+        target: "Complete chain"
+        automated_check: "traceability_check"
+
+  - id: dev
+    title: "Developers"
+    icon: "💻"
+    color: "#27ae60"
+    questions:
+      - question: "Is the API contract clear?"
+        check_location: "/cards/:slug"
+        target: "Complete spec with examples"
+        automated_check: null
+
+      - question: "What stories does my card support?"
+        check_location: "Card frontmatter"
+        target: "related_stories populated"
+        automated_check: "card_relationships_check"
+
+      - question: "Are my changes breaking anything?"
+        check_location: "npm run test:prd"
+        target: "All tests pass"
+        automated_check: "test_runner"
+
+      - question: "Is my documentation compliant?"
+        check_location: "/compliance"
+        target: "Score >90%"
+        automated_check: "compliance_check"
+
+  - id: qa
+    title: "QA Engineers"
+    icon: "🧪"
+    color: "#9b59b6"
+    questions:
+      - question: "What test collections exist?"
+        check_location: "docs/test-coverage/_index.yaml"
+        target: "All PRDs have collections"
+        automated_check: "collection_inventory"
+
+      - question: "Are all acceptance criteria tested?"
+        check_location: "PRD coverage details"
+        target: "AC coverage = 100%"
+        automated_check: "ac_coverage_check"
+
+      - question: "What's the overall test pass rate?"
+        check_location: "npm run test:prd"
+        target: "100% pass"
+        automated_check: "test_runner"
+
+      - question: "Are there manual test runbooks?"
+        check_location: "docs/integration/*.md"
+        target: "E2E flows documented"
+        automated_check: "runbook_inventory"
+
+  - id: lead
+    title: "Tech Leads"
+    icon: "🎯"
+    color: "#e67e22"
+    questions:
+      - question: "Are PRD→Story→Card relationships intact?"
+        check_location: "/compliance"
+        target: "No broken links"
+        automated_check: "relationship_check"
+
+      - question: "Is the architecture documented?"
+        check_location: "/architecture"
+        target: "Mermaid diagrams current"
+        automated_check: null
+
+      - question: "Are deprecated items clearly marked?"
+        check_location: "PRD/Card status"
+        target: "Deprecated status used"
+        automated_check: "deprecation_check"
+
+      - question: "Is test coverage measurable?"
+        check_location: "/coverage"
+        target: "Statistics accurate"
+        automated_check: "coverage_accuracy_check"
+
+# Quick health check commands (also data-driven)
+quick_checks:
+  - name: "Compliance Score"
+    description: "Are docs well-structured?"
+    command: "curl -s http://localhost:8080/compliance | grep -o '<div class=\"score-number\">[^<]*</div>'"
+
+  - name: "Test Suite"
+    description: "Is the system working?"
+    command: "npm run test:prd"
+
+  - name: "Document Counts"
+    description: "Is everything tracked?"
+    command: |
+      echo "PRDs: $(ls docs/prd/*.md | wc -l)"
+      echo "Stories: $(grep '^  - id:' docs/stories/_index.yaml | wc -l)"
+      echo "Cards: $(ls docs/cards/*.md | wc -l)"
+
+# Action items (dynamically tracked)
+# These should be updated as team progresses
+action_items:
+  - id: fix-prd-008-mock
+    description: "Fix PRD-008 tests for mock mode compatibility"
+    status: pending
+    priority: high
+    created: "2025-12-20"
+
+  - id: review-us-018
+    description: "Review US-018 test collection"
+    status: pending
+    priority: medium
+    created: "2025-12-20"
+
+  - id: draft-prds-status
+    description: "Move 3 Draft PRDs to In Progress or mark as future"
+    status: pending
+    priority: low
+    created: "2025-12-20"
+
+# Evaluation scorecard template
+scorecard_template:
+  sections:
+    - name: "Metrics"
+      fields:
+        - "Compliance Score: ___%"
+        - "PRD Test Pass Rate: ___/___"
+        - "Story Test Pass Rate: ___/___"
+        - "Cards Completed: ___/___"
+
+    - name: "Health by Layer"
+      table:
+        headers: ["Layer", "Count", "Done", "In Progress", "Issues"]
+        rows:
+          - ["PRDs", "", "", "", ""]
+          - ["Stories", "", "", "", ""]
+          - ["Cards", "", "", "", ""]
+
+    - name: "Action Items"
+      format: "checklist"
+
+    - name: "Questions for Team Discussion"
+      format: "numbered_list"
