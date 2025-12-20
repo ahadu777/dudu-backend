@@ -1,0 +1,11 @@
+# QA 测试执行状态
+# 由 QA Dashboard 自动更新，请勿手动编辑
+#
+# 状态说明:
+#   passed  - 测试通过
+#   failed  - 测试失败
+#   pending - 待测试（默认）
+
+last_updated: "2025-12-20T00:00:00Z"
+
+executions: {}
