@@ -538,11 +538,14 @@ function parseQaE2eChecklist(content: string): QaE2eChecklist {
       const name = tcMatch[3].trim();
       const details = tcMatch[4];
 
-      // 提取操作步骤
-      const opMatch = details.match(/[-*]\s*操作[:：]\s*([^\n]+)/);
-      const operation = opMatch ? opMatch[1].trim() : '';
+      // 提取操作步骤 - 匹配第一个 "  - 描述" 格式行（排除 **Expected**）
+      // 格式: "  - 启动小程序 → 点击需要登录..." 或 "  - 操作: 选择商品..."
+      const opMatch = details.match(/^\s*[-*]\s+(?!\*\*Expected\*\*)([^\n]+)/m);
+      let operation = opMatch ? opMatch[1].trim() : '';
+      // 移除冗余的 "操作:" 前缀（有些 runbook 文件使用这个格式）
+      operation = operation.replace(/^操作[:：]\s*/, '');
 
-      // 提取预期结果
+      // 提取预期结果 - 匹配 "  - **Expected**: 描述" 格式
       const expMatch = details.match(/[-*]\s*\*\*Expected\*\*[:：]\s*([^\n]+)/);
       const expected = expMatch ? expMatch[1].trim() : '';
 
@@ -658,4 +661,242 @@ export function extractStoryTestData(): StoryTestData[] {
   }
 
   return storyDataList;
+}
+
+// ============================================
+// 按功能分组的测试数据 (QA Dashboard 优化)
+// ============================================
+
+// 功能分类映射表
+export const FUNCTION_CATEGORIES: Record<string, { name: string; icon: string }> = {
+  'PAY': { name: '支付', icon: '💳' },
+  'REFUND': { name: '退款', icon: '↩️' },
+  'OTA': { name: 'OTA 渠道', icon: '🔗' },
+  'VERIFY': { name: '核销', icon: '✓' },
+  'ORDER': { name: '订单', icon: '📋' },
+  'ORD': { name: '订单', icon: '📋' },
+  'TKT': { name: '票券', icon: '🎫' },
+  'TICKET': { name: '票券', icon: '🎫' },
+  'RSV': { name: '预约', icon: '📅' },
+  'ACT': { name: '激活', icon: '⚡' },
+  'VEN': { name: '场馆', icon: '🏢' },
+  'WX': { name: '微信', icon: '💬' },
+  'AUTH': { name: '认证', icon: '🔐' },
+  'LOGIN': { name: '登录', icon: '🔑' },
+  'ADM': { name: '管理后台', icon: '⚙️' },
+  'ADMIN': { name: '管理后台', icon: '⚙️' },
+  'RPT': { name: '报表', icon: '📊' },
+  'REPORT': { name: '报表', icon: '📊' },
+  'PRC': { name: '定价', icon: '💰' },
+  'CAN': { name: '取消', icon: '❌' },
+  'PRO': { name: '产品', icon: '📦' },
+  'PROD': { name: '产品', icon: '📦' },
+  'PRODUCT': { name: '产品', icon: '📦' },
+  'CAT': { name: '商品目录', icon: '📦' },
+  'QR': { name: 'QR 码', icon: '📱' },
+  'PRF': { name: '配置', icon: '⚙️' },
+  'OPR': { name: '操作', icon: '🔧' },
+  'OP': { name: '操作', icon: '🔧' },
+  'NOTIFY': { name: '通知', icon: '🔔' },
+};
+
+// 要过滤的前缀（不展示给 QA）
+const FILTER_PREFIXES = ['ENV', 'DAEMON', 'CONFIG'];
+
+// 技术性内容检测 - 操作/预期描述中的技术术语
+const TECH_PATTERNS_DETAIL = [
+  /\b(GET|POST|PUT|DELETE|PATCH)\s+\//i,     // API 路径: GET /api/xxx
+  /返回\s*\d{3}/,                             // HTTP 状态码: 返回 200
+  /\b\d{3}\b.*(?:状态|code|response)/i,       // 状态码相关
+  /\w+_\w+/,                                   // 下划线字段名: ticket_code
+  /(?:数组|对象|字段|参数)/,                   // JSON 术语
+  /(?:header|body|payload|response|request)/i, // HTTP 术语
+  /(?:api|endpoint)/i,                        // API 术语 (不包含 token/url)
+  /`[^`]+`/,                                   // 代码引用: `onHide`
+];
+
+// 技术性内容检测 - 名称中的代码审查/开发术语
+const TECH_PATTERNS_NAME = [
+  /(?:try-catch|catch|定时器|内存泄漏)/,       // 代码质量术语
+  /(?:缩进|注释|命名规范)/,                    // 代码风格
+  /(?:监听器?|回调|异步)/,                     // 编程概念
+  /(?:存储操作|异常捕获)/,                     // 代码实现细节
+];
+
+// 合并后的测试用例
+export interface MergedTestCase {
+  id: string;
+  name: string;
+  operation: string;
+  expected: string;
+  checked: boolean;
+  sourceStories: string[];  // 来源 Story 列表
+}
+
+// 功能分组
+export interface FunctionGroup {
+  category: string;       // "PAY"
+  displayName: string;    // "支付"
+  icon: string;           // "💳"
+  testCases: MergedTestCase[];
+  stats: {
+    total: number;
+    checked: number;
+    unchecked: number;
+  };
+}
+
+// 前缀合并映射（将相似前缀合并到主前缀）
+const PREFIX_ALIASES: Record<string, string> = {
+  'TICKET': 'TKT',
+  'ADMIN': 'ADM',
+  'PRODUCT': 'PROD',
+  'PRO': 'PROD',       // PRO 也合并到 PROD
+  'REPORT': 'RPT',
+  'OP': 'OPR',
+  'ORD': 'ORDER',
+  'CAT': 'PROD',       // CAT (商品目录) 合并到 PROD
+};
+
+/**
+ * 从测试用例 ID 提取功能前缀
+ * TC-PAY-001 -> PAY
+ * TC-TICKET-001 -> TKT (合并)
+ */
+function extractPrefix(tcId: string): string {
+  const match = tcId.match(/^TC-([A-Z]+)-/);
+  if (!match) return 'OTHER';
+
+  const rawPrefix = match[1];
+  // 应用别名合并
+  return PREFIX_ALIASES[rawPrefix] || rawPrefix;
+}
+
+/**
+ * 判断是否需要过滤（不展示给 QA）
+ * 过滤技术性描述：API 路径、状态码、字段名等
+ */
+function shouldFilterTestCase(tc: QaE2eTestCase): boolean {
+  const prefix = extractPrefix(tc.id);
+
+  // 前缀黑名单
+  if (FILTER_PREFIXES.includes(prefix)) {
+    return true;
+  }
+
+  // 检查 ID 是否是代码审查类
+  if (tc.id.includes('审查')) {
+    return true;
+  }
+
+  // 检查名称中的代码审查/开发术语
+  const nameText = tc.name || '';
+  for (const pattern of TECH_PATTERNS_NAME) {
+    if (pattern.test(nameText)) {
+      return true;
+    }
+  }
+
+  // 检查操作和预期中的技术性内容
+  const detailText = `${tc.operation || ''} ${tc.expected || ''}`;
+  for (const pattern of TECH_PATTERNS_DETAIL) {
+    if (pattern.test(detailText)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * 按功能分组测试用例
+ * - 遍历所有 Story 的 QA E2E Checklist
+ * - 按 TC 前缀分组
+ * - 去重合并（相同 ID 只保留一个，记录来源 Story）
+ * - 过滤技术性测试
+ */
+export function groupTestCasesByFunction(storyTestData: StoryTestData[]): FunctionGroup[] {
+  // 使用 Map 按 TC ID 去重，同时记录来源
+  const tcMap = new Map<string, {
+    tc: QaE2eTestCase;
+    sources: Set<string>;
+  }>();
+
+  // 收集所有测试用例
+  for (const story of storyTestData) {
+    for (const round of story.qaE2eChecklist.rounds) {
+      for (const tc of round.testCases) {
+        // 过滤技术性测试
+        if (shouldFilterTestCase(tc)) {
+          continue;
+        }
+
+        if (tcMap.has(tc.id)) {
+          // 已存在，添加来源
+          tcMap.get(tc.id)!.sources.add(story.storyId);
+          // 如果任一来源已 checked，则标记为 checked
+          if (tc.checked) {
+            tcMap.get(tc.id)!.tc.checked = true;
+          }
+        } else {
+          // 新增
+          tcMap.set(tc.id, {
+            tc: { ...tc },
+            sources: new Set([story.storyId])
+          });
+        }
+      }
+    }
+  }
+
+  // 按功能前缀分组
+  const groupMap = new Map<string, MergedTestCase[]>();
+
+  for (const [tcId, { tc, sources }] of tcMap) {
+    const prefix = extractPrefix(tcId);
+
+    if (!groupMap.has(prefix)) {
+      groupMap.set(prefix, []);
+    }
+
+    groupMap.get(prefix)!.push({
+      id: tc.id,
+      name: tc.name,
+      operation: tc.operation,
+      expected: tc.expected,
+      checked: tc.checked,
+      sourceStories: Array.from(sources).sort()
+    });
+  }
+
+  // 构建返回结构
+  const groups: FunctionGroup[] = [];
+
+  for (const [prefix, testCases] of groupMap) {
+    // 按 ID 排序
+    testCases.sort((a, b) => a.id.localeCompare(b.id));
+
+    const category = FUNCTION_CATEGORIES[prefix];
+    const displayName = category?.name || prefix;
+    const icon = category?.icon || '📝';
+
+    const checked = testCases.filter(tc => tc.checked).length;
+
+    groups.push({
+      category: prefix,
+      displayName,
+      icon,
+      testCases,
+      stats: {
+        total: testCases.length,
+        checked,
+        unchecked: testCases.length - checked
+      }
+    });
+  }
+
+  // 按用例数量降序排序
+  groups.sort((a, b) => b.testCases.length - a.testCases.length);
+
+  return groups;
 }

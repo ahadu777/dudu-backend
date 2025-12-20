@@ -11,7 +11,7 @@ import { loadTestCoverageData, getCoverageStats } from '../../utils/coveragePars
 import { loadAllTestCases, FeatureTestCases } from '../../utils/testCaseParser';
 import { loadPRDCoverageWithTests, PRDCoverage } from '../../utils/acParser';
 import { extractPrdTestData, PrdTestData, TestCaseDetail } from '../../utils/newmanParser';
-import { extractStoryTestData, StoryTestData, RunbookTestCase } from '../../utils/runbookParser';
+import { extractStoryTestData, StoryTestData, RunbookTestCase, groupTestCasesByFunction, FunctionGroup, MergedTestCase } from '../../utils/runbookParser';
 import { baseLayout, sharedStyles } from './templates/base';
 import { componentStyles, pageHeader } from './templates/components';
 import { projectDocsStyles } from './styles';
@@ -269,6 +269,9 @@ router.get('/coverage', (req: Request, res: Response) => {
         const storyTestData = extractStoryTestData()
           .filter(s => s.storyId !== 'Unknown');
 
+        // 按功能分组的测试数据（去重 + 过滤）
+        const functionGroups = groupTestCasesByFunction(storyTestData);
+
         // 计算总统计
         const prdStats = prdTestData.reduce((acc, prd) => ({
           total: acc.total + prd.stats.total,
@@ -276,12 +279,12 @@ router.get('/coverage', (req: Request, res: Response) => {
           failed: acc.failed + prd.stats.failed
         }), { total: 0, passed: 0, failed: 0 });
 
-        const storyStats = storyTestData.reduce((acc, story) => ({
-          total: acc.total + story.stats.total,
-          passed: acc.passed + story.stats.passed,
-          failed: acc.failed + story.stats.failed,
-          pending: acc.pending + story.stats.pending
-        }), { total: 0, passed: 0, failed: 0, pending: 0 });
+        // 按功能分组后的统计（去重后）
+        const funcStats = functionGroups.reduce((acc, group) => ({
+          total: acc.total + group.stats.total,
+          checked: acc.checked + group.stats.checked,
+          unchecked: acc.unchecked + group.stats.unchecked
+        }), { total: 0, checked: 0, unchecked: 0 });
 
         const isPrdTab = tab === 'prd';
         const isStoryTab = tab === 'story';
@@ -912,6 +915,37 @@ router.get('/coverage', (req: Request, res: Response) => {
     }
     .empty-state .icon { font-size: 4em; margin-bottom: 16px; }
 
+    /* 展开/收回按钮 */
+    .btn-outline {
+      padding: 8px 16px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9em;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .btn-outline:hover {
+      background: #f5f5f5;
+      border-color: #3498db;
+      color: #3498db;
+    }
+
+    /* 来源标签 */
+    .source-tags, .source-tag {
+      font-size: 0.75em;
+      color: #7f8c8d;
+      background: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+    .source-tags {
+      background: #e8f4f8;
+      color: #3498db;
+    }
+
     /* 响应式 */
     @media (max-width: 768px) {
       .stats-row { flex-direction: column; }
@@ -967,24 +1001,24 @@ router.get('/coverage', (req: Request, res: Response) => {
       </div>
       ` : `
       <div class="stat-card">
-        <div class="number">${storyTestData.length}</div>
-        <div class="label">Stories</div>
+        <div class="number">${functionGroups.length}</div>
+        <div class="label">功能分组</div>
       </div>
       <div class="stat-card">
-        <div class="number">${storyStats.total}</div>
-        <div class="label">Test Cases</div>
+        <div class="number">${funcStats.total}</div>
+        <div class="label">测试用例</div>
       </div>
       <div class="stat-card success">
-        <div class="number">${storyStats.passed}</div>
-        <div class="label">Checked</div>
+        <div class="number">${funcStats.checked}</div>
+        <div class="label">已完成</div>
       </div>
       <div class="stat-card warning">
-        <div class="number">${storyStats.pending}</div>
-        <div class="label">Unchecked</div>
+        <div class="number">${funcStats.unchecked}</div>
+        <div class="label">待测试</div>
       </div>
-      <div class="stat-card ${storyStats.total > 0 ? (storyStats.passed / storyStats.total * 100 >= 80 ? 'success' : 'warning') : ''}">
-        <div class="number">${storyStats.total > 0 ? ((storyStats.passed / storyStats.total * 100).toFixed(0)) : 0}%</div>
-        <div class="label">Progress</div>
+      <div class="stat-card ${funcStats.total > 0 ? (funcStats.checked / funcStats.total * 100 >= 80 ? 'success' : 'warning') : ''}">
+        <div class="number">${funcStats.total > 0 ? ((funcStats.checked / funcStats.total * 100).toFixed(0)) : 0}%</div>
+        <div class="label">完成率</div>
       </div>
       `}
     </div>
@@ -1061,51 +1095,53 @@ router.get('/coverage', (req: Request, res: Response) => {
     </div>
     `).join('') : '<div class="empty-state"><div class="icon">📭</div><p>暂无 PRD 测试数据，请先运行 Newman 测试</p></div>') : ''}
 
-    <!-- QA E2E Checklist -->
+    <!-- QA E2E Checklist - 按功能分组 -->
     ${isStoryTab ? `
-    <div class="section-header">
-      <h2>QA E2E Checklist</h2>
-      <p>Runbook E2E test scenarios defined in QA checklist format</p>
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2>QA 测试清单</h2>
+        <p>按功能分组，去重合并后的测试用例</p>
+      </div>
+      <div class="bulk-actions" style="display: flex; gap: 8px;">
+        <button id="expand-all" class="btn-outline">展开所有</button>
+        <button id="collapse-all" class="btn-outline">收回所有</button>
+      </div>
     </div>
     ` : ''}
-    ${isStoryTab ? (storyTestData.length > 0 ? storyTestData.map((story: StoryTestData, idx: number) => `
-    <div class="test-group" data-group="story-${idx}">
-      <div class="test-group-header" data-group-id="story-${idx}">
+    ${isStoryTab ? (functionGroups.length > 0 ? functionGroups.map((group: FunctionGroup, idx: number) => `
+    <div class="test-group" data-group="func-${idx}">
+      <div class="test-group-header" data-group-id="func-${idx}">
         <div class="test-group-title">
-          <span class="toggle-icon" id="icon-story-${idx}">▶</span>
-          <h3>${story.storyId} ${story.storyTitle}</h3>
+          <span class="toggle-icon" id="icon-func-${idx}">▶</span>
+          <h3>${group.icon} ${group.displayName} (${group.category})</h3>
         </div>
         <div class="test-group-meta">
-          <span class="badge badge-blue">${story.qaE2eChecklist?.stats.total || 0} test cases</span>
-          <span class="badge ${(story.qaE2eChecklist?.stats.unchecked || 0) > 0 ? 'badge-gray' : 'badge-green'}">${story.qaE2eChecklist?.stats.checked || 0}/${story.qaE2eChecklist?.stats.total || 0} checked</span>
+          <span class="badge badge-blue">${group.stats.total} 用例</span>
+          <span class="badge ${group.stats.unchecked > 0 ? 'badge-gray' : 'badge-green'}">${group.stats.checked}/${group.stats.total} 完成</span>
         </div>
       </div>
-      <div class="test-group-body" id="body-story-${idx}">
+      <div class="test-group-body" id="body-func-${idx}">
         <div class="test-cases-list">
-          ${(story.qaE2eChecklist?.rounds || []).map((round: { name: string; scenarioCount: number; testCases: Array<{ id: string; name: string; operation: string; expected: string; checked: boolean }> }) => `
-          <div class="round-section">
-            <div class="round-header"><strong>${round.name}</strong> <span class="badge badge-outline">${round.testCases.length} cases</span></div>
-            ${round.testCases.map((tc: { id: string; name: string; operation: string; expected: string; checked: boolean }) => `
-            <div class="test-case-card ${tc.checked ? 'passed' : 'pending'}">
-              <div class="tc-header">
-                <span class="tc-id">${tc.id}</span>
-                <span class="tc-name">${tc.name}</span>
-                <span class="tc-status ${tc.checked ? 'passed' : 'pending'}">${tc.checked ? 'Checked' : 'Unchecked'}</span>
-              </div>
-              ${tc.operation || tc.expected ? `
-              <div class="tc-section">
-                ${tc.operation ? `<div class="tc-detail"><strong>Operation:</strong> ${tc.operation}</div>` : ''}
-                ${tc.expected ? `<div class="tc-detail"><strong>Expected:</strong> ${tc.expected}</div>` : ''}
-              </div>
-              ` : ''}
+          ${group.testCases.map((tc: MergedTestCase) => `
+          <div class="test-case-card ${tc.checked ? 'passed' : 'pending'}">
+            <div class="tc-header">
+              <span class="tc-id">${tc.id}</span>
+              <span class="tc-name">${tc.name}</span>
+              ${tc.sourceStories.length > 1 ? `<span class="source-tags">来自: ${tc.sourceStories.join(', ')}</span>` : `<span class="source-tag">${tc.sourceStories[0]}</span>`}
+              <span class="tc-status ${tc.checked ? 'passed' : 'pending'}">${tc.checked ? '已完成' : '待测试'}</span>
             </div>
-            `).join('')}
+            ${tc.operation || tc.expected ? `
+            <div class="tc-section">
+              ${tc.operation ? `<div class="tc-detail"><strong>操作:</strong> ${tc.operation}</div>` : ''}
+              ${tc.expected ? `<div class="tc-detail"><strong>预期:</strong> ${tc.expected}</div>` : ''}
+            </div>
+            ` : ''}
           </div>
           `).join('')}
         </div>
       </div>
     </div>
-    `).join('') : '<div class="empty-state"><div class="icon">📭</div><p>No QA E2E Checklist found. Please add checklist to your Runbooks.</p></div>') : ''}
+    `).join('') : '<div class="empty-state"><div class="icon">📭</div><p>暂无 QA E2E 测试清单，请在 Runbook 中添加测试用例。</p></div>') : ''}
 
   </div>
 
@@ -1142,6 +1178,32 @@ router.get('/coverage', (req: Request, res: Response) => {
       }
 
     });
+
+    // 展开所有
+    var expandAllBtn = document.getElementById('expand-all');
+    if (expandAllBtn) {
+      expandAllBtn.addEventListener('click', function() {
+        document.querySelectorAll('.test-group-body').forEach(function(el) {
+          el.classList.add('expanded');
+        });
+        document.querySelectorAll('.toggle-icon').forEach(function(el) {
+          el.classList.add('expanded');
+        });
+      });
+    }
+
+    // 收回所有
+    var collapseAllBtn = document.getElementById('collapse-all');
+    if (collapseAllBtn) {
+      collapseAllBtn.addEventListener('click', function() {
+        document.querySelectorAll('.test-group-body').forEach(function(el) {
+          el.classList.remove('expanded');
+        });
+        document.querySelectorAll('.toggle-icon').forEach(function(el) {
+          el.classList.remove('expanded');
+        });
+      });
+    }
   </script>
 </body>
 </html>`;
