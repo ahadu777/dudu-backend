@@ -11,3 +11,4 @@ export { handleSitemap } from './sitemap';
 export { handleGraph } from './graph';
 export { handleCompliance } from './compliance';
 export { handleArchitecture } from './architecture';
+export { handleMemosList, handleMemoDetail } from './memos';

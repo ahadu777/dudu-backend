@@ -6,6 +6,7 @@ import { logger } from '../../utils/logger';
 import { markdownToHtml, renderMarkdownFile } from '../../utils/markdown';
 import { loadPRDDocuments, loadStoriesIndex } from '../../utils/prdParser';
 import { getCardStats } from '../../utils/cardParser';
+import { getMemoStats } from '../../utils/memoParser';
 import { buildSitemap } from '../../utils/sitemapBuilder';
 import { runComplianceAudit } from '../../utils/complianceAuditor';
 import { loadTestCoverageData, getCoverageStats } from '../../utils/coverageParser';
@@ -27,7 +28,9 @@ import {
   handleSitemap,
   handleGraph,
   handleCompliance,
-  handleArchitecture
+  handleArchitecture,
+  handleMemosList,
+  handleMemoDetail
 } from './handlers';
 
 // Generate detailed test cases for QA - loads from YAML files
@@ -247,6 +250,10 @@ router.get('/cards/:cardSlug', handleCardDetail);
 router.get('/stories', handleStoriesList);
 router.get('/stories/:storyId', handleStoryDetail);
 
+// ============ Memos Routes ============
+router.get('/memos', handleMemosList);
+router.get('/memos/:memoId', handleMemoDetail);
+
 // ============ Visualization Routes ============
 
 router.get('/sitemap', handleSitemap);
@@ -275,6 +282,28 @@ router.get('/evaluation', (_req: Request, res: Response) => {
     const prdStats = { total: loadPRDDocuments().length };
     const storyStats = { total: loadStoriesIndex().length };
     const cardStats = getCardStats();
+
+    // Calculate Foundation Score from existing data sources
+    const complianceResult = runComplianceAudit();
+    const complianceScore = Math.max(0, complianceResult.overall_score); // Ensure non-negative
+
+    // Test pass rate from test-coverage YAML
+    const coverageData = loadTestCoverageData();
+    const testStats = (coverageData?.coverage_summary as any)?.test_statistics || {};
+    const testPassRate = testStats.success_rate === '100%' ? 100 :
+      parseInt(testStats.success_rate || '0');
+
+    // Documentation completeness (Cards Done / Total)
+    const docsComplete = cardStats.total > 0
+      ? Math.round(((cardStats.byStatus.Done || 0) / cardStats.total) * 100)
+      : 0;
+
+    // Overall Foundation Score (weighted average)
+    const foundationScore = Math.round(
+      (complianceScore * 0.4) + (testPassRate * 0.4) + (docsComplete * 0.2)
+    );
+
+    const getBarColor = (score: number) => score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
 
     const pageStyles = `
       .eval-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -307,8 +336,32 @@ router.get('/evaluation', (_req: Request, res: Response) => {
       .action-items .priority-high { color: #e74c3c; font-weight: 500; }
       .action-items .priority-medium { color: #f39c12; }
       .action-items .priority-low { color: #27ae60; }
-      .data-source { text-align: center; margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; border: 1px dashed #3498db; }
-      .data-source code { background: #d4edda; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; }
+      .how-it-works { margin-top: 40px; background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%); border-radius: 12px; padding: 25px; border: 2px solid #3498db; }
+      .how-it-works h2 { color: #2c3e50; margin-bottom: 20px; font-size: 1.3em; }
+      .how-it-works .principle { background: #d4edda; border-left: 4px solid #27ae60; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+      .how-it-works .principle strong { color: #155724; }
+      .data-flow-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+      .data-flow-table th { background: #2c3e50; color: white; padding: 12px; text-align: left; }
+      .data-flow-table td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+      .data-flow-table tr:last-child td { border-bottom: none; }
+      .data-flow-table code { background: #e8f4f8; padding: 2px 6px; border-radius: 3px; font-size: 0.85em; color: #2c3e50; }
+      .data-flow-table .arrow { color: #3498db; font-weight: bold; }
+      .data-flow-table tr:hover { background: #f8f9fa; }
+      .foundation-score { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border-radius: 12px; padding: 30px; margin-bottom: 30px; color: white; }
+      .foundation-score h2 { margin: 0 0 20px 0; font-size: 1.3em; }
+      .score-display { display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
+      .main-score { text-align: center; min-width: 150px; }
+      .main-score .number { font-size: 4em; font-weight: 700; line-height: 1; }
+      .main-score .label { font-size: 0.9em; opacity: 0.8; margin-top: 5px; }
+      .score-breakdown { flex: 1; min-width: 300px; }
+      .score-item { display: flex; align-items: center; margin-bottom: 12px; }
+      .score-item .name { width: 140px; font-size: 0.9em; opacity: 0.9; }
+      .score-item .bar-container { flex: 1; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; margin: 0 15px; }
+      .score-item .bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+      .score-item .bar.green { background: #27ae60; }
+      .score-item .bar.yellow { background: #f39c12; }
+      .score-item .bar.red { background: #e74c3c; }
+      .score-item .value { width: 50px; text-align: right; font-weight: 600; }
     `;
 
     // Build role sections dynamically from YAML config
@@ -358,6 +411,39 @@ router.get('/evaluation', (_req: Request, res: Response) => {
           <div class="last-updated">Questions last updated: ${evalConfig.last_updated}</div>
         </div>
 
+        <div class="foundation-score">
+          <h2>📊 Foundation Score</h2>
+          <div class="score-display">
+            <div class="main-score">
+              <div class="number">${foundationScore}%</div>
+              <div class="label">Overall Health</div>
+            </div>
+            <div class="score-breakdown">
+              <div class="score-item">
+                <span class="name">Compliance</span>
+                <div class="bar-container">
+                  <div class="bar ${getBarColor(complianceScore)}" style="width: ${complianceScore}%"></div>
+                </div>
+                <span class="value">${complianceScore}%</span>
+              </div>
+              <div class="score-item">
+                <span class="name">Test Pass Rate</span>
+                <div class="bar-container">
+                  <div class="bar ${getBarColor(testPassRate)}" style="width: ${testPassRate}%"></div>
+                </div>
+                <span class="value">${testPassRate}%</span>
+              </div>
+              <div class="score-item">
+                <span class="name">Docs Complete</span>
+                <div class="bar-container">
+                  <div class="bar ${getBarColor(docsComplete)}" style="width: ${docsComplete}%"></div>
+                </div>
+                <span class="value">${docsComplete}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-value">${prdStats.total}</div>
@@ -391,9 +477,57 @@ router.get('/evaluation', (_req: Request, res: Response) => {
         </div>
         ` : ''}
 
-        <div class="data-source">
-          <strong>Zero Hardcoding:</strong> All questions loaded from <code>docs/reference/evaluation-questions.yaml</code><br>
-          Add/modify questions there → UI reflects changes automatically
+        <div class="how-it-works">
+          <h2>📐 How This Page Works</h2>
+          <div class="principle">
+            <strong>Zero Hardcoding Principle:</strong> If changing data requires changing code, it's hardcoded.
+            If data changes flow through automatically, it's data-driven. This page demonstrates the principle it evaluates.
+          </div>
+          <table class="data-flow-table">
+            <tr><th>Data Source</th><th></th><th>Parser</th><th></th><th>UI Display</th></tr>
+            <tr>
+              <td><code>docs/reference/evaluation-questions.yaml</code></td>
+              <td class="arrow">→</td>
+              <td><code>yaml.load()</code></td>
+              <td class="arrow">→</td>
+              <td>Questions by Role (above)</td>
+            </tr>
+            <tr>
+              <td><code>docs/prd/*.md</code></td>
+              <td class="arrow">→</td>
+              <td><code>loadPRDDocuments()</code></td>
+              <td class="arrow">→</td>
+              <td>PRD Count: ${prdStats.total}</td>
+            </tr>
+            <tr>
+              <td><code>docs/stories/_index.yaml</code></td>
+              <td class="arrow">→</td>
+              <td><code>loadStoriesIndex()</code></td>
+              <td class="arrow">→</td>
+              <td>Story Count: ${storyStats.total}</td>
+            </tr>
+            <tr>
+              <td><code>docs/cards/*.md</code></td>
+              <td class="arrow">→</td>
+              <td><code>getCardStats()</code></td>
+              <td class="arrow">→</td>
+              <td>Card Count: ${cardStats.total}</td>
+            </tr>
+            <tr>
+              <td><code>docs/test-coverage/_index.yaml</code></td>
+              <td class="arrow">→</td>
+              <td><code>loadTestCoverageData()</code></td>
+              <td class="arrow">→</td>
+              <td>/coverage page</td>
+            </tr>
+            <tr>
+              <td><code>postman/auto-generated/*.json</code></td>
+              <td class="arrow">→</td>
+              <td><code>extractPrdTestData()</code></td>
+              <td class="arrow">→</td>
+              <td>/test-results page</td>
+            </tr>
+          </table>
         </div>
       </div>
     `;
@@ -1373,6 +1507,7 @@ router.get('/project-docs', (_req, res) => {
     const prdStats = { total: loadPRDDocuments().length };
     const storyStats = { total: loadStoriesIndex().length };
     const cardStats = getCardStats();
+    const memoStats = getMemoStats();
     const coverageStats = getCoverageStats();
 
     // 读取规则内容（从 markdown 文件）
@@ -1446,6 +1581,7 @@ router.get('/project-docs', (_req, res) => {
 
     // 导航卡片配置
     const navCards = [
+      { href: '/memos', icon: '💡', title: 'Strategic Memos', desc: 'Synthesized thinking, value propositions, and strategic analysis', stats: `Total: ${memoStats.total} memos` },
       { href: '/prd', icon: '📋', title: 'PRD Documents', desc: 'Product Requirements Documents with detailed specifications', stats: `Total: ${prdStats.total} documents` },
       { href: '/stories', icon: '📖', title: 'User Stories', desc: 'User stories linking business requirements to technical implementation', stats: `Total: ${storyStats.total} stories` },
       { href: '/cards', icon: '🎯', title: 'Implementation Cards', desc: 'Technical implementation cards with API contracts', stats: `Total: ${cardStats.total} cards (${cardStats.byStatus.Done || 0} done)` },

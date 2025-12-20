@@ -1,5 +1,68 @@
 # AI Development Guide
 
+## CEO Context
+
+**If Jimmy (CEO/CTO) is asking questions**, read this first:
+- `docs/reference/CEO-CONTEXT.md` - His goals, philosophy, and evaluation framework
+
+Jimmy focuses on **evaluating the foundation**, not implementing features. He wants data-driven answers that hold the team accountable.
+
+---
+
+## Research Context
+
+**Full context:** `docs/reference/RESEARCH-CONTEXT.md`
+
+**Goal:** Transform scattered research into systematic business value drivers.
+
+```
+Scattered Sources          Synthesized Memos         Business Outcomes
+─────────────────          ─────────────────         ─────────────────
+ChatGPT analysis    ──┐
+Claude strategy     ──┼──▶  MEMO-001              ──▶  Investor deck
+WeChat insights     ──┤     MEMO-002              ──▶  Team alignment
+Partner feedback    ──┤     MEMO-003              ──▶  PRD → Product
+Market signals      ──┘         ↓
+                           leads_to: PRD-XXX       ──▶  Revenue
+```
+
+### Pathways to Synthesized Ideas
+
+| Pathway | Example | Capture Trigger |
+|---------|---------|-----------------|
+| Market exploration | "What should we charge?" | Deep analysis emerges |
+| Client conversation | Client asks → pricing strategy | Strategic response worth keeping |
+| Investor prep | Value proposition articulation | Pitch content crystallizes |
+| Partner negotiation | Deal structure | Terms documented |
+
+### When to Create a Memo
+
+| User says | Action |
+|-----------|--------|
+| "Save this as a memo" | Create memo from conversation content |
+| "This is worth keeping" | Prompt for memo title and tags |
+| Strategic analysis, value prop, pitch content | Suggest saving as memo |
+
+### Memo System
+
+| What | Where | Purpose |
+|------|-------|---------|
+| **Memos** | `docs/memos/` | Synthesized strategic thinking |
+| **Web UI** | `/memos` | Browse, filter by tag, share |
+| **Reference** | `docs/reference/RESEARCH-CONTEXT.md` | Full strategic framework |
+
+### Memo → PRD Connection
+
+```
+Memo (strategic thinking) → PRD (when ready to build) → Story → Card → Code
+```
+
+When a memo leads to building something:
+- PRD adds `source_memo: "MEMO-001"`
+- Memo adds `leads_to: ["PRD-010"]`
+
+---
+
 ## ⚠️ MANDATORY WORKFLOW
 
 **所有开发任务必须遵循 5 步工作流，详见 skill：**

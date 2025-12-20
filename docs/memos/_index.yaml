@@ -1,0 +1,13 @@
+# Memo Registry
+# Synthesized strategic thinking, value propositions, and market analysis
+# Each memo is presentation-ready and can evolve over time
+
+memos:
+  - id: MEMO-001
+    title: "Bank Partnership Value Proposition - Rent Payments"
+    tags: ["bank-partnership", "rewardkoi", "rent-payments", "b2b", "fintech"]
+    audience: ["investors", "partners"]
+    status: Active
+    created: "2025-12-20"
+    updated: "2025-12-20"
+    leads_to: []  # PRDs that came from this thinking
