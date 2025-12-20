@@ -14,8 +14,8 @@ unified_collection:
     PRD-003: "100% (6 tests + 负载/容错补充)"
     PRD-004: "API层 100% (3 tests + 性能测试)"
     PRD-005: "100% (6 tests + 审计/对账补充)"
-    PRD-006: "100% (23 tests - 46 assertions)"
-    PRD-007: "100% (30 tests - 62 assertions)"
+    PRD-006: "100% (53 tests - 108 assertions)"  # 含原 PRD-007 测试
+    # PRD-007: Deprecated, merged into PRD-006
     PRD-008: "100% (25 tests - 64 assertions)"
 
 # ===== PRD COVERAGE REGISTRY =====
@@ -288,7 +288,10 @@ coverage_registry:
 
   - prd_id: PRD-007
     title: "Ticket Reservation & Validation System"
-    status: "✅ Newman 100% (62/62 assertions pass)"
+    status: "⚠️ DEPRECATED - merged into PRD-006"
+    deprecated: true
+    merged_into: PRD-006
+    # 原测试状态: "✅ Newman 100% (62/62 assertions pass)"
     primary_collection: "postman/auto-generated/prd-007-reservation-validation.postman_collection.json"
     last_updated: "2025-11-27"
     test_statistics:
@@ -473,8 +476,8 @@ coverage_summary:
     PRD-003: "✅ Newman 100% (17/17 pass) - 8 requests covering operator auth, QR generation, venue scan, fraud detection"
     PRD-004: "✅ Newman 100% (12/12 pass) - 6 requests covering WeChat auth validation, JWT security, performance"
     PRD-005: "✅ Newman 100% (14/14 pass) - 6 requests covering resellers, batches, billing, inventory"
-    PRD-006: "✅ Newman 100% (46/46 pass) - 23 requests covering ticket activation, reservation calendar, operator validation"
-    PRD-007: "✅ Newman 100% (62/62 pass) - 30 requests covering customer validation, slots, reservations, operator validation"
+    PRD-006: "✅ Newman 100% (108/108 pass) - 53 requests covering ticket activation, reservation calendar, operator validation (含原 PRD-007 测试)"
+    # PRD-007: DEPRECATED - merged into PRD-006
     PRD-008: "✅ Backend 100% (64/64 pass) + Frontend E2E 100% (63/63 scenarios) - Backend: product catalog, orders, payment, ticket QR. Frontend: login, booking, payment, verification flow"
 
   coverage_gap_summary:
@@ -483,8 +486,8 @@ coverage_summary:
     PRD-003_gaps: []  # 全部测试通过，无覆盖缺口
     PRD-004_gaps: []  # 全部测试通过，无覆盖缺口
     PRD-005_gaps: []  # 全部测试通过，无覆盖缺口
-    PRD-006_gaps: []  # 全部测试通过，无覆盖缺口
-    PRD-007_gaps: []  # 全部测试通过，无覆盖缺口
+    PRD-006_gaps: []  # 全部测试通过，无覆盖缺口（含原 PRD-007）
+    # PRD-007_gaps: DEPRECATED - merged into PRD-006
     PRD-008_gaps: []  # Phase 1 全部测试通过
 
   test_statistics:

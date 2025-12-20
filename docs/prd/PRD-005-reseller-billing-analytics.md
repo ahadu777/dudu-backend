@@ -3,6 +3,7 @@
 ## Document Metadata
 ```yaml
 prd_id: "PRD-005"
+category: "channel"
 product_area: "Finance & Analytics"
 owner: "Finance Team"
 status: "Done"

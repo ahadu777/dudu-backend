@@ -6,7 +6,7 @@ status: "Draft"
 priority: High
 created_date: "2025-11-14"
 last_updated: "2025-12-17"
-business_requirement: "PRD-007"
+business_requirement: "PRD-006"  # 原 PRD-007 已合并到 PRD-006
 depends_on:
   - US-001  # 票券必须存在
   - US-004  # 支付完成后才能预约

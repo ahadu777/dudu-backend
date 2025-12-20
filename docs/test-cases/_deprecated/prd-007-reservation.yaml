@@ -1,7 +1,11 @@
+# DEPRECATED: PRD-007 已合并到 PRD-006
+# 测试用例现归属 PRD-006，运行命令: npm run test:prd 006
 prd_id: PRD-007
+status: deprecated
+merged_into: PRD-006
 feature: 预约与验票
 description: 日历时段、容量管理、预约创建、操作员验票
-test_command: npm run test:prd 007
+test_command: npm run test:prd 006  # 原 007
 
 test_cases:
   - id: TC-007-01

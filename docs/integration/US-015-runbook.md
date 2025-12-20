@@ -9,7 +9,7 @@
 | 字段 | 值 |
 |------|-----|
 | **Story** | US-015 |
-| **PRD** | PRD-007 |
+| **PRD** | PRD-006 |
 | **Status** | Done |
 | **Last Updated** | 2025-12-17 |
 | **Test Type** | API (Newman) + Manual |

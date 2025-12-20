@@ -3,6 +3,7 @@
 ## Document Metadata
 ```yaml
 prd_id: "PRD-001"
+category: "core"
 product_area: "Commerce"
 owner: "Product Manager"
 status: "Done"

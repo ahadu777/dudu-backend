@@ -312,7 +312,7 @@ stories:
     enhances: [US-001, US-002]
     enhanced_by: []
     # Business requirements
-    business_requirement: "PRD-007"
+    business_requirement: "PRD-006"  # 原 PRD-007 已合并到 PRD-006
     deadline: "2025-12-31"
     implicit_dependencies: [tickets-issuance, order-create, operators-login]
     # E2E validation assets

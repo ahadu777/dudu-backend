@@ -3,6 +3,7 @@
 ## Document Metadata
 ```yaml
 prd_id: "PRD-008"
+category: "customer"
 product_area: "B2C Direct Sales"
 owner: "Product Manager"
 status: "In Progress"
