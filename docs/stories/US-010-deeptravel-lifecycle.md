@@ -87,15 +87,16 @@ cards:
 
 ## Decomposition & Cards
 - **US-010A** 聚焦旅客闭环，囊括：
-  - travel-search-hub
-  - seat-lock-service
-  - wechat-payment-session
+  - miniprogram-product-catalog（替代 travel-search-hub）
+  - miniprogram-order（替代 seat-lock-service）
+  - wallyt-payment（替代 wechat-payment-session）
   - bundle-ticket-engine
 - **US-010B** 聚焦运营支撑，囊括：
   - admin-package-config
-  - ticket-lifecycle-daemon
   - notification-orchestrator
   - merchant-redemption-console
+  - route-schedule-management
+  - schedule-pricing-rules
 
 ## Validation evidence
 - 2025-10-28：旅客闭环集合 `reports/collections/us-010a-traveler-loop.json` pass，报告 `reports/newman/e2e.xml`

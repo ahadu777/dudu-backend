@@ -155,11 +155,9 @@ stories:
         - reports/collections/us-010b-operations-backbone.json
   - id: US-010A
     title: DeepTravel 旅客闭环体验
-    status: In Progress
+    status: Done
     cards:
-      - travel-search-hub
-      - seat-lock-service
-      - wechat-payment-session
+      # deprecated: [travel-search-hub, seat-lock-service, wechat-payment-session]
       - bundle-ticket-engine
       - route-schedule-management
       - schedule-pricing-rules
@@ -167,13 +165,12 @@ stories:
       - miniprogram-order
       - wallyt-payment
     sequence:
-      - catalog-endpoint → travel-search-hub
-      - travel-search-hub → seat-lock-service
-      - seat-lock-service → order-create
-      - order-create → bundle-ticket-engine
+      - catalog-endpoint → miniprogram-product-catalog
+      - miniprogram-product-catalog → miniprogram-order
+      - miniprogram-order → wallyt-payment
+      - wallyt-payment → payment-webhook
+      - payment-webhook → bundle-ticket-engine
       - bundle-ticket-engine → tickets-issuance
-      - order-create → wechat-payment-session
-      - wechat-payment-session → payment-webhook
     enhances: [US-001, US-003, US-004]
     # Business requirements
     business_requirement: "PRD-008"
@@ -345,6 +342,23 @@ stories:
       runbook: docs/integration/US-016-runbook.md
       newman:
         - reports/collections/us-016-activation-reservation.json
+
+  - id: US-017
+    title: 分销商账单与数据分析
+    status: Done
+    cards:
+      - ota-premade-tickets  # 批次元数据中包含分销商信息
+    # Sequence dependencies
+    sequence:
+      - ota-premade-tickets → venue-enhanced-scanning
+    # Cross-story relationships
+    enhances: [US-012, US-013]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-005"
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-017-runbook.md
 
   - id: US-018
     title: OTA Ticket PDF Export
