@@ -5,10 +5,14 @@ import {
   VerifyContactResponse,
   CreateReservationRequest,
   CreateReservationResponse,
+  ModifyReservationRequest,
+  ModifyReservationResponse,
+  CancelReservationRequest,
+  CancelReservationResponse,
   TicketReservation,
   TicketStatus,
 } from './types';
-import { ReservationSlotsServiceMock } from '../reservationSlots/service.mock';
+import { ReservationSlotServiceMock } from '../reservation-slots/service.mock';
 import { logger } from '../../utils/logger';
 
 interface MockTicket {
@@ -20,16 +24,35 @@ interface MockTicket {
   orq: number;
   customer_email?: string;
   customer_phone?: string;
+  customer_name?: string;
+}
+
+// Customer info interface for operator validation
+export interface CustomerInfo {
+  customer_name?: string;
+  customer_email?: string;
+  customer_phone?: string;
 }
 
 export class CustomerReservationServiceMock {
+  private static instance: CustomerReservationServiceMock;
   private tickets: Map<string, MockTicket> = new Map();
   private reservations: Map<string, TicketReservation> = new Map();
-  private slotsService: ReservationSlotsServiceMock;
+  private slotsService: ReservationSlotServiceMock;
 
   constructor() {
-    this.slotsService = new ReservationSlotsServiceMock();
+    this.slotsService = new ReservationSlotServiceMock();
     this.seedMockTickets();
+  }
+
+  /**
+   * Get singleton instance (for shared state with operatorValidation)
+   */
+  static getInstance(): CustomerReservationServiceMock {
+    if (!CustomerReservationServiceMock.instance) {
+      CustomerReservationServiceMock.instance = new CustomerReservationServiceMock();
+    }
+    return CustomerReservationServiceMock.instance;
   }
 
   /**
@@ -164,30 +187,8 @@ export class CustomerReservationServiceMock {
       };
     }
 
-    // Get customer info from ticket
+    // Get customer info from ticket (optional)
     const { customer_email, customer_phone } = validation.ticket;
-
-    if (!customer_email || !customer_phone) {
-      return {
-        success: false,
-        error: 'Missing customer contact information in ticket',
-      };
-    }
-
-    // Basic validation of contact info
-    if (customer_email.trim().length < 3) {
-      return {
-        success: false,
-        error: 'Valid customer email is required',
-      };
-    }
-
-    if (!/^[\d\s+\-()]+$/.test(customer_phone)) {
-      return {
-        success: false,
-        error: 'Valid phone number is required',
-      };
-    }
 
     logger.info('contact.verification.success', { ticket_code, customer_email });
 
@@ -202,7 +203,7 @@ export class CustomerReservationServiceMock {
    * Uses customer_email and customer_phone from ticket data
    */
   async createReservation(request: CreateReservationRequest): Promise<CreateReservationResponse> {
-    const { ticket_code, slot_id, orq } = request;
+    const { ticket_code, slot_id, orq, customer_name: providedName, customer_email: providedEmail, customer_phone: providedPhone } = request;
 
     try {
       // 1. Validate ticket
@@ -214,19 +215,14 @@ export class CustomerReservationServiceMock {
         };
       }
 
-      // Get customer info and orq from validated ticket
-      const { customer_email, customer_phone, orq: ticketOrq } = validation.ticket;
+      // Get customer info: use provided values or fallback to ticket values
+      const { customer_email: ticketEmail, customer_phone: ticketPhone, orq: ticketOrq } = validation.ticket;
+      const customer_email = providedEmail || ticketEmail || '';
+      const customer_phone = providedPhone || ticketPhone || '';
       const reservationOrq = ticketOrq || 1; // Default to 1 if not available
 
-      if (!customer_email || !customer_phone) {
-        return {
-          success: false,
-          error: 'Missing customer contact information in ticket',
-        };
-      }
-
       // 2. Get slot details
-      const slot = await this.slotsService.getSlotById(parseInt(slot_id));
+      const slot = await this.slotsService.getSlotById(slot_id);
       if (!slot) {
         return {
           success: false,
@@ -273,7 +269,7 @@ export class CustomerReservationServiceMock {
       this.reservations.set(reservationId, reservation);
 
       // 6. Increment slot booked count
-      await this.slotsService.incrementBookedCount(parseInt(slot_id));
+      await this.slotsService.incrementBookedCount(slot_id);
 
       // 7. Update ticket status to RESERVED
       const ticket = this.tickets.get(ticket_code);
@@ -319,6 +315,131 @@ export class CustomerReservationServiceMock {
   async getReservationByTicket(ticketNumber: string): Promise<TicketReservation | null> {
     const reservation = Array.from(this.reservations.values()).find(
       r => r.ticket_code === ticketNumber && r.status === 'RESERVED'
+    );
+    return reservation || null;
+  }
+
+  /**
+   * Modify existing reservation (change slot)
+   */
+  async modifyReservation(request: ModifyReservationRequest): Promise<ModifyReservationResponse> {
+    const { reservation_id, new_slot_id } = request;
+
+    logger.info('reservation.modify.start', { reservation_id, new_slot_id });
+
+    // Find reservation
+    const reservation = this.reservations.get(reservation_id);
+    if (!reservation) {
+      return { success: false, error: 'Reservation not found' };
+    }
+
+    if (reservation.status === 'VERIFIED') {
+      return { success: false, error: 'Cannot modify verified reservation' };
+    }
+
+    // Get old and new slots
+    const oldSlot = await this.slotsService.getSlotById(reservation.slot_id);
+    const newSlot = await this.slotsService.getSlotById(new_slot_id);
+
+    if (!newSlot) {
+      return { success: false, error: 'New slot not found' };
+    }
+
+    if (newSlot.booked_count >= newSlot.total_capacity) {
+      return { success: false, error: 'New slot is full' };
+    }
+
+    // Update counts
+    if (oldSlot) {
+      await this.slotsService.decrementBookedCount(reservation.slot_id);
+    }
+    await this.slotsService.incrementBookedCount(new_slot_id);
+
+    // Update reservation
+    reservation.slot_id = new_slot_id;
+    reservation.updated_at = new Date().toISOString();
+
+    logger.info('reservation.modify.success', { reservation_id, new_slot_id });
+
+    return {
+      success: true,
+      data: {
+        reservation_id,
+        ticket_code: reservation.ticket_code,
+        new_slot_id,
+        new_slot_date: newSlot.date,
+        new_slot_time: `${newSlot.start_time} - ${newSlot.end_time}`,
+        updated_at: reservation.updated_at
+      }
+    };
+  }
+
+  /**
+   * Cancel reservation
+   */
+  async cancelReservation(request: CancelReservationRequest): Promise<CancelReservationResponse> {
+    const { reservation_id } = request;
+
+    logger.info('reservation.cancel.start', { reservation_id });
+
+    // Find reservation
+    const reservation = this.reservations.get(reservation_id);
+    if (!reservation) {
+      return { success: false, error: 'Reservation not found' };
+    }
+
+    if (reservation.status === 'VERIFIED') {
+      return { success: false, error: 'Cannot cancel verified reservation' };
+    }
+
+    // Decrement slot booked count
+    await this.slotsService.decrementBookedCount(reservation.slot_id);
+
+    // Update reservation status
+    reservation.status = 'CANCELLED';
+    reservation.updated_at = new Date().toISOString();
+
+    // Update ticket status back to ACTIVATED
+    const ticket = this.tickets.get(reservation.ticket_code);
+    if (ticket) {
+      ticket.status = 'ACTIVATED';
+    }
+
+    logger.info('reservation.cancel.success', { reservation_id });
+
+    return {
+      success: true,
+      message: 'Reservation cancelled successfully',
+      data: {
+        reservation_id,
+        ticket_status: 'ACTIVATED',
+        cancelled_at: new Date().toISOString()
+      }
+    };
+  }
+
+  /**
+   * Get customer info by ticket code (for operator validation)
+   */
+  async getCustomerInfo(ticketCode: string): Promise<CustomerInfo> {
+    const ticket = this.tickets.get(ticketCode);
+    if (!ticket) {
+      return {};
+    }
+
+    return {
+      customer_name: ticket.customer_name,
+      customer_email: ticket.customer_email,
+      customer_phone: ticket.customer_phone,
+    };
+  }
+
+  /**
+   * Get reservation by ticket code (for operator validation)
+   */
+  async getReservationByTicketCode(ticketCode: string): Promise<TicketReservation | null> {
+    const reservation = Array.from(this.reservations.values()).find(
+      r => r.ticket_code === ticketCode && r.status !== 'CANCELLED'
     );
     return reservation || null;
   }

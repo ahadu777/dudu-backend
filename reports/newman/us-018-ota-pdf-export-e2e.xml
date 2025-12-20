@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="US-018: OTA Ticket PDF Export" tests="7" time="6.314">
+  <testsuite name="Setup: Generate Test Tickets" id="b84f8d9b-0b7e-4c8d-baed-46be6a6c3eeb" timestamp="2025-12-18T16:50:42.261Z" tests="2" failures="0" errors="0" time="4.607">
+    <testcase name="Status code is 201" time="4.607" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Response has batch_id and tickets" time="4.607" classname="Us018OtaTicketPdfExport"/>
+  </testsuite>
+  <testsuite name="1.1 Single Ticket PDF - Success" id="d17dfc4d-807f-4fb2-b5c4-03370dbb3036" timestamp="2025-12-18T16:50:42.261Z" tests="4" failures="0" errors="0" time="0.388">
+    <testcase name="Status code is 200" time="0.388" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Content-Type is application/pdf" time="0.388" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Content-Disposition header exists" time="0.388" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Response body is not empty" time="0.388" classname="Us018OtaTicketPdfExport"/>
+  </testsuite>
+  <testsuite name="1.2 Single Ticket PDF - Not Found (404)" id="5ec5db70-262b-4f74-a0b3-fc0495070935" timestamp="2025-12-18T16:50:42.261Z" tests="2" failures="0" errors="0" time="0.328">
+    <testcase name="Status code is 404" time="0.328" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Response has error code TICKET_NOT_FOUND" time="0.328" classname="Us018OtaTicketPdfExport"/>
+  </testsuite>
+  <testsuite name="1.3 Single Ticket PDF - No API Key (401)" id="f4232ca8-e8d0-4278-a227-15562c10d674" timestamp="2025-12-18T16:50:42.261Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 401" time="0.002" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Response has error" time="0.002" classname="Us018OtaTicketPdfExport"/>
+  </testsuite>
+  <testsuite name="2.1 Batch PDF - Success" id="eb9d8dd3-7602-4892-a97f-e7058972a2f3" timestamp="2025-12-18T16:50:42.261Z" tests="4" failures="0" errors="0" time="0.674">
+    <testcase name="Status code is 200" time="0.674" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Content-Type is application/pdf" time="0.674" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Content-Disposition header exists" time="0.674" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Response body is not empty (batch PDF)" time="0.674" classname="Us018OtaTicketPdfExport"/>
+  </testsuite>
+  <testsuite name="2.2 Batch PDF - Not Found (404)" id="178edd25-80f8-4b1b-abdd-31946377b711" timestamp="2025-12-18T16:50:42.261Z" tests="2" failures="0" errors="0" time="0.314">
+    <testcase name="Status code is 404" time="0.314" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Response has error code BATCH_NOT_FOUND" time="0.314" classname="Us018OtaTicketPdfExport"/>
+  </testsuite>
+  <testsuite name="2.3 Batch PDF - No API Key (401)" id="b3ec666b-eb5c-451a-b64b-5be3ba0e9d50" timestamp="2025-12-18T16:50:42.261Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 401" time="0.001" classname="Us018OtaTicketPdfExport"/>
+    <testcase name="Response has error" time="0.001" classname="Us018OtaTicketPdfExport"/>
+  </testsuite>
+</testsuites>

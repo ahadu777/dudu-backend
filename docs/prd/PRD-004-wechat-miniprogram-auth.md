@@ -3,6 +3,7 @@
 ## 元数据
 ```yaml
 prd_id: "PRD-004"
+category: "platform"
 product_area: "Identity & Access"
 owner: "Product Manager"
 status: "Done"

@@ -2497,6 +2497,212 @@
         }
       }
     },
+    "/api/ota/tickets/{code}/pdf": {
+      "get": {
+        "tags": [
+          "OTA Integration"
+        ],
+        "summary": "Export ticket as PDF",
+        "description": "Generates a PDF document for a single ticket containing title, ticket code, and QR code",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ticket code",
+            "example": "DT-ABC123XYZ"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF generated successfully",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "attachment; filename=\"DT-ABC123XYZ.pdf\""
+              }
+            }
+          },
+          "401": {
+            "description": "API key required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "API_KEY_REQUIRED"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized - ticket not owned by partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Ticket does not belong to this partner"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "TICKET_NOT_FOUND"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Ticket not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ota/batches/{id}/pdf": {
+      "get": {
+        "tags": [
+          "OTA Integration"
+        ],
+        "summary": "Export all tickets in a batch as a single PDF",
+        "description": "Generates a PDF document containing all tickets in a batch, one ticket per page",
+        "security": [
+          {
+            "otaApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Batch ID",
+            "example": "BATCH-20251218-partner-ABC123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF generated successfully",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "attachment; filename=\"BATCH-20251218-partner-ABC123.pdf\""
+              }
+            }
+          },
+          "401": {
+            "description": "API key required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "API_KEY_REQUIRED"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized - batch not owned by partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "UNAUTHORIZED"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Batch does not belong to this partner"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Batch not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "BATCH_NOT_FOUND"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Batch not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ota/orders": {
       "get": {
         "tags": [

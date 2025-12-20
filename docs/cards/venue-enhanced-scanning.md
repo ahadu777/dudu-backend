@@ -429,3 +429,25 @@ router.post('/scan', ...)        // Maps to: POST /venue/scan ✅
 - In-memory operations for development
 - Same business logic validation
 - Performance testing capabilities
+
+## Acceptance
+
+### AC-1: 扫码验票
+**Given** 操作员在场馆终端
+**When** POST /venue/scan 带有有效 QR 码
+**Then** 返回 success 结果，显示票券信息
+
+### AC-2: 验证功能码
+**Given** QR 码解密成功
+**When** 验证 function_code 与票券权益
+**Then** 功能码存在于票券 entitlements 中
+
+### AC-3: 成功入场
+**Given** 票券有效且功能码匹配
+**When** 核销操作完成
+**Then** remaining_uses 减 1，记录 redemption_event
+
+### AC-4: 阻止重复使用
+**Given** JTI 已在数据库中记录（同一功能码）
+**When** POST /venue/scan 使用相同 QR 码和功能码
+**Then** 返回 reject，reason 为 ALREADY_REDEEMED

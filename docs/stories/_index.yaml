@@ -133,17 +133,14 @@ stories:
     title: DeepTravel 小程序全链路购票与核销体验
     status: Draft
     cards:
-      - travel-search-hub
-      - seat-lock-service
-      - wechat-payment-session
       - bundle-ticket-engine
-      - ticket-lifecycle-daemon
       - merchant-redemption-console
       - admin-package-config
       - notification-orchestrator
       - route-schedule-management
       - schedule-pricing-rules
       - wallyt-payment
+    # deprecated: [travel-search-hub, seat-lock-service, wechat-payment-session, ticket-lifecycle-daemon]
     decomposed_into:
       - US-010A
       - US-010B
@@ -190,16 +187,13 @@ stories:
     status: Draft
     cards:
       - admin-package-config
-      - ticket-lifecycle-daemon
       - notification-orchestrator
       - merchant-redemption-console
       - route-schedule-management
       - schedule-pricing-rules
+    # deprecated: [ticket-lifecycle-daemon]
     sequence:
-      - admin-package-config → ticket-lifecycle-daemon
       - admin-package-config → merchant-redemption-console
-      - tickets-issuance → ticket-lifecycle-daemon
-      - ticket-lifecycle-daemon → notification-orchestrator
       - refund-processing → notification-orchestrator
       - "[operators-login] → merchant-redemption-console"
     enhances: [US-002, US-005, US-006, US-007]
@@ -228,17 +222,14 @@ stories:
     title: OTA Platform Integration for Bulk Ticket Reservation
     status: Done
     cards:
-      - ota-channel-management
       - ota-premade-tickets
       - ota-reservation-management
       - ota-order-retrieval
-      - ota-reseller-management
       - qr-generation-api
       - venue-enhanced-scanning
+    # deprecated: [ota-channel-management, ota-reseller-management]
     # Sequence dependencies
     sequence:
-      - ota-channel-management → ota-premade-tickets
-      - ota-channel-management → ota-reservation-management
       - ota-premade-tickets → qr-generation-api
       - qr-generation-api → ota-order-retrieval
     # Cross-story relationships
@@ -321,7 +312,7 @@ stories:
     enhances: [US-001, US-002]
     enhanced_by: []
     # Business requirements
-    business_requirement: "PRD-007"
+    business_requirement: "PRD-006"  # 原 PRD-007 已合并到 PRD-006
     deadline: "2025-12-31"
     implicit_dependencies: [tickets-issuance, order-create, operators-login]
     # E2E validation assets
@@ -336,7 +327,7 @@ stories:
       - reservation-slot-management
       - customer-reservation-portal
       - operator-validation-scanner
-      - ticket-lifecycle-daemon
+    # deprecated: [ticket-lifecycle-daemon]
     # Sequence dependencies
     sequence:
       - tickets-issuance → ticket-activation
@@ -355,3 +346,21 @@ stories:
       newman:
         - reports/collections/us-016-activation-reservation.json
 
+  - id: US-018
+    title: OTA Ticket PDF Export
+    status: Done
+    cards:
+      - ota-pdf-export
+    # Sequence dependencies
+    sequence:
+      - ota-premade-tickets → ota-pdf-export
+    # Cross-story relationships
+    enhances: [US-012]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-002"
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-018-runbook.md
+      newman:
+        - postman/auto-generated/us-018-ota-pdf-export.postman_collection.json

@@ -232,3 +232,65 @@ POST /orders
 // Result: Adult $888 × 2 + Plan C $400 = $2,176 total
 // Tickets: vip_ferry (2), monchhichi_gift_x2 (2), playground_tokens (20), tea_set (1) entitlements
 ```
+
+## Acceptance — Given / When / Then
+
+### 正常流程
+
+#### AC-1: 创建基础订单
+- **Given** 产品 101 存在且 status='active'，库存充足
+- **When** `POST /orders` `{ items: [{product_id: 101, qty: 1}], channel_id: 1, out_trade_no: "unique-123" }`
+- **Then** 返回 200/201，`{ order_id: N, status: "PENDING" | "CREATED" }`
+- **And** `products.reserved` 增加 1
+
+#### AC-2: 创建复杂定价订单
+- **Given** 产品 107 支持复杂定价
+- **When** `POST /orders` 包含 `pricing_context: { booking_dates, customer_breakdown, addons }`
+- **Then** 返回 200，包含 `amounts: { subtotal, addons_total, total }` 和 `pricing_breakdown`
+- **And** 金额按照客户类型和日期正确计算
+
+#### AC-3: 幂等性 - 相同 out_trade_no
+- **Given** 已存在 out_trade_no="order-abc" 的订单
+- **When** `POST /orders` 使用相同 out_trade_no
+- **Then** 返回相同的 order_id（不创建新订单）
+- **Or** 返回 409 Conflict
+
+### 异常流程
+
+#### AC-4: 产品不存在
+- **Given** 产品 ID 99999 不存在
+- **When** `POST /orders` `{ items: [{product_id: 99999, qty: 1}] }`
+- **Then** 返回 400/404，`{ error: "PRODUCT_NOT_FOUND" }`
+
+#### AC-5: 产品已下架
+- **Given** 产品 102 存在但 status='inactive'
+- **When** `POST /orders` `{ items: [{product_id: 102, qty: 1}] }`
+- **Then** 返回 400，`{ error: "PRODUCT_UNAVAILABLE" }`
+
+#### AC-6: 库存不足
+- **Given** 产品 101 可用库存 = 0
+- **When** `POST /orders` `{ items: [{product_id: 101, qty: 1}] }`
+- **Then** 返回 400/409，`{ error: "INSUFFICIENT_INVENTORY" }`
+- **And** 不预留库存
+
+#### AC-7: 缺少必填字段
+- **Given** 请求缺少 items 或 channel_id
+- **When** `POST /orders`
+- **Then** 返回 400，`{ error: "VALIDATION_ERROR", details: [...] }`
+
+### 边界情况
+
+#### AC-8: 空 items 数组
+- **Given** `items: []`
+- **When** `POST /orders`
+- **Then** 返回 400，`{ error: "EMPTY_ORDER" }`
+
+#### AC-9: 并发创建相同订单
+- **Given** 两个请求同时提交相同 out_trade_no
+- **When** 并发 `POST /orders`
+- **Then** 只有一个成功创建订单，另一个返回已存在的订单或 409
+
+#### AC-10: 大量商品订单
+- **Given** items 包含 50 个不同商品
+- **When** `POST /orders`
+- **Then** 成功创建订单，所有商品库存正确预留

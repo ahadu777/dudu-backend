@@ -1,7 +1,7 @@
 # Ticket Reservation System - Implementation Progress
 
 **Last Updated:** 2025-11-25
-**Project:** PRD-006 (Ticket Activation) + PRD-007 (Reservation Validation)
+**Project:** PRD-006 (Ticket Activation & Reservation)
 **Stories:** US-015 (Operator Validation) + US-016 (Ticket Activation)
 
 ---
@@ -254,8 +254,8 @@ class CustomerReservationServiceEnhanced {
 - [Implementation Decisions](implementation-decisions-reservation-system.md) - Q&A + 60+ test scenarios
 
 ### PRDs & Stories
-- [PRD-006](prd/PRD-006-ticket-activation-reservation.md) - Ticket Activation
-- [PRD-007](prd/PRD-007-ticket-reservation-validation.md) - Reservation Validation
+- [PRD-006](prd/PRD-006-ticket-activation-reservation.md) - Ticket Activation & Reservation
+- ~~PRD-007~~ - 已合并到 PRD-006，见 `_deprecated/`
 - [US-015](stories/US-015-operator-reservation-validation.md) - Operator Validation
 - [US-016](stories/US-016-ticket-activation-reservation.md) - Ticket Activation
 

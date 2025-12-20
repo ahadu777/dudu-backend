@@ -1,163 +1,229 @@
-# US-004 — Payment notify → issue tickets (sync)
+# US-004: Payment Notify & Ticket Issuance Runbook
 
-Synchronous ticket issuance: Payment webhook receives notification → Immediately issues tickets
+支付通知与票券发放完整测试：创建订单 → 支付通知 → 票券发放 → 幂等性验证
 
-## Prerequisites
-- **Base URL**: `http://localhost:8080`
-- **Existing order**: Use US-001 steps 1-2 or create manually
-- **Server running**: `npm run build && PORT=8080 npm start`
+---
 
-## Step-by-Step Flow
+## 📋 Metadata
 
-### 1. Create Order (if needed)
-Create a pending order for ticket issuance:
-```bash
-curl -s -X POST http://localhost:8080/orders \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "items": [{"product_id": 101, "qty": 1}],
-    "channel_id": 1,
-    "out_trade_no": "payment-test-$(date +%s)"
-  }' | jq '.'
+| 字段 | 值 |
+|------|-----|
+| **Story** | US-004 |
+| **PRD** | PRD-001 |
+| **Status** | Done |
+| **Last Updated** | 2025-12-17 |
+| **Test Type** | API (Newman) + Manual |
+| **Automation** | ✅ 全自动化 |
+
+### 关联测试资产
+
+| 资产类型 | 路径/命令 |
+|---------|----------|
+| Newman Collection | `postman/auto-generated/us-004-*.json` |
+| Newman Command | `npm run test:story 004` |
+| Related Cards | `payment-webhook`, `ticket-issuance` |
+
+---
+
+## 🎯 Business Context
+
+### 用户旅程
+
+```
+用户下单
+  → 跳转支付
+  → 支付成功
+  → 支付网关回调
+  → 系统发放票券
+  → 用户可查看票券
 ```
 
-**Expected**: Order with status "PENDING"
+### 测试目标
 
-### 2. Payment Success Notification
-Simulate payment gateway webhook:
-```bash
-# Replace <ORDER_ID> with actual order_id from step 1
-curl -s -X POST http://localhost:8080/payments/notify \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "gateway": "mock",
-    "gateway_txn_id": "tx-payment-$(date +%s)",
-    "order_id": <ORDER_ID>,
-    "status": "SUCCESS",
-    "hmac": "FAKE"
-  }' | jq '.'
-```
+- [ ] 验证支付通知处理
+- [ ] 验证票券同步发放
+- [ ] 验证支付失败处理
+- [ ] 验证幂等性（重复通知）
 
-**Expected**:
-- Order status changes to "PAID"
-- Tickets issued immediately (synchronous)
-- Response includes ticket information
+---
 
-### 3. Verify Ticket Issuance
-Check that tickets were created:
-```bash
-curl -s -H "Authorization: Bearer user123" \
-  http://localhost:8080/my/tickets | jq '.'
-```
+## 🔧 Prerequisites
 
-**Expected**: New tickets appear with proper entitlements
+| 项目 | 值 | 说明 |
+|------|-----|------|
+| **Base URL** | `http://localhost:8080` | 本地开发环境 |
+| **支付网关** | `mock` | 测试用模拟网关 |
+| **用户 Token** | `user123` | 查看票券用 |
 
-### 4. Payment Failure Notification
-Test payment failure scenario:
-```bash
-# Create another order first
-FAIL_ORDER=$(curl -s -X POST http://localhost:8080/orders -H 'Content-Type: application/json' -d '{"items":[{"product_id":101,"qty":1}],"channel_id":1,"out_trade_no":"fail-test-'$(date +%s)'"}' | jq -r '.order_id')
+---
 
-# Send failure notification
-curl -s -X POST http://localhost:8080/payments/notify \
-  -H 'Content-Type: application/json' \
-  -d "{
-    \"gateway\": \"mock\",
-    \"gateway_txn_id\": \"tx-fail-$(date +%s)\",
-    \"order_id\": $FAIL_ORDER,
-    \"status\": \"FAILED\",
-    \"hmac\": \"FAKE\"
-  }" | jq '.'
-```
+## 🧪 Test Scenarios
 
-**Expected**: Order remains "PENDING", no tickets issued
+### Module 1: 订单创建
 
-### 5. Idempotency Test
-Send duplicate payment notification:
-```bash
-# Replay the same successful payment
-curl -s -X POST http://localhost:8080/payments/notify \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "gateway": "mock",
-    "gateway_txn_id": "DUPLICATE_TXN_ID",
-    "order_id": <ORDER_ID>,
-    "status": "SUCCESS",
-    "hmac": "FAKE"
-  }' | jq '.'
-```
+**Related Card**: `order-create`
+**Coverage**: 2/2 ACs (100%)
 
-**Expected**: No duplicate tickets created, proper idempotency response
+#### TC-PAY-001: 创建待支付订单
 
-## Complete Payment Flow Example
-```bash
-export BASE=http://localhost:8080
+**AC Reference**: `order-create.AC-1`
 
-# Step 1: Create order
-echo "=== Creating Order ==="
-ORDER_RESP=$(curl -s -X POST $BASE/orders -H 'Content-Type: application/json' -d '{"items":[{"product_id":101,"qty":1}],"channel_id":1,"out_trade_no":"payment-demo-'$(date +%s)'"}')
-ORDER_ID=$(echo $ORDER_RESP | jq -r '.order_id')
-echo "Order created: $ORDER_ID"
-echo "Initial status: $(echo $ORDER_RESP | jq -r '.status')"
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 有效商品和数量 | POST /orders | 返回 200，订单状态 PENDING |
 
-# Step 2: Check tickets before payment
-echo "=== Tickets Before Payment ==="
-BEFORE_COUNT=$(curl -s -H "Authorization: Bearer user123" $BASE/my/tickets | jq '.tickets | length')
-echo "Ticket count before: $BEFORE_COUNT"
+**验证点**:
+- [ ] 返回状态码 200
+- [ ] 返回 order_id
+- [ ] status = PENDING
+- [ ] 包含 out_trade_no
 
-# Step 3: Payment notification
-echo "=== Processing Payment ==="
-PAYMENT_RESP=$(curl -s -X POST $BASE/payments/notify -H 'Content-Type: application/json' -d "{\"gateway\":\"mock\",\"gateway_txn_id\":\"tx-$(date +%s)\",\"order_id\":$ORDER_ID,\"status\":\"SUCCESS\",\"hmac\":\"FAKE\"}")
-echo "Payment response:"
-echo $PAYMENT_RESP | jq '.'
+---
 
-# Step 4: Verify ticket issuance
-echo "=== Tickets After Payment ==="
-AFTER_RESP=$(curl -s -H "Authorization: Bearer user123" $BASE/my/tickets)
-AFTER_COUNT=$(echo $AFTER_RESP | jq '.tickets | length')
-echo "Ticket count after: $AFTER_COUNT"
-echo "New tickets:"
-echo $AFTER_RESP | jq '.tickets[] | select(.order_id == '$ORDER_ID') | {ticket_code, product_name, status}'
+#### TC-PAY-002: 订单包含商品明细
 
-# Step 5: Verify order status
-echo "=== Final Order Status ==="
-# Note: Would need order lookup endpoint to verify, or check through admin interface
-echo "Order $ORDER_ID should now be PAID status"
-```
+**AC Reference**: `order-create.AC-2`
 
-## Webhook Integration for Gateways
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 多个商品项 | POST /orders | 返回订单含全部商品 |
 
-### Stripe Webhook Example
-```bash
-# Simulating Stripe webhook format
-curl -s -X POST http://localhost:8080/payments/notify \
-  -H 'Content-Type: application/json' \
-  -H 'Stripe-Signature: t=...' \
-  -d '{
-    "gateway": "stripe",
-    "gateway_txn_id": "pi_1ABC123stripe",
-    "order_id": <ORDER_ID>,
-    "status": "SUCCESS",
-    "amount": 2500,
-    "currency": "SGD",
-    "hmac": "stripe_signature_hash"
-  }' | jq '.'
-```
+**验证点**:
+- [ ] items 包含所有商品
+- [ ] 金额计算正确
 
-### PayPal Webhook Example
-```bash
-# Simulating PayPal IPN format
-curl -s -X POST http://localhost:8080/payments/notify \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "gateway": "paypal",
-    "gateway_txn_id": "1234567890ABCDEF",
-    "order_id": <ORDER_ID>,
-    "status": "SUCCESS",
-    "payer_email": "buyer@example.com",
-    "hmac": "paypal_verification_hash"
-  }' | jq '.'
-```
+---
+
+### Module 2: 支付通知处理
+
+**Related Card**: `payment-webhook`
+**Coverage**: 4/4 ACs (100%)
+
+#### TC-PAY-003: 支付成功通知
+
+**AC Reference**: `payment-webhook.AC-1`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 待支付订单存在 | POST /payments/notify (SUCCESS) | 订单变为 PAID，票券发放 |
+
+**验证点**:
+- [ ] 返回 status = processed
+- [ ] order_status = PAID
+- [ ] tickets_issued 数组不为空
+- [ ] 票券包含 ticket_code
+
+---
+
+#### TC-PAY-004: 支付失败通知
+
+**AC Reference**: `payment-webhook.AC-2`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 待支付订单存在 | POST /payments/notify (FAILED) | 订单保持 PENDING，无票券 |
+
+**验证点**:
+- [ ] 返回 status = failed
+- [ ] order_status = PENDING
+- [ ] 无票券发放
+
+---
+
+#### TC-PAY-005: 幂等性 - 重复通知
+
+**AC Reference**: `payment-webhook.AC-3`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 已处理的支付通知 | POST /payments/notify (相同 txn_id) | 返回 200，不重复发票 |
+
+**验证点**:
+- [ ] 返回状态码 200
+- [ ] 不创建重复票券
+- [ ] 幂等响应
+
+---
+
+#### TC-PAY-006: 无效订单 ID
+
+**AC Reference**: `payment-webhook.AC-4`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 不存在的 order_id | POST /payments/notify | 返回 404 |
+
+**验证点**:
+- [ ] 返回状态码 404
+- [ ] 提示订单不存在
+
+---
+
+### Module 3: 票券发放验证
+
+**Related Card**: `ticket-issuance`
+**Coverage**: 3/3 ACs (100%)
+
+#### TC-PAY-007: 票券同步发放
+
+**AC Reference**: `ticket-issuance.AC-1`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 支付成功通知 | 检查 /my/tickets | 新票券立即可见 |
+
+**验证点**:
+- [ ] 票券在响应中立即返回
+- [ ] 票券状态 = ACTIVE
+- [ ] 包含正确的权益信息
+
+---
+
+#### TC-PAY-008: 票券关联订单
+
+**AC Reference**: `ticket-issuance.AC-2`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 已发放票券 | 查询票券详情 | 包含 order_id |
+
+**验证点**:
+- [ ] ticket.order_id = 原订单 ID
+- [ ] 可追溯到原始订单
+
+---
+
+#### TC-PAY-009: 原子性 - 失败回滚
+
+**AC Reference**: `ticket-issuance.AC-3`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 发票过程中出错 | 系统异常 | 订单和票券都回滚 |
+
+**验证点**:
+- [ ] 无部分发放
+- [ ] 订单状态不变
+- [ ] 可重试处理
+
+---
+
+## 📊 Summary
+
+| Module | Test Cases | Status |
+|--------|-----------|--------|
+| 订单创建 | 2 | pending |
+| 支付通知处理 | 4 | pending |
+| 票券发放验证 | 3 | pending |
+| **Total** | **9** | **0/9 通过** |
+
+---
+
+## 🔗 Related Documentation
+
+- [payment-webhook](../cards/payment-webhook.md)
+- [ticket-issuance](../cards/ticket-issuance.md)
+- [order-create](../cards/order-create.md)
 
 ## Expected Response Formats
 
@@ -173,8 +239,7 @@ curl -s -X POST http://localhost:8080/payments/notify \
       "product_id": 101,
       "product_name": "3-in-1 Transport Pass"
     }
-  ],
-  "message": "Payment processed and tickets issued"
+  ]
 }
 ```
 
@@ -184,31 +249,71 @@ curl -s -X POST http://localhost:8080/payments/notify \
   "status": "failed",
   "order_id": 12345,
   "order_status": "PENDING",
-  "error": "Payment failed",
-  "message": "Order remains pending"
+  "error": "Payment failed"
 }
 ```
 
-## Expected Results
-- ✅ **Synchronous processing**: Tickets issued immediately on SUCCESS
-- ✅ **Status updates**: Order status correctly updated
-- ✅ **Failure handling**: Failed payments don't create tickets
-- ✅ **Idempotency**: Duplicate notifications handled properly
-- ✅ **Atomic operation**: Either complete success or complete rollback
+---
 
-## Error Scenarios
-| Scenario | Expected Response |
-|----------|-------------------|
-| Invalid order_id | `404 Not Found` |
-| Already processed | `200 OK` (idempotent) |
-| Invalid gateway | `400 Bad Request` |
-| Missing HMAC | `401 Unauthorized` |
-| System error | `500` with rollback |
+## 🧪 QA E2E Checklist
 
-## Integration Notes
-- **Synchronous**: Tickets issued in same request cycle
-- **Atomic**: Database transactions ensure consistency
-- **Webhook security**: HMAC validation for production
-- **Gateway agnostic**: Supports multiple payment providers
-- **Error recovery**: Failed webhooks can be replayed
-- **Monitoring**: All payment events logged for audit
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (5 scenarios)
+
+- [ ] **TC-ORDER-101**: 创建待支付订单
+  - 操作: 用户选择商品 (product_id=101, qty=1) → 调用 POST /orders
+  - **Expected**: 返回 200，订单创建成功，status = PENDING，包含 order_id 和 out_trade_no
+
+- [ ] **TC-PAY-101**: 支付成功通知处理
+  - 操作: 订单创建成功 → 支付网关发送成功通知 → 调用 POST /payments/notify (SUCCESS)
+  - **Expected**: 返回 status = processed，order_status = PAID，tickets_issued 数组不为空
+
+- [ ] **TC-PAY-102**: 票券同步发放
+  - 操作: 支付成功后 → 立即查询 GET /my/tickets
+  - **Expected**: 新票券立即可见，status = ACTIVE，包含正确的权益信息，可追溯到原始订单 ID
+
+- [ ] **TC-PAY-103**: 库存扣减一次
+  - 操作: 支付成功 → 检查库存表
+  - **Expected**: 商品库存减 1，且只扣减一次
+
+- [ ] **TC-PAY-104**: 核销记录可追溯
+  - 操作: 支付成功并出票 → 查询票券详情
+  - **Expected**: 票券包含 order_id，可追溯到原始订单
+
+### Round 2: 异常场景 (4 scenarios)
+
+- [ ] **TC-PAY-201**: 支付失败通知处理
+  - 操作: 订单创建成功 → 支付网关发送失败通知 → 调用 POST /payments/notify (FAILED)
+  - **Expected**: 返回 status = failed，order_status = PENDING，无票券发放
+
+- [ ] **TC-PAY-202**: 重复支付通知幂等性
+  - 操作: 已处理的支付通知 → 再次发送相同 gateway_txn_id 的通知
+  - **Expected**: 返回 200，不创建重复票券，库存不重复扣减，幂等响应
+
+- [ ] **TC-PAY-203**: 无效订单 ID 被拒绝
+  - 操作: 使用不存在的 order_id → 调用 POST /payments/notify
+  - **Expected**: 返回 404，提示订单不存在
+
+- [ ] **TC-PAY-204**: 数据冲突检测
+  - 操作: 同一 gateway_txn_id 对应不同订单或金额 → 发送支付通知
+  - **Expected**: 系统拒绝处理并标记为冲突，返回错误
+
+### Round 3: 边界测试 (2 scenarios)
+
+- [ ] **TC-PAY-301**: 原子性 - 出票失败回滚
+  - 操作: 模拟出票过程中异常（如数据库连接失败）
+  - **Expected**: 订单状态不变，无部分出票，可重试处理
+
+- [ ] **TC-PAY-302**: 高并发重复通知
+  - 操作: 同时发送 5 个相同的支付成功通知
+  - **Expected**: 只有一个通知被处理，其余返回幂等响应，最终只发放一次票券
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 作者 | 变更内容 |
+|------|------|------|----------|
+| 1.1 | 2025-12-18 | AI | 添加 QA E2E Checklist |
+| 1.0 | 2025-12-17 | Initial | 初始版本 |

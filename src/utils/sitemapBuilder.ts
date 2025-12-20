@@ -48,7 +48,7 @@ export function buildSitemap(): SitemapPRD[] {
       stories: storyList.map(story => {
         // Get cards for this story from _index.yaml
         const storyData = stories.find(s => s.id === story.id);
-        const storyCards: any[] = (storyData as any)?.cards || [];
+        const storyCards: string[] = storyData?.cards || [];
 
         // Also check cards that reference this story
         const relatedCards = cards.filter(card =>
@@ -131,8 +131,7 @@ export function findStoriesUsingCard(cardSlug: string): StoryInfo[] {
 
   // Also check stories that reference this card in their cards array
   const matchingStories = stories.filter(story => {
-    const storyData = story as any;
-    const storyCards = storyData.cards || [];
+    const storyCards = story.cards || [];
     return storyCards.includes(cardSlug) || relatedStoryIds.includes(story.id);
   });
 

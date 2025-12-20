@@ -3,6 +3,18 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { env } from '../config/env';
 import { AppError } from './errorHandler';
 
+// JWT Payload 类型定义
+export interface UserTokenPayload {
+  id: number;
+  email: string;
+}
+
+export interface OperatorTokenPayload {
+  sub: number;
+  username: string;
+  roles: string[];
+}
+
 // 扩展 Express Request 类型以包含 user 和 operator
 declare global {
   namespace Express {
@@ -92,8 +104,8 @@ export const authenticateOperator = (req: Request, res: Response, next: NextFunc
 
     const token = authHeader.substring(7); // 移除 "Bearer " 前缀
 
-    // 验证 operator token
-    const decoded = jwt.verify(token, String(env.JWT_SECRET)) as any;
+    // 验证 operator token (cast through unknown for type safety)
+    const decoded = jwt.verify(token, String(env.JWT_SECRET)) as unknown as OperatorTokenPayload;
 
     // 将 operator 信息添加到请求对象
     req.operator = {

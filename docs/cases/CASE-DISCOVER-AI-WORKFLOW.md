@@ -349,4 +349,121 @@ curl 'http://localhost:8080/api/ota/resellers/summary?page=1&limit=3&batches_per
 
 ---
 
-*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns.***
+### 2025-12-15: Intent Analysis & Context Awareness (CASE-005)
+
+**Problem Identified**: AI was distracted by user's open file instead of focusing on user's actual question.
+
+**Scenario**: User asked "你觉得现在的ai工作流还有能够改进的地方吗" (Do you think the AI workflow can be improved?)
+
+**AI Failure**:
+1. User had `complianceAuditor.ts` open in IDE
+2. AI read that file first (irrelevant to the question)
+3. User correctly pointed out: "查看工作流你不应该是去看claude.md文档或者skill吗"
+
+**Root Cause Analysis**:
+- Step 0 (Task Classification) existed but lacked "Intent Analysis" step
+- No guidance on handling "context noise" (open files unrelated to task)
+- Missing task types: Explanation, Feasibility, Meta/Process, Code Review
+
+**Improvements Made**:
+
+1. **CLAUDE.md Simplified** - Removed duplicate workflow details, points to skill
+2. **Step 0 Enhanced** - Added "Intent Analysis" with 3 sub-steps:
+   - 0.1 检查上下文干扰 (Check context interference)
+   - 0.2 匹配任务类型 (Match task type)
+   - 0.3 判断是否需要完整流程 (Determine if full workflow needed)
+3. **New Task Types Added**:
+   - Explanation (解释类) → 直接回答
+   - Feasibility (可行性评估) → 分析后回答
+   - Meta/Process (工作流改进) → 完整流程
+   - Code Review (代码审查) → 阅读后回答
+4. **Step 1 Enhanced** - Added "上下文相关性检查"
+5. **Step 4 Added** - Experience Learning (可选)
+6. **Anti-Patterns Updated** - Added "被用户打开的文件带偏"
+
+**Files Changed**:
+- `CLAUDE.md` - Simplified to entry point
+- `.claude/skills/ai-workflow/SKILL.md` - Core workflow (5 steps)
+- `.claude/skills/ai-workflow/references/experience-learning.md` - New reference
+
+**Test Result**: ✅ **SUCCESS**
+- Workflow now explicitly addresses "context noise" issue
+- Clear guidance on when to ignore open files
+- New task types cover previously missing scenarios
+
+**Key Learning**: AI context includes irrelevant signals (open files, recent navigation). Step 0 must actively filter noise by analyzing user intent first, not just matching patterns.
+
+---
+
+---
+
+### 2025-12-19: Step 3 检查清单完整性问题 (US-018)
+
+**Problem Identified**: 上下文恢复后，AI 继续执行任务但遗漏了 Step 3 检查清单中的多个关键项。
+
+**Scenario**: US-018 OTA 票券 PDF 导出功能实现
+
+**AI Failure Points**:
+1. **未更新 `docs/stories/_index.yaml`** - 新建 Story 后未在索引中注册
+2. **未更新 `openapi/openapi.json`** - 新增 2 个 API 端点但未更新 OpenAPI 规范
+3. **未执行 API 契约三方一致性验证** - 跳过了 Card = Code = OpenAPI 验证
+4. **未执行 Step 4 经验学习** - 遇到问题但未记录
+
+**Root Cause Analysis**:
+- 上下文恢复时，AI 从 todo list 继续执行，但 todo list 本身不完整
+- Step 3 检查清单在 SKILL.md 中定义，但 AI 未主动对照完整清单
+- AI 倾向于"做完眼前的事"而非"确保所有事都做完"
+
+**Evidence**:
+```bash
+# 用户运行 validate:docs 发现警告
+npm run validate:docs
+# ⚠️ Story US-018 未被其关联的 PRD (PRD-002) 的 related_stories 列出
+# ⚠️ PRD-002 未列出关联的 US-018
+
+# 用户指出遗漏
+# "index.yaml没有对应的更新"
+# "我发现你还是有很多事情没有遵循ai工作流去做的"
+```
+
+**Improvements Needed**:
+
+1. **Step 3 检查清单应作为 todo list 模板**
+   - 当进入 Step 3 时，自动将完整检查清单加入 todo list
+   - 不依赖 AI 记忆，显式追踪每个检查项
+
+2. **OpenAPI 更新应与路由修改联动**
+   - 新增 API 端点 → 自动提示更新 OpenAPI
+   - 可考虑在 Code Review 阶段检查
+
+3. **文档索引更新应作为文档创建的后置步骤**
+   - 创建 Story → 更新 `_index.yaml`
+   - 创建 Card → 检查相关 Story 引用
+
+**Files Changed** (补充遗漏):
+- `openapi/openapi.json` - 添加 PDF 导出端点规范
+- `docs/stories/_index.yaml` - 添加 US-018 条目
+- `docs/prd/PRD-002-ota-platform-integration.md` - related_stories 添加 US-018
+
+**Key Learning**:
+- **检查清单必须显式化** - 依赖 AI 记忆检查清单不可靠
+- **上下文恢复时重新加载工作流** - 不能假设 todo list 包含所有必要步骤
+- **validate:docs 是最后防线** - 应在提交前强制运行
+
+**Proposed Workflow Enhancement**:
+```markdown
+## Step 3 进入时，自动加载检查清单到 todo list:
+- [ ] 相关测试全部通过
+- [ ] API 契约一致（Card = Code = OpenAPI）
+- [ ] OpenAPI 已更新（如有新端点）
+- [ ] Newman collection 创建/更新
+- [ ] Runbook 创建/更新（Story 级别）
+- [ ] docs/stories/_index.yaml 已更新（如有新 Story）
+- [ ] 覆盖率更新 docs/test-coverage/_index.yaml
+- [ ] npm run validate:docs 无错误
+- [ ] Card 状态更新为 "Done"
+```
+
+---
+
+*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable.***

@@ -16,10 +16,10 @@ depends_on:
   - US-004
 cards:
   - admin-package-config
-  - ticket-lifecycle-daemon
   - notification-orchestrator
   - merchant-redemption-console
   - route-schedule-management    # 线路班次管理（PRD-008 Phase 2）
+# deprecated: [ticket-lifecycle-daemon] - moved to _deprecated/
 related_features:
   - ticket-cancellation
   - refund-processing

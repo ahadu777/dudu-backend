@@ -1,0 +1,57 @@
+prd_id: PRD-006
+feature: 票券激活系统
+description: 票券状态管理、立即激活、预约激活、有效期控制
+test_command: npm run test:prd 006
+
+test_cases:
+  - id: TC-006-01
+    name: 立即激活票券
+    priority: P0
+    preconditions:
+      - 票券已购买
+      - 状态为未激活
+    steps:
+      - 选择票券
+      - 点击立即激活
+      - 验证激活结果
+    expected:
+      - 激活成功
+      - 状态变为"已激活"
+      - 有效期从当日开始计算
+
+  - id: TC-006-02
+    name: 预约激活票券
+    priority: P0
+    preconditions:
+      - 票券已购买
+      - 选择未来日期
+    steps:
+      - 选择激活日期
+      - 确认预约激活
+    expected:
+      - 预约成功
+      - 状态变为"待激活"
+      - 到期自动激活
+
+  - id: TC-006-03
+    name: 激活过期票券
+    priority: P1
+    preconditions:
+      - 票券已过最后激活期限
+    steps:
+      - 尝试激活过期票券
+    expected:
+      - 激活失败
+      - 提示"票券已过期，无法激活"
+
+  - id: TC-006-04
+    name: 查询票券激活状态
+    priority: P1
+    preconditions:
+      - 票券存在
+    steps:
+      - 发送 GET 请求查询票券状态
+      - 验证返回信息
+    expected:
+      - 返回票券详情
+      - 包含激活状态和有效期

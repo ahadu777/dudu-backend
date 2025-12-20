@@ -3,15 +3,22 @@
 ## Document Metadata
 ```yaml
 prd_id: "PRD-007"
+category: "core"
 product_area: "Tickets & Operations"
 owner: "Product Manager"
-status: "Draft"
+status: "Deprecated"
 version: "2.0"
 created_date: "2025-11-14"
-last_updated: "2025-12-12"
+last_updated: "2025-12-19"
+deprecated_at: "2025-12-19"
+deprecated_reason: "功能与 PRD-006 重叠 90%+，合并以统一票务预约系统"
+merged_into: "PRD-006"
 related_stories: ["US-015"]
 implementation_cards: ["reservation-slot-management", "customer-reservation-portal", "operator-validation-scanner"]
 ```
+
+> **DEPRECATED**: 本 PRD 已合并到 [PRD-006](./PRD-006-ticket-activation-reservation.md)。
+> PRD-006 统一管理票务激活和预约功能，避免功能重叠。
 
 ## 1. Executive Summary
 

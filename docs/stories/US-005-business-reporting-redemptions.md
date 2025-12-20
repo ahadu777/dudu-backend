@@ -23,11 +23,12 @@ Provide basic reporting of redemption events filtered by time window, function, 
 ## Acceptance (Given/When/Then)
 **Story A — Time window**
 - Given redemption events exist for the last 24h
-- When GET /reports/redemptions?from=...&to=...
-- Then 200 with only events in the window
+- When the analyst queries redemption events for a specific time window
+- Then only events within that time window are returned
 
 **Story B — Filter by function and location**
-- When adding function=ferry&location_id=52
+- Given the analyst wants to filter by specific criteria
+- When they filter by function (e.g., ferry) and location
 - Then only matching events are returned
 
 ## Non-functional constraints

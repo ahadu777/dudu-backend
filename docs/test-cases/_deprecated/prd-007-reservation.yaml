@@ -1,0 +1,78 @@
+# DEPRECATED: PRD-007 已合并到 PRD-006
+# 测试用例现归属 PRD-006，运行命令: npm run test:prd 006
+prd_id: PRD-007
+status: deprecated
+merged_into: PRD-006
+feature: 预约与验票
+description: 日历时段、容量管理、预约创建、操作员验票
+test_command: npm run test:prd 006  # 原 007
+
+test_cases:
+  - id: TC-007-01
+    name: 查询可用时段
+    priority: P0
+    preconditions:
+      - 日历配置完成
+      - 存在可用容量
+    steps:
+      - 选择日期
+      - 请求可用时段列表
+    expected:
+      - 返回时段列表
+      - 显示剩余容量
+      - 满员时段标记不可选
+
+  - id: TC-007-02
+    name: 创建预约
+    priority: P0
+    preconditions:
+      - 用户已登录
+      - 时段有剩余容量
+    steps:
+      - 选择时段
+      - 填写预约信息
+      - 提交预约
+    expected:
+      - 预约成功
+      - 生成预约确认码
+      - 容量减少1
+
+  - id: TC-007-03
+    name: 操作员验票
+    priority: P0
+    preconditions:
+      - 操作员已登录
+      - 预约存在
+    steps:
+      - 扫描预约码
+      - 验证预约有效性
+    expected:
+      - 验票成功
+      - 显示预约详情
+      - 记录入场时间
+
+  - id: TC-007-04
+    name: 容量超限检测
+    priority: P1
+    preconditions:
+      - 时段容量已满
+    steps:
+      - 尝试创建新预约
+    expected:
+      - 预约失败
+      - 提示"该时段已约满"
+
+  - id: TC-007-05
+    name: 取消预约
+    priority: P1
+    preconditions:
+      - 预约存在
+      - 预约时间未到
+    steps:
+      - 选择预约
+      - 点击取消
+      - 确认取消
+    expected:
+      - 取消成功
+      - 容量释放
+      - 预约状态变为"已取消"

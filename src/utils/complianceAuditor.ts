@@ -167,7 +167,7 @@ export function runComplianceAudit(): ComplianceReport {
     }
 
     // Check Story → Card relationships
-    const storyCards = (story as any).cards || [];
+    const storyCards = story.cards || [];
     storyCards.forEach((cardSlug: string) => {
       const card = cards.find(c => c.metadata.slug === cardSlug);
       if (!card) {
@@ -266,7 +266,7 @@ export function runComplianceAudit(): ComplianceReport {
           });
           cardViolations++;
         } else {
-          const storyCardList = (story as any).cards || [];
+          const storyCardList = story.cards || [];
           if (!storyCardList.includes(slug)) {
             violations.push({
               type: 'error',

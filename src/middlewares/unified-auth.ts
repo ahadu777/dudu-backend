@@ -3,6 +3,18 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { AppError } from './errorHandler';
+import { UserTokenPayload, OperatorTokenPayload } from './auth';
+
+// Unified JWT payload type for runtime checking
+interface UnifiedJwtPayload {
+  // User fields
+  id?: number;
+  email?: string;
+  // Operator fields
+  sub?: number;
+  username?: string;
+  roles?: string[];
+}
 
 // API Keys store (same as OTA auth)
 const API_KEYS = new Map<string, { partner_id: string, partner_name: string, permissions: string[], rate_limit: number }>([
@@ -46,13 +58,13 @@ export const unifiedAuth = () => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.substring(7);
-        const decoded = jwt.verify(token, String(env.JWT_SECRET)) as any;
+        const decoded = jwt.verify(token, String(env.JWT_SECRET)) as unknown as UnifiedJwtPayload;
 
         // Distinguish between User JWT and Operator JWT based on payload
         if (decoded.username && decoded.roles) {
           // Operator JWT (has username and roles)
           req.operator = {
-            operator_id: decoded.sub,
+            operator_id: decoded.sub!,
             username: decoded.username,
             roles: decoded.roles
           };
@@ -68,7 +80,7 @@ export const unifiedAuth = () => {
           return next();
         } else if (decoded.id && decoded.email) {
           // User JWT (has id and email)
-          req.user = decoded;
+          req.user = { id: decoded.id, email: decoded.email };
           req.authType = 'USER';
 
           logger.info('unified.auth.user_success', {

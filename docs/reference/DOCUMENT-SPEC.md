@@ -20,6 +20,28 @@
 
 **职责**：定义产品愿景、业务目标和成功指标
 
+**PRD 定位**：
+
+在本项目中，PRD 的定位是 **Epic/Feature Request**（需求级），而非产品模块级：
+
+```
+Category = 产品模块（core, customer, channel, operation, platform）
+PRD      = 需求/Epic（一个完整的业务目标，1-3 个月可完成）
+Story    = 用户能力（用户能做什么）
+Card     = 技术实现（API 契约、数据结构）
+```
+
+**为什么这样定义**：
+- 更灵活：按需求创建，不需要预先规划完整产品架构
+- 更务实：中小团队常见做法，降低文档维护成本
+- 有约束：通过 category 标签实现逻辑分组，避免混乱
+
+**约束规则**：
+1. **同 category 的 PRD 应共享 Card** - 避免重复实现相同功能
+2. **新 PRD 前检查** - 同 category 是否已有相关 PRD，优先扩展已有 PRD
+3. **合并触发** - 功能重叠 >50% 时必须合并（如 PRD-006 + PRD-007）
+4. **粒度控制** - 一个 PRD 应能在 1-3 个月内完成，过大则拆分
+
 **应该包含**：
 - 需求背景（为什么要做）
 - 解决方案概述（做什么）
@@ -34,6 +56,38 @@
 - ❌ Given/When/Then 验收标准 → 放 Story
 - ❌ API 路径、数据结构 → 放 Card
 - ❌ 实现细节、代码文件 → 放 Card
+
+**Category 分类**（必填）：
+
+每个 PRD 必须指定一个 category，用于标识其在产品架构中的位置：
+
+| Category | 职责 | 典型功能 |
+|----------|------|----------|
+| `core` | 核心业务 | 购买、激活、预约、核销、库存、定价 |
+| `customer` | 用户端 | 小程序、Web 预约、订单查询 |
+| `channel` | 渠道 | OTA API、分销商、批量操作 |
+| `operation` | 运营 | 场馆管理、操作员工具、报表 |
+| `platform` | 平台 | 认证、多租户、通知服务 |
+
+> 详见 [PRODUCT-ARCHITECTURE.md](./PRODUCT-ARCHITECTURE.md)
+
+**新建 PRD 检查清单**：
+
+新建 PRD 前，必须确认以下事项：
+
+- [ ] 参考 [PRODUCT-ARCHITECTURE.md](./PRODUCT-ARCHITECTURE.md)，选择正确的 category
+- [ ] 检查同 category 下是否已有相关 PRD，优先扩展已有 PRD
+- [ ] 功能与已有 PRD 重叠度 < 30%
+- [ ] 预估可在 1-3 个月内完成
+- [ ] 明确与相邻 PRD 的边界
+
+**规模建议**：
+
+| 指标 | 建议值 | 警告值 |
+|------|--------|--------|
+| Stories 数量 | 3-8 | >15 需考虑拆分 |
+| Cards 数量 | 5-20 | >30 需考虑拆分 |
+| 完成周期 | 1-3 个月 | >6 个月需拆分 |
 
 ---
 
@@ -81,6 +135,7 @@
 - 验收标准（Given/When/Then，技术视角）
 - 实现文件路径
 - 集成点
+- 非功能需求（可选，高并发/性能敏感场景）
 
 **验收标准写法**：
 
@@ -175,12 +230,14 @@ graph TD
 ## 元数据
 ​```yaml
 prd_id: "PRD-XXX"
+category: "core | customer | channel | operation | platform"  # 必填，产品架构分类
 product_area: "[产品领域]"
 owner: "[负责人]"
 status: "Draft | In Progress | Done | Deprecated | On Hold"
 created_date: "YYYY-MM-DD"
 last_updated: "YYYY-MM-DD"
 stories: ["US-XXX", "US-YYY"]  # 关联的 Stories
+merged_into: ""  # 可选，废弃合并时指向目标 PRD
 ​```
 
 ## 变更日志
@@ -381,6 +438,22 @@ src/modules/xxx/
 
 ## 集成点
 - **[依赖Card]** - [集成说明]
+
+## 非功能需求 (可选)
+
+### Scalability
+| 指标 | 目标值 | 说明 |
+|------|--------|------|
+| 预期 QPS | [X] req/s | [日常负载] |
+| 峰值 QPS | [Y] req/s | [峰值场景，如促销] |
+| 响应时间 P99 | [Z] ms | [性能目标] |
+
+### 扩展策略
+- 水平扩展：[是否支持，如何扩展]
+- 数据分片：[是否需要，策略]
+- 缓存策略：[缓存层，TTL]
+
+> 注：此 section 为可选，仅在高并发或性能敏感场景需要填写
 ```
 
 ---
@@ -420,6 +493,21 @@ deprecated_reason: "[废弃原因]"
 deprecated_by: "[操作人]"
 superseded_by: "[替代文档，如有]"  # 可选
 ```
+
+### 废弃文档存放
+
+废弃的文档应移动到对应目录的 `_deprecated/` 子目录：
+
+```
+docs/prd/_deprecated/           # 废弃的 PRD
+docs/stories/_deprecated/       # 废弃的 Story
+docs/cards/_deprecated/         # 废弃的 Card
+```
+
+**规则**：
+1. 文件保留原名，便于追溯
+2. 每个 `_deprecated/` 目录应有 README.md 记录废弃清单
+3. 废弃文档不删除，作为历史记录保留
 
 ---
 
@@ -568,8 +656,8 @@ grep -l "business_requirement: \"PRD-008\"" docs/stories/*.md
 # 查看 Story 的所有 Cards
 grep -l "related_stories:.*US-010A" docs/cards/*.md
 
-# 查看废弃的文档
-grep -l "status: Deprecated" docs/prd/*.md docs/stories/*.md docs/cards/*.md
+# 查看废弃的文档（已移动到 _deprecated 目录）
+ls docs/prd/_deprecated/ docs/stories/_deprecated/ docs/cards/_deprecated/ 2>/dev/null
 ```
 
 ---

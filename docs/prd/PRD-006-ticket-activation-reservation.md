@@ -3,13 +3,16 @@
 ## Document Metadata
 ```yaml
 prd_id: "PRD-006"
+category: "core"
 product_area: "Tickets & Fulfillment"
 owner: "Product Manager"
 status: "Draft"
 created_date: "2025-11-14"
-last_updated: "2025-11-14"
-related_stories: ["US-016"]
-implementation_cards: ["ticket-lifecycle-daemon", "reservation-slot-management", "operator-validation-scanner", "customer-reservation-portal"]
+last_updated: "2025-12-19"
+related_stories: ["US-015", "US-016"]  # US-015 从 PRD-007 合并而来
+implementation_cards: ["reservation-slot-management", "operator-validation-scanner", "customer-reservation-portal"]
+# deprecated_cards: ["ticket-lifecycle-daemon"] - moved to _deprecated/
+# merged_from: "PRD-007" - 2025-12-19 合并，原文件见 _deprecated/PRD-007-ticket-reservation-validation.md
 ```
 
 ## Executive Summary

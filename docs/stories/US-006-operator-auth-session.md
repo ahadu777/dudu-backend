@@ -18,22 +18,23 @@ Authenticate operators and bind scans to a device/location via short-lived sessi
 - Operator API
 
 ## Scope (in)
-- POST /operators/login → POST /validators/sessions → use session_id on scans → session expiry
+- Operator login → Session binding → Authenticated scans → Session expiry
 
 ## Acceptance (Given/When/Then)
 **Story A — Login**
-- Given valid credentials
-- When POST /operators/login
-- Then 200 { operator_token }
+- Given the operator has valid credentials
+- When the operator logs in
+- Then they receive an authentication token
 
 **Story B — Scan with operator auth**
-- Given a valid operator_token (JWT)
-- When POST /venue/scan with Authorization header
-- Then scan proceeds with operator context from JWT
+- Given the operator has a valid session
+- When the operator scans a ticket
+- Then the scan is recorded with the operator's context
 
 **Story C — Invalid auth**
-- When POST /venue/scan with expired/invalid operator token
-- Then 401 Unauthorized
+- Given the operator's session has expired or is invalid
+- When the operator attempts to scan a ticket
+- Then access is denied
 
 ## Links
 - Cards: operators-login, venue-enhanced-scanning

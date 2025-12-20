@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 
+// Base type for parsed YAML frontmatter (allows any fields)
+type ParsedFrontmatter = Record<string, unknown>;
+
 export interface CardMetadata {
   card: string;
   slug: string;
@@ -28,14 +31,14 @@ export interface CardDocument {
  * Parse YAML frontmatter from markdown file
  * Handles both --- frontmatter and ```yaml code blocks
  */
-function parseFrontmatter(content: string): { metadata: any; body: string } {
+function parseFrontmatter(content: string): { metadata: ParsedFrontmatter; body: string } {
   // Try standard frontmatter format (used in cards)
   const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
   const match = content.match(frontmatterRegex);
 
   if (match) {
     try {
-      const metadata = yaml.load(match[1]) as any;
+      const metadata = yaml.load(match[1]) as ParsedFrontmatter;
       return { metadata, body: match[2] };
     } catch (e) {
       // Continue to fallback
@@ -47,7 +50,7 @@ function parseFrontmatter(content: string): { metadata: any; body: string } {
   const metadataMatch = content.match(metadataBlockRegex);
   if (metadataMatch) {
     try {
-      const metadata = yaml.load(metadataMatch[1]) as any;
+      const metadata = yaml.load(metadataMatch[1]) as ParsedFrontmatter;
       const body = content.replace(/```yaml\s*\n[\s\S]*?\n```\s*\n?/, '').trim();
       return { metadata, body };
     } catch (e2) {
@@ -82,11 +85,11 @@ export function loadCardDocuments(): CardDocument[] {
 
     // Extract title from first line if not in metadata
     const titleMatch = body.match(/^#\s+(.+)$/m) || content.match(/^#\s+(.+)$/m);
-    const title = metadata.card || (titleMatch ? titleMatch[1] : filename);
+    const title = String(metadata.card || (titleMatch ? titleMatch[1] : filename));
 
     return {
       filename,
-      metadata: metadata as CardMetadata,
+      metadata: metadata as unknown as CardMetadata,
       content: body || content,
       title: title.replace(/^#+\s*/, '').trim()
     };

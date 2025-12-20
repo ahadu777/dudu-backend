@@ -1,552 +1,407 @@
-# US-015: Ticket Reservation & Validation - Directus Integration Guide
+# US-015: Ticket Reservation & Validation Runbook
 
-**Story:** US-015 Ticket Reservation & Validation
-**Related PRD:** PRD-007
-**Cards:** reservation-slot-management, customer-reservation-portal, operator-validation-scanner
-**Status:** ✅ Complete (Directus Integration)
-**Last Updated:** 2025-11-27
+票券预约验证完整测试：时段查询 → 票券验证 → 创建预约 → 操作员核验
 
 ---
 
-## 🎯 Overview
+## 📋 Metadata
 
-This guide provides **copy-paste commands** for testing US-015 with **Directus CMS** as the data source.
+| 字段 | 值 |
+|------|-----|
+| **Story** | US-015 |
+| **PRD** | PRD-006 |
+| **Status** | Done |
+| **Last Updated** | 2025-12-17 |
+| **Test Type** | API (Newman) + Manual |
+| **Automation** | ✅ 全自动化 |
 
-**Key Differences from Mock Mode:**
-- Uses real Directus collections for tickets, reservations, and slots
-- Validates ticket `status = 'ACTIVATED'` before allowing reservations
-- Returns UUIDs for IDs instead of sequential numbers
-- Customer contact info fetched from Directus ticket records
+### 关联测试资产
 
-**User Journeys:**
-1. **Customer** → View slots → Validate ticket → Create reservation
-2. **Operator** → Login → Scan QR → Validate ticket → Allow/Deny entry
-
----
-
-## 🚀 Prerequisites
-
-```bash
-# 1. Ensure server is running with Directus enabled
-export USE_DIRECTUS=true
-npm start
-
-# 2. Health check
-curl http://localhost:8080/healthz
-
-# Expected: {"status":"ok","timestamp":"..."}
-
-# 3. Verify Directus connection
-# Check logs for: "directus.connection.success"
-```
+| 资产类型 | 路径/命令 |
+|---------|----------|
+| Newman Collection | `postman/auto-generated/us-015-*.json` |
+| Newman Command | `npm run test:story 015` |
+| Related Cards | `reservation-slot-management`, `customer-reservation-portal`, `operator-validation-scanner` |
 
 ---
 
-## 📅 Journey 1: Customer Reservation Flow (Directus)
+## 🎯 Business Context
 
-### Step 1.1: View Available Slots (Calendar)
+### 用户旅程
 
-```bash
-# Get all slots for December 2025
-curl -s "http://localhost:8080/api/reservation-slots/available?month=2025-12" \
-  | python -m json.tool | head -80
-
-# Expected: Grouped by date with slots array
-# Response structure (Directus mode):
-# {
-#   "success": true,
-#   "data": [
-#     {
-#       "date": "2025-12-01",
-#       "slots": [
-#         {
-#           "id": "550e8400-e29b-41d4-a716-446655440000",
-#           "start_time": "09:00:00",
-#           "end_time": "12:00:00",
-#           "total_capacity": 200,
-#           "available_count": 150,
-#           "capacity_status": "AVAILABLE",
-#           "status": "ACTIVE"
-#         },
-#         {
-#           "id": "660e8400-e29b-41d4-a716-446655440001",
-#           "start_time": "14:00:00",
-#           "end_time": "17:00:00",
-#           "total_capacity": 200,
-#           "available_count": 25,
-#           "capacity_status": "LIMITED",
-#           "status": "ACTIVE"
-#         }
-#       ]
-#     },
-#     {
-#       "date": "2025-12-02",
-#       "slots": [...]
-#     }
-#   ]
-# }
-#
-# Capacity Status Rules (Directus):
-# - AVAILABLE: > 50% slots remaining (available > 100 for capacity 200)
-# - LIMITED: 1-50% slots remaining (available 1-100 for capacity 200)
-# - FULL: 0% slots remaining (available = 0)
 ```
+客户流程:
+  查看可用时段 → 验证票券 → 创建预约 → 到场验证
+
+操作员流程:
+  登录系统 → 扫描 QR → 验证票券 → 允许/拒绝入场
+```
+
+### 测试目标
+
+- [ ] 验证时段查询功能
+- [ ] 验证票券状态检查
+- [ ] 验证预约创建流程
+- [ ] 验证操作员核验流程
 
 ---
 
-### Step 1.2: Validate Ticket (Directus Checks Real Status)
+## 🔧 Prerequisites
 
-```bash
-# Test with ACTIVATED ticket from Directus
-curl -s -X POST http://localhost:8080/api/tickets/validate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-20251201-ABC123",
-    "orq": 1
-  }' | python -m json.tool
-
-# Expected Success Response (Directus):
-# {
-#   "success": true,
-#   "valid": true,
-#   "ticket": {
-#     "ticket_code": "TKT-20251201-ABC123",
-#     "product_id": 101,
-#     "product_name": "Hong Kong Disneyland 1-Day Ticket",
-#     "status": "ACTIVATED",
-#     "expires_at": "2025-12-31T23:59:59.000Z",
-#     "reserved_at": null,
-#     "customer_email": "alice@example.com",
-#     "customer_phone": "+852-9123-4567",
-#     "order_id": 12345
-#   }
-# }
-```
-
-**Test Invalid Ticket:**
-```bash
-curl -s -X POST http://localhost:8080/api/tickets/validate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "INVALID-TICKET-999",
-    "orq": 1
-  }' | python -m json.tool
-
-# Expected Error (Directus query returns null):
-# {
-#   "success": false,
-#   "valid": false,
-#   "error": "Ticket not found"
-# }
-```
-
-**Test Non-Activated Ticket (Directus Validation):**
-```bash
-# Directus checks: ticket.status !== 'ACTIVATED'
-curl -s -X POST http://localhost:8080/api/tickets/validate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-PENDING-001",
-    "orq": 1
-  }' | python -m json.tool
-
-# Expected Error (Directus validates activation):
-# {
-#   "success": false,
-#   "valid": false,
-#   "error": "Ticket must be activated before making a reservation"
-# }
-```
-
-**Test Already Reserved Ticket:**
-```bash
-curl -s -X POST http://localhost:8080/api/tickets/validate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-ALREADY-RESERVED",
-    "orq": 1
-  }' | python -m json.tool
-
-# Expected Error (Directus checks existing reservations):
-# {
-#   "success": false,
-#   "valid": false,
-#   "error": "Ticket already has an active reservation"
-# }
-```
+| 项目 | 值 | 说明 |
+|------|-----|------|
+| **Base URL** | `http://localhost:8080` | 本地开发环境 |
+| **数据模式** | Directus / Mock | USE_DIRECTUS=true 启用 |
+| **测试票券** | TKT-20251201-ABC123 | 已激活票券 |
 
 ---
 
-### Step 1.3: Create Reservation (Directus Writes to CMS)
+## 🧪 Test Scenarios
 
-```bash
-# Create reservation with customer info from ticket
-# Directus will: (1) Create reservation record (2) Update ticket status to RESERVED
-curl -s -X POST http://localhost:8080/api/reservations/create \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-20251201-ABC123",
-    "slot_id": "550e8400-e29b-41d4-a716-446655440000",
-    "orq": 1
-  }' | python -m json.tool
+### Module 1: 时段管理
 
-# Expected Success (Directus creates reservation + updates ticket):
-# {
-#   "success": true,
-#   "data": {
-#     "reservation_id": "770e8400-e29b-41d4-a716-446655440002",
-#     "ticket_code": "TKT-20251201-ABC123",
-#     "slot_id": 550,
-#     "slot_date": "2025-12-01",
-#     "slot_time": "09:00-12:00",
-#     "customer_email": "alice@example.com",
-#     "customer_phone": "+852-9123-4567",
-#     "status": "RESERVED",
-#     "created_at": "2025-11-27T10:30:00.000Z"
-#   }
-# }
-```
+**Related Card**: `reservation-slot-management`
+**Coverage**: 3/3 ACs (100%)
 
-**Create Reservation with Override Contact Info:**
-```bash
-# Provide customer_email and customer_phone to override ticket info
-curl -s -X POST http://localhost:8080/api/reservations/create \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-20251201-XYZ456",
-    "slot_id": "1",
-    "customer_email": "bob@custom.com",
-    "customer_phone": "+852-8888-9999",
-    "orq": 1
-  }' | python -m json.tool
+#### TC-RSV-001: 查询可用时段
 
-# Directus will use provided contact info instead of fetching from ticket
-```
+**AC Reference**: `reservation-slot-management.AC-1`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 系统有时段配置 | GET /api/reservation-slots/available?month=2025-12 | 返回时段列表 |
+
+**验证点**:
+- [ ] 返回 success = true
+- [ ] data 按日期分组
+- [ ] 每个 slot 包含 id, start_time, end_time
+- [ ] 显示 capacity_status (AVAILABLE/LIMITED/FULL)
 
 ---
 
-### Step 1.4: Verify Slot Capacity Updated (Directus Auto-Updates)
+#### TC-RSV-002: 时段容量正确
 
-```bash
-# Check slot capacity decreased after reservation
-curl -s "http://localhost:8080/api/reservation-slots/available?month=2025-12" \
-  | python -m json.tool
+**AC Reference**: `reservation-slot-management.AC-2`
 
-# Expected: available_count decreased by 1 for the reserved slot
-# Directus automatically updates slot.available_count when reservation is created
-```
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 时段有预约记录 | GET /api/reservation-slots/available | available_count 正确 |
 
----
-
-## 🔐 Journey 2: Operator Validation Flow (Directus)
-
-### Step 2.1: Operator Login (Directus - Future Enhancement)
-
-```bash
-# Login as operator (currently mock, Directus operators collection coming soon)
-curl -s -X POST http://localhost:8080/operators/auth \
-  -H "Content-Type: application/json" \
-  -d '{
-    "operator_id": "OP-001",
-    "password": "password123",
-    "terminal_id": "GATE-A1",
-    "orq": 1
-  }' | python -m json.tool
-
-# Expected (mock auth, Directus validation TODO):
-# {
-#   "success": true,
-#   "data": {
-#     "operator_id": "OP-001",
-#     "operator_name": "Operator OP-001",
-#     "terminal_id": "GATE-A1",
-#     "session_token": "hex-token-64-chars",
-#     "expires_at": "2025-11-27T22:30:00.000Z"
-#   }
-# }
-```
+**验证点**:
+- [ ] total_capacity 正确
+- [ ] available_count = total - reserved
+- [ ] capacity_status 根据剩余量变化
 
 ---
 
-### Step 2.2: Validate Ticket (QR Scan) - GREEN (Directus Validation)
+#### TC-RSV-003: 无效月份格式
 
-```bash
-# Scan RESERVED ticket with valid reservation for today
-curl -s -X POST http://localhost:8080/operators/validate-ticket \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-20251127-GREEN",
-    "operator_id": "OP-001",
-    "terminal_id": "GATE-A1",
-    "orq": 1
-  }' | python -m json.tool
+**AC Reference**: `reservation-slot-management.AC-3`
 
-# Expected GREEN (Directus checks: status=RESERVED + reservation.slot_date=today):
-# {
-#   "success": true,
-#   "validation_result": {
-#     "ticket_code": "TKT-20251127-GREEN",
-#     "status": "RESERVED",
-#     "color_code": "GREEN",
-#     "message": "Valid reservation - Allow entry",
-#     "details": {
-#       "customer_email": "valid@example.com",
-#       "slot_date": "2025-11-27",
-#       "slot_time": "09:00:00-12:00:00",
-#       "product_name": "Hong Kong Disneyland 1-Day Ticket"
-#     },
-#     "allow_entry": true
-#   }
-# }
-```
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 无效月份格式 | GET /api/reservation-slots/available?month=invalid | 返回 400 |
+
+**验证点**:
+- [ ] 返回状态码 400
+- [ ] 提示日期格式错误
 
 ---
 
-### Step 2.3: Validate Ticket (QR Scan) - YELLOW (Directus Validation)
+### Module 2: 票券验证
 
-```bash
-# Scan ticket with reservation for DIFFERENT date
-curl -s -X POST http://localhost:8080/operators/validate-ticket \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-20251128-YELLOW",
-    "operator_id": "OP-001",
-    "terminal_id": "GATE-A1",
-    "orq": 1
-  }' | python -m json.tool
+**Related Card**: `customer-reservation-portal`
+**Coverage**: 4/4 ACs (100%)
 
-# Expected YELLOW (Directus checks: reservation.slot_date != today):
-# {
-#   "success": true,
-#   "validation_result": {
-#     "ticket_code": "TKT-20251128-YELLOW",
-#     "status": "RESERVED",
-#     "color_code": "YELLOW",
-#     "message": "Warning: Reservation is for 2025-11-28, not today",
-#     "details": {
-#       "customer_email": "warning@example.com",
-#       "slot_date": "2025-11-28",
-#       "slot_time": "14:00:00-17:00:00",
-#       "product_name": "Hong Kong Disneyland 1-Day Ticket"
-#     },
-#     "allow_entry": false
-#   }
-# }
-```
+#### TC-RSV-004: 已激活票券验证成功
+
+**AC Reference**: `customer-reservation-portal.AC-1`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 票券状态 ACTIVATED | POST /api/tickets/validate | 返回 valid = true |
+
+**验证点**:
+- [ ] success = true
+- [ ] valid = true
+- [ ] 返回票券详情
 
 ---
 
-### Step 2.4: Validate Ticket (QR Scan) - RED (Directus Validation)
+#### TC-RSV-005: 不存在票券返回错误
 
-```bash
-# Scan ticket that is NOT RESERVED (Directus checks status)
-curl -s -X POST http://localhost:8080/operators/validate-ticket \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-ACTIVATED-ONLY",
-    "operator_id": "OP-001",
-    "terminal_id": "GATE-A1",
-    "orq": 1
-  }' | python -m json.tool
+**AC Reference**: `customer-reservation-portal.AC-2`
 
-# Expected RED (Directus: ticket.status !== 'RESERVED'):
-# {
-#   "success": true,
-#   "validation_result": {
-#     "ticket_code": "TKT-ACTIVATED-ONLY",
-#     "status": "ACTIVATED",
-#     "color_code": "RED",
-#     "message": "Ticket not reserved - Deny entry",
-#     "details": {
-#       "customer_email": "N/A",
-#       "slot_date": "N/A",
-#       "slot_time": "N/A",
-#       "product_name": "Hong Kong Disneyland 1-Day Ticket"
-#     },
-#     "allow_entry": false
-#   }
-# }
-```
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 票券码不存在 | POST /api/tickets/validate | 返回 valid = false |
 
-**Scan Invalid Ticket:**
-```bash
-curl -s -X POST http://localhost:8080/operators/validate-ticket \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TOTALLY-INVALID",
-    "operator_id": "OP-001",
-    "terminal_id": "GATE-A1",
-    "orq": 1
-  }' | python -m json.tool
-
-# Expected RED (Directus query returns null):
-# {
-#   "success": true,
-#   "validation_result": {
-#     "ticket_code": "TOTALLY-INVALID",
-#     "status": "INVALID",
-#     "color_code": "RED",
-#     "message": "Invalid ticket - Deny entry",
-#     "details": {
-#       "customer_email": "N/A",
-#       "slot_date": "N/A",
-#       "slot_time": "N/A",
-#       "product_name": "N/A"
-#     },
-#     "allow_entry": false
-#   }
-# }
-```
+**验证点**:
+- [ ] success = false
+- [ ] error = "Ticket not found"
 
 ---
 
-### Step 2.5: Verify Ticket Entry - ALLOW (Directus Updates Status)
+#### TC-RSV-006: 未激活票券被拒绝
 
-```bash
-# Operator allows entry - Directus updates ticket.status = 'VERIFIED'
-curl -s -X POST http://localhost:8080/operators/verify-ticket \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-20251127-GREEN",
-    "operator_id": "OP-001",
-    "terminal_id": "GATE-A1",
-    "validation_decision": "ALLOW",
-    "orq": 1
-  }' | python -m json.tool
+**AC Reference**: `customer-reservation-portal.AC-3`
 
-# Expected (Directus updates: ticket.status + reservation.status to VERIFIED):
-# {
-#   "success": true,
-#   "data": {
-#     "ticket_code": "TKT-20251127-GREEN",
-#     "verification_status": "VERIFIED",
-#     "verified_at": "2025-11-27T12:45:30.000Z",
-#     "operator_id": "OP-001",
-#     "terminal_id": "GATE-A1"
-#   }
-# }
-```
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 票券状态非 ACTIVATED | POST /api/tickets/validate | 返回错误 |
+
+**验证点**:
+- [ ] valid = false
+- [ ] error 包含 "must be activated"
 
 ---
 
-### Step 2.6: Verify Ticket Entry - DENY (Directus Logs Decision)
+#### TC-RSV-007: 已预约票券被拒绝
 
-```bash
-# Operator denies entry - Directus logs denial (does NOT update ticket status)
-curl -s -X POST http://localhost:8080/operators/verify-ticket \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_code": "TKT-SUSPICIOUS-001",
-    "operator_id": "OP-001",
-    "terminal_id": "GATE-A1",
-    "validation_decision": "DENY",
-    "orq": 1
-  }' | python -m json.tool
+**AC Reference**: `customer-reservation-portal.AC-4`
 
-# Expected (Directus logs denial but ticket remains in original status):
-# {
-#   "success": true,
-#   "data": {
-#     "ticket_code": "TKT-SUSPICIOUS-001",
-#     "verification_status": "DENIED",
-#     "verified_at": "2025-11-27T12:50:00.000Z",
-#     "operator_id": "OP-001",
-#     "terminal_id": "GATE-A1"
-#   }
-# }
-```
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 票券已有预约 | POST /api/tickets/validate | 返回已预约错误 |
+
+**验证点**:
+- [ ] valid = false
+- [ ] error 包含 "already has an active reservation"
 
 ---
 
-## 📊 Directus Collections Used
+### Module 3: 创建预约
 
-### 1. `tickets` Collection
-Fields:
-- `ticket_code` (string, unique)
-- `status` (enum: PENDING_PAYMENT, ACTIVATED, RESERVED, VERIFIED, EXPIRED, CANCELLED)
-- `product_id` (integer)
-- `customer_email` (string)
-- `customer_phone` (string)
-- `expires_at` (datetime)
-- `reserved_at` (datetime)
-- `verified_at` (datetime)
-- `verified_by` (string, operator_id)
-- `order_id` (integer)
+**Related Card**: `customer-reservation-portal`
+**Coverage**: 3/3 ACs (100%)
 
-### 2. `ticket_reservations` Collection
-Fields:
-- `id` (uuid, primary key)
-- `ticket_id` (string, references ticket_code)
-- `slot_id` (uuid, references reservation_slots.id)
-- `customer_email` (string)
-- `customer_phone` (string)
-- `status` (enum: RESERVED, VERIFIED, CANCELLED)
-- `reserved_at` (datetime)
-- `updated_at` (datetime)
+#### TC-RSV-008: 创建预约成功
 
-### 3. `reservation_slots` Collection
-Fields:
-- `id` (uuid, primary key)
-- `date` (date)
-- `start_time` (time)
-- `end_time` (time)
-- `total_capacity` (integer)
-- `available_count` (integer)
-- `status` (enum: ACTIVE, CLOSED, SUSPENDED)
+**AC Reference**: `customer-reservation-portal.AC-5`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 有效票券和时段 | POST /api/reservations/create | 返回预约详情 |
+
+**验证点**:
+- [ ] success = true
+- [ ] 返回 reservation_id
+- [ ] 返回 slot_date, slot_time
+- [ ] 票券状态变为 RESERVED
 
 ---
 
-## ✅ Directus Validation Logic Summary
+#### TC-RSV-009: 时段容量更新
 
-### Customer Reservation:
-1. ✅ **Ticket Validation**: `status = 'ACTIVATED'` (blocks PENDING_PAYMENT, RESERVED, VERIFIED)
-2. ✅ **Duplicate Check**: No active reservation for ticket
-3. ✅ **Expiry Check**: `expires_at > now()`
-4. ✅ **Create Reservation**: Insert into `ticket_reservations`
-5. ✅ **Update Ticket**: Set `status = 'RESERVED'`, `reserved_at = now()`
-6. ✅ **Update Slot**: Decrement `available_count`
+**AC Reference**: `customer-reservation-portal.AC-6`
 
-### Operator Validation:
-1. ✅ **Ticket Exists**: Query `tickets` by `ticket_code`
-2. ✅ **Status Check**: Must be `status = 'RESERVED'`
-3. ✅ **Fetch Reservation**: Get reservation + slot details
-4. ✅ **Date Validation**: Compare `slot.date` with today (Hong Kong timezone UTC+8)
-5. ✅ **Color Code**:
-   - 🟢 **GREEN**: RESERVED + date matches today
-   - 🟡 **YELLOW**: RESERVED but date mismatch
-   - 🔴 **RED**: Not RESERVED or not found
-6. ✅ **Verify Entry (ALLOW)**: Update `ticket.status = 'VERIFIED'`, `reservation.status = 'VERIFIED'`
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 创建预约后 | GET /api/reservation-slots/available | available_count 减少 |
+
+**验证点**:
+- [ ] available_count 减少 1
+- [ ] capacity_status 可能变化
 
 ---
 
-## 🐛 Troubleshooting Directus Mode
+#### TC-RSV-010: 使用自定义联系方式
 
-**Issue: "Ticket not found" for valid ticket**
-```bash
-# Check Directus connection
-# Look for logs: "directus.connection.success"
-```
+**AC Reference**: `customer-reservation-portal.AC-7`
 
-**Issue: "Ticket must be activated" for activated ticket**
-```bash
-# Verify ticket status in Directus admin panel
-# Ensure status field is exactly 'ACTIVATED' (case-sensitive)
-```
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 提供 customer_email 和 phone | POST /api/reservations/create | 使用自定义联系方式 |
 
-**Issue: Slot capacity not updating**
-```bash
-# Check Directus permissions for reservation_slots collection
-# Ensure API has write access to update available_count
-```
+**验证点**:
+- [ ] customer_email = 提供的值
+- [ ] customer_phone = 提供的值
 
 ---
 
-**Status:** ✅ Directus integration complete
-**Mode:** Directus CMS (`USE_DIRECTUS=true`)
-**Collections:** tickets, ticket_reservations, reservation_slots
-**Ready for:** Production use, Hong Kong timezone validation
+### Module 4: 操作员核验
 
+**Related Card**: `operator-validation-scanner`
+**Coverage**: 5/5 ACs (100%)
 
-**Status:** ✅ All endpoints tested and working
-**Mode:** Mock service (USE_DATABASE=false)
-**Ready for:** Newman automation, Frontend integration
+#### TC-RSV-011: 操作员登录
+
+**AC Reference**: `operator-validation-scanner.AC-1`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 有效操作员凭证 | POST /operators/auth | 返回 session_token |
+
+**验证点**:
+- [ ] success = true
+- [ ] 返回 session_token
+- [ ] 返回 expires_at
+
+---
+
+#### TC-RSV-012: GREEN - 当日有效预约
+
+**AC Reference**: `operator-validation-scanner.AC-2`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | RESERVED + 当日预约 | POST /operators/validate-ticket | color_code = GREEN |
+
+**验证点**:
+- [ ] color_code = GREEN
+- [ ] message 包含 "Allow entry"
+- [ ] allow_entry = true
+
+---
+
+#### TC-RSV-013: YELLOW - 非当日预约
+
+**AC Reference**: `operator-validation-scanner.AC-3`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | RESERVED + 其他日期 | POST /operators/validate-ticket | color_code = YELLOW |
+
+**验证点**:
+- [ ] color_code = YELLOW
+- [ ] message 包含日期警告
+- [ ] allow_entry = false
+
+---
+
+#### TC-RSV-014: RED - 未预约票券
+
+**AC Reference**: `operator-validation-scanner.AC-4`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 非 RESERVED 状态 | POST /operators/validate-ticket | color_code = RED |
+
+**验证点**:
+- [ ] color_code = RED
+- [ ] message 包含 "Deny entry"
+- [ ] allow_entry = false
+
+---
+
+#### TC-RSV-015: 确认入场
+
+**AC Reference**: `operator-validation-scanner.AC-5`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | GREEN 票券 | POST /operators/verify-ticket (ALLOW) | 状态变为 VERIFIED |
+
+**验证点**:
+- [ ] verification_status = VERIFIED
+- [ ] 返回 verified_at
+- [ ] 票券状态更新
+
+---
+
+## 📊 Summary
+
+| Module | Test Cases | Status |
+|--------|-----------|--------|
+| 时段管理 | 3 | pending |
+| 票券验证 | 4 | pending |
+| 创建预约 | 3 | pending |
+| 操作员核验 | 5 | pending |
+| **Total** | **15** | **0/15 通过** |
+
+---
+
+## 🔗 Related Documentation
+
+- [reservation-slot-management](../cards/reservation-slot-management.md)
+- [customer-reservation-portal](../cards/customer-reservation-portal.md)
+- [operator-validation-scanner](../cards/operator-validation-scanner.md)
+
+## Color Code Reference
+
+| Color | Condition | Action |
+|-------|-----------|--------|
+| 🟢 GREEN | RESERVED + 当日预约 | 允许入场 |
+| 🟡 YELLOW | RESERVED + 非当日 | 警告，需确认 |
+| 🔴 RED | 未预约或无效 | 拒绝入场 |
+
+---
+
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (8 scenarios)
+
+- [ ] **TC-RSV-101**: 票券验证
+  - 操作: 持有已支付的票券 → 输入票券编码 → 进入预约页面
+  - **Expected**: 系统验证票券状态为 ACTIVATED，显示预约日历
+
+- [ ] **TC-RSV-102**: 查看可用时段
+  - 操作: 在预约日历中点击某一天
+  - **Expected**: 显示该日所有时段及剩余容量（如"150/200 可用"）
+
+- [ ] **TC-RSV-103**: 创建预约
+  - 操作: 选择日期和时段 → 确认预约
+  - **Expected**: 预约创建成功，票券状态变为 RESERVED，收到确认邮件含二维码
+
+- [ ] **TC-RSV-104**: 有效预约验证（绿色）
+  - 操作: 客户预约今天的时段 → 操作员扫描二维码
+  - **Expected**: 屏幕显示绿色"有效票券"，显示客户信息，可点击"标记已验证"
+
+- [ ] **TC-RSV-105**: 日期不匹配验证（红色）
+  - 操作: 客户预约其他日期 → 操作员今天扫描二维码
+  - **Expected**: 屏幕显示红色"日期不符"，显示预约日期
+
+- [ ] **TC-RSV-106**: 未预约票券验证（红色）
+  - 操作: 票券已激活但未预约 → 操作员扫描二维码
+  - **Expected**: 屏幕显示红色"未预约"，提示需先预约时段
+
+- [ ] **TC-RSV-107**: 时段容量更新
+  - 操作: 创建预约后 → 查询该时段可用容量
+  - **Expected**: available_count 减少 1，capacity_status 可能变化
+
+- [ ] **TC-RSV-108**: 使用自定义联系方式
+  - 操作: 创建预约时提供 customer_email 和 phone
+  - **Expected**: 预约记录使用提供的联系方式
+
+### Round 2: 异常场景 (5 scenarios)
+
+- [ ] **TC-RSV-201**: 时段已满
+  - 操作: 某时段已达容量上限 → 尝试预约该时段
+  - **Expected**: 拒绝预约，提示"该时段已满"，推荐其他可用时段
+
+- [ ] **TC-RSV-202**: 不存在票券验证
+  - 操作: 输入不存在的票券编码
+  - **Expected**: 返回错误，提示 "Ticket not found"
+
+- [ ] **TC-RSV-203**: 未激活票券预约
+  - 操作: 使用非 ACTIVATED 状态票券尝试预约
+  - **Expected**: 返回错误，提示 "must be activated"
+
+- [ ] **TC-RSV-204**: 已预约票券重复预约
+  - 操作: 已有预约的票券 → 尝试再次预约
+  - **Expected**: 返回错误，提示 "already has an active reservation"
+
+- [ ] **TC-RSV-205**: 重复扫描已验证票券
+  - 操作: 票券已被验证 → 另一操作员再次扫描
+  - **Expected**: 屏幕显示黄色"已验证"，显示验证时间和操作员
+
+### Round 3: 边界测试 (2 scenarios)
+
+- [ ] **TC-RSV-301**: 容量强制执行
+  - 操作: 某时段剩余 1 个名额 → 2 位客户同时尝试预约
+  - **Expected**: 第一位成功，第二位收到"时段已满"错误
+
+- [ ] **TC-RSV-302**: 无效月份格式
+  - 操作: 查询可用时段时使用无效月份格式
+  - **Expected**: 返回 400，提示日期格式错误
+
+---
+
+## 📝 Revision History
+
+| 版本 | 日期 | 作者 | 变更内容 |
+|------|------|------|----------|
+| 1.1 | 2025-12-18 | Claude | 添加 QA E2E Checklist |
+| 1.0 | 2025-12-17 | System | 初始版本 |

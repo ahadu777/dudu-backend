@@ -11,7 +11,7 @@ pr: ""
 newman_report: "reports/newman/ota-b2b2c-billing.xml"
 integration_runbook: "docs/integration/ota-b2b2c-billing-runbook.md"
 last_update: "2025-12-10T12:00:00+08:00"
-related_stories: ["US-012"]
+related_stories: ["US-012", "US-017"]
 relationships:
   depends_on: ["ota-channel-management"]
   triggers: ["order-create", "qr-generation-api"]
