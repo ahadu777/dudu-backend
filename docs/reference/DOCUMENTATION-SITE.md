@@ -353,6 +353,41 @@ PRD-006 | Ticket Activation System | ✅ Complete (100%)
 
 ---
 
+### 12. Product Architecture - `/architecture` ⭐ NEW
+
+**Visual architecture diagram** with Mermaid flowchart rendering.
+
+**What it shows:**
+- Product architecture flowchart
+- System component relationships
+- Data flow between modules
+- Interactive Mermaid diagrams (pan, zoom)
+
+**Data source:**
+- File: `docs/product-architecture-flowchart.md`
+- Renders Mermaid code blocks as interactive diagrams
+- Uses Mermaid.js CDN for client-side rendering
+
+**Use case:** Understand system architecture and component relationships at a glance
+
+**Features:**
+- ✅ Mermaid diagram support (flowcharts, sequence diagrams, etc.)
+- ✅ Automatic code block detection and rendering
+- ✅ Styled markdown content alongside diagrams
+- ✅ Navigation bar consistent with other pages
+
+**Example Mermaid block:**
+```markdown
+```mermaid
+graph TD
+    A[User] --> B[API Gateway]
+    B --> C[Service Layer]
+    C --> D[Database]
+```
+```
+
+---
+
 ## Architecture
 
 ### Parser Utilities (Zero Hardcoding)
@@ -433,7 +468,52 @@ coverage_registry:
 
 ---
 
-#### 4. `src/utils/sitemapBuilder.ts` (New)
+#### 4. `src/utils/complianceAuditor.ts` (New)
+
+**Responsibilities:**
+- Audit all PRDs, Stories, and Cards for compliance violations
+- Validate status values against allowed values per document type
+- Check bidirectional relationship consistency (PRD ↔ Story ↔ Card)
+- Detect missing required fields in YAML frontmatter
+- Generate actionable fix suggestions with impact explanations
+
+**Key functions:**
+```typescript
+runComplianceAudit(): ComplianceReport     // Full audit of all docs
+```
+
+**Interfaces:**
+```typescript
+interface ComplianceViolation {
+  type: 'error' | 'warning';
+  category: string;
+  file: string;
+  issue: string;
+  fix: string;
+  impact: string;
+}
+
+interface ComplianceReport {
+  violations: ComplianceViolation[];
+  stats: {
+    totalFiles: number;
+    errors: number;
+    warnings: number;
+    score: number;
+  };
+}
+```
+
+**Validation rules:**
+- PRD status: `Draft`, `In Progress`, `Done`
+- Story status: `Draft`, `In Progress`, `Done`
+- Card status: `Ready`, `In Progress`, `Done`
+- Bidirectional: If PRD claims story, story must claim PRD back
+- Required fields per document type (see "Developer Maintenance Requirements")
+
+---
+
+#### 5. `src/utils/sitemapBuilder.ts` (New)
 
 **Responsibilities:**
 - Build hierarchical PRD → Story → Card tree
@@ -659,16 +739,22 @@ docs/
 │   └── ...
 ├── test-coverage/
 │   └── _index.yaml               # Coverage data
-└── reference/
-    └── DOCUMENTATION-SITE.md     # This file
+├── reference/
+│   └── DOCUMENTATION-SITE.md     # This file
+└── product-architecture-flowchart.md  # Architecture diagram (Mermaid)
 
 src/
+├── modules/
+│   └── docs/
+│       └── router.ts             # Documentation route handlers
 ├── utils/
 │   ├── prdParser.ts              # PRD & Story loader
 │   ├── cardParser.ts             # Card loader
 │   ├── coverageParser.ts         # Coverage loader
-│   └── sitemapBuilder.ts         # Hierarchy builder
-└── app.ts                         # Route handlers
+│   ├── sitemapBuilder.ts         # Hierarchy builder
+│   ├── complianceAuditor.ts      # Compliance audit engine
+│   └── markdown.ts               # Markdown to HTML converter
+└── app.ts                         # Main application
 ```
 
 ---
@@ -1371,6 +1457,6 @@ The documentation visualization site provides a **zero-maintenance, PM-friendly 
 
 ---
 
-**Last Updated:** 2025-11-30
+**Last Updated:** 2025-12-15
 **Maintainer:** Development Team
 **Related:** [CLAUDE.md](../CLAUDE.md), [KNOWLEDGE-GRAPH.md](KNOWLEDGE-GRAPH.md)
