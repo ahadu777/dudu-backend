@@ -181,6 +181,8 @@ When answering "Is feature X ready?" or "Can user do Y?":
 
 **Lesson (2025-12-22):** The `/ai-sitemap` endpoint is machine-readable institutional knowledge. It solves the problem of ephemeral AI context by exposing the complete project state as structured JSON.
 
+**Lesson (2025-12-22):** Postman collection JSON already contains the E2E API sequence in its `item` array structure. The `/tests` page now parses this to show the actual request chain (method → endpoint → test name) for each collection. This makes E2E coverage visible without manual documentation.
+
 ---
 
 *Last updated: 2025-12-22*

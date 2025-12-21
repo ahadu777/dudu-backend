@@ -1706,6 +1706,7 @@ router.get('/tests', (_req: Request, res: Response) => {
       id: string;
       testCases: Array<{ name: string; folder: string }>;
       totalTests: number;
+      apiSequence: Array<{ step: number; name: string; method: string; path: string; folder: string }>;
     }> = [];
 
     // Read all Postman collection JSON files
@@ -1716,8 +1717,10 @@ router.get('/tests', (_req: Request, res: Response) => {
         try {
           const content = JSON.parse(fs.readFileSync(path.join(postmanDir, file), 'utf-8'));
           const testCases: Array<{ name: string; folder: string }> = [];
+          const apiSequence: Array<{ step: number; name: string; method: string; path: string; folder: string }> = [];
+          let stepCounter = 0;
 
-          // Extract test names recursively from Postman collection structure
+          // Extract test names AND API sequence recursively from Postman collection structure
           const extractTests = (items: any[], folder = '') => {
             if (!items) return;
             for (const item of items) {
@@ -1727,6 +1730,21 @@ router.get('/tests', (_req: Request, res: Response) => {
               } else if (item.name) {
                 // It's a test request
                 testCases.push({ name: item.name, folder });
+
+                // Extract API method and path for sequence visualization
+                stepCounter++;
+                const method = item.request?.method || 'GET';
+                let path = '';
+                if (item.request?.url) {
+                  if (typeof item.request.url === 'string') {
+                    path = item.request.url.replace(/\{\{[^}]+\}\}/g, '').replace(/^https?:\/\/[^/]+/, '') || '/';
+                  } else if (item.request.url.path) {
+                    path = '/' + item.request.url.path.join('/');
+                  } else if (item.request.url.raw) {
+                    path = item.request.url.raw.replace(/\{\{[^}]+\}\}/g, '').replace(/^https?:\/\/[^/]+/, '') || '/';
+                  }
+                }
+                apiSequence.push({ step: stepCounter, name: item.name, method, path, folder });
               }
             }
           };
@@ -1753,7 +1771,8 @@ router.get('/tests', (_req: Request, res: Response) => {
             type,
             id,
             testCases,
-            totalTests: testCases.length
+            totalTests: testCases.length,
+            apiSequence
           });
         } catch (e) {
           logger.warn(`Failed to parse ${file}:`, e);
@@ -1988,6 +2007,82 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
       </ul>
       <p style="margin-top: 12px;"><strong>Trust level:</strong> ✅ These are the actual executable tests from Newman/Postman collections.</p>
     </div>
+
+    <!-- E2E API Flows - Dynamically Parsed from Postman Collections -->
+    <div style="background: #f0f7ff; border: 2px solid #3498db; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px;">
+      <h2 style="color: #2980b9; margin-bottom: 12px;">🔄 E2E API Flows (Parsed from Postman JSON)</h2>
+      <p style="color: #34495e; margin-bottom: 16px;">Each test collection runs these API calls in sequence. This is the actual E2E chain that Newman executes.</p>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+        <button id="showAllFlowsBtn" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Show All Flows</button>
+        <button id="hideAllFlowsBtn" style="padding: 8px 16px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer;">Hide All</button>
+        <span style="color: #7f8c8d; margin-left: 12px; align-self: center;">Click a collection to see its API sequence</span>
+      </div>
+
+      ${collections.filter(c => c.type === 'prd' || c.type === 'story').map(c => `
+      <div style="background: white; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; overflow: hidden;" class="flow-card">
+        <div class="flow-header" data-target="flow-${c.filename.replace(/[^a-zA-Z0-9]/g, '-')}"
+             style="padding: 12px 16px; background: ${c.type === 'prd' ? '#e8f4fd' : '#e8fdf4'}; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-weight: 600; color: #2c3e50;">${c.id}</span>
+            <span style="color: #7f8c8d; margin-left: 8px; font-size: 0.9em;">${c.name}</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="background: ${c.type === 'prd' ? '#2980b9' : '#27ae60'}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${c.apiSequence.length} API calls</span>
+            <span style="color: #7f8c8d;">▼</span>
+          </div>
+        </div>
+        <div id="flow-${c.filename.replace(/[^a-zA-Z0-9]/g, '-')}" style="display: none; padding: 16px; background: #fafbfc;">
+          <div style="font-family: monospace; font-size: 0.85em;">
+            ${c.apiSequence.map((api, idx) => `
+            <div style="display: flex; align-items: flex-start; margin-bottom: 8px; ${idx < c.apiSequence.length - 1 ? 'border-left: 2px solid #3498db; padding-left: 16px; margin-left: 8px;' : 'padding-left: 16px; margin-left: 8px;'}">
+              <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center; margin-right: 8px;">${api.method}</span>
+              <div style="flex: 1;">
+                <code style="color: #2c3e50;">${api.path || '/'}</code>
+                <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
+              </div>
+            </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+      `).join('')}
+
+      <div style="background: #d4edda; padding: 12px; border-radius: 4px; margin-top: 16px;">
+        <p style="margin: 0; color: #155724;"><strong>✅ Key insight:</strong> Each collection above represents a complete E2E flow. Newman runs the requests in order, passing variables between steps (e.g., order_id from creation → payment → QR generation).</p>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Show All Flows button
+        var showBtn = document.getElementById('showAllFlowsBtn');
+        if (showBtn) {
+          showBtn.addEventListener('click', function() {
+            document.querySelectorAll('[id^="flow-"]').forEach(function(el) { el.style.display = 'block'; });
+          });
+        }
+
+        // Hide All Flows button
+        var hideBtn = document.getElementById('hideAllFlowsBtn');
+        if (hideBtn) {
+          hideBtn.addEventListener('click', function() {
+            document.querySelectorAll('[id^="flow-"]').forEach(function(el) { el.style.display = 'none'; });
+          });
+        }
+
+        // Flow headers (toggle individual flows)
+        document.querySelectorAll('.flow-header').forEach(function(header) {
+          header.addEventListener('click', function() {
+            var targetId = this.getAttribute('data-target');
+            var target = document.getElementById(targetId);
+            if (target) {
+              target.style.display = target.style.display === 'none' ? 'block' : 'none';
+            }
+          });
+        });
+      });
+    </script>
 
     <div class="stats-row">
       <div class="stat-card">
