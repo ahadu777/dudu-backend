@@ -2,11 +2,36 @@
 # These questions help assess system health from different perspectives
 # Data-driven: Add/modify questions here, UI reflects changes automatically
 
-last_updated: "2025-12-20"
-version: "1.0"
+last_updated: "2025-12-22"
+version: "1.1"
 
 # Question categories by role
 roles:
+  - id: ceo
+    title: "CEO"
+    icon: "👔"
+    color: "#2c3e50"
+    questions:
+      - question: "Is production ready?"
+        check_location: "/evaluation"
+        target: "Foundation Score ≥80%, all checks green"
+        automated_check: "production_readiness"
+        sub_checks:
+          - "npm run build succeeds"
+          - "npm run test:prd passes"
+          - "Compliance score ≥90%"
+          - "No critical violations"
+
+      - question: "What's blocking the ship?"
+        check_location: "/evaluation#action-items"
+        target: "Zero high-priority items"
+        automated_check: "blocking_items"
+
+      - question: "How healthy is the foundation?"
+        check_location: "/evaluation"
+        target: "Foundation Score visible"
+        automated_check: "foundation_score"
+
   - id: pm
     title: "Product Managers"
     icon: "📋"
@@ -106,6 +131,15 @@ roles:
         check_location: "/coverage"
         target: "Statistics accurate"
         automated_check: "coverage_accuracy_check"
+
+      - question: "Does local environment match production?"
+        check_location: "package.json engines"
+        target: "node -v matches engines.node"
+        automated_check: "env_parity"
+        sub_checks:
+          - "node -v returns v24.x"
+          - "npm run build succeeds"
+          - "npm start runs without errors"
 
 # Quick health check commands (also data-driven)
 quick_checks:

@@ -56,12 +56,23 @@ Documentation System
 
 ## Foundation Score
 
-Your executive dashboard metric:
-- **Compliance (40%)** - Are docs well-structured?
-- **Test Pass Rate (40%)** - Is the system working?
+Your executive dashboard metric (4 dimensions):
+- **Compliance (30%)** - Are docs well-structured?
+- **Test Pass Rate (30%)** - Is the system working?
 - **Docs Complete (20%)** - Are cards done?
+- **Production Ready (20%)** - Can we ship?
 
 Access at: `/evaluation`
+
+### Production Readiness Checks
+
+Beyond tests and docs, production readiness includes:
+- Node version parity (local vs production)
+- Package manager consistency (npm/yarn)
+- Dependencies resolve cleanly
+- Build succeeds without errors
+
+**Lesson learned (2025-12-21):** DigitalOcean App Platform uses buildpacks (not Dockerfile), resolving `>=18.0.0` to latest Node (24.x). Local should match.
 
 ## Data Sources (All Data-Driven)
 
@@ -96,6 +107,42 @@ When Jimmy starts a conversation:
 4. He cares about the "single number" that represents health
 5. He wants to see patterns work across the whole system
 
+## AI Verification Guide
+
+When answering "Is feature X ready?" or "Can user do Y?":
+
+### 1. Don't Trust Summaries Alone
+| Source | Type | Trust Level |
+|--------|------|-------------|
+| `docs/test-coverage/_index.yaml` | Summary | ⚠️ May be outdated |
+| `postman/auto-generated/*.json` | Actual tests | ✅ Source of truth |
+| `src/modules/**/*.ts` | Implementation | ✅ Source of truth |
+
+### 2. Verification Steps
+```
+1. TRACE CODE: grep/read actual implementation
+   → Find the endpoints that handle the flow
+
+2. FIND TESTS: parse postman/auto-generated/*.json
+   → Extract test names with: grep '"name"' <collection>.json
+
+3. CHECK COVERAGE:
+   → Individual steps tested? ✅/❌
+   → Full E2E chain tested? ✅/❌
+
+4. RUN TEST: npm run test:prd {N}
+   → Get actual pass/fail results
+```
+
+### 3. Example: "Can operator scan QR from miniprogram?"
+| Step | Check | Result |
+|------|-------|--------|
+| Code exists? | grep scan/qr in src/ | ✅ Found in qr-generation/, operatorValidation/ |
+| Tests exist? | PRD-006 has AC-3.2, PRD-008 has A7.1 | ✅ Individual steps |
+| E2E chain? | No single test chains miniprogram→operator | ⚠️ Gap |
+
+**Lesson (2025-12-22):** Test coverage YAML summarizes what *should* be tested. Actual test JSON files show what *is* tested. Always verify against the actual test collection when answering flow questions.
+
 ---
 
-*Last updated: 2025-12-20*
+*Last updated: 2025-12-22*

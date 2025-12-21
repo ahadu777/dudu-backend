@@ -32,6 +32,164 @@ import {
   handleMemosList,
   handleMemoDetail
 } from './handlers';
+import { loadCardDocuments } from '../../utils/cardParser';
+
+// ============ Auto-Generated Action Items ============
+// Data-driven: computes from actual data instead of hardcoded YAML list
+interface AutoActionItem {
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  source: string; // Where this action item came from
+  category: 'compliance' | 'coverage' | 'docs' | 'production';
+}
+
+function generateAutoActionItems(): AutoActionItem[] {
+  const actions: AutoActionItem[] = [];
+
+  // 1. Get compliance violations (errors = high priority, warnings = medium)
+  const complianceResult = runComplianceAudit();
+  const criticalViolations = complianceResult.violations.filter(v => v.type === 'error');
+  const warningViolations = complianceResult.violations.filter(v => v.type === 'warning');
+
+  if (criticalViolations.length > 0) {
+    // Group by category for better actionability
+    const byCategory = criticalViolations.reduce((acc, v) => {
+      acc[v.category] = (acc[v.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    Object.entries(byCategory).forEach(([category, count]) => {
+      actions.push({
+        description: `Fix ${count} ${category} error(s) in documentation`,
+        priority: 'high',
+        source: '/compliance',
+        category: 'compliance'
+      });
+    });
+  }
+
+  if (warningViolations.length > 3) {
+    actions.push({
+      description: `Review ${warningViolations.length} compliance warnings`,
+      priority: 'medium',
+      source: '/compliance',
+      category: 'compliance'
+    });
+  }
+
+  // 2. Get coverage gaps from test-coverage data
+  const coverageData = loadTestCoverageData();
+  if (coverageData?.remaining_gaps) {
+    const gaps = coverageData.remaining_gaps as string[];
+    if (gaps.length > 0) {
+      actions.push({
+        description: `Address ${gaps.length} remaining test coverage gap(s)`,
+        priority: 'medium',
+        source: '/coverage',
+        category: 'coverage'
+      });
+    }
+  }
+
+  // 3. Get draft/in-progress cards that need completion
+  const cards = loadCardDocuments();
+  const draftCards = cards.filter(c => c.metadata.status === 'Ready' || c.metadata.status === 'Draft');
+  const inProgressCards = cards.filter(c => c.metadata.status === 'In Progress');
+
+  if (inProgressCards.length > 0) {
+    actions.push({
+      description: `Complete ${inProgressCards.length} In Progress card(s)`,
+      priority: 'high',
+      source: '/cards',
+      category: 'docs'
+    });
+  }
+
+  if (draftCards.length > 3) {
+    actions.push({
+      description: `Move ${draftCards.length} Draft/Ready cards to In Progress or mark as deprecated`,
+      priority: 'low',
+      source: '/cards',
+      category: 'docs'
+    });
+  }
+
+  // 4. Production readiness checks
+  const testStats = (coverageData?.coverage_summary as any)?.test_statistics || {};
+  const successRate = testStats.success_rate || '0%';
+  if (successRate !== '100%') {
+    actions.push({
+      description: `Fix failing tests (current: ${successRate} pass rate)`,
+      priority: 'high',
+      source: 'npm run test:prd',
+      category: 'production'
+    });
+  }
+
+  // Check for PRDs without test coverage
+  const prdCoverageRegistry = (coverageData as any)?.coverage_registry || [];
+  const prdsWithGaps = prdCoverageRegistry.filter((p: any) =>
+    p.coverage_gaps && p.coverage_gaps.length > 0 && !p.deprecated
+  );
+  if (prdsWithGaps.length > 0) {
+    actions.push({
+      description: `Review ${prdsWithGaps.length} PRD(s) with known test gaps`,
+      priority: 'medium',
+      source: '/coverage',
+      category: 'production'
+    });
+  }
+
+  return actions.sort((a, b) => {
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    return priorityOrder[a.priority] - priorityOrder[b.priority];
+  });
+}
+
+// ============ Production Readiness Score ============
+// Calculates production readiness based on multiple factors
+function calculateProductionReadiness(): { score: number; details: string[] } {
+  const details: string[] = [];
+  let totalPoints = 0;
+  let earnedPoints = 0;
+
+  // 1. Test pass rate (40 points)
+  totalPoints += 40;
+  const coverageData = loadTestCoverageData();
+  const testStats = (coverageData?.coverage_summary as any)?.test_statistics || {};
+  const successRate = testStats.success_rate === '100%' ? 100 : parseInt(testStats.success_rate || '0');
+  const testPoints = Math.round(successRate * 0.4);
+  earnedPoints += testPoints;
+  details.push(`Tests: ${testPoints}/40 (${successRate}% pass rate)`);
+
+  // 2. No critical compliance errors (30 points)
+  totalPoints += 30;
+  const complianceResult = runComplianceAudit();
+  const criticalErrors = complianceResult.violations.filter(v => v.type === 'error').length;
+  const compliancePoints = criticalErrors === 0 ? 30 : Math.max(0, 30 - (criticalErrors * 5));
+  earnedPoints += compliancePoints;
+  details.push(`Compliance: ${compliancePoints}/30 (${criticalErrors} critical errors)`);
+
+  // 3. Documentation completeness (20 points)
+  totalPoints += 20;
+  const cardStats = getCardStats();
+  const docsCompleteRate = cardStats.total > 0
+    ? ((cardStats.byStatus.Done || 0) / cardStats.total) * 100
+    : 0;
+  const docsPoints = Math.round(docsCompleteRate * 0.2);
+  earnedPoints += docsPoints;
+  details.push(`Docs: ${docsPoints}/20 (${Math.round(docsCompleteRate)}% complete)`);
+
+  // 4. No remaining coverage gaps (10 points)
+  totalPoints += 10;
+  const gaps = (coverageData?.remaining_gaps as string[] || []).length;
+  const gapPoints = gaps === 0 ? 10 : Math.max(0, 10 - (gaps * 2));
+  earnedPoints += gapPoints;
+  details.push(`Coverage Gaps: ${gapPoints}/10 (${gaps} gaps)`);
+
+  const score = Math.round((earnedPoints / totalPoints) * 100);
+  return { score, details };
+}
 
 // Generate detailed test cases for QA - loads from YAML files
 function generateTestCasesHTML(): string {
@@ -298,10 +456,17 @@ router.get('/evaluation', (_req: Request, res: Response) => {
       ? Math.round(((cardStats.byStatus.Done || 0) / cardStats.total) * 100)
       : 0;
 
-    // Overall Foundation Score (weighted average)
+    // Production Readiness (new dimension)
+    const prodReadiness = calculateProductionReadiness();
+
+    // Overall Foundation Score (weighted average with 4 dimensions)
+    // 30% Compliance + 30% Tests + 20% Docs + 20% Production Readiness
     const foundationScore = Math.round(
-      (complianceScore * 0.4) + (testPassRate * 0.4) + (docsComplete * 0.2)
+      (complianceScore * 0.3) + (testPassRate * 0.3) + (docsComplete * 0.2) + (prodReadiness.score * 0.2)
     );
+
+    // Auto-generate action items from actual data (no more hardcoded YAML list!)
+    const autoActionItems = generateAutoActionItems();
 
     const getBarColor = (score: number) => score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
 
@@ -397,11 +562,14 @@ router.get('/evaluation', (_req: Request, res: Response) => {
       </div>
     `).join('');
 
-    // Build action items dynamically from YAML
-    const pendingActions = evalConfig.action_items.filter(a => a.status === 'pending');
-    const actionItemsHtml = pendingActions.map(action =>
-      `<li class="priority-${action.priority}">${action.description}</li>`
-    ).join('');
+    // Build action items from AUTO-GENERATED data (not YAML!)
+    // This is the key improvement: actions come from actual system state
+    const actionItemsHtml = autoActionItems.map(action => {
+      const sourceLink = action.source.startsWith('/')
+        ? `<a href="${action.source}" style="color: inherit; margin-left: 8px; font-size: 0.8em;">[${action.source}]</a>`
+        : `<code style="font-size: 0.8em; margin-left: 8px;">${action.source}</code>`;
+      return `<li class="priority-${action.priority}">${action.description}${sourceLink}</li>`;
+    }).join('');
 
     const content = `
       <div class="eval-container">
@@ -420,25 +588,32 @@ router.get('/evaluation', (_req: Request, res: Response) => {
             </div>
             <div class="score-breakdown">
               <div class="score-item">
-                <span class="name">Compliance</span>
+                <span class="name">Compliance (30%)</span>
                 <div class="bar-container">
                   <div class="bar ${getBarColor(complianceScore)}" style="width: ${complianceScore}%"></div>
                 </div>
                 <span class="value">${complianceScore}%</span>
               </div>
               <div class="score-item">
-                <span class="name">Test Pass Rate</span>
+                <span class="name">Test Pass Rate (30%)</span>
                 <div class="bar-container">
                   <div class="bar ${getBarColor(testPassRate)}" style="width: ${testPassRate}%"></div>
                 </div>
                 <span class="value">${testPassRate}%</span>
               </div>
               <div class="score-item">
-                <span class="name">Docs Complete</span>
+                <span class="name">Docs Complete (20%)</span>
                 <div class="bar-container">
                   <div class="bar ${getBarColor(docsComplete)}" style="width: ${docsComplete}%"></div>
                 </div>
                 <span class="value">${docsComplete}%</span>
+              </div>
+              <div class="score-item">
+                <span class="name">Prod Ready (20%)</span>
+                <div class="bar-container">
+                  <div class="bar ${getBarColor(prodReadiness.score)}" style="width: ${prodReadiness.score}%"></div>
+                </div>
+                <span class="value">${prodReadiness.score}%</span>
               </div>
             </div>
           </div>
@@ -470,12 +645,15 @@ router.get('/evaluation', (_req: Request, res: Response) => {
 
         ${roleSectionsHtml}
 
-        ${pendingActions.length > 0 ? `
+        ${autoActionItems.length > 0 ? `
         <div class="action-items">
-          <h3>📝 Current Action Items</h3>
+          <h3>📝 Auto-Generated Action Items</h3>
+          <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">
+            These items are computed from actual system data, not a hardcoded list.
+          </p>
           <ul>${actionItemsHtml}</ul>
         </div>
-        ` : ''}
+        ` : '<div class="action-items" style="background: #d4edda; border-left-color: #27ae60;"><h3 style="color: #155724;">✅ No Action Items</h3><p style="color: #155724;">All systems healthy!</p></div>'}
 
         <div class="how-it-works">
           <h2>📐 How This Page Works</h2>
@@ -526,6 +704,20 @@ router.get('/evaluation', (_req: Request, res: Response) => {
               <td><code>extractPrdTestData()</code></td>
               <td class="arrow">→</td>
               <td>/test-results page</td>
+            </tr>
+            <tr>
+              <td><em>Multiple sources</em></td>
+              <td class="arrow">→</td>
+              <td><code>generateAutoActionItems()</code></td>
+              <td class="arrow">→</td>
+              <td>Action Items: ${autoActionItems.length}</td>
+            </tr>
+            <tr>
+              <td><em>Multiple sources</em></td>
+              <td class="arrow">→</td>
+              <td><code>calculateProductionReadiness()</code></td>
+              <td class="arrow">→</td>
+              <td>Prod Ready: ${prodReadiness.score}%</td>
             </tr>
           </table>
         </div>
