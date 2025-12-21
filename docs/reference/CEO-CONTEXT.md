@@ -47,6 +47,7 @@ Documentation System
 
 | Role | Question | Where to Check |
 |------|----------|----------------|
+| CEO | What's the complete project state? | `/ai-sitemap` (JSON) |
 | PM | Can I see all features at a glance? | `/sitemap` |
 | PM | What's the implementation progress? | `/project-docs` |
 | Dev | Is the API contract clear? | `/cards/:slug` |
@@ -84,6 +85,41 @@ Beyond tests and docs, production readiness includes:
 | Evaluation questions | `docs/reference/evaluation-questions.yaml` |
 | Test coverage | `docs/test-coverage/_index.yaml` |
 | Compliance rules | `src/utils/complianceAuditor.ts` |
+
+## AI Project Knowledge Base
+
+The `/ai-sitemap` endpoint is the **machine-readable institutional knowledge** of this project.
+
+```
+Problem: AI context is ephemeral. Conversations reset. Knowledge is lost.
+Solution: The project itself exposes its complete state as structured JSON.
+```
+
+### What It Enables
+- **AI Onboarding**: Any AI agent can understand the entire project in one request
+- **Knowledge Continuity**: When context is lost, fetch `/ai-sitemap` to reconstruct
+- **Verification**: AI can answer "Is X ready?" by checking actual sources, not summaries
+- **External Integration**: Other systems can programmatically navigate the project
+
+### What It Contains (v3.0)
+| Section | Purpose |
+|---------|---------|
+| `project` | Tech stack, description |
+| `knowledge_sources.documentation` | PRD → Story → Card → Memo hierarchy |
+| `knowledge_sources.reference_guides` | How to work here |
+| `knowledge_sources.testing` | Postman collections = source of truth |
+| `knowledge_sources.codebase` | Module structure, key files |
+| `verification_guide` | Steps to verify "Is feature X ready?" |
+| `summary` | Quick counts across all documentation |
+
+### Quick Access
+```bash
+# Get complete project state as JSON
+curl http://localhost:8080/ai-sitemap | python -m json.tool
+
+# Or view in browser
+open http://localhost:8080/ai-sitemap
+```
 
 ## Quick Commands
 
@@ -142,6 +178,8 @@ When answering "Is feature X ready?" or "Can user do Y?":
 | E2E chain? | No single test chains miniprogram→operator | ⚠️ Gap |
 
 **Lesson (2025-12-22):** Test coverage YAML summarizes what *should* be tested. Actual test JSON files show what *is* tested. Always verify against the actual test collection when answering flow questions.
+
+**Lesson (2025-12-22):** The `/ai-sitemap` endpoint is machine-readable institutional knowledge. It solves the problem of ephemeral AI context by exposing the complete project state as structured JSON.
 
 ---
 

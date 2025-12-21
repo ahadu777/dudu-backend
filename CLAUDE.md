@@ -9,6 +9,67 @@ Jimmy focuses on **evaluating the foundation**, not implementing features. He wa
 
 ---
 
+## AI Project Knowledge Base (Critical)
+
+### Why This Matters
+
+The `/ai-sitemap` endpoint is the **machine-readable institutional knowledge** of this project. It solves a fundamental problem:
+
+```
+Problem: AI context is ephemeral. Conversations reset. Knowledge is lost.
+Solution: The project itself exposes its complete state as structured data.
+```
+
+**This enables:**
+- **AI Onboarding**: Any AI agent can understand the entire project in one request
+- **Knowledge Continuity**: When context is lost, fetch `/ai-sitemap` to reconstruct
+- **Verification**: AI can answer "Is X ready?" by checking actual sources, not summaries
+- **External Integration**: Other systems/AI tools can programmatically navigate the project
+
+### The Endpoint
+
+```
+GET http://localhost:8080/ai-sitemap
+```
+
+### What It Contains (v3.0)
+
+| Section | Purpose |
+|---------|---------|
+| `project` | What is this? Tech stack, description |
+| `knowledge_sources.documentation` | PRDs → Stories → Cards → Memos (full hierarchy with items) |
+| `knowledge_sources.reference_guides` | How to work here (all docs/reference/*.md with purposes) |
+| `knowledge_sources.case_studies` | What we learned (real implementation examples) |
+| `knowledge_sources.integration_runbooks` | How to test (E2E flows per story) |
+| `knowledge_sources.testing` | What's actually tested (Postman JSON = source of truth) |
+| `knowledge_sources.codebase` | Where's the code (modules, key files) |
+| `verification_guide` | How to verify "Is feature X ready?" |
+| `summary` | Quick counts across all documentation |
+
+### AI Recovery Protocol
+
+When starting a new session or losing context:
+
+```
+1. Fetch /ai-sitemap
+2. Read project.description and summary
+3. For specific questions, navigate knowledge_sources
+4. For "Is X ready?" questions, follow verification_guide
+```
+
+### Trust Hierarchy
+
+| Source | Trust | Why |
+|--------|-------|-----|
+| `/ai-sitemap` | ✅ HIGH | Dynamically generated from actual files |
+| `/tests` | ✅ HIGH | Parses actual Postman JSON |
+| `postman/auto-generated/*.json` | ✅ HIGH | Executable tests |
+| `src/modules/**/*.ts` | ✅ HIGH | Actual implementation |
+| `/coverage` | ⚠️ MEDIUM | YAML summary, manually maintained |
+| `docs/test-coverage/_index.yaml` | ⚠️ MEDIUM | May be outdated |
+
+---
+
 ## Research Context
 
 **Full context:** `docs/reference/RESEARCH-CONTEXT.md`

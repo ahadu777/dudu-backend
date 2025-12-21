@@ -1693,6 +1693,799 @@ router.get('/coverage', (req: Request, res: Response) => {
       }
 });
 
+// ============ /tests - Live Test Collection Browser ============
+// Purpose: Expose actual Postman test cases for AI and humans to search
+// Data source: postman/auto-generated/*.json (source of truth, not YAML summaries)
+router.get('/tests', (_req: Request, res: Response) => {
+  try {
+    const postmanDir = path.join(process.cwd(), 'postman/auto-generated');
+    const collections: Array<{
+      filename: string;
+      name: string;
+      type: 'prd' | 'story' | 'other';
+      id: string;
+      testCases: Array<{ name: string; folder: string }>;
+      totalTests: number;
+    }> = [];
+
+    // Read all Postman collection JSON files
+    if (fs.existsSync(postmanDir)) {
+      const files = fs.readdirSync(postmanDir).filter(f => f.endsWith('.json'));
+
+      for (const file of files) {
+        try {
+          const content = JSON.parse(fs.readFileSync(path.join(postmanDir, file), 'utf-8'));
+          const testCases: Array<{ name: string; folder: string }> = [];
+
+          // Extract test names recursively from Postman collection structure
+          const extractTests = (items: any[], folder = '') => {
+            if (!items) return;
+            for (const item of items) {
+              if (item.item) {
+                // It's a folder
+                extractTests(item.item, item.name || folder);
+              } else if (item.name) {
+                // It's a test request
+                testCases.push({ name: item.name, folder });
+              }
+            }
+          };
+
+          extractTests(content.item);
+
+          // Determine type and ID from filename
+          let type: 'prd' | 'story' | 'other' = 'other';
+          let id = '';
+
+          if (file.startsWith('prd-')) {
+            type = 'prd';
+            const match = file.match(/prd-(\d+)/);
+            id = match ? `PRD-${match[1].padStart(3, '0')}` : file;
+          } else if (file.startsWith('us-')) {
+            type = 'story';
+            const match = file.match(/us-(\d+)/);
+            id = match ? `US-${match[1].padStart(3, '0')}` : file;
+          }
+
+          collections.push({
+            filename: file,
+            name: content.info?.name || file,
+            type,
+            id,
+            testCases,
+            totalTests: testCases.length
+          });
+        } catch (e) {
+          logger.warn(`Failed to parse ${file}:`, e);
+        }
+      }
+    }
+
+    // Sort: PRDs first, then Stories, then Others
+    collections.sort((a, b) => {
+      const typeOrder = { prd: 0, story: 1, other: 2 };
+      if (typeOrder[a.type] !== typeOrder[b.type]) {
+        return typeOrder[a.type] - typeOrder[b.type];
+      }
+      return a.id.localeCompare(b.id);
+    });
+
+    // Calculate stats
+    const prdCollections = collections.filter(c => c.type === 'prd');
+    const storyCollections = collections.filter(c => c.type === 'story');
+    const totalTests = collections.reduce((sum, c) => sum + c.totalTests, 0);
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Collections - Live Source of Truth</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f7fa;
+    }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+    .page-header {
+      background: white;
+      border-radius: 8px;
+      padding: 24px 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .page-header h1 { font-size: 2em; color: #2c3e50; margin-bottom: 8px; }
+    .page-header .subtitle { color: #7f8c8d; font-size: 1.1em; }
+    .page-nav { margin-top: 16px; display: flex; gap: 16px; }
+    .page-nav a { color: #3498db; text-decoration: none; }
+    .page-nav a:hover { text-decoration: underline; }
+
+    /* AI Guide Box */
+    .ai-guide {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .ai-guide h2 { font-size: 1.2em; margin-bottom: 12px; }
+    .ai-guide p { opacity: 0.95; margin-bottom: 8px; }
+    .ai-guide code { background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; }
+    .ai-guide ul { margin-left: 20px; margin-top: 8px; }
+    .ai-guide li { margin-bottom: 4px; }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    .stat-card .number { font-size: 2.5em; font-weight: 700; color: #3498db; }
+    .stat-card .label { color: #7f8c8d; font-size: 0.9em; margin-top: 4px; }
+
+    /* Search Box */
+    .search-box {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    .search-box input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+    .search-box input:focus { outline: none; border-color: #3498db; }
+    .search-hint { color: #7f8c8d; font-size: 0.85em; margin-top: 8px; }
+
+    /* Collection Cards */
+    .collection-card {
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+      overflow: hidden;
+    }
+    .collection-header {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+    .collection-header:hover { background: #f8f9fa; }
+    .collection-title { font-weight: 600; color: #2c3e50; }
+    .collection-meta { display: flex; gap: 12px; align-items: center; }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: 500;
+    }
+    .badge-prd { background: #e8f4fd; color: #2980b9; }
+    .badge-story { background: #e8fdf4; color: #27ae60; }
+    .badge-other { background: #fdf4e8; color: #e67e22; }
+    .test-count { color: #7f8c8d; font-size: 0.9em; }
+
+    /* Test List */
+    .test-list {
+      display: none;
+      padding: 16px 20px;
+      background: #fafbfc;
+    }
+    .test-list.expanded { display: block; }
+    .test-item {
+      padding: 8px 12px;
+      border-left: 3px solid #e0e0e0;
+      margin-bottom: 6px;
+      background: white;
+      border-radius: 0 4px 4px 0;
+    }
+    .test-item.ac-test { border-left-color: #3498db; }
+    .test-item .folder { color: #7f8c8d; font-size: 0.8em; margin-bottom: 2px; }
+    .test-item .name { color: #2c3e50; }
+    .test-item.highlight { background: #fff3cd; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <h1>🧪 Test Collections</h1>
+      <p class="subtitle">Live source of truth - dynamically parsed from Postman JSON files</p>
+      <div class="page-nav">
+        <a href="/project-docs">← Documentation Hub</a>
+        <a href="/coverage">Coverage Summary</a>
+        <a href="/evaluation">Foundation Score</a>
+      </div>
+    </div>
+
+    <!-- Why This Page Exists -->
+    <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px;">
+      <h2 style="color: #856404; margin-bottom: 12px;">⚠️ Why This Page Exists (vs /coverage)</h2>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+        <tr style="background: #ffeeba;">
+          <th style="padding: 8px; text-align: left; border: 1px solid #ffc107;">Page</th>
+          <th style="padding: 8px; text-align: left; border: 1px solid #ffc107;">Data Source</th>
+          <th style="padding: 8px; text-align: left; border: 1px solid #ffc107;">Problem</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ffc107;"><strong>/coverage</strong></td>
+          <td style="padding: 8px; border: 1px solid #ffc107;"><code>docs/test-coverage/_index.yaml</code></td>
+          <td style="padding: 8px; border: 1px solid #ffc107;">❌ Summary written by humans - <em>may be outdated</em></td>
+        </tr>
+        <tr style="background: #d4edda;">
+          <td style="padding: 8px; border: 1px solid #ffc107;"><strong>/tests</strong> (this page)</td>
+          <td style="padding: 8px; border: 1px solid #ffc107;"><code>postman/auto-generated/*.json</code></td>
+          <td style="padding: 8px; border: 1px solid #ffc107;">✅ Parsed from actual test files - <em>always current</em></td>
+        </tr>
+      </table>
+      <p style="color: #856404;"><strong>Lesson learned (2025-12-22):</strong> When asked "Can operator scan QR from miniprogram?", the YAML summary said "covered" but actual tests showed individual steps tested, not the full E2E chain. This page exposes the <em>actual</em> test names so you can verify coverage yourself.</p>
+    </div>
+
+    <!-- Where Test Cases Come From -->
+    <div style="background: #e8f4f8; border: 2px solid #17a2b8; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px;">
+      <h2 style="color: #0c5460; margin-bottom: 12px;">📂 Where These Test Cases Come From</h2>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+        <tr style="background: #bee5eb;">
+          <th style="padding: 8px; text-align: left; border: 1px solid #17a2b8;">Source</th>
+          <th style="padding: 8px; text-align: left; border: 1px solid #17a2b8;">Location</th>
+          <th style="padding: 8px; text-align: left; border: 1px solid #17a2b8;">Description</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #17a2b8;"><strong>Postman Collections</strong></td>
+          <td style="padding: 8px; border: 1px solid #17a2b8;"><code>postman/auto-generated/*.json</code></td>
+          <td style="padding: 8px; border: 1px solid #17a2b8;">AI-generated test collections for PRD and Story acceptance criteria</td>
+        </tr>
+        <tr style="background: #f8f9fa;">
+          <td style="padding: 8px; border: 1px solid #17a2b8;"><strong>Naming Convention</strong></td>
+          <td style="padding: 8px; border: 1px solid #17a2b8;"><code>prd-NNN-*.json</code> or <code>us-NNN-*.json</code></td>
+          <td style="padding: 8px; border: 1px solid #17a2b8;">PRD tests vs Story (User Story) tests</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #17a2b8;"><strong>Test Runner</strong></td>
+          <td style="padding: 8px; border: 1px solid #17a2b8;"><code>npm run test:prd</code></td>
+          <td style="padding: 8px; border: 1px solid #17a2b8;">Newman executes these collections against the running server</td>
+        </tr>
+        <tr style="background: #f8f9fa;">
+          <td style="padding: 8px; border: 1px solid #17a2b8;"><strong>Test Reports</strong></td>
+          <td style="padding: 8px; border: 1px solid #17a2b8;"><code>reports/newman/*.xml</code></td>
+          <td style="padding: 8px; border: 1px solid #17a2b8;">JUnit XML reports from test runs (pass/fail results)</td>
+        </tr>
+      </table>
+      <div style="background: #fff; padding: 12px; border-radius: 4px; margin-top: 12px;">
+        <p style="margin: 0 0 8px 0; color: #0c5460;"><strong>🔄 Test Lifecycle:</strong></p>
+        <code style="display: block; color: #155724; background: #d4edda; padding: 8px; border-radius: 4px;">
+PRD/Story doc → AI generates Postman collection → This page parses JSON → Newman runs tests → XML reports
+        </code>
+      </div>
+    </div>
+
+    <div class="ai-guide">
+      <h2>🤖 For AI Agents & Humans</h2>
+      <p>This page shows <strong>actual test case names</strong> parsed from <code>postman/auto-generated/*.json</code>.</p>
+      <p><strong>Use this to answer questions like:</strong></p>
+      <ul>
+        <li>"Is feature X tested?" → Search for keywords in test names below</li>
+        <li>"What does PRD-006 test?" → Expand the PRD-006 collection to see all tests</li>
+        <li>"Is there an E2E test for [flow]?" → Look for tests that chain multiple steps</li>
+        <li>"Does the QR scan flow have coverage?" → Search "QR" or "scan" to find actual tests</li>
+      </ul>
+      <p style="margin-top: 12px;"><strong>Trust level:</strong> ✅ These are the actual executable tests from Newman/Postman collections.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="number">${collections.length}</div>
+        <div class="label">Test Collections</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">${totalTests}</div>
+        <div class="label">Total Test Cases</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">${prdCollections.length}</div>
+        <div class="label">PRD Collections</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">${storyCollections.length}</div>
+        <div class="label">Story Collections</div>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <input type="text" id="searchInput" placeholder="Search test cases... (e.g., 'operator scan', 'QR', 'AC-3.2')" style="flex: 1;">
+        <button id="expandAllBtn" style="padding: 10px 16px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Expand All</button>
+        <button id="collapseAllBtn" style="padding: 10px 16px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Collapse All</button>
+      </div>
+      <p class="search-hint">Search across all ${totalTests} test cases. Matching tests will be highlighted.</p>
+    </div>
+
+    ${collections.map(c => `
+    <div class="collection-card" data-collection="${c.filename}">
+      <div class="collection-header" data-filename="${c.filename}">
+        <span class="collection-title">${c.id || c.name}</span>
+        <div class="collection-meta">
+          <span class="badge badge-${c.type}">${c.type.toUpperCase()}</span>
+          <span class="test-count">${c.totalTests} tests</span>
+        </div>
+      </div>
+      <div class="test-list" id="list-${c.filename.replace(/\./g, '-')}">
+        ${c.testCases.map(t => `
+        <div class="test-item ${t.name.includes('AC-') ? 'ac-test' : ''}" data-name="${t.name.toLowerCase()}">
+          ${t.folder ? `<div class="folder">📁 ${t.folder}</div>` : ''}
+          <div class="name">${t.name}</div>
+        </div>
+        `).join('')}
+      </div>
+    </div>
+    `).join('')}
+  </div>
+
+  <script>
+    // Track which collections user has manually toggled
+    const userToggledCollections = new Set();
+
+    function expandAll() {
+      document.querySelectorAll('.test-list').forEach(list => {
+        list.classList.add('expanded');
+      });
+      // Also show all test items (in case search had hidden some)
+      document.querySelectorAll('.test-item').forEach(item => {
+        item.style.display = '';
+      });
+      // Clear the toggle tracking since user explicitly expanded all
+      userToggledCollections.clear();
+    }
+
+    function collapseAll() {
+      document.querySelectorAll('.test-list').forEach(list => {
+        list.classList.remove('expanded');
+      });
+      // Clear the toggle tracking since user explicitly collapsed all
+      userToggledCollections.clear();
+    }
+
+    function toggleCollection(filename) {
+      const listId = 'list-' + filename.replace(/\\./g, '-');
+      const list = document.getElementById(listId);
+      const isExpanded = list.classList.contains('expanded');
+
+      // Track user's manual toggle
+      if (isExpanded) {
+        userToggledCollections.add(filename + '-collapsed');
+        userToggledCollections.delete(filename + '-expanded');
+      } else {
+        userToggledCollections.add(filename + '-expanded');
+        userToggledCollections.delete(filename + '-collapsed');
+      }
+
+      list.classList.toggle('expanded');
+    }
+
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+      const query = e.target.value.toLowerCase();
+      const testItems = document.querySelectorAll('.test-item');
+      const collections = document.querySelectorAll('.collection-card');
+
+      if (!query) {
+        // Clear search: remove highlights and collapse all (unless user manually expanded)
+        testItems.forEach(item => {
+          item.classList.remove('highlight');
+          item.style.display = '';
+        });
+        collections.forEach(c => {
+          const filename = c.getAttribute('data-collection');
+          // Only collapse if user hasn't manually expanded this one
+          if (!userToggledCollections.has(filename + '-expanded')) {
+            c.querySelector('.test-list').classList.remove('expanded');
+          }
+        });
+        return;
+      }
+
+      // During search: show/hide items and auto-expand matching collections
+      collections.forEach(c => {
+        const filename = c.getAttribute('data-collection');
+        const list = c.querySelector('.test-list');
+        const items = c.querySelectorAll('.test-item');
+        let hasMatch = false;
+
+        items.forEach(item => {
+          const name = item.getAttribute('data-name');
+          if (name.includes(query)) {
+            item.classList.add('highlight');
+            item.style.display = '';
+            hasMatch = true;
+          } else {
+            item.classList.remove('highlight');
+            item.style.display = 'none';
+          }
+        });
+
+        // Auto-expand collections with matches, collapse those without
+        // But respect user's manual toggle
+        if (hasMatch) {
+          if (!userToggledCollections.has(filename + '-collapsed')) {
+            list.classList.add('expanded');
+          }
+        } else {
+          if (!userToggledCollections.has(filename + '-expanded')) {
+            list.classList.remove('expanded');
+          }
+        }
+      });
+    });
+
+    // Attach event listeners (CSP-compliant, no inline handlers)
+    document.getElementById('expandAllBtn').addEventListener('click', expandAll);
+    document.getElementById('collapseAllBtn').addEventListener('click', collapseAll);
+
+    // Collection header click handlers
+    document.querySelectorAll('.collection-header').forEach(header => {
+      header.addEventListener('click', function() {
+        const filename = this.getAttribute('data-filename');
+        toggleCollection(filename);
+      });
+    });
+
+    // Expand all if URL has ?expand=all
+    if (window.location.search.includes('expand=all')) {
+      document.querySelectorAll('.test-list').forEach(list => list.classList.add('expanded'));
+    }
+  </script>
+</body>
+</html>`;
+
+    res.send(html);
+  } catch (error) {
+    logger.error('Error loading tests page:', error);
+    res.status(500).json({ error: 'Failed to load tests page' });
+  }
+});
+
+// Helper function to get purpose description for reference files
+function getReferenceFilePurpose(filename: string): string {
+  const purposes: Record<string, string> = {
+    'AI-TEST-GENERATION.md': 'Guide for AI to generate Postman test collections',
+    'API-CHANGE-MANAGEMENT.md': 'Breaking vs non-breaking API changes workflow',
+    'CEO-CONTEXT.md': 'CEO evaluation framework and questions',
+    'DOCUMENT-LAYER-DECISION.md': 'When to create PRD vs Story vs Card',
+    'DOCUMENT-SPEC.md': 'Document templates and lifecycle',
+    'DOCUMENTATION-SITE.md': 'Documentation site implementation details',
+    'DUPLICATE-PREVENTION.md': 'How to avoid duplicate stories/cards',
+    'EXPERIENCE-LEARNING.md': 'Lessons learned and best practices',
+    'KNOWLEDGE-GRAPH.md': 'Cross-story dependency tracking',
+    'NATURAL-LANGUAGE-OPTIMIZATION.md': 'Converting user requests to specs',
+    'NEWMAN-REPORT-STANDARD.md': 'Test report naming conventions',
+    'PRODUCT-ARCHITECTURE.md': 'Multi-platform product flowcharts',
+    'REFACTORING-IMPACT.md': 'Impact analysis for code changes',
+    'RESEARCH-CONTEXT.md': 'Strategic memo system and research workflow',
+    'RESTFUL-API-DESIGN.md': 'RESTful API design standards',
+    'RUNBOOK-TEMPLATE.md': 'E2E test runbook template',
+    'TC-REGISTRY-SPEC.md': 'Test coverage registry specification',
+    'TROUBLESHOOTING.md': 'Common issues and solutions',
+    'developer-rules.md': 'Developer guidelines and rules',
+    'evaluation-questions.yaml': 'Foundation evaluation questions by role',
+  };
+  return purposes[filename] || 'Reference documentation';
+}
+
+// ============ AI Site Directory / Knowledge Base ============
+// Comprehensive project knowledge base for AI agents and external systems
+router.get('/ai-sitemap', (_req: Request, res: Response) => {
+  try {
+    const prdDocs = loadPRDDocuments();
+    const stories = loadStoriesIndex();
+    const cardStats = getCardStats();
+    const coverageStats = getCoverageStats();
+
+    // Read test collections
+    const postmanDir = path.join(process.cwd(), 'postman/auto-generated');
+    const testCollections: string[] = [];
+    if (fs.existsSync(postmanDir)) {
+      testCollections.push(...fs.readdirSync(postmanDir).filter(f => f.endsWith('.json')));
+    }
+
+    // Load cards for detailed listing
+    const cards = loadCardDocuments();
+
+    // Load reference documents
+    const referenceDir = path.join(process.cwd(), 'docs/reference');
+    const referenceFiles = fs.existsSync(referenceDir)
+      ? fs.readdirSync(referenceDir).filter(f => f.endsWith('.md') || f.endsWith('.yaml'))
+      : [];
+
+    // Load case studies
+    const casesDir = path.join(process.cwd(), 'docs/cases');
+    const caseFiles = fs.existsSync(casesDir)
+      ? fs.readdirSync(casesDir).filter(f => f.endsWith('.md'))
+      : [];
+
+    // Load integration runbooks
+    const integrationDir = path.join(process.cwd(), 'docs/integration');
+    const runbookFiles = fs.existsSync(integrationDir)
+      ? fs.readdirSync(integrationDir).filter(f => f.endsWith('.md'))
+      : [];
+
+    // Load memos
+    const memosDir = path.join(process.cwd(), 'docs/memos');
+    const memoFiles = fs.existsSync(memosDir)
+      ? fs.readdirSync(memosDir).filter(f => f.endsWith('.md'))
+      : [];
+
+    // Load source modules
+    const modulesDir = path.join(process.cwd(), 'src/modules');
+    const moduleNames = fs.existsSync(modulesDir)
+      ? fs.readdirSync(modulesDir).filter(f => fs.statSync(path.join(modulesDir, f)).isDirectory())
+      : [];
+
+    const sitemap = {
+      _meta: {
+        description: 'Machine-readable institutional knowledge of the Synque project',
+        generated: new Date().toISOString(),
+        version: '3.0',
+        significance: {
+          problem: 'AI context is ephemeral. Conversations reset. Knowledge is lost.',
+          solution: 'The project itself exposes its complete state as structured data.',
+        },
+        capabilities: [
+          'AI Onboarding - Any AI agent can understand the entire project in one request',
+          'Knowledge Continuity - When context is lost, fetch this endpoint to reconstruct understanding',
+          'Verification - Answer "Is X ready?" by checking actual sources, not summaries',
+          'External Integration - Other systems can programmatically navigate the project',
+        ],
+        recovery_protocol: [
+          '1. Fetch /ai-sitemap',
+          '2. Read project.description and summary',
+          '3. For specific questions, navigate knowledge_sources',
+          '4. For "Is X ready?" questions, follow verification_guide',
+        ],
+      },
+      project: {
+        name: 'Synque Express API',
+        description: 'Cruise ticketing platform with B2B/B2C integration, mini-program support, and venue operations',
+        tech_stack: {
+          runtime: 'Node.js 24+',
+          framework: 'Express 5.1',
+          language: 'TypeScript',
+          database: 'MySQL (TypeORM)',
+          testing: 'Newman/Postman',
+          docs: 'OpenAPI 3.0.3',
+        },
+      },
+      knowledge_sources: {
+        documentation: {
+          description: 'Structured documentation following PRD → Story → Card hierarchy',
+          sources: [
+            {
+              type: 'PRD',
+              description: 'Product Requirements Documents - business goals, success metrics',
+              location: 'docs/prd/*.md',
+              web_path: '/prd',
+              count: prdDocs.length,
+              items: prdDocs.map(p => ({
+                id: p.metadata.prd_id,
+                title: p.title,
+                status: p.metadata.status,
+                path: `/prd/${p.metadata.prd_id}`,
+                file: `docs/prd/${p.metadata.prd_id}.md`,
+              })),
+            },
+            {
+              type: 'Story',
+              description: 'User Stories - user capabilities, acceptance criteria (black box)',
+              location: 'docs/stories/_index.yaml + docs/stories/*.md',
+              web_path: '/stories',
+              count: stories.length,
+              items: stories.map(s => ({
+                id: s.id,
+                title: s.title,
+                status: s.status,
+                prd: s.business_requirement,
+                path: `/stories/${s.id}`,
+              })),
+            },
+            {
+              type: 'Card',
+              description: 'Implementation Cards - API contracts, technical specs (white box)',
+              location: 'docs/cards/*.md',
+              web_path: '/cards',
+              count: cardStats.total,
+              stats: cardStats,
+              items: cards.map(c => ({
+                slug: c.metadata.slug,
+                title: c.title,
+                status: c.metadata.status,
+                related_stories: c.metadata.related_stories,
+                path: `/cards/${c.metadata.slug}`,
+                file: `docs/cards/${c.metadata.slug}.md`,
+              })),
+            },
+            {
+              type: 'Memo',
+              description: 'Strategic Memos - synthesized thinking, value propositions',
+              location: 'docs/memos/*.md',
+              web_path: '/memos',
+              count: memoFiles.length,
+              items: memoFiles.map(f => ({
+                file: f,
+                path: `/memos/${f.replace('.md', '')}`,
+              })),
+            },
+          ],
+        },
+        reference_guides: {
+          description: 'Developer guides, standards, and workflows',
+          location: 'docs/reference/',
+          files: referenceFiles.map(f => ({
+            name: f,
+            file: `docs/reference/${f}`,
+            purpose: getReferenceFilePurpose(f),
+          })),
+        },
+        case_studies: {
+          description: 'Real-world implementation examples and lessons learned',
+          location: 'docs/cases/',
+          files: caseFiles.map(f => ({
+            name: f,
+            file: `docs/cases/${f}`,
+          })),
+        },
+        integration_runbooks: {
+          description: 'Step-by-step E2E test flows for each user story',
+          location: 'docs/integration/',
+          count: runbookFiles.length,
+          files: runbookFiles.map(f => ({
+            name: f,
+            file: `docs/integration/${f}`,
+            story_id: f.match(/US-(\d+)/)?.[0] || null,
+          })),
+        },
+        testing: {
+          description: 'Test collections and coverage tracking',
+          sources: [
+            {
+              type: 'Postman Collections',
+              description: 'Actual executable tests (SOURCE OF TRUTH)',
+              location: 'postman/auto-generated/*.json',
+              web_path: '/tests',
+              trust_level: 'HIGH - parsed from actual test files',
+              count: testCollections.length,
+              collections: testCollections,
+            },
+            {
+              type: 'Coverage Summary',
+              description: 'YAML summary of test coverage (may be outdated)',
+              location: 'docs/test-coverage/_index.yaml',
+              web_path: '/coverage',
+              trust_level: 'MEDIUM - manually maintained',
+              stats: coverageStats,
+            },
+            {
+              type: 'Newman Reports',
+              description: 'JUnit XML test results',
+              location: 'reports/newman/*.xml',
+            },
+          ],
+        },
+        codebase: {
+          description: 'Source code organization',
+          modules: moduleNames.map(m => ({
+            name: m,
+            path: `src/modules/${m}/`,
+            typical_files: ['router.ts', 'service.ts', 'types.ts'],
+          })),
+          key_files: [
+            { file: 'src/types/domain.ts', purpose: 'Core type definitions (Single Source of Truth)' },
+            { file: 'src/core/mock/', purpose: 'Mock data for development' },
+            { file: 'openapi/openapi.json', purpose: 'OpenAPI specification' },
+            { file: 'CLAUDE.md', purpose: 'AI development guide and rules' },
+          ],
+        },
+      },
+      web_endpoints: {
+        description: 'Available HTTP endpoints (see knowledge_sources for detailed item listings)',
+        navigation: [
+          { path: '/project-docs', title: 'Documentation Hub', type: 'html' },
+          { path: '/ai-sitemap', title: 'AI Knowledge Base', type: 'json' },
+        ],
+        documentation: [
+          { path: '/prd', title: 'PRD List', pattern: '/prd/:prdId' },
+          { path: '/stories', title: 'User Stories', pattern: '/stories/:storyId' },
+          { path: '/cards', title: 'Implementation Cards', pattern: '/cards/:cardSlug' },
+          { path: '/memos', title: 'Strategic Memos', pattern: '/memos/:memoId' },
+        ],
+        testing: [
+          { path: '/tests', title: 'Test Collections (Source of Truth)', trust: 'HIGH' },
+          { path: '/coverage', title: 'Coverage Summary', trust: 'MEDIUM - may be outdated' },
+        ],
+        evaluation: [
+          { path: '/compliance', title: 'Compliance Dashboard' },
+          { path: '/evaluation', title: 'Foundation Score' },
+        ],
+        visualization: [
+          { path: '/sitemap', title: 'Documentation Sitemap' },
+          { path: '/graph', title: 'Relationship Graph' },
+          { path: '/architecture', title: 'Product Architecture' },
+        ],
+        api: [
+          { path: '/docs', title: 'Swagger UI (OpenAPI)' },
+          { path: '/healthz', title: 'Health Check', type: 'json' },
+        ],
+        external: [
+          { path: '/prd-docs', title: 'Directus PRD Viewer', pattern: '/prd-docs/:fileId' },
+        ],
+      },
+      verification_guide: {
+        description: 'How to answer "Is feature X ready?" questions',
+        steps: [
+          '1. TRACE CODE: Search src/modules/**/*.ts for implementation',
+          '2. FIND TESTS: Check /tests page or parse postman/auto-generated/*.json',
+          '3. CHECK COVERAGE: Individual steps tested? Full E2E chain tested?',
+          '4. RUN TEST: npm run test:prd {N} for actual pass/fail',
+        ],
+        trust_levels: {
+          'docs/test-coverage/_index.yaml': 'Summary - may be outdated',
+          'postman/auto-generated/*.json': 'Source of truth - actual tests',
+          'src/modules/**/*.ts': 'Source of truth - actual implementation',
+        },
+        example: {
+          question: 'Can operator scan QR from miniprogram?',
+          checks: [
+            { step: 'Code exists?', method: 'grep scan/qr in src/', result: 'Found in qr-generation/, operatorValidation/' },
+            { step: 'Tests exist?', method: 'Check /tests for AC-3.2, A7.1', result: 'Individual steps tested' },
+            { step: 'E2E chain?', method: 'Look for chained test', result: 'Gap - no full chain test' },
+          ],
+        },
+      },
+      summary: {
+        documentation: {
+          total_prds: prdDocs.length,
+          total_stories: stories.length,
+          total_cards: cardStats.total,
+          total_memos: memoFiles.length,
+          cards_done: cardStats.byStatus.Done || 0,
+          cards_in_progress: cardStats.byStatus['In Progress'] || 0,
+        },
+        testing: {
+          total_test_collections: testCollections.length,
+          total_runbooks: runbookFiles.length,
+        },
+        reference: {
+          total_reference_docs: referenceFiles.length,
+          total_case_studies: caseFiles.length,
+        },
+        codebase: {
+          total_modules: moduleNames.length,
+        },
+      },
+    };
+
+    res.json(sitemap);
+  } catch (error) {
+    logger.error('Error generating AI sitemap:', error);
+    res.status(500).json({ error: 'Failed to generate sitemap' });
+  }
+});
+
 // Documentation Hub - Main landing page
 router.get('/project-docs', (_req, res) => {
   try {
@@ -1784,6 +2577,8 @@ router.get('/project-docs', (_req, res) => {
       { href: '/docs', icon: '🔧', title: 'API Documentation', desc: 'Swagger UI with OpenAPI 3.0 specification', stats: 'Interactive explorer' },
       { href: '/architecture', icon: '🏗️', title: 'Product Architecture', desc: 'Multi-platform product flowcharts', stats: 'System overview' },
       { href: '/evaluation', icon: '🔍', title: 'Foundation Evaluation', desc: 'Ask the right questions to assess system health by role', stats: 'PM / Dev / QA / Tech Lead' },
+      { href: '/tests', icon: '🧪', title: 'Test Collections', desc: 'Live test cases from Postman JSON (source of truth for AI)', stats: 'Searchable test inventory' },
+      { href: '/ai-sitemap', icon: '🤖', title: 'AI Knowledge Base', desc: 'Machine-readable project knowledge (JSON) - enables AI context recovery', stats: 'Complete project state' },
     ];
 
     const navGridHtml = navCards.map(card => `
@@ -1801,6 +2596,38 @@ router.get('/project-docs', (_req, res) => {
       <p class="subtitle">Browse product documentation, user stories, implementation cards, and test coverage</p>
 
       <div class="nav-grid">${navGridHtml}</div>
+
+      <!-- AI Knowledge Base Explanation -->
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+        <h2 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.5em;">🤖</span> AI Project Knowledge Base
+        </h2>
+        <p style="margin: 0 0 15px 0; font-size: 1.1em; opacity: 0.95;">
+          <strong>The <code style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px;">/ai-sitemap</code> endpoint is the machine-readable institutional knowledge of this project.</strong>
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+          <div>
+            <h4 style="margin: 0 0 8px 0; opacity: 0.9;">🎯 The Problem</h4>
+            <p style="margin: 0; opacity: 0.85; font-size: 0.95em;">AI context is ephemeral. Conversations reset. Knowledge is lost. Every new session starts from zero.</p>
+          </div>
+          <div>
+            <h4 style="margin: 0 0 8px 0; opacity: 0.9;">✨ The Solution</h4>
+            <p style="margin: 0; opacity: 0.85; font-size: 0.95em;">The project itself exposes its complete state as structured JSON. Any AI can understand the entire project in one request.</p>
+          </div>
+        </div>
+        <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0;">🔄 AI Recovery Protocol</h4>
+          <div style="display: flex; gap: 15px; flex-wrap: wrap; font-size: 0.9em;">
+            <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px;">1. Fetch /ai-sitemap</span>
+            <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px;">2. Read project summary</span>
+            <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px;">3. Navigate knowledge sources</span>
+            <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px;">4. Follow verification guide</span>
+          </div>
+        </div>
+        <p style="margin: 15px 0 0 0; font-size: 0.85em; opacity: 0.7;">
+          This enables: AI Onboarding • Knowledge Continuity • Verification • External Integration
+        </p>
+      </div>
 
       <h2 style="margin-top: 30px; margin-bottom: 15px;">Overview Statistics</h2>
       <div class="stats-grid">
