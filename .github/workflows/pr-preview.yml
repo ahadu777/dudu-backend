@@ -36,11 +36,11 @@ jobs:
           echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
       - name: Authenticate Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          echo "${{ secrets.RAILWAY_TOKEN }}" | railway login --browserless
-
-      - name: Set Railway project
-        run: railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+          # Railway CLI automatically uses RAILWAY_TOKEN env var
+          railway whoami || echo "Token set, will authenticate on first command"
 
       - name: Generate service name
         id: service-name
@@ -51,6 +51,8 @@ jobs:
 
       - name: Check if service exists and create if needed
         id: service-setup
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
           
@@ -80,11 +82,15 @@ jobs:
           fi
 
       - name: Set service context
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
           railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
 
       - name: Set environment variables
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
@@ -108,6 +114,8 @@ jobs:
 
       - name: Deploy to Railway
         id: deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
           railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
@@ -125,6 +133,8 @@ jobs:
 
       - name: Get preview URL
         id: preview-url
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"

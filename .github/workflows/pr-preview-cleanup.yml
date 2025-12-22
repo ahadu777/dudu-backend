@@ -22,13 +22,21 @@ jobs:
           echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
       - name: Authenticate Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          echo "${{ secrets.RAILWAY_TOKEN }}" | railway login --browserless
+          # Railway CLI automatically uses RAILWAY_TOKEN env var
+          railway whoami || echo "Token set, will authenticate on first command"
 
       - name: Set Railway project
-        run: railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} || railway link ${{ secrets.RAILWAY_PROJECT_ID }}
 
       - name: Delete preview service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
           
