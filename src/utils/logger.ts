@@ -76,14 +76,18 @@ const fileFormat = winston.format.combine(
   })
 );
 
-export const logger = winston.createLogger({
-  level: level(),
-  levels,
-  transports: [
-    // 控制台输出
-    new winston.transports.Console({
-      format: consoleFormat,
-    }),
+// Only use file logging in development
+// In production (Railway/cloud), use console only (stdout/stderr are captured)
+const transports: winston.transport[] = [
+  // 控制台输出 (always enabled)
+  new winston.transports.Console({
+    format: consoleFormat,
+  }),
+];
+
+// Add file transports only in development
+if (env.NODE_ENV === 'development') {
+  transports.push(
     // 错误日志文件
     new winston.transports.File({
       filename: 'logs/error.log',
@@ -94,7 +98,13 @@ export const logger = winston.createLogger({
     new winston.transports.File({
       filename: 'logs/all.log',
       format: fileFormat,
-    }),
-  ],
+    })
+  );
+}
+
+export const logger = winston.createLogger({
+  level: level(),
+  levels,
+  transports,
 });
 

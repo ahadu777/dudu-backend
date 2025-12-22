@@ -37,6 +37,9 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder --chown=express:nodejs /app/dist ./dist
 COPY --from=builder --chown=express:nodejs /app/openapi ./openapi
 
+# Create logs directory with proper permissions for non-root user
+RUN mkdir -p /app/logs && chown express:nodejs /app/logs
+
 # Switch to non-root user
 USER express
 
