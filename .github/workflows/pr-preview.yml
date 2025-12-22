@@ -1,0 +1,238 @@
+name: Railway PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.state == 'open'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Authenticate Railway
+        run: |
+          echo "${{ secrets.RAILWAY_TOKEN }}" | railway login --browserless
+
+      - name: Set Railway project
+        run: railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Generate service name
+        id: service-name
+        run: |
+          SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
+          echo "name=${SERVICE_NAME}" >> $GITHUB_OUTPUT
+          echo "✅ Service name: ${SERVICE_NAME}"
+
+      - name: Check if service exists and create if needed
+        id: service-setup
+        run: |
+          SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
+          
+          # List all services and check if ours exists
+          SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
+          
+          if echo "$SERVICES_JSON" | jq -e ".[] | select(.name == \"${SERVICE_NAME}\")" > /dev/null 2>&1; then
+            SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
+            echo "✅ Service ${SERVICE_NAME} already exists (ID: ${SERVICE_ID})"
+          else
+            # Create new service
+            SERVICE_ID=$(railway service create --name "${SERVICE_NAME}" --json 2>/dev/null | jq -r '.id' || echo "")
+            
+            if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ]; then
+              # Fallback: try without --json flag
+              railway service create "${SERVICE_NAME}" || true
+              # Get the ID after creation
+              SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
+              SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
+            fi
+            
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
+            echo "✅ Created service ${SERVICE_NAME} (ID: ${SERVICE_ID})"
+          fi
+
+      - name: Set service context
+        run: |
+          SERVICE_ID="${{ steps.service-setup.outputs.id }}"
+          railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+
+      - name: Set environment variables
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          SERVICE_ID="${{ steps.service-setup.outputs.id }}"
+          
+          railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+          
+          # Set mandatory environment variables
+          railway variables set NODE_ENV=preview || railway variables --service "${SERVICE_ID}" set NODE_ENV=preview
+          railway variables set PORT=3000 || railway variables --service "${SERVICE_ID}" set PORT=3000
+          railway variables set PR_NUMBER="${PR_NUMBER}" || railway variables --service "${SERVICE_ID}" set PR_NUMBER="${PR_NUMBER}"
+          
+          # Set PR-scoped environment variables
+          railway variables set DB_NAME="myapp_pr_${PR_NUMBER}" || railway variables --service "${SERVICE_ID}" set DB_NAME="myapp_pr_${PR_NUMBER}"
+          railway variables set JWT_SECRET="preview-secret-${PR_NUMBER}" || railway variables --service "${SERVICE_ID}" set JWT_SECRET="preview-secret-${PR_NUMBER}"
+          
+          # Set any additional preview-specific env vars
+          railway variables set USE_DATABASE=false || railway variables --service "${SERVICE_ID}" set USE_DATABASE=false || true
+          railway variables set SWAGGER_ENABLED=true || railway variables --service "${SERVICE_ID}" set SWAGGER_ENABLED=true || true
+          
+          echo "✅ Environment variables set for PR #${PR_NUMBER}"
+
+      - name: Deploy to Railway
+        id: deploy
+        run: |
+          SERVICE_ID="${{ steps.service-setup.outputs.id }}"
+          railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+          
+          # Deploy using Railway's Docker build
+          # Railway will detect Dockerfile and build automatically
+          railway up --detach || railway deploy --detach
+          
+          echo "✅ Deployment initiated for PR #${{ github.event.pull_request.number }}"
+
+      - name: Wait for deployment
+        run: |
+          echo "⏳ Waiting for deployment to complete..."
+          sleep 30
+
+      - name: Get preview URL
+        id: preview-url
+        run: |
+          SERVICE_ID="${{ steps.service-setup.outputs.id }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          
+          railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+          
+          # Wait a bit for deployment to start
+          sleep 10
+          
+          # Try multiple methods to get the URL
+          PREVIEW_URL=""
+          
+          # Method 1: Check service status
+          STATUS_JSON=$(railway status --json 2>/dev/null || echo "{}")
+          PREVIEW_URL=$(echo "$STATUS_JSON" | jq -r '.service.domain // empty' 2>/dev/null || echo "")
+          
+          # Method 2: Check domains
+          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ]; then
+            DOMAIN_JSON=$(railway domain --json 2>/dev/null || echo "[]")
+            PREVIEW_URL=$(echo "$DOMAIN_JSON" | jq -r '.[0].domain // empty' 2>/dev/null || echo "")
+          fi
+          
+          # Method 3: Check service list
+          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ]; then
+            SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
+            PREVIEW_URL=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.id == \"${SERVICE_ID}\") | .domain // empty" 2>/dev/null || echo "")
+          fi
+          
+          # Fallback: Use Railway's default domain pattern
+          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ] || [ "$PREVIEW_URL" == "" ]; then
+            echo "⚠️ Could not retrieve URL automatically, using Railway default pattern"
+            PREVIEW_URL="https://api-pr-${PR_NUMBER}.up.railway.app"
+          fi
+          
+          # Ensure URL starts with https://
+          if [[ ! "$PREVIEW_URL" =~ ^https?:// ]]; then
+            PREVIEW_URL="https://${PREVIEW_URL}"
+          fi
+          
+          echo "url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Preview URL: ${PREVIEW_URL}"
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const previewUrl = '${{ steps.preview-url.outputs.url }}';
+            const prNumber = '${{ github.event.pull_request.number }}';
+            const prBranch = '${{ github.event.pull_request.head.ref }}';
+            
+            const commentBody = `## 🚀 Preview Environment Deployed
+
+**Preview API URL:** ${previewUrl}
+
+**PR Details:**
+- PR #${prNumber}
+- Branch: \`${prBranch}\`
+
+**Environment:**
+- NODE_ENV: \`preview\`
+- PORT: \`3000\`
+- PR_NUMBER: \`${prNumber}\`
+- DB_NAME: \`myapp_pr_${prNumber}\`
+
+**⚠️ Important Notes:**
+- This is an ephemeral preview environment
+- Data is isolated per PR and will be destroyed when PR is closed
+- The environment is automatically updated on each push to this PR
+- Access expires when PR is closed or merged
+
+**Testing:**
+- API Base URL: ${previewUrl}
+- Health Check: ${previewUrl}/healthz
+- Swagger Docs: ${previewUrl}/docs
+
+---
+*Automatically deployed by Railway PR Preview workflow*`;
+
+            // Check if comment already exists
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const existingComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🚀 Preview Environment Deployed')
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: commentBody
+              });
+              console.log('✅ Updated existing preview comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+              console.log('✅ Created new preview comment');
+            }
+
