@@ -18,6 +18,8 @@ A production-ready ticketing system with complete integration proof artifacts th
 
 **🚂 Railway Preview Environment Test** - Testing automatic Railway preview deployment for PRs.
 
+**🎯 Railway PR Preview** - Every PR automatically gets a live preview environment on Railway!
+
 ### Quick Start for Integration
 ```bash
 # 1. Test complete user flows
