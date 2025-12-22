@@ -24,7 +24,7 @@ jobs:
         run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
       - name: Link Railway project
-        run: railway link $RAILWAY_PROJECT_ID
+        run: railway link --project $RAILWAY_PROJECT_ID
 
       - name: Delete preview service
         env:
