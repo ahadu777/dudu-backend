@@ -10,25 +10,50 @@ This guide explains how to set up automatic Preview Environments for Pull Reques
 
 ## Setup Steps
 
-### 1. Install Railway CLI (Local Setup)
+### 1. Install Railway CLI (Local Setup - Optional)
 
 ```bash
 curl -fsSL https://railway.app/install.sh | sh
 ```
 
-### 2. Get Railway Token
+### 2. Get Railway Account Token (REQUIRED)
 
-1. Go to [Railway Dashboard](https://railway.app/dashboard)
-2. Click on your profile → **Settings** → **Tokens**
-3. Click **New Token**
-4. Give it a name (e.g., "GitHub Actions PR Preview")
-5. Copy the token (you'll only see it once!)
+**⚠️ IMPORTANT: You MUST use an Account Token (not a Project Token)**
+
+**Account Tokens** can:
+- ✅ Create services via API
+- ✅ Deploy to any project
+- ✅ Manage projects and services
+
+**Project Tokens** can:
+- ❌ Cannot create services via API
+- ✅ Can only deploy to the specific project
+- ❌ Limited permissions
+
+**Steps to get Account Token:**
+
+1. Go to [Railway Account Settings](https://railway.app/account/tokens)
+2. Click **New Token**
+3. Give it a name (e.g., "GitHub Actions PR Preview")
+4. **Copy the token immediately** (you'll only see it once!)
+5. This is your **Account Token** - use this for `RAILWAY_TOKEN`
+
+**Alternative: Get from Dashboard**
+- Go to [Railway Dashboard](https://railway.app/dashboard)
+- Click your profile icon (top right)
+- Click **Account Settings**
+- Go to **Tokens** tab
+- Click **New Token**
 
 ### 3. Get Railway Project ID
 
-1. Go to your Railway project dashboard
+1. Go to your Railway project dashboard: `https://railway.app/project/<your-project-id>`
 2. Click on **Settings** → **General**
-3. Copy the **Project ID** (UUID format)
+3. Copy the **Project ID** (UUID format, e.g., `89630eec-a911-452b-ac20-051982c8ec61`)
+
+**Or get it from URL:**
+- The Project ID is in the URL: `https://railway.app/project/89630eec-a911-452b-ac20-051982c8ec61`
+- Copy the UUID part
 
 ### 4. Configure GitHub Secrets
 
@@ -38,161 +63,142 @@ Add these secrets:
 
 | Secret Name | Value | Description |
 |------------|-------|-------------|
-| `RAILWAY_TOKEN` | Your Railway token | Authentication token for Railway CLI |
+| `RAILWAY_TOKEN` | Your **Account Token** | ⚠️ Must be Account Token (not Project Token) |
 | `RAILWAY_PROJECT_ID` | Your project UUID | Railway project where services will be created |
 
-### 5. Verify Setup
+**How to add secrets:**
+1. Click **New repository secret**
+2. Name: `RAILWAY_TOKEN`
+3. Value: Paste your Account Token
+4. Click **Add secret**
+5. Repeat for `RAILWAY_PROJECT_ID`
 
-1. **You create a test PR:**
+### 5. Verify Token Type (Optional Test)
+
+You can verify your token is an Account Token by running locally:
+
+```bash
+export RAILWAY_TOKEN="your-token-here"
+railway whoami
+```
+
+If it shows your account email, it's an Account Token ✅
+
+### 6. Test the Workflow
+
+1. **Create a test PR:**
    - Create a Pull Request
    - The workflow should automatically:
      - Create a Railway service named `api-pr-<PR_NUMBER>`
      - Deploy your Express app
      - Comment on the PR with the preview URL
 
-2. **Team member creates a PR:**
-   - Any collaborator creates a PR
-   - Same workflow runs automatically
-   - They get their own preview environment
-   - Preview URL appears in their PR comments
-   - No additional setup needed for team members
+2. **Check GitHub Actions:**
+   - Go to **Actions** tab
+   - Click on the workflow run
+   - Should see "✅ Service created successfully"
 
-**Note:** Team members don't need Railway accounts or tokens - everything uses the shared repository secrets.
+3. **Verify Deployment:**
+   - Check Railway Dashboard
+   - You should see a new service `api-pr-<PR_NUMBER>`
+   - Service should be deploying
 
 ## How It Works
 
-### Team-Wide Support ✅
+### On PR Open/Sync/Reopen
 
-**This workflow works for ALL team members:**
-- ✅ Any collaborator with write access can create PRs
-- ✅ Every PR automatically gets its own preview environment
-- ✅ Each PR is isolated (separate Railway service)
-- ✅ Preview URLs appear in PR comments automatically
-- ✅ No manual steps required for anyone
+1. GitHub Actions workflow triggers
+2. Creates Railway service via GraphQL API (requires Account Token)
+3. Deploys Express app using Dockerfile
+4. Sets environment variables:
+   - `NODE_ENV=preview`
+   - `PORT=3000`
+   - `PR_NUMBER=<PR number>`
+   - `DB_NAME=myapp_pr_<PR_NUMBER>`
+   - `JWT_SECRET=preview-secret-<PR_NUMBER>`
+5. Comments PR with preview URL: `https://api-pr-<PR_NUMBER>.up.railway.app`
 
-**Important:**
-- All PRs use the same Railway project (shared `RAILWAY_PROJECT_ID`)
-- Each PR gets its own isolated service: `api-pr-<PR_NUMBER>`
-- Services don't interfere with each other
-- All team members see preview URLs in their PR comments
+### On PR Close/Merge
 
-### Deployment Workflow (`.github/workflows/pr-preview.yml`)
-
-**Triggers:**
-- PR opened (by any team member)
-- PR synchronized (new commits pushed)
-- PR reopened
-
-**Actions:**
-1. Checks out PR branch code (from any collaborator)
-2. Authenticates with Railway (using shared token)
-3. Creates or updates service `api-pr-<PR_NUMBER>`
-4. Sets PR-scoped environment variables
-5. Deploys using Railway's Docker build
-6. Comments on PR with preview URL (visible to all)
-
-### Cleanup Workflow (`.github/workflows/pr-preview-cleanup.yml`)
-
-**Triggers:**
-- PR closed (merged or not)
-
-**Actions:**
-1. Authenticates with Railway
-2. Deletes service `api-pr-<PR_NUMBER>`
-3. Comments on PR confirming cleanup
-
-## Environment Variables
-
-Each preview environment automatically gets:
-
-### Mandatory Variables
-- `NODE_ENV=preview`
-- `PORT=3000`
-- `PR_NUMBER=<pull request number>`
-
-### PR-Scoped Variables
-- `DB_NAME=myapp_pr_<PR_NUMBER>`
-- `JWT_SECRET=preview-secret-<PR_NUMBER>`
-
-### Additional Variables
-You can add more variables in the workflow file under the "Set environment variables" step:
-
-```yaml
-railway variables set YOUR_VAR_NAME="your_value_${PR_NUMBER}"
-```
-
-## Service Naming
-
-- Format: `api-pr-<PR_NUMBER>`
-- Example: `api-pr-142` for PR #142
-- Each PR gets its own isolated service
-
-## Preview URLs
-
-Railway automatically generates HTTPS URLs for each service:
-- Format: `https://api-pr-<PR_NUMBER>.up.railway.app`
-- Or custom domain if configured
+1. Cleanup workflow triggers
+2. Deletes the Railway service
+3. Frees up resources
 
 ## Troubleshooting
 
-### Workflow fails with "Railway login failed"
-- Verify `RAILWAY_TOKEN` secret is correct
-- Token may have expired - generate a new one
+### Error: "Service not found"
 
-### Service creation fails
-- Check Railway project limits
-- Verify `RAILWAY_PROJECT_ID` is correct
-- Ensure Railway account has sufficient credits
+**Cause:** Project Token cannot create services via API
 
-### Preview URL not accessible
-- Wait 1-2 minutes after deployment
-- Check Railway dashboard for service status
-- Verify service is running (not crashed)
+**Solution:**
+1. Get an Account Token (see step 2 above)
+2. Update GitHub Secret `RAILWAY_TOKEN` with Account Token
+3. Re-run the workflow
 
-### Cleanup doesn't work
-- Service may have been manually deleted
-- Check Railway logs for errors
-- Verify token has delete permissions
+### Error: "Not Authorized" in GraphQL API
 
-## Cost Considerations
+**Cause:** Using Project Token instead of Account Token
 
-- Railway offers a free tier with usage limits
-- Each preview environment counts as a separate service
-- Services are automatically destroyed on PR close
-- Monitor usage in Railway dashboard
+**Solution:**
+- Use Account Token from [railway.app/account/tokens](https://railway.app/account/tokens)
+- Update GitHub Secret `RAILWAY_TOKEN`
 
-## Advanced Configuration
+### Error: "Cannot find module /app/scripts/start.js"
 
-### Custom Environment Variables
+**Cause:** Railway trying to run `npm start` which calls `scripts/start.js` (not in Docker)
 
-Edit `.github/workflows/pr-preview.yml` and add to the "Set environment variables" step:
+**Solution:** Already fixed - `railway.toml` uses `node dist/index.js` directly
 
-```yaml
-railway variables set CUSTOM_VAR="value_${PR_NUMBER}"
-```
+### Error: "EACCES: permission denied, mkdir 'logs'"
 
-### Custom Service Names
+**Cause:** Non-root user cannot create directories
 
-Change the service name format in both workflow files:
+**Solution:** Already fixed - file logging disabled in production, logs directory created in Dockerfile
 
-```yaml
-SERVICE_NAME="custom-prefix-pr-${{ github.event.pull_request.number }}"
-```
+### Error: "ERR_REQUIRE_ESM: require() of ES Module nanoid"
 
-### Database per PR
+**Cause:** nanoid v5+ is ESM-only, but TypeScript compiles to CommonJS
 
-If you need a database per PR, add to the workflow:
+**Solution:** Already fixed - using dynamic import() for nanoid
 
-```yaml
-railway variables set DB_HOST="db-pr-${PR_NUMBER}.railway.app"
-railway variables set DB_PORT="5432"
-```
+## Environment Variables
+
+Each PR preview environment gets:
+
+- `NODE_ENV=preview`
+- `PORT=3000`
+- `PR_NUMBER=<pull request number>`
+- `DB_NAME=myapp_pr_<PR_NUMBER>`
+- `JWT_SECRET=preview-secret-<PR_NUMBER>`
+
+## Manual Service Creation (Fallback)
+
+If you must use a Project Token, you can manually create services:
+
+1. Go to Railway Dashboard: `https://railway.app/project/<PROJECT_ID>`
+2. Click **New Service**
+3. Name it: `api-pr-<PR_NUMBER>` (e.g., `api-pr-7`)
+4. Then re-run the GitHub Actions workflow
+
+⚠️ **Not recommended** - defeats the purpose of automation!
+
+## Cleanup
+
+Services are automatically deleted when PRs are closed/merged via `.github/workflows/pr-preview-cleanup.yml`.
+
+You can also manually delete services from Railway Dashboard if needed.
+
+## Security Notes
+
+- **Account Tokens** have broader permissions - use with caution
+- Tokens are stored as GitHub Secrets (encrypted)
+- Each PR gets an isolated environment
+- Services are automatically cleaned up on PR close
 
 ## Support
 
-For issues:
+If you encounter issues:
 1. Check GitHub Actions logs
-2. Check Railway dashboard logs
-3. Verify secrets are set correctly
-4. Ensure Railway account is active
-
+2. Check Railway deployment logs
+3. Verify token type (Account Token vs Project Token)
+4. Ensure Project ID is correct
