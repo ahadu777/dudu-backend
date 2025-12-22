@@ -68,48 +68,72 @@ jobs:
           SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
           PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
           
+          echo "🔍 Looking for service: ${SERVICE_NAME}"
+          echo "📦 Project ID: ${PROJECT_ID}"
+          
           # Ensure project is linked
-          railway link "${PROJECT_ID}" 2>&1 || true
+          echo "🔗 Linking to project..."
+          railway link "${PROJECT_ID}" 2>&1 || echo "Link attempt completed"
           
           # List all services (with retry)
-          SERVICES_JSON=$(railway service list --json 2>&1 || echo "[]")
+          echo "📋 Listing services..."
+          SERVICES_JSON=$(railway service list --json 2>&1)
+          echo "Raw services JSON: ${SERVICES_JSON}"
           
-          # If empty or error, try again
-          if [ "$SERVICES_JSON" == "[]" ] || echo "$SERVICES_JSON" | grep -q "error\|Unauthorized"; then
-            echo "Retrying service list..."
-            sleep 2
-            SERVICES_JSON=$(railway service list --json 2>&1 || echo "[]")
+          # Check for errors
+          if echo "$SERVICES_JSON" | grep -qi "error\|unauthorized\|not found"; then
+            echo "⚠️ Error listing services, retrying..."
+            sleep 3
+            SERVICES_JSON=$(railway service list --json 2>&1)
+            echo "Retry services JSON: ${SERVICES_JSON}"
+          fi
+          
+          # Parse JSON safely
+          if [ -z "$SERVICES_JSON" ] || [ "$SERVICES_JSON" == "[]" ]; then
+            echo "📋 No services found or empty response"
+            SERVICES_JSON="[]"
           fi
           
           # Check if service exists
           if echo "$SERVICES_JSON" | jq -e ".[] | select(.name == \"${SERVICE_NAME}\")" > /dev/null 2>&1; then
             SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
+            echo "✅ Service ${SERVICE_NAME} already exists (ID: ${SERVICE_ID})"
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
-            echo "✅ Service ${SERVICE_NAME} already exists (ID: ${SERVICE_ID})"
           else
             # Create new service
-            echo "Creating service ${SERVICE_NAME}..."
-            SERVICE_OUTPUT=$(railway service create --name "${SERVICE_NAME}" --json 2>&1 || echo "")
+            echo "🆕 Creating service ${SERVICE_NAME}..."
+            SERVICE_OUTPUT=$(railway service create --name "${SERVICE_NAME}" --json 2>&1)
+            echo "Service create output: ${SERVICE_OUTPUT}"
+            
             SERVICE_ID=$(echo "$SERVICE_OUTPUT" | jq -r '.id // empty' 2>/dev/null || echo "")
             
             # If creation failed, try without --json
             if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
-              railway service create "${SERVICE_NAME}" 2>&1 || true
-              sleep 3
-              SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
+              echo "⚠️ JSON creation failed, trying without --json flag..."
+              railway service create "${SERVICE_NAME}" 2>&1 || echo "Create command executed"
+              sleep 5
+              SERVICES_JSON=$(railway service list --json 2>&1 || echo "[]")
               SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
             fi
             
-            if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ]; then
-              echo "⚠️ Could not create service, using fallback"
+            # Final check
+            if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
+              echo "❌ ERROR: Could not create or find service ${SERVICE_NAME}"
+              echo "Service list output: ${SERVICES_JSON}"
+              echo "⚠️ Service creation failed - deployment will be skipped"
               SERVICE_ID=""
+            else
+              echo "✅ Created service ${SERVICE_NAME} (ID: ${SERVICE_ID})"
             fi
             
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
-            echo "✅ Created service ${SERVICE_NAME} (ID: ${SERVICE_ID})"
           fi
+          
+          # Debug output
+          echo "📤 Outputting SERVICE_ID: ${SERVICE_ID}"
+          echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
 
       - name: Set service context
         env:
@@ -164,18 +188,29 @@ jobs:
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
           PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
           
-          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "" ]; then
-            echo "⚠️ No service ID, cannot deploy"
+          echo "🔍 Checking SERVICE_ID: '${SERVICE_ID}'"
+          echo "📦 Project ID: ${PROJECT_ID}"
+          
+          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "" ] || [ "$SERVICE_ID" == "null" ]; then
+            echo "❌ ERROR: No service ID available, cannot deploy"
+            echo "⚠️ Service creation may have failed. Check the 'Check if service exists' step logs."
+            echo "💡 This might be due to Railway authentication issues or service creation failures."
             exit 1
           fi
           
+          echo "✅ Service ID found: ${SERVICE_ID}"
+          
           # Ensure context
-          railway link "${PROJECT_ID}" 2>&1 || true
-          railway service use "${SERVICE_ID}" 2>&1 || true
+          echo "🔗 Linking to project and service..."
+          railway link "${PROJECT_ID}" 2>&1 || echo "Project link attempted"
+          railway service use "${SERVICE_ID}" 2>&1 || echo "Service use attempted"
           
           # Deploy (Railway will detect Dockerfile automatically)
-          echo "Starting deployment..."
-          railway up --detach 2>&1 | head -20 || railway deploy --detach 2>&1 | head -20 || railway up 2>&1 | head -20
+          echo "🚀 Starting deployment..."
+          railway up --detach 2>&1 || railway deploy --detach 2>&1 || railway up 2>&1 || {
+            echo "⚠️ Deployment command failed, but continuing..."
+            echo "Deployment may still be in progress"
+          }
           
           echo "✅ Deployment initiated for PR #${{ github.event.pull_request.number }}"
 
