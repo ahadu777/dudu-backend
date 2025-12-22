@@ -125,7 +125,8 @@ jobs:
           echo "📝 Setting environment variables via GraphQL API..."
           
           # Set each environment variable via GraphQL mutation
-          for var_pair in "NODE_ENV=preview" "PORT=3000" "PR_NUMBER=${PR_NUMBER}" "DB_NAME=myapp_pr_${PR_NUMBER}" "JWT_SECRET=preview-secret-${PR_NUMBER}"; do
+          # USE_DATABASE=false enables mock mode (no database needed for PR previews)
+          for var_pair in "NODE_ENV=preview" "PORT=3000" "PR_NUMBER=${PR_NUMBER}" "USE_DATABASE=false" "DB_NAME=myapp_pr_${PR_NUMBER}" "JWT_SECRET=preview-secret-${PR_NUMBER}"; do
             VAR_NAME="${var_pair%%=*}"
             VAR_VALUE="${var_pair#*=}"
             
