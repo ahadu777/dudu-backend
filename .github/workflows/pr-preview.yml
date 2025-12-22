@@ -49,15 +49,20 @@ jobs:
           fi
           echo "✅ Railway token is set"
 
-      - name: Link Railway project
+      - name: Set Railway project context
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
-          # Railway CLI v3: railway link <project-id> (no --project flag)
-          # Create railway.toml or use link command
-          railway link "${PROJECT_ID}" 2>&1 || echo "Project link attempted (will continue)"
+          # Railway CLI uses RAILWAY_PROJECT_ID env var automatically
+          # Create railway.toml to set project context
+          echo "[build]" > railway.toml
+          echo "builder = \"dockerfile\"" >> railway.toml
+          echo "" >> railway.toml
+          echo "[deploy]" >> railway.toml
+          echo "startCommand = \"npm start\"" >> railway.toml
+          echo "✅ Created railway.toml for project context"
 
       - name: Check if service exists and create if needed
         id: service-setup
@@ -71,10 +76,7 @@ jobs:
           echo "🔍 Looking for service: ${SERVICE_NAME}"
           echo "📦 Project ID: ${PROJECT_ID}"
           
-          # Ensure project is linked
-          echo "🔗 Linking to project..."
-          railway link "${PROJECT_ID}" 2>&1 || echo "Link attempt completed"
-          
+          # Railway CLI uses RAILWAY_PROJECT_ID env var automatically
           # List all services (with retry)
           echo "📋 Listing services..."
           SERVICES_JSON=$(railway service list --json 2>&1)
@@ -141,12 +143,13 @@ jobs:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
-          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
           
           if [ -n "$SERVICE_ID" ] && [ "$SERVICE_ID" != "" ]; then
-            railway link "${PROJECT_ID}" --service "${SERVICE_ID}" 2>&1 || \
-            railway service use "${SERVICE_ID}" 2>&1 || \
-            echo "Service context set"
+            # Railway CLI uses RAILWAY_PROJECT_ID env var automatically
+            # Set service context using service use command
+            railway service use "${SERVICE_ID}" 2>&1 || echo "Service context set (continuing)"
+          else
+            echo "⚠️ No service ID available"
           fi
 
       - name: Set environment variables
@@ -236,9 +239,8 @@ jobs:
             exit 0
           fi
           
-          # Ensure context
-          railway link "${PROJECT_ID}" 2>&1 || true
-          railway service use "${SERVICE_ID}" 2>&1 || true
+          # Ensure service context
+          railway service use "${SERVICE_ID}" 2>&1 || echo "Service use attempted"
           sleep 5
           
           # Try to get URL

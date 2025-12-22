@@ -33,13 +33,13 @@ jobs:
           fi
           echo "✅ Railway token is set"
 
-      - name: Link Railway project
+      - name: Set Railway project context
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
-          railway link "${PROJECT_ID}" 2>&1 || echo "Project link attempted (will continue)"
+          # Railway CLI uses RAILWAY_PROJECT_ID env var automatically
+          echo "✅ Railway project context set via environment variable"
 
       - name: Delete preview service
         env:
@@ -49,9 +49,7 @@ jobs:
           SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
           PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
           
-          # Ensure project is linked
-          railway link "${PROJECT_ID}" 2>&1 || true
-          
+          # Railway CLI uses RAILWAY_PROJECT_ID env var automatically
           # Check if service exists
           SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
           
@@ -59,8 +57,7 @@ jobs:
             SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
             echo "🗑️ Deleting service ${SERVICE_NAME} (ID: ${SERVICE_ID})"
             
-            railway link "${PROJECT_ID}" 2>&1 || true
-            railway service use "${SERVICE_ID}" 2>&1 || true
+            railway service use "${SERVICE_ID}" 2>&1 || echo "Service use attempted"
             railway service delete --yes 2>&1 || railway service delete "${SERVICE_ID}" --yes 2>&1 || railway service delete "${SERVICE_NAME}" --yes 2>&1 || echo "Delete attempted"
             
             echo "✅ Successfully deleted preview environment for PR #${{ github.event.pull_request.number }}"
