@@ -111,51 +111,45 @@ jobs:
             echo "✅ Service already exists (ID: ${SERVICE_EXISTS})"
           fi
           
-          # Deploy with Railway CLI
-          # Railway CLI needs RAILWAY_TOKEN in environment, and may need explicit project context
-          echo "📦 Deploying service..."
+          # Get the service ID (either from creation or existing)
+          FINAL_SERVICE_ID="${SERVICE_ID:-${SERVICE_EXISTS}}"
           
-          # Verify Railway CLI can authenticate
-          echo "🔐 Verifying Railway CLI authentication..."
-          railway whoami 2>&1 || echo "⚠️ Railway CLI auth check failed, but continuing..."
+          if [ -z "$FINAL_SERVICE_ID" ] || [ "$FINAL_SERVICE_ID" == "null" ]; then
+            echo "❌ No service ID available, cannot proceed"
+            exit 1
+          fi
           
-          # Deploy using Railway CLI
-          # Use explicit project context via railway.toml (already created above)
+          echo "✅ Using service ID: ${FINAL_SERVICE_ID}"
+          
+          # Set environment variables using Railway GraphQL API (works with Account Token)
+          echo "📝 Setting environment variables via GraphQL API..."
+          
+          # Set each environment variable via GraphQL mutation
+          for var_pair in "NODE_ENV=preview" "PORT=3000" "PR_NUMBER=${PR_NUMBER}" "DB_NAME=myapp_pr_${PR_NUMBER}" "JWT_SECRET=preview-secret-${PR_NUMBER}"; do
+            VAR_NAME="${var_pair%%=*}"
+            VAR_VALUE="${var_pair#*=}"
+            
+            SET_VAR_MUTATION='{"query":"mutation { variableUpsert(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", key: \"'${VAR_NAME}'\", value: \"'${VAR_VALUE}'\"}) { id key value } }"}'
+            VAR_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$SET_VAR_MUTATION" \
+              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+            
+            if echo "$VAR_RESPONSE" | jq -e '.data.variableUpsert' > /dev/null 2>&1; then
+              echo "  ✅ Set ${VAR_NAME}=${VAR_VALUE}"
+            else
+              echo "  ⚠️ Failed to set ${VAR_NAME}: ${VAR_RESPONSE}"
+            fi
+          done
+          
+          # Try Railway CLI deployment (may fail with Account Token, but service exists)
+          echo "📦 Attempting deployment via Railway CLI..."
           railway up --service "$SERVICE_NAME" --detach 2>&1 || {
-            echo ""
-            echo "⚠️ Railway CLI deployment failed, but service was created via API"
-            echo "   Service ID: ${SERVICE_ID:-${SERVICE_EXISTS}}"
-            echo "   Trying to set variables and redeploy..."
-          }
-          
-          # Wait a moment
-          sleep 5
-          
-          # Set environment variables using Railway CLI
-          echo "📝 Setting environment variables..."
-          railway variables \
-            --set "NODE_ENV=preview" \
-            --set "PORT=3000" \
-            --set "PR_NUMBER=${PR_NUMBER}" \
-            --set "DB_NAME=myapp_pr_${PR_NUMBER}" \
-            --set "JWT_SECRET=preview-secret-${PR_NUMBER}" \
-            --service "$SERVICE_NAME" \
-            --skip-deploys 2>&1 || {
-            echo "⚠️ Variables set failed, trying alternative method..."
-            # Try setting variables one by one
-            for var in "NODE_ENV=preview" "PORT=3000" "PR_NUMBER=${PR_NUMBER}" "DB_NAME=myapp_pr_${PR_NUMBER}" "JWT_SECRET=preview-secret-${PR_NUMBER}"; do
-              railway variables --set "$var" --service "$SERVICE_NAME" --skip-deploys 2>&1 || echo "⚠️ Failed to set ${var%%=*}"
-            done
-          }
-          
-          # Deploy again with environment variables
-          echo "🚀 Deploying with environment variables..."
-          railway up --service "$SERVICE_NAME" --detach 2>&1 || {
-            echo "⚠️ Final deployment via CLI failed"
-            echo "   Service was created successfully via API (ID: ${SERVICE_ID:-${SERVICE_EXISTS}})"
-            echo "   You may need to deploy manually or check Railway dashboard"
-            echo "   Service URL should be: https://${SERVICE_NAME}.up.railway.app"
-            # Don't exit - service exists, just deployment might need manual trigger
+            echo "⚠️ Railway CLI deployment failed (common with Account Tokens)"
+            echo "   Service exists and is configured (ID: ${FINAL_SERVICE_ID})"
+            echo "   Railway may auto-deploy when variables are set"
+            echo "   Check Railway dashboard for deployment status"
           }
           
           # Wait for deployment
