@@ -424,7 +424,7 @@ export class WallytPaymentService {
       for (const breakdown of pricingContext.customer_breakdown) {
         for (let i = 0; i < breakdown.count; i++) {
           const ticket = new TicketEntity();
-          ticket.ticket_code = ticketCodeGenerator.generate('MP');
+          ticket.ticket_code = await ticketCodeGenerator.generate('MP');
           ticket.order_id = Number(order.id);
           ticket.product_id = order.product_id!;
           ticket.orq = 1;

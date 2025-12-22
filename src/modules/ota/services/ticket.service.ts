@@ -332,10 +332,10 @@ export class TicketService extends BaseOTAService {
       });
     }
 
-    // Pre-generate all ticket codes first (synchronous, fast)
+    // Pre-generate all ticket codes first
     const ticketCodes: string[] = [];
     for (let i = 0; i < request.quantity; i++) {
-      ticketCodes.push(ticketCodeGenerator.generate('DT'));
+      ticketCodes.push(await ticketCodeGenerator.generate('DT'));
     }
 
     // QR color config (reused for all tickets)
@@ -695,7 +695,7 @@ export class TicketService extends BaseOTAService {
 
     const tickets: any[] = [];
     for (let i = 0; i < request.quantity; i++) {
-      const ticketCode = ticketCodeGenerator.generate();
+      const ticketCode = await ticketCodeGenerator.generate();
       tickets.push({
         ticket_code: ticketCode,
         status: 'pre_generated',

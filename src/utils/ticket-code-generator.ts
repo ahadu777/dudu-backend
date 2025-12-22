@@ -1,8 +1,17 @@
-import { nanoid } from 'nanoid';
 import { logger } from './logger';
 
+// Lazy-load nanoid (ESM module) using dynamic import
+let nanoidModule: { nanoid: (size?: number) => string } | null = null;
+
+async function getNanoid(): Promise<(size?: number) => string> {
+  if (!nanoidModule) {
+    nanoidModule = await import('nanoid');
+  }
+  return nanoidModule.nanoid;
+}
+
 export interface TicketCodeGenerator {
-  generate(prefix?: string): string;
+  generate(prefix?: string): Promise<string>;
   generateWithRetry(checkExists: (code: string) => Promise<boolean>, prefix?: string): Promise<string>;
 }
 
@@ -24,7 +33,8 @@ class SecureTicketCodeGenerator implements TicketCodeGenerator {
    * @param prefix Prefix string (default 'TKT')
    * @returns Ticket code (e.g., 'TKT-V1StGXR8_Z5j')
    */
-  generate(prefix: string = 'TKT'): string {
+  async generate(prefix: string = 'TKT'): Promise<string> {
+    const nanoid = await getNanoid();
     return `${prefix}-${nanoid(this.ID_LENGTH)}`;
   }
 
@@ -41,7 +51,7 @@ class SecureTicketCodeGenerator implements TicketCodeGenerator {
     const MAX_ATTEMPTS = 3;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const ticketCode = this.generate(prefix);
+      const ticketCode = await this.generate(prefix);
       const exists = await checkExists(ticketCode);
 
       if (!exists) {

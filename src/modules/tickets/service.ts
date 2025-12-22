@@ -80,7 +80,7 @@ class TicketService {
       // Create tickets based on quantity
       for (let ticketIndex = 0; ticketIndex < item.qty; ticketIndex++) {
         // Generate secure random ticket code (replaces predictable orderId-itemIndex-ticketIndex format)
-        const ticketCode = ticketCodeGenerator.generate('TKT');
+        const ticketCode = await ticketCodeGenerator.generate('TKT');
 
         // Build entitlements from product functions
         const entitlements: Entitlement[] = product.functions.map(func => ({
