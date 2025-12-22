@@ -33,6 +33,16 @@ jobs:
       - name: Add Railway to PATH
         run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
+      - name: Set Railway project context
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: |
+          # Railway CLI reads RAILWAY_PROJECT_ID from env automatically
+          # Create railway.toml to set project context (CI-safe method)
+          echo "project = \"$RAILWAY_PROJECT_ID\"" > railway.toml
+          echo "✅ Railway project context set"
+
       - name: Deploy PR Preview
         id: deploy
         env:
@@ -45,9 +55,8 @@ jobs:
           echo "🚀 Deploying to service: ${SERVICE_NAME}"
           
           # Railway up automatically creates service if it doesn't exist
-          # --project flag targets the project directly (CI-safe, no link needed)
+          # Railway CLI reads project from railway.toml or RAILWAY_PROJECT_ID env var
           railway up \
-            --project "$RAILWAY_PROJECT_ID" \
             --service "$SERVICE_NAME" \
             --env NODE_ENV=preview \
             --env PORT=3000 \

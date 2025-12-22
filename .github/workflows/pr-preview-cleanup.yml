@@ -23,6 +23,16 @@ jobs:
       - name: Add Railway to PATH
         run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
+      - name: Set Railway project context
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: |
+          # Railway CLI reads RAILWAY_PROJECT_ID from env automatically
+          # Create railway.toml to set project context (CI-safe method)
+          echo "project = \"$RAILWAY_PROJECT_ID\"" > railway.toml
+          echo "✅ Railway project context set"
+
       - name: Delete preview service
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -31,8 +41,7 @@ jobs:
         run: |
           SERVICE_NAME="api-pr-${PR_NUMBER}"
           echo "🗑️ Deleting service: ${SERVICE_NAME}"
-          # Use --project flag to target project directly (CI-safe)
-          railway service delete "$SERVICE_NAME" --project "$RAILWAY_PROJECT_ID" --yes || echo "Service may not exist"
+          railway service delete "$SERVICE_NAME" --yes || echo "Service may not exist"
 
       - name: Comment on PR
         uses: actions/github-script@v7
