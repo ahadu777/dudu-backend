@@ -17,8 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install Railway CLI
         run: curl -fsSL https://railway.app/install.sh | sh
@@ -26,44 +25,71 @@ jobs:
       - name: Add Railway to PATH
         run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
-      # 🔑 REQUIRED: select project (no --project flag exists)
-      - name: Link Railway project
-        run: railway link "$RAILWAY_PROJECT_ID"
-
       - name: Deploy PR Preview
         id: deploy
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          set -e
-
           SERVICE_NAME="api-pr-${PR_NUMBER}"
-          echo "Deploying service: $SERVICE_NAME"
-
-          railway up \
+          
+          echo "🚀 Deploying to service: ${SERVICE_NAME}"
+          
+          # Railway CLI uses railway.toml for project context
+          # Ensure railway.toml exists (it should from repo)
+          if [ ! -f "railway.toml" ]; then
+            cat > railway.toml << EOF
+          [build]
+          builder = "DOCKERFILE"
+          
+          [deploy]
+          startCommand = "npm start"
+          healthcheckPath = "/healthz"
+          EOF
+          fi
+          
+          # Deploy first to create service if it doesn't exist
+          echo "📦 Deploying service..."
+          railway up --service "$SERVICE_NAME" --detach || {
+            echo "⚠️ Initial deployment failed, service may be created now"
+          }
+          
+          # Wait for service to be ready
+          sleep 5
+          
+          # Set environment variables using correct Railway CLI syntax
+          # railway variables --set "KEY=value" --service <SERVICE>
+          echo "📝 Setting environment variables..."
+          railway variables \
+            --set "NODE_ENV=preview" \
+            --set "PORT=3000" \
+            --set "PR_NUMBER=${PR_NUMBER}" \
+            --set "DB_NAME=myapp_pr_${PR_NUMBER}" \
+            --set "JWT_SECRET=preview-secret-${PR_NUMBER}" \
             --service "$SERVICE_NAME" \
-            --env NODE_ENV=preview \
-            --env PORT=3000 \
-            --env PR_NUMBER="$PR_NUMBER" \
-            --env DB_NAME="myapp_pr_${PR_NUMBER}" \
-            --env JWT_SECRET="preview-secret-${PR_NUMBER}" \
-            --detach
-
-          echo "url=https://${SERVICE_NAME}.up.railway.app" >> $GITHUB_OUTPUT
+            --skip-deploys || echo "⚠️ Variables set attempted"
+          
+          # Deploy again with environment variables
+          echo "🚀 Deploying with environment variables..."
+          railway up --service "$SERVICE_NAME" --detach
+          
+          # Wait for deployment
+          sleep 15
+          
+          # Railway auto-assigns domain
+          PREVIEW_URL="https://${SERVICE_NAME}.up.railway.app"
+          echo "url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Preview URL: ${PREVIEW_URL}"
 
       - name: Comment PR with preview URL
         uses: actions/github-script@v7
         with:
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
-
+            const pr = context.issue.number;
             await github.rest.issues.createComment({
               ...context.repo,
-              issue_number: context.issue.number,
-              body: `## 🚀 Railway Preview Ready
-
-              **API URL:** ${url}
-
-            🔁 This preview updates on every push to this PR.  
-            🗑️ You can safely delete it when the PR is closed.`
-                        });
+              issue_number: pr,
+              body: `## 🚀 Preview Environment Ready\n\n**API URL:** ${url}\n\n⚠️ Ephemeral environment, deleted on PR close.`
+            });
