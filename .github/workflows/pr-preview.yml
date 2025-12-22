@@ -58,21 +58,22 @@ jobs:
           startCommand = "npm start"
           EOF
           
+          # Set environment variables using railway variables command
+          # Railway CLI needs variables set before deployment
+          echo "📝 Setting environment variables..."
+          railway variables set NODE_ENV=preview --service "$SERVICE_NAME" 2>&1 || echo "NODE_ENV set attempted"
+          railway variables set PORT=3000 --service "$SERVICE_NAME" 2>&1 || echo "PORT set attempted"
+          railway variables set PR_NUMBER="$PR_NUMBER" --service "$SERVICE_NAME" 2>&1 || echo "PR_NUMBER set attempted"
+          railway variables set DB_NAME="myapp_pr_$PR_NUMBER" --service "$SERVICE_NAME" 2>&1 || echo "DB_NAME set attempted"
+          railway variables set JWT_SECRET="preview-secret-$PR_NUMBER" --service "$SERVICE_NAME" 2>&1 || echo "JWT_SECRET set attempted"
+          railway variables set USE_DATABASE=false --service "$SERVICE_NAME" 2>&1 || echo "USE_DATABASE set attempted"
+          railway variables set SWAGGER_ENABLED=true --service "$SERVICE_NAME" 2>&1 || echo "SWAGGER_ENABLED set attempted"
+          
           # Deploy using Railway CLI
           # Railway will create service if it doesn't exist
-          railway up \
-            --service "$SERVICE_NAME" \
-            --env NODE_ENV=preview \
-            --env PORT=3000 \
-            --env PR_NUMBER="$PR_NUMBER" \
-            --env DB_NAME="myapp_pr_$PR_NUMBER" \
-            --env JWT_SECRET="preview-secret-$PR_NUMBER" \
-            --env USE_DATABASE=false \
-            --env SWAGGER_ENABLED=true \
-            --detach || {
-              echo "⚠️ Railway up failed, checking if service needs to be created..."
-              # If service doesn't exist, Railway CLI might fail
-              # In that case, the service will be created on next attempt
+          echo "🚀 Starting deployment..."
+          railway up --service "$SERVICE_NAME" --detach || {
+              echo "⚠️ Railway up failed"
               exit 1
             }
           
