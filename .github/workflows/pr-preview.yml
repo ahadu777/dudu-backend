@@ -175,26 +175,40 @@ jobs:
             done
           fi
           
-          # Trigger deployment via GraphQL API
-          echo "📦 Triggering deployment via GraphQL API..."
-          DEPLOY_MUTATION='{"query":"mutation { deploymentCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", projectId: \"'${RAILWAY_PROJECT_ID}'\"}) { id status } }"}'
-          DEPLOY_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$DEPLOY_MUTATION" \
-            "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+          # Trigger deployment using Railway CLI with explicit token
+          # Railway CLI needs the token in environment variable
+          echo "📦 Triggering deployment via Railway CLI..."
           
-          if echo "$DEPLOY_RESPONSE" | jq -e '.data.deploymentCreate.id' > /dev/null 2>&1; then
-            DEPLOYMENT_ID=$(echo "$DEPLOY_RESPONSE" | jq -r '.data.deploymentCreate.id')
-            echo "✅ Deployment triggered (ID: ${DEPLOYMENT_ID})"
-          else
-            echo "⚠️ GraphQL deployment trigger failed, trying Railway CLI..."
-            railway up --service "$SERVICE_NAME" --detach 2>&1 || {
-              echo "⚠️ Railway CLI deployment also failed"
-              echo "   Service exists (ID: ${FINAL_SERVICE_ID})"
-              echo "   Please trigger deployment manually from Railway dashboard"
-            }
-          fi
+          # Set Railway token explicitly for CLI
+          export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
+          
+          # Use Railway CLI to deploy (it should work with Account Token in env)
+          railway up --service "$SERVICE_NAME" --detach 2>&1 || {
+            echo "⚠️ Railway CLI deployment failed, trying GraphQL API..."
+            
+            # Fallback: Try GraphQL deploymentCreate
+            DEPLOY_MUTATION='{"query":"mutation { deploymentCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", projectId: \"'${RAILWAY_PROJECT_ID}'\"}) { id status } }"}'
+            DEPLOY_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$DEPLOY_MUTATION" \
+              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+            
+            if echo "$DEPLOY_RESPONSE" | jq -e '.data.deploymentCreate.id' > /dev/null 2>&1; then
+              DEPLOYMENT_ID=$(echo "$DEPLOY_RESPONSE" | jq -r '.data.deploymentCreate.id')
+              echo "✅ Deployment triggered via GraphQL (ID: ${DEPLOYMENT_ID})"
+            else
+              echo "⚠️ GraphQL deployment also failed: ${DEPLOY_RESPONSE}"
+              echo ""
+              echo "💡 Service created and configured, but deployment needs manual trigger:"
+              echo "   1. Go to: https://railway.app/project/${RAILWAY_PROJECT_ID}"
+              echo "   2. Click on service: ${SERVICE_NAME}"
+              echo "   3. Click 'Deploy' or 'Redeploy' button"
+              echo ""
+              echo "   Note: This is a known limitation - Railway may require manual first deployment"
+              echo "   After first deployment, Railway may auto-deploy on variable changes"
+            fi
+          }
           
           # Wait for deployment to start
           echo "⏳ Waiting for deployment to start..."
