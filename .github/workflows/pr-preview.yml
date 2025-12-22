@@ -19,11 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: curl -fsSL https://railway.app/install.sh | sh
-
-      - name: Add Railway to PATH
-        run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
+      - name: Install Railway CLI and jq
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+          sudo apt-get update && sudo apt-get install -y jq
 
       - name: Deploy PR Preview
         id: deploy
@@ -36,10 +36,19 @@ jobs:
           
           echo "🚀 Deploying to service: ${SERVICE_NAME}"
           
-          # Railway CLI uses railway.toml for project context
-          # Ensure railway.toml exists (it should from repo)
-          if [ ! -f "railway.toml" ]; then
-            cat > railway.toml << EOF
+          # Verify Railway token is set
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "❌ RAILWAY_TOKEN is not set"
+            exit 1
+          fi
+          
+          echo "✅ RAILWAY_TOKEN is set (length: ${#RAILWAY_TOKEN})"
+          echo "✅ RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
+          
+          # Create railway.toml with project ID for Railway CLI context
+          cat > railway.toml << EOF
+          project = "${RAILWAY_PROJECT_ID}"
+          
           [build]
           builder = "DOCKERFILE"
           
@@ -47,19 +56,48 @@ jobs:
           startCommand = "npm start"
           healthcheckPath = "/healthz"
           EOF
+          
+          echo "✅ Created railway.toml with project context"
+          
+          # Check if service exists, create via Railway GraphQL API if it doesn't
+          echo "🔍 Checking if service exists..."
+          RAILWAY_GRAPHQL="https://backboard.railway.app/graphql/v2"
+          
+          # Query to list services
+          LIST_QUERY='{"query":"query { project(id: \"'${RAILWAY_PROJECT_ID}'\") { services { id name } } }"}'
+          SERVICES_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$LIST_QUERY" \
+            "$RAILWAY_GRAPHQL" 2>&1 || echo '{"data":{"project":{"services":[]}}}')
+          
+          SERVICE_EXISTS=$(echo "$SERVICES_RESPONSE" | jq -r ".data.project.services[] | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
+          
+          if [ -z "$SERVICE_EXISTS" ] || [ "$SERVICE_EXISTS" == "null" ]; then
+            echo "📦 Service doesn't exist, creating via Railway API..."
+            
+            # Create service via GraphQL mutation
+            CREATE_MUTATION='{"query":"mutation { serviceCreate(input: {name: \"'${SERVICE_NAME}'\", projectId: \"'${RAILWAY_PROJECT_ID}'\"}) { id name } }"}'
+            CREATE_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$CREATE_MUTATION" \
+              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+            
+            SERVICE_ID=$(echo "$CREATE_RESPONSE" | jq -r '.data.serviceCreate.id // empty' 2>/dev/null || echo "")
+            
+            if [ -n "$SERVICE_ID" ] && [ "$SERVICE_ID" != "null" ]; then
+              echo "✅ Service created successfully (ID: ${SERVICE_ID})"
+              sleep 3
+            else
+              echo "⚠️ Service creation may have failed, but continuing..."
+              echo "Response: ${CREATE_RESPONSE}"
+            fi
+          else
+            echo "✅ Service already exists (ID: ${SERVICE_EXISTS})"
           fi
           
-          # Deploy first to create service if it doesn't exist
-          echo "📦 Deploying service..."
-          railway up --service "$SERVICE_NAME" --detach || {
-            echo "⚠️ Initial deployment failed, service may be created now"
-          }
-          
-          # Wait for service to be ready
-          sleep 5
-          
-          # Set environment variables using correct Railway CLI syntax
-          # railway variables --set "KEY=value" --service <SERVICE>
+          # Set environment variables using Railway CLI
           echo "📝 Setting environment variables..."
           railway variables \
             --set "NODE_ENV=preview" \
@@ -68,11 +106,14 @@ jobs:
             --set "DB_NAME=myapp_pr_${PR_NUMBER}" \
             --set "JWT_SECRET=preview-secret-${PR_NUMBER}" \
             --service "$SERVICE_NAME" \
-            --skip-deploys || echo "⚠️ Variables set attempted"
+            --skip-deploys 2>&1 || echo "⚠️ Variables set attempted (may need service to exist first)"
           
-          # Deploy again with environment variables
-          echo "🚀 Deploying with environment variables..."
-          railway up --service "$SERVICE_NAME" --detach
+          # Deploy with Railway CLI
+          echo "🚀 Deploying service..."
+          railway up --service "$SERVICE_NAME" --detach || {
+            echo "❌ Deployment failed"
+            exit 1
+          }
           
           # Wait for deployment
           sleep 15
