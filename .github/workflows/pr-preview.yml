@@ -76,6 +76,9 @@ jobs:
           echo "🔍 Looking for service: ${SERVICE_NAME}"
           echo "📦 Project ID: ${PROJECT_ID}"
           
+          # Initialize SERVICE_ID
+          SERVICE_ID=""
+          
           # Use Railway REST API directly (more reliable than CLI)
           RAILWAY_API="https://api.railway.app/v1"
           
@@ -90,12 +93,13 @@ jobs:
           SERVICES_JSON=$(echo "$SERVICES_RESPONSE" | sed '$d')
           
           echo "HTTP Status: ${HTTP_CODE}"
-          echo "Services response: ${SERVICES_JSON}"
+          echo "Services response (first 500 chars): ${SERVICES_JSON:0:500}"
           
           # Check if API call succeeded
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "⚠️ Railway API returned error (HTTP ${HTTP_CODE})"
-            echo "Response: ${SERVICES_JSON}"
+            echo "❌ Railway API returned error (HTTP ${HTTP_CODE})"
+            echo "Full response: ${SERVICES_JSON}"
+            echo "⚠️ This might be an authentication issue. Check your RAILWAY_TOKEN."
             SERVICES_JSON="[]"
           fi
           
@@ -125,13 +129,13 @@ jobs:
             CREATE_JSON=$(echo "$CREATE_RESPONSE" | sed '$d')
             
             echo "Create HTTP Status: ${CREATE_HTTP_CODE}"
-            echo "Create response: ${CREATE_JSON}"
+            echo "Create response (first 500 chars): ${CREATE_JSON:0:500}"
             
             SERVICE_ID=$(echo "$CREATE_JSON" | jq -r '.id // empty' 2>/dev/null || echo "")
             
             # If API creation failed, try Railway CLI as fallback
             if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
-              echo "⚠️ API creation failed, trying Railway CLI fallback..."
+              echo "⚠️ API creation failed (HTTP ${CREATE_HTTP_CODE}), trying Railway CLI fallback..."
               SERVICE_OUTPUT=$(railway service create --name "${SERVICE_NAME}" --json 2>&1 || echo "")
               echo "CLI create output: ${SERVICE_OUTPUT}"
               SERVICE_ID=$(echo "$SERVICE_OUTPUT" | jq -r '.id // empty' 2>/dev/null || echo "")
@@ -139,21 +143,34 @@ jobs:
               # If still failed, verify by listing again
               if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
                 echo "⚠️ CLI creation also failed, verifying by listing services..."
-                sleep 3
+                sleep 5
                 SERVICES_RESPONSE=$(curl -s -w "\n%{http_code}" \
                   -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
                   -H "Content-Type: application/json" \
                   "${RAILWAY_API}/projects/${PROJECT_ID}/services" 2>&1)
+                HTTP_CODE=$(echo "$SERVICES_RESPONSE" | tail -n1)
                 SERVICES_JSON=$(echo "$SERVICES_RESPONSE" | sed '$d')
+                echo "Verification HTTP Status: ${HTTP_CODE}"
                 SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
               fi
             fi
             
-            # Final check
+            # Final check - FAIL if service creation failed
             if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
               echo "❌ ERROR: Could not create or find service ${SERVICE_NAME}"
-              echo "⚠️ Service creation failed - deployment will be skipped"
-              SERVICE_ID=""
+              echo "📋 Debug info:"
+              echo "  - Project ID: ${PROJECT_ID}"
+              echo "  - Service Name: ${SERVICE_NAME}"
+              echo "  - API HTTP Code: ${CREATE_HTTP_CODE}"
+              echo "  - API Response: ${CREATE_JSON}"
+              echo ""
+              echo "💡 Troubleshooting:"
+              echo "  1. Verify RAILWAY_TOKEN is valid and has proper permissions"
+              echo "  2. Verify RAILWAY_PROJECT_ID is correct"
+              echo "  3. Check Railway dashboard for service creation errors"
+              echo ""
+              echo "⚠️ Failing step - service is required for deployment"
+              exit 1
             else
               echo "✅ Created service ${SERVICE_NAME} (ID: ${SERVICE_ID})"
             fi
@@ -162,8 +179,14 @@ jobs:
             echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
           fi
           
+          # Final validation before output
+          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
+            echo "❌ CRITICAL: SERVICE_ID is empty after all attempts!"
+            exit 1
+          fi
+          
           # Debug output
-          echo "📤 Outputting SERVICE_ID: ${SERVICE_ID}"
+          echo "📤 Final SERVICE_ID: ${SERVICE_ID}"
           echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
 
       - name: Set service context
