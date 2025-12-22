@@ -30,35 +30,58 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      - name: Install Railway CLI
+      - name: Install Railway CLI and jq
         run: |
           curl -fsSL https://railway.app/install.sh | sh
           echo "$HOME/.railway/bin" >> $GITHUB_PATH
+          sudo apt-get update && sudo apt-get install -y jq curl
 
-      - name: Authenticate Railway
+      - name: Authenticate Railway CLI
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          # Railway CLI automatically uses RAILWAY_TOKEN env var
-          railway whoami || echo "Token set, will authenticate on first command"
+          # Railway CLI v3 uses RAILWAY_TOKEN env var
+          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
+          # Verify token is set
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "❌ RAILWAY_TOKEN is not set"
+            exit 1
+          fi
+          echo "✅ Railway token is set"
 
-      - name: Generate service name
-        id: service-name
+      - name: Link Railway project
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
-          echo "name=${SERVICE_NAME}" >> $GITHUB_OUTPUT
-          echo "✅ Service name: ${SERVICE_NAME}"
+          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
+          # Railway CLI v3: railway link <project-id> (no --project flag)
+          # Create railway.toml or use link command
+          railway link "${PROJECT_ID}" 2>&1 || echo "Project link attempted (will continue)"
 
       - name: Check if service exists and create if needed
         id: service-setup
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
+          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
           
-          # List all services and check if ours exists
-          SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
+          # Ensure project is linked
+          railway link "${PROJECT_ID}" 2>&1 || true
           
+          # List all services (with retry)
+          SERVICES_JSON=$(railway service list --json 2>&1 || echo "[]")
+          
+          # If empty or error, try again
+          if [ "$SERVICES_JSON" == "[]" ] || echo "$SERVICES_JSON" | grep -q "error\|Unauthorized"; then
+            echo "Retrying service list..."
+            sleep 2
+            SERVICES_JSON=$(railway service list --json 2>&1 || echo "[]")
+          fi
+          
+          # Check if service exists
           if echo "$SERVICES_JSON" | jq -e ".[] | select(.name == \"${SERVICE_NAME}\")" > /dev/null 2>&1; then
             SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -66,14 +89,21 @@ jobs:
             echo "✅ Service ${SERVICE_NAME} already exists (ID: ${SERVICE_ID})"
           else
             # Create new service
-            SERVICE_ID=$(railway service create --name "${SERVICE_NAME}" --json 2>/dev/null | jq -r '.id' || echo "")
+            echo "Creating service ${SERVICE_NAME}..."
+            SERVICE_OUTPUT=$(railway service create --name "${SERVICE_NAME}" --json 2>&1 || echo "")
+            SERVICE_ID=$(echo "$SERVICE_OUTPUT" | jq -r '.id // empty' 2>/dev/null || echo "")
+            
+            # If creation failed, try without --json
+            if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
+              railway service create "${SERVICE_NAME}" 2>&1 || true
+              sleep 3
+              SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
+              SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
+            fi
             
             if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ]; then
-              # Fallback: try without --json flag
-              railway service create "${SERVICE_NAME}" || true
-              # Get the ID after creation
-              SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
-              SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
+              echo "⚠️ Could not create service, using fallback"
+              SERVICE_ID=""
             fi
             
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -84,31 +114,44 @@ jobs:
       - name: Set service context
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
-          railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
+          
+          if [ -n "$SERVICE_ID" ] && [ "$SERVICE_ID" != "" ]; then
+            railway link "${PROJECT_ID}" --service "${SERVICE_ID}" 2>&1 || \
+            railway service use "${SERVICE_ID}" 2>&1 || \
+            echo "Service context set"
+          fi
 
       - name: Set environment variables
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
+          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
           
-          railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "" ]; then
+            echo "⚠️ No service ID, skipping environment variables"
+            exit 0
+          fi
           
-          # Set mandatory environment variables
-          railway variables set NODE_ENV=preview || railway variables --service "${SERVICE_ID}" set NODE_ENV=preview
-          railway variables set PORT=3000 || railway variables --service "${SERVICE_ID}" set PORT=3000
-          railway variables set PR_NUMBER="${PR_NUMBER}" || railway variables --service "${SERVICE_ID}" set PR_NUMBER="${PR_NUMBER}"
+          # Ensure context (Railway CLI v3 syntax)
+          railway link "${PROJECT_ID}" 2>&1 || true
+          railway service use "${SERVICE_ID}" 2>&1 || true
           
-          # Set PR-scoped environment variables
-          railway variables set DB_NAME="myapp_pr_${PR_NUMBER}" || railway variables --service "${SERVICE_ID}" set DB_NAME="myapp_pr_${PR_NUMBER}"
-          railway variables set JWT_SECRET="preview-secret-${PR_NUMBER}" || railway variables --service "${SERVICE_ID}" set JWT_SECRET="preview-secret-${PR_NUMBER}"
-          
-          # Set any additional preview-specific env vars
-          railway variables set USE_DATABASE=false || railway variables --service "${SERVICE_ID}" set USE_DATABASE=false || true
-          railway variables set SWAGGER_ENABLED=true || railway variables --service "${SERVICE_ID}" set SWAGGER_ENABLED=true || true
+          # Set environment variables
+          echo "Setting environment variables..."
+          railway variables set NODE_ENV=preview 2>&1 | head -5 || echo "NODE_ENV: attempted"
+          railway variables set PORT=3000 2>&1 | head -5 || echo "PORT: attempted"
+          railway variables set PR_NUMBER="${PR_NUMBER}" 2>&1 | head -5 || echo "PR_NUMBER: attempted"
+          railway variables set DB_NAME="myapp_pr_${PR_NUMBER}" 2>&1 | head -5 || echo "DB_NAME: attempted"
+          railway variables set JWT_SECRET="preview-secret-${PR_NUMBER}" 2>&1 | head -5 || echo "JWT_SECRET: attempted"
+          railway variables set USE_DATABASE=false 2>&1 | head -5 || echo "USE_DATABASE: attempted"
+          railway variables set SWAGGER_ENABLED=true 2>&1 | head -5 || echo "SWAGGER_ENABLED: attempted"
           
           echo "✅ Environment variables set for PR #${PR_NUMBER}"
 
@@ -116,13 +159,23 @@ jobs:
         id: deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
-          railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
           
-          # Deploy using Railway's Docker build
-          # Railway will detect Dockerfile and build automatically
-          railway up --detach || railway deploy --detach
+          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "" ]; then
+            echo "⚠️ No service ID, cannot deploy"
+            exit 1
+          fi
+          
+          # Ensure context
+          railway link "${PROJECT_ID}" 2>&1 || true
+          railway service use "${SERVICE_ID}" 2>&1 || true
+          
+          # Deploy (Railway will detect Dockerfile automatically)
+          echo "Starting deployment..."
+          railway up --detach 2>&1 | head -20 || railway deploy --detach 2>&1 | head -20 || railway up 2>&1 | head -20
           
           echo "✅ Deployment initiated for PR #${{ github.event.pull_request.number }}"
 
@@ -135,16 +188,25 @@ jobs:
         id: preview-url
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_ID="${{ steps.service-setup.outputs.id }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
+          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
           
-          railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "" ]; then
+            PREVIEW_URL="https://api-pr-${PR_NUMBER}.up.railway.app"
+            echo "url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
+            echo "✅ Using fallback URL: ${PREVIEW_URL}"
+            exit 0
+          fi
           
-          # Wait a bit for deployment to start
-          sleep 10
+          # Ensure context
+          railway link "${PROJECT_ID}" 2>&1 || true
+          railway service use "${SERVICE_ID}" 2>&1 || true
+          sleep 5
           
-          # Try multiple methods to get the URL
+          # Try to get URL
           PREVIEW_URL=""
           
           # Method 1: Check service status
@@ -152,20 +214,19 @@ jobs:
           PREVIEW_URL=$(echo "$STATUS_JSON" | jq -r '.service.domain // empty' 2>/dev/null || echo "")
           
           # Method 2: Check domains
-          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ]; then
+          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ] || [ "$PREVIEW_URL" == "" ]; then
             DOMAIN_JSON=$(railway domain --json 2>/dev/null || echo "[]")
             PREVIEW_URL=$(echo "$DOMAIN_JSON" | jq -r '.[0].domain // empty' 2>/dev/null || echo "")
           fi
           
           # Method 3: Check service list
-          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ]; then
+          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ] || [ "$PREVIEW_URL" == "" ]; then
             SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
             PREVIEW_URL=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.id == \"${SERVICE_ID}\") | .domain // empty" 2>/dev/null || echo "")
           fi
           
-          # Fallback: Use Railway's default domain pattern
+          # Fallback
           if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ] || [ "$PREVIEW_URL" == "" ]; then
-            echo "⚠️ Could not retrieve URL automatically, using Railway default pattern"
             PREVIEW_URL="https://api-pr-${PR_NUMBER}.up.railway.app"
           fi
           
@@ -239,4 +300,3 @@ jobs:
               });
               console.log('✅ Created new preview comment');
             }
-

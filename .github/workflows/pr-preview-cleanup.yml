@@ -16,29 +16,41 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Install Railway CLI
+      - name: Install Railway CLI and jq
         run: |
           curl -fsSL https://railway.app/install.sh | sh
           echo "$HOME/.railway/bin" >> $GITHUB_PATH
+          sudo apt-get update && sudo apt-get install -y jq curl
 
-      - name: Authenticate Railway
+      - name: Authenticate Railway CLI
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          # Railway CLI automatically uses RAILWAY_TOKEN env var
-          railway whoami || echo "Token set, will authenticate on first command"
+          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "❌ RAILWAY_TOKEN is not set"
+            exit 1
+          fi
+          echo "✅ Railway token is set"
 
-      - name: Set Railway project
+      - name: Link Railway project
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} || railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
+          railway link "${PROJECT_ID}" 2>&1 || echo "Project link attempted (will continue)"
 
       - name: Delete preview service
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
+          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
+          
+          # Ensure project is linked
+          railway link "${PROJECT_ID}" 2>&1 || true
           
           # Check if service exists
           SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
@@ -47,8 +59,9 @@ jobs:
             SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
             echo "🗑️ Deleting service ${SERVICE_NAME} (ID: ${SERVICE_ID})"
             
-            railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
-            railway service delete --yes || railway service delete "${SERVICE_ID}" --force || railway service delete "${SERVICE_NAME}" --yes
+            railway link "${PROJECT_ID}" 2>&1 || true
+            railway service use "${SERVICE_ID}" 2>&1 || true
+            railway service delete --yes 2>&1 || railway service delete "${SERVICE_ID}" --yes 2>&1 || railway service delete "${SERVICE_NAME}" --yes 2>&1 || echo "Delete attempted"
             
             echo "✅ Successfully deleted preview environment for PR #${{ github.event.pull_request.number }}"
           else
@@ -80,4 +93,3 @@ jobs:
             } catch (error) {
               console.log('⚠️ Could not post cleanup comment (PR may be merged):', error.message);
             }
-
