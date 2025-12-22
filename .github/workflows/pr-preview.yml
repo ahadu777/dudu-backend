@@ -17,7 +17,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install Railway CLI
         run: curl -fsSL https://railway.app/install.sh | sh
@@ -25,14 +26,21 @@ jobs:
       - name: Add Railway to PATH
         run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
+      # 🔑 REQUIRED: select project (no --project flag exists)
+      - name: Link Railway project
+        run: railway link "$RAILWAY_PROJECT_ID"
+
       - name: Deploy PR Preview
         id: deploy
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          set -e
+
           SERVICE_NAME="api-pr-${PR_NUMBER}"
+          echo "Deploying service: $SERVICE_NAME"
+
           railway up \
-            --project "$RAILWAY_PROJECT_ID" \
             --service "$SERVICE_NAME" \
             --env NODE_ENV=preview \
             --env PORT=3000 \
@@ -40,6 +48,7 @@ jobs:
             --env DB_NAME="myapp_pr_${PR_NUMBER}" \
             --env JWT_SECRET="preview-secret-${PR_NUMBER}" \
             --detach
+
           echo "url=https://${SERVICE_NAME}.up.railway.app" >> $GITHUB_OUTPUT
 
       - name: Comment PR with preview URL
@@ -47,9 +56,14 @@ jobs:
         with:
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
-            const pr = context.issue.number;
+
             await github.rest.issues.createComment({
               ...context.repo,
-              issue_number: pr,
-              body: `## 🚀 Preview Environment Ready\n\n**API URL:** ${url}\n\n⚠️ Ephemeral environment, deleted on PR close.`
-            });
+              issue_number: context.issue.number,
+              body: `## 🚀 Railway Preview Ready
+
+              **API URL:** ${url}
+
+            🔁 This preview updates on every push to this PR.  
+            🗑️ You can safely delete it when the PR is closed.`
+                        });
