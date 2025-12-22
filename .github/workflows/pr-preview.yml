@@ -33,26 +33,27 @@ jobs:
       - name: Add Railway to PATH
         run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
-      - name: Link Railway project
-        run: railway link --project $RAILWAY_PROJECT_ID
-
       - name: Deploy PR Preview
         id: deploy
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_NAME="api-pr-${PR_NUMBER}"
           
           echo "🚀 Deploying to service: ${SERVICE_NAME}"
           
           # Railway up automatically creates service if it doesn't exist
+          # --project flag targets the project directly (CI-safe, no link needed)
           railway up \
-            --service $SERVICE_NAME \
+            --project "$RAILWAY_PROJECT_ID" \
+            --service "$SERVICE_NAME" \
             --env NODE_ENV=preview \
             --env PORT=3000 \
-            --env PR_NUMBER=$PR_NUMBER \
-            --env DB_NAME=myapp_pr_$PR_NUMBER \
-            --env JWT_SECRET=preview-secret-$PR_NUMBER \
+            --env PR_NUMBER="$PR_NUMBER" \
+            --env DB_NAME="myapp_pr_$PR_NUMBER" \
+            --env JWT_SECRET="preview-secret-$PR_NUMBER" \
             --env USE_DATABASE=false \
             --env SWAGGER_ENABLED=true \
             --detach
