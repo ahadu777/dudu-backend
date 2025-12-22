@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
   pull-requests: write
 
 env:
@@ -14,13 +13,11 @@ env:
   RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
 jobs:
-  deploy-preview:
+  preview:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.state == 'open'
-    
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -30,315 +27,55 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      - name: Install Railway CLI and jq
-        run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-          sudo apt-get update && sudo apt-get install -y jq curl
+      - name: Install Railway CLI
+        run: curl -fsSL https://railway.app/install.sh | sh
 
-      - name: Authenticate Railway CLI
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          # Railway CLI authentication
-          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          # Verify token is set
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ RAILWAY_TOKEN is not set"
-            exit 1
-          fi
-          
-          # Railway CLI needs token to be passed via login command or config file
-          # Create Railway config directory
-          mkdir -p ~/.railway
-          
-          # Set token in Railway config (Railway CLI reads from here)
-          echo "$RAILWAY_TOKEN" | railway login --browserless 2>&1 || {
-            # Alternative: Set token directly in config
-            echo '{"token":"'$RAILWAY_TOKEN'"}' > ~/.railway/config.json 2>&1 || echo "Config write attempted"
-          }
-          
-          echo "✅ Railway token configured"
+      - name: Add Railway to PATH
+        run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
-      - name: Set Railway project context
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-        run: |
-          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
-          # Railway CLI uses RAILWAY_PROJECT_ID env var automatically
-          # Create railway.toml to set project context
-          echo "[build]" > railway.toml
-          echo "builder = \"dockerfile\"" >> railway.toml
-          echo "" >> railway.toml
-          echo "[deploy]" >> railway.toml
-          echo "startCommand = \"npm start\"" >> railway.toml
-          echo "✅ Created railway.toml for project context"
+      - name: Link Railway project
+        run: railway link $RAILWAY_PROJECT_ID
 
-      - name: Check if service exists and create if needed
-        id: service-setup
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-        run: |
-          SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
-          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
-          
-          echo "🔍 Looking for service: ${SERVICE_NAME}"
-          echo "📦 Project ID: ${PROJECT_ID}"
-          
-          # Initialize SERVICE_ID
-          SERVICE_ID=""
-          
-          # Use Railway CLI (Railway uses GraphQL API internally, CLI handles it)
-          # Railway CLI automatically uses RAILWAY_TOKEN and RAILWAY_PROJECT_ID env vars
-          
-          # Verify Railway CLI is available
-          if ! command -v railway &> /dev/null; then
-            echo "❌ Railway CLI not found in PATH"
-            echo "   Make sure Railway CLI is installed: curl -fsSL https://railway.app/install.sh | sh"
-            exit 1
-          fi
-          
-          # Verify authentication (skip if whoami fails, will try anyway)
-          echo "🔐 Verifying Railway authentication..."
-          WHOAMI_OUTPUT=$(railway whoami 2>&1 || echo "")
-          if echo "$WHOAMI_OUTPUT" | grep -qi "not authenticated\|unauthorized\|please login"; then
-            echo "⚠️ Railway whoami failed, but continuing (token may still work)"
-            echo "   Output: ${WHOAMI_OUTPUT}"
-          else
-            echo "✅ Railway authentication verified"
-          fi
-          
-          # List all services using Railway CLI
-          echo "📋 Listing services via Railway CLI..."
-          SERVICES_JSON=$(railway service list --json 2>&1)
-          echo "Services response: ${SERVICES_JSON}"
-          
-          # Check for errors
-          if echo "$SERVICES_JSON" | grep -qi "error\|unauthorized\|not found\|not authenticated"; then
-            echo "❌ Railway CLI error: ${SERVICES_JSON}"
-            echo "💡 Troubleshooting:"
-            echo "  1. Verify RAILWAY_TOKEN is valid"
-            echo "  2. Verify RAILWAY_PROJECT_ID is correct"
-            echo "  3. Try running: railway whoami"
-            SERVICES_JSON="[]"
-          fi
-          
-          # Parse JSON safely
-          if [ -z "$SERVICES_JSON" ] || [ "$SERVICES_JSON" == "[]" ] || [ "$SERVICES_JSON" == "null" ]; then
-            echo "📋 No services found or empty response"
-            SERVICES_JSON="[]"
-          fi
-          
-          # Check if service exists
-          if echo "$SERVICES_JSON" | jq -e ".[] | select(.name == \"${SERVICE_NAME}\")" > /dev/null 2>&1; then
-            SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
-            echo "✅ Service ${SERVICE_NAME} already exists (ID: ${SERVICE_ID})"
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
-          else
-            # Create new service using Railway CLI
-            echo "🆕 Creating service ${SERVICE_NAME} via Railway CLI..."
-            SERVICE_OUTPUT=$(railway service create --name "${SERVICE_NAME}" --json 2>&1)
-            echo "CLI create output: ${SERVICE_OUTPUT}"
-            
-            SERVICE_ID=$(echo "$SERVICE_OUTPUT" | jq -r '.id // empty' 2>/dev/null || echo "")
-            
-            # If creation failed, try without --json flag
-            if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
-              echo "⚠️ JSON creation failed, trying without --json flag..."
-              railway service create "${SERVICE_NAME}" 2>&1 || echo "Create command executed"
-              sleep 5
-              # List again to get the service ID
-              SERVICES_JSON=$(railway service list --json 2>&1 || echo "[]")
-              SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
-            fi
-            
-            # Final check - FAIL if service creation failed
-            if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
-              echo "❌ ERROR: Could not create or find service ${SERVICE_NAME}"
-              echo "📋 Debug info:"
-              echo "  - Project ID: ${PROJECT_ID}"
-              echo "  - Service Name: ${SERVICE_NAME}"
-              echo "  - CLI Output: ${SERVICE_OUTPUT}"
-              echo "  - Services List: ${SERVICES_JSON}"
-              echo ""
-              echo "💡 Troubleshooting:"
-              echo "  1. Verify RAILWAY_TOKEN is valid: railway whoami"
-              echo "  2. Verify RAILWAY_PROJECT_ID is correct"
-              echo "  3. Check Railway dashboard for service creation errors"
-              echo "  4. Try manually: railway service create ${SERVICE_NAME}"
-              echo ""
-              echo "⚠️ Failing step - service is required for deployment"
-              exit 1
-            else
-              echo "✅ Created service ${SERVICE_NAME} (ID: ${SERVICE_ID})"
-            fi
-            
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
-          fi
-          
-          # Final validation before output
-          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
-            echo "❌ CRITICAL: SERVICE_ID is empty after all attempts!"
-            exit 1
-          fi
-          
-          # Debug output
-          echo "📤 Final SERVICE_ID: ${SERVICE_ID}"
-          echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
-
-      - name: Set service context
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-        run: |
-          SERVICE_ID="${{ steps.service-setup.outputs.id }}"
-          
-          if [ -n "$SERVICE_ID" ] && [ "$SERVICE_ID" != "" ]; then
-            # Railway CLI uses RAILWAY_PROJECT_ID env var automatically
-            # Set service context using service use command
-            railway service use "${SERVICE_ID}" 2>&1 || echo "Service context set (continuing)"
-          else
-            echo "⚠️ No service ID available"
-          fi
-
-      - name: Set environment variables
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-        run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          SERVICE_ID="${{ steps.service-setup.outputs.id }}"
-          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
-          
-          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "" ]; then
-            echo "⚠️ No service ID, skipping environment variables"
-            exit 0
-          fi
-          
-          # Ensure context (Railway CLI v3 syntax)
-          railway link "${PROJECT_ID}" 2>&1 || true
-          railway service use "${SERVICE_ID}" 2>&1 || true
-          
-          # Set environment variables
-          echo "Setting environment variables..."
-          railway variables set NODE_ENV=preview 2>&1 | head -5 || echo "NODE_ENV: attempted"
-          railway variables set PORT=3000 2>&1 | head -5 || echo "PORT: attempted"
-          railway variables set PR_NUMBER="${PR_NUMBER}" 2>&1 | head -5 || echo "PR_NUMBER: attempted"
-          railway variables set DB_NAME="myapp_pr_${PR_NUMBER}" 2>&1 | head -5 || echo "DB_NAME: attempted"
-          railway variables set JWT_SECRET="preview-secret-${PR_NUMBER}" 2>&1 | head -5 || echo "JWT_SECRET: attempted"
-          railway variables set USE_DATABASE=false 2>&1 | head -5 || echo "USE_DATABASE: attempted"
-          railway variables set SWAGGER_ENABLED=true 2>&1 | head -5 || echo "SWAGGER_ENABLED: attempted"
-          
-          echo "✅ Environment variables set for PR #${PR_NUMBER}"
-
-      - name: Deploy to Railway
+      - name: Deploy PR Preview
         id: deploy
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          SERVICE_ID="${{ steps.service-setup.outputs.id }}"
-          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
+          SERVICE_NAME="api-pr-${PR_NUMBER}"
           
-          echo "🔍 Checking SERVICE_ID: '${SERVICE_ID}'"
-          echo "📦 Project ID: ${PROJECT_ID}"
+          echo "🚀 Deploying to service: ${SERVICE_NAME}"
           
-          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "" ] || [ "$SERVICE_ID" == "null" ]; then
-            echo "❌ ERROR: No service ID available, cannot deploy"
-            echo "⚠️ Service creation may have failed. Check the 'Check if service exists' step logs."
-            echo "💡 This might be due to Railway authentication issues or service creation failures."
-            exit 1
-          fi
+          # Railway up automatically creates service if it doesn't exist
+          railway up \
+            --service $SERVICE_NAME \
+            --env NODE_ENV=preview \
+            --env PORT=3000 \
+            --env PR_NUMBER=$PR_NUMBER \
+            --env DB_NAME=myapp_pr_$PR_NUMBER \
+            --env JWT_SECRET=preview-secret-$PR_NUMBER \
+            --env USE_DATABASE=false \
+            --env SWAGGER_ENABLED=true \
+            --detach
           
-          echo "✅ Service ID found: ${SERVICE_ID}"
+          # Wait a moment for deployment to start
+          sleep 10
           
-          # Ensure context
-          echo "🔗 Linking to project and service..."
-          railway link "${PROJECT_ID}" 2>&1 || echo "Project link attempted"
-          railway service use "${SERVICE_ID}" 2>&1 || echo "Service use attempted"
-          
-          # Deploy (Railway will detect Dockerfile automatically)
-          echo "🚀 Starting deployment..."
-          railway up --detach 2>&1 || railway deploy --detach 2>&1 || railway up 2>&1 || {
-            echo "⚠️ Deployment command failed, but continuing..."
-            echo "Deployment may still be in progress"
-          }
-          
-          echo "✅ Deployment initiated for PR #${{ github.event.pull_request.number }}"
-
-      - name: Wait for deployment
-        run: |
-          echo "⏳ Waiting for deployment to complete..."
-          sleep 30
-
-      - name: Get preview URL
-        id: preview-url
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-        run: |
-          SERVICE_ID="${{ steps.service-setup.outputs.id }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          PROJECT_ID="${{ secrets.RAILWAY_PROJECT_ID }}"
-          
-          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "" ]; then
-            PREVIEW_URL="https://api-pr-${PR_NUMBER}.up.railway.app"
-            echo "url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
-            echo "✅ Using fallback URL: ${PREVIEW_URL}"
-            exit 0
-          fi
-          
-          # Ensure service context
-          railway service use "${SERVICE_ID}" 2>&1 || echo "Service use attempted"
-          sleep 5
-          
-          # Try to get URL
-          PREVIEW_URL=""
-          
-          # Method 1: Check service status
-          STATUS_JSON=$(railway status --json 2>/dev/null || echo "{}")
-          PREVIEW_URL=$(echo "$STATUS_JSON" | jq -r '.service.domain // empty' 2>/dev/null || echo "")
-          
-          # Method 2: Check domains
-          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ] || [ "$PREVIEW_URL" == "" ]; then
-            DOMAIN_JSON=$(railway domain --json 2>/dev/null || echo "[]")
-            PREVIEW_URL=$(echo "$DOMAIN_JSON" | jq -r '.[0].domain // empty' 2>/dev/null || echo "")
-          fi
-          
-          # Method 3: Check service list
-          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ] || [ "$PREVIEW_URL" == "" ]; then
-            SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
-            PREVIEW_URL=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.id == \"${SERVICE_ID}\") | .domain // empty" 2>/dev/null || echo "")
-          fi
-          
-          # Fallback
-          if [ -z "$PREVIEW_URL" ] || [ "$PREVIEW_URL" == "null" ] || [ "$PREVIEW_URL" == "" ]; then
-            PREVIEW_URL="https://api-pr-${PR_NUMBER}.up.railway.app"
-          fi
-          
-          # Ensure URL starts with https://
-          if [[ ! "$PREVIEW_URL" =~ ^https?:// ]]; then
-            PREVIEW_URL="https://${PREVIEW_URL}"
-          fi
-          
+          # Railway auto-assigns domain: https://${SERVICE_NAME}.up.railway.app
+          PREVIEW_URL="https://${SERVICE_NAME}.up.railway.app"
           echo "url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
           echo "✅ Preview URL: ${PREVIEW_URL}"
 
-      - name: Comment on PR
+      - name: Comment PR with preview URL
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const previewUrl = '${{ steps.preview-url.outputs.url }}';
+            const url = '${{ steps.deploy.outputs.url }}';
             const prNumber = '${{ github.event.pull_request.number }}';
             const prBranch = '${{ github.event.pull_request.head.ref }}';
             
             const commentBody = '## 🚀 Preview Environment Deployed\n\n' +
-              '**Preview API URL:** ' + previewUrl + '\n\n' +
+              '**Preview API URL:** ' + url + '\n\n' +
               '**PR Details:**\n' +
               '- PR #' + prNumber + '\n' +
               '- Branch: `' + prBranch + '`\n\n' +
@@ -353,9 +90,9 @@ jobs:
               '- The environment is automatically updated on each push to this PR\n' +
               '- Access expires when PR is closed or merged\n\n' +
               '**Testing:**\n' +
-              '- API Base URL: ' + previewUrl + '\n' +
-              '- Health Check: ' + previewUrl + '/healthz\n' +
-              '- Swagger Docs: ' + previewUrl + '/docs\n\n' +
+              '- API Base URL: ' + url + '\n' +
+              '- Health Check: ' + url + '/healthz\n' +
+              '- Swagger Docs: ' + url + '/docs\n\n' +
               '---\n' +
               '*Automatically deployed by Railway PR Preview workflow*';
 
