@@ -24,7 +24,9 @@ jobs:
       - name: Delete PR Service
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          railway service delete api-pr-${PR_NUMBER} \
-            --project "$RAILWAY_PROJECT_ID" \
-            --yes || true
+          SERVICE_NAME="api-pr-${PR_NUMBER}"
+          echo "🗑️ Deleting service: ${SERVICE_NAME}"
+          railway service delete "$SERVICE_NAME" --yes || echo "Service may not exist or already deleted"

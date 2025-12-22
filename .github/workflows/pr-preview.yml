@@ -25,22 +25,57 @@ jobs:
       - name: Add Railway to PATH
         run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
+      - name: Set Railway project context
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: |
+          # Railway CLI reads project from railway.toml or RAILWAY_PROJECT_ID env var
+          # Ensure railway.toml has project set (it should already exist)
+          if [ ! -f "railway.toml" ]; then
+            echo "project = \"$RAILWAY_PROJECT_ID\"" > railway.toml
+          fi
+          echo "✅ Railway project context ready"
+
       - name: Deploy PR Preview
         id: deploy
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_NAME="api-pr-${PR_NUMBER}"
-          railway up \
-            --project "$RAILWAY_PROJECT_ID" \
-            --service "$SERVICE_NAME" \
-            --env NODE_ENV=preview \
-            --env PORT=3000 \
-            --env PR_NUMBER="$PR_NUMBER" \
-            --env DB_NAME="myapp_pr_${PR_NUMBER}" \
-            --env JWT_SECRET="preview-secret-${PR_NUMBER}" \
-            --detach
-          echo "url=https://${SERVICE_NAME}.up.railway.app" >> $GITHUB_OUTPUT
+          
+          echo "🚀 Deploying to service: ${SERVICE_NAME}"
+          
+          # Set environment variables using railway variables command
+          # Note: Service must exist first, so we deploy first, then set vars
+          railway up --service "$SERVICE_NAME" --detach || {
+            echo "⚠️ Initial deployment attempt failed, service may be created now"
+          }
+          
+          # Wait a moment for service to be ready
+          sleep 5
+          
+          # Set environment variables
+          echo "📝 Setting environment variables..."
+          railway variables set NODE_ENV=preview --service "$SERVICE_NAME" 2>&1 || echo "NODE_ENV: attempted"
+          railway variables set PORT=3000 --service "$SERVICE_NAME" 2>&1 || echo "PORT: attempted"
+          railway variables set PR_NUMBER="$PR_NUMBER" --service "$SERVICE_NAME" 2>&1 || echo "PR_NUMBER: attempted"
+          railway variables set DB_NAME="myapp_pr_${PR_NUMBER}" --service "$SERVICE_NAME" 2>&1 || echo "DB_NAME: attempted"
+          railway variables set JWT_SECRET="preview-secret-${PR_NUMBER}" --service "$SERVICE_NAME" 2>&1 || echo "JWT_SECRET: attempted"
+          
+          # Deploy again with updated environment variables
+          echo "🚀 Deploying with environment variables..."
+          railway up --service "$SERVICE_NAME" --detach
+          
+          # Wait for deployment
+          sleep 10
+          
+          # Railway auto-assigns domain
+          PREVIEW_URL="https://${SERVICE_NAME}.up.railway.app"
+          echo "url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Preview URL: ${PREVIEW_URL}"
 
       - name: Comment PR with preview URL
         uses: actions/github-script@v7
