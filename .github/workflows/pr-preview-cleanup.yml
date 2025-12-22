@@ -1,0 +1,79 @@
+name: Railway PR Preview Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+jobs:
+  cleanup-preview:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Authenticate Railway
+        run: |
+          echo "${{ secrets.RAILWAY_TOKEN }}" | railway login --browserless
+
+      - name: Set Railway project
+        run: railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Delete preview service
+        run: |
+          SERVICE_NAME="api-pr-${{ github.event.pull_request.number }}"
+          
+          # Check if service exists
+          SERVICES_JSON=$(railway service list --json 2>/dev/null || echo "[]")
+          
+          if echo "$SERVICES_JSON" | jq -e ".[] | select(.name == \"${SERVICE_NAME}\")" > /dev/null 2>&1; then
+            SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id")
+            echo "🗑️ Deleting service ${SERVICE_NAME} (ID: ${SERVICE_ID})"
+            
+            railway service use "${SERVICE_ID}" || railway link --service "${SERVICE_ID}"
+            railway service delete --yes || railway service delete "${SERVICE_ID}" --force || railway service delete "${SERVICE_NAME}" --yes
+            
+            echo "✅ Successfully deleted preview environment for PR #${{ github.event.pull_request.number }}"
+          else
+            echo "ℹ️ Service ${SERVICE_NAME} does not exist, nothing to clean up"
+          fi
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = '${{ github.event.pull_request.number }}';
+            
+            const commentBody = `## 🧹 Preview Environment Cleaned Up
+
+The preview environment for PR #${prNumber} has been automatically destroyed.
+
+**Service:** \`api-pr-${prNumber}\`
+
+All resources associated with this preview environment have been removed.
+
+---
+*Automatically cleaned up by Railway PR Preview workflow*`;
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+              console.log('✅ Posted cleanup comment');
+            } catch (error) {
+              console.log('⚠️ Could not post cleanup comment (PR may be merged):', error.message);
+            }
+

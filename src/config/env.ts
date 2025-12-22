@@ -7,8 +7,9 @@ dotenv.config();
 // Validate and export environment variables
 export const env = cleanEnv(process.env, {
   // Server Configuration
-  NODE_ENV: str({ choices: ['development', 'production', 'test'], default: 'development' }),
-  PORT: num({ default: 8080 }), // App Platform 使用 8080，本地开发可以设置为 3000
+  NODE_ENV: str({ choices: ['development', 'production', 'test', 'preview'], default: 'development' }),
+  PORT: num({ default: 8080 }), // App Platform 使用 8080，本地开发可以设置为 3000，Railway preview 使用 3000
+  PR_NUMBER: str({ default: '' }), // PR number for preview environments
 
   // Database Configuration
   USE_DATABASE: bool({ default: true }), // Enable database mode (true) or mock mode (false)
