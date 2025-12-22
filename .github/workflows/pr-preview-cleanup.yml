@@ -54,16 +54,12 @@ jobs:
           script: |
             const prNumber = '${{ github.event.pull_request.number }}';
             
-            const commentBody = `## 🧹 Preview Environment Cleaned Up
-
-The preview environment for PR #${prNumber} has been automatically destroyed.
-
-**Service:** \`api-pr-${prNumber}\`
-
-All resources associated with this preview environment have been removed.
-
----
-*Automatically cleaned up by Railway PR Preview workflow*`;
+            const commentBody = '## 🧹 Preview Environment Cleaned Up\n\n' +
+              'The preview environment for PR #' + prNumber + ' has been automatically destroyed.\n\n' +
+              '**Service:** `api-pr-' + prNumber + '`\n\n' +
+              'All resources associated with this preview environment have been removed.\n\n' +
+              '---\n' +
+              '*Automatically cleaned up by Railway PR Preview workflow*';
 
             try {
               await github.rest.issues.createComment({
