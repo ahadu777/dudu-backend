@@ -60,21 +60,33 @@ jobs:
           echo "✅ Created railway.toml with project context"
           
           # Check if service exists, create via Railway GraphQL API if it doesn't
+          # NOTE: This requires an Account Token (not Project Token)
+          # Project Tokens cannot create services via API
           echo "🔍 Checking if service exists..."
           RAILWAY_GRAPHQL="https://backboard.railway.app/graphql/v2"
           
-          # Query to list services
-          LIST_QUERY='{"query":"query { project(id: \"'${RAILWAY_PROJECT_ID}'\") { services { id name } } }"}'
+          # Query to list services (using correct GraphQL connection syntax)
+          LIST_QUERY='{"query":"query { project(id: \"'${RAILWAY_PROJECT_ID}'\") { services { edges { node { id name } } } } }"}'
           SERVICES_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$LIST_QUERY" \
-            "$RAILWAY_GRAPHQL" 2>&1 || echo '{"data":{"project":{"services":[]}}}')
+            "$RAILWAY_GRAPHQL" 2>&1 || echo '{"data":{"project":{"services":{"edges":[]}}}}')
           
-          SERVICE_EXISTS=$(echo "$SERVICES_RESPONSE" | jq -r ".data.project.services[] | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
+          # Check for errors
+          if echo "$SERVICES_RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            echo "⚠️ GraphQL query failed (may need Account Token):"
+            echo "$SERVICES_RESPONSE" | jq '.errors' 2>/dev/null || echo "$SERVICES_RESPONSE"
+            echo ""
+            echo "💡 If using Project Token, services must be created manually first."
+            echo "   Trying Railway CLI deployment anyway..."
+            SERVICE_EXISTS=""
+          else
+            SERVICE_EXISTS=$(echo "$SERVICES_RESPONSE" | jq -r ".data.project.services.edges[].node | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
+          fi
           
           if [ -z "$SERVICE_EXISTS" ] || [ "$SERVICE_EXISTS" == "null" ]; then
-            echo "📦 Service doesn't exist, creating via Railway API..."
+            echo "📦 Service doesn't exist, attempting to create via Railway API..."
             
             # Create service via GraphQL mutation
             CREATE_MUTATION='{"query":"mutation { serviceCreate(input: {name: \"'${SERVICE_NAME}'\", projectId: \"'${RAILWAY_PROJECT_ID}'\"}) { id name } }"}'
@@ -84,18 +96,37 @@ jobs:
               -d "$CREATE_MUTATION" \
               "$RAILWAY_GRAPHQL" 2>&1 || echo "")
             
-            SERVICE_ID=$(echo "$CREATE_RESPONSE" | jq -r '.data.serviceCreate.id // empty' 2>/dev/null || echo "")
-            
-            if [ -n "$SERVICE_ID" ] && [ "$SERVICE_ID" != "null" ]; then
+            # Check if creation succeeded
+            if echo "$CREATE_RESPONSE" | jq -e '.data.serviceCreate.id' > /dev/null 2>&1; then
+              SERVICE_ID=$(echo "$CREATE_RESPONSE" | jq -r '.data.serviceCreate.id')
               echo "✅ Service created successfully (ID: ${SERVICE_ID})"
               sleep 3
             else
-              echo "⚠️ Service creation may have failed, but continuing..."
+              echo "⚠️ Service creation via API failed (requires Account Token)"
               echo "Response: ${CREATE_RESPONSE}"
+              echo ""
+              echo "💡 Trying Railway CLI - it may create service automatically..."
             fi
           else
             echo "✅ Service already exists (ID: ${SERVICE_EXISTS})"
           fi
+          
+          # Deploy with Railway CLI
+          # Railway CLI might create service automatically if it doesn't exist
+          echo "📦 Deploying service..."
+          railway up --service "$SERVICE_NAME" --detach 2>&1 || {
+            echo ""
+            echo "❌ Deployment failed: Service '${SERVICE_NAME}' not found"
+            echo ""
+            echo "💡 Solutions:"
+            echo "   1. Use an Account Token (not Project Token) to auto-create services"
+            echo "   2. Or create service manually: https://railway.app/project/${RAILWAY_PROJECT_ID}"
+            echo "   3. Then re-run this workflow"
+            exit 1
+          }
+          
+          # Wait a moment
+          sleep 5
           
           # Set environment variables using Railway CLI
           echo "📝 Setting environment variables..."
@@ -106,12 +137,12 @@ jobs:
             --set "DB_NAME=myapp_pr_${PR_NUMBER}" \
             --set "JWT_SECRET=preview-secret-${PR_NUMBER}" \
             --service "$SERVICE_NAME" \
-            --skip-deploys 2>&1 || echo "⚠️ Variables set attempted (may need service to exist first)"
+            --skip-deploys 2>&1 || echo "⚠️ Variables set attempted"
           
-          # Deploy with Railway CLI
-          echo "🚀 Deploying service..."
+          # Deploy again with environment variables
+          echo "🚀 Deploying with environment variables..."
           railway up --service "$SERVICE_NAME" --detach || {
-            echo "❌ Deployment failed"
+            echo "❌ Final deployment failed"
             exit 1
           }
           
