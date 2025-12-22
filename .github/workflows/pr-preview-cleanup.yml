@@ -15,23 +15,13 @@ env:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true || github.event.action == 'closed'
 
     steps:
       - name: Install Railway CLI
-        run: curl -fsSL https://railway.app/install.sh | sh
-
-      - name: Add Railway to PATH
-        run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
-      - name: Set Railway project context
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          # Railway CLI reads RAILWAY_PROJECT_ID from env automatically
-          # Create railway.toml to set project context (CI-safe method)
-          echo "project = \"$RAILWAY_PROJECT_ID\"" > railway.toml
-          echo "✅ Railway project context set"
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
       - name: Delete preview service
         env:
@@ -41,7 +31,14 @@ jobs:
         run: |
           SERVICE_NAME="api-pr-${PR_NUMBER}"
           echo "🗑️ Deleting service: ${SERVICE_NAME}"
-          railway service delete "$SERVICE_NAME" --yes || echo "Service may not exist"
+          
+          # Create railway.toml for project context
+          cat > railway.toml << EOF
+          [build]
+          builder = "dockerfile"
+          EOF
+          
+          railway service delete "$SERVICE_NAME" --yes || echo "Service may not exist or already deleted"
 
       - name: Comment on PR
         uses: actions/github-script@v7
