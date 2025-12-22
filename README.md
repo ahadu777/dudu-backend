@@ -16,6 +16,8 @@ A production-ready ticketing system with complete integration proof artifacts th
 
 **✅ Testing PR Codespace Workflow** - This PR tests the automatic Codespace creation workflow.
 
+**🚂 Railway Preview Environment Test** - Testing automatic Railway preview deployment for PRs.
+
 ### Quick Start for Integration
 ```bash
 # 1. Test complete user flows
