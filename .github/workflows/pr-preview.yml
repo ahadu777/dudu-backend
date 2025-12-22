@@ -176,33 +176,27 @@ jobs:
             const prNumber = '${{ github.event.pull_request.number }}';
             const prBranch = '${{ github.event.pull_request.head.ref }}';
             
-            const commentBody = `## 🚀 Preview Environment Deployed
-
-**Preview API URL:** ${previewUrl}
-
-**PR Details:**
-- PR #${prNumber}
-- Branch: \`${prBranch}\`
-
-**Environment:**
-- NODE_ENV: \`preview\`
-- PORT: \`3000\`
-- PR_NUMBER: \`${prNumber}\`
-- DB_NAME: \`myapp_pr_${prNumber}\`
-
-**⚠️ Important Notes:**
-- This is an ephemeral preview environment
-- Data is isolated per PR and will be destroyed when PR is closed
-- The environment is automatically updated on each push to this PR
-- Access expires when PR is closed or merged
-
-**Testing:**
-- API Base URL: ${previewUrl}
-- Health Check: ${previewUrl}/healthz
-- Swagger Docs: ${previewUrl}/docs
-
----
-*Automatically deployed by Railway PR Preview workflow*`;
+            const commentBody = '## 🚀 Preview Environment Deployed\n\n' +
+              '**Preview API URL:** ' + previewUrl + '\n\n' +
+              '**PR Details:**\n' +
+              '- PR #' + prNumber + '\n' +
+              '- Branch: `' + prBranch + '`\n\n' +
+              '**Environment:**\n' +
+              '- NODE_ENV: `preview`\n' +
+              '- PORT: `3000`\n' +
+              '- PR_NUMBER: `' + prNumber + '`\n' +
+              '- DB_NAME: `myapp_pr_' + prNumber + '`\n\n' +
+              '**⚠️ Important Notes:**\n' +
+              '- This is an ephemeral preview environment\n' +
+              '- Data is isolated per PR and will be destroyed when PR is closed\n' +
+              '- The environment is automatically updated on each push to this PR\n' +
+              '- Access expires when PR is closed or merged\n\n' +
+              '**Testing:**\n' +
+              '- API Base URL: ' + previewUrl + '\n' +
+              '- Health Check: ' + previewUrl + '/healthz\n' +
+              '- Swagger Docs: ' + previewUrl + '/docs\n\n' +
+              '---\n' +
+              '*Automatically deployed by Railway PR Preview workflow*';
 
             // Check if comment already exists
             const { data: comments } = await github.rest.issues.listComments({
