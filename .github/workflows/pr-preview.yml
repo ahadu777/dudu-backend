@@ -12,154 +12,44 @@ env:
   RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
   RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   preview:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
+      - name: Install Railway CLI
+        run: curl -fsSL https://railway.app/install.sh | sh
 
-      - name: Install Railway CLI and jq
-        run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-          sudo apt-get update && sudo apt-get install -y jq
+      - name: Add Railway to PATH
+        run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
       - name: Deploy PR Preview
         id: deploy
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           SERVICE_NAME="api-pr-${PR_NUMBER}"
-          
-          echo "🚀 Deploying to service: ${SERVICE_NAME}"
-          
-          # Railway CLI automatically uses RAILWAY_TOKEN and RAILWAY_PROJECT_ID from env
-          # Create railway.toml for project context (CI-safe)
-          cat > railway.toml << EOF
-          [build]
-          builder = "dockerfile"
-          
-          [deploy]
-          startCommand = "npm start"
-          EOF
-          
-          # Set environment variables using railway variables command
-          # Railway CLI needs variables set before deployment
-          echo "📝 Setting environment variables..."
-          railway variables set NODE_ENV=preview --service "$SERVICE_NAME" 2>&1 || echo "NODE_ENV set attempted"
-          railway variables set PORT=3000 --service "$SERVICE_NAME" 2>&1 || echo "PORT set attempted"
-          railway variables set PR_NUMBER="$PR_NUMBER" --service "$SERVICE_NAME" 2>&1 || echo "PR_NUMBER set attempted"
-          railway variables set DB_NAME="myapp_pr_$PR_NUMBER" --service "$SERVICE_NAME" 2>&1 || echo "DB_NAME set attempted"
-          railway variables set JWT_SECRET="preview-secret-$PR_NUMBER" --service "$SERVICE_NAME" 2>&1 || echo "JWT_SECRET set attempted"
-          railway variables set USE_DATABASE=false --service "$SERVICE_NAME" 2>&1 || echo "USE_DATABASE set attempted"
-          railway variables set SWAGGER_ENABLED=true --service "$SERVICE_NAME" 2>&1 || echo "SWAGGER_ENABLED set attempted"
-          
-          # Deploy using Railway CLI
-          # Railway will create service if it doesn't exist
-          echo "🚀 Starting deployment..."
-          railway up --service "$SERVICE_NAME" --detach || {
-              echo "⚠️ Railway up failed"
-              exit 1
-            }
-          
-          # Wait for deployment
-          sleep 15
-          
-          # Get service domain from Railway
-          # Railway auto-assigns domain: https://${SERVICE_NAME}.up.railway.app
-          # But we can also query Railway API to get actual domain
-          PREVIEW_URL="https://${SERVICE_NAME}.up.railway.app"
-          
-          # Try to get actual domain from Railway API
-          SERVICE_DOMAIN=$(curl -s \
-            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            "https://api.railway.app/v1/projects/${RAILWAY_PROJECT_ID}/services" \
-            | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .domain // empty" 2>/dev/null || echo "")
-          
-          if [ -n "$SERVICE_DOMAIN" ] && [ "$SERVICE_DOMAIN" != "null" ] && [ "$SERVICE_DOMAIN" != "" ]; then
-            PREVIEW_URL="https://${SERVICE_DOMAIN}"
-          fi
-          
-          echo "url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
-          echo "✅ Preview URL: ${PREVIEW_URL}"
+          railway up \
+            --project "$RAILWAY_PROJECT_ID" \
+            --service "$SERVICE_NAME" \
+            --env NODE_ENV=preview \
+            --env PORT=3000 \
+            --env PR_NUMBER="$PR_NUMBER" \
+            --env DB_NAME="myapp_pr_${PR_NUMBER}" \
+            --env JWT_SECRET="preview-secret-${PR_NUMBER}" \
+            --detach
+          echo "url=https://${SERVICE_NAME}.up.railway.app" >> $GITHUB_OUTPUT
 
       - name: Comment PR with preview URL
-        if: success()
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
-            const prNumber = '${{ github.event.pull_request.number }}';
-            const prBranch = '${{ github.event.pull_request.head.ref }}';
-            
-            const marker = '<!-- railway-preview -->';
-            const commentBody = '## 🚀 Preview Environment Deployed\n\n' +
-              '**Preview API URL:** ' + url + '\n\n' +
-              '**PR Details:**\n' +
-              '- PR #' + prNumber + '\n' +
-              '- Branch: `' + prBranch + '`\n\n' +
-              '**Environment:**\n' +
-              '- NODE_ENV: `preview`\n' +
-              '- PORT: `3000`\n' +
-              '- PR_NUMBER: `' + prNumber + '`\n' +
-              '- DB_NAME: `myapp_pr_' + prNumber + '`\n\n' +
-              '**⚠️ Important Notes:**\n' +
-              '- This is an ephemeral preview environment\n' +
-              '- Data is isolated per PR and will be destroyed when PR is closed\n' +
-              '- The environment is automatically updated on each push to this PR\n' +
-              '- Access expires when PR is closed or merged\n\n' +
-              '**Testing:**\n' +
-              '- API Base URL: ' + url + '\n' +
-              '- Health Check: ' + url + '/healthz\n' +
-              '- Swagger Docs: ' + url + '/docs\n\n' +
-              '---\n' +
-              '*Automatically deployed by Railway PR Preview workflow*' +
-              '\n\n' + marker;
-
-            // Check if comment already exists
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
+            const pr = context.issue.number;
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: pr,
+              body: `## 🚀 Preview Environment Ready\n\n**API URL:** ${url}\n\n⚠️ Ephemeral environment, deleted on PR close.`
             });
-
-            const existingComment = comments.find(comment => 
-              comment.body.includes(marker)
-            );
-
-            if (existingComment) {
-              // Update existing comment
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existingComment.id,
-                body: commentBody
-              });
-              console.log('✅ Updated existing preview comment');
-            } else {
-              // Create new comment
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: commentBody
-              });
-              console.log('✅ Created new preview comment');
-            }

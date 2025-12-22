@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 env:
   RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -15,53 +14,17 @@ env:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true || github.event.action == 'closed'
-
     steps:
       - name: Install Railway CLI
-        run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+        run: curl -fsSL https://railway.app/install.sh | sh
 
-      - name: Delete preview service
+      - name: Add Railway to PATH
+        run: echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Delete PR Service
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
-          SERVICE_NAME="api-pr-${PR_NUMBER}"
-          echo "🗑️ Deleting service: ${SERVICE_NAME}"
-          
-          # Create railway.toml for project context
-          cat > railway.toml << EOF
-          [build]
-          builder = "dockerfile"
-          EOF
-          
-          railway service delete "$SERVICE_NAME" --yes || echo "Service may not exist or already deleted"
-
-      - name: Comment on PR
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const prNumber = '${{ github.event.pull_request.number }}';
-            
-            const commentBody = '## 🧹 Preview Environment Cleaned Up\n\n' +
-              'The preview environment for PR #' + prNumber + ' has been automatically destroyed.\n\n' +
-              '**Service:** `api-pr-' + prNumber + '`\n\n' +
-              'All resources associated with this preview environment have been removed.\n\n' +
-              '---\n' +
-              '*Automatically cleaned up by Railway PR Preview workflow*';
-
-            try {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: commentBody
-              });
-              console.log('✅ Posted cleanup comment');
-            } catch (error) {
-              console.log('⚠️ Could not post cleanup comment (PR may be merged):', error.message);
-            }
+          railway service delete api-pr-${PR_NUMBER} \
+            --project "$RAILWAY_PROJECT_ID" \
+            --yes || true
