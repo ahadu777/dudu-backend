@@ -4,5 +4,5 @@ project = "89630eec-a911-452b-ac20-051982c8ec61"
 builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "node dist/index.js"
 healthcheckPath = "/healthz"
