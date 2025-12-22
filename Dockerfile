@@ -40,12 +40,12 @@ COPY --from=builder --chown=express:nodejs /app/openapi ./openapi
 # Switch to non-root user
 USER express
 
-# Expose port
-EXPOSE 8080
+# Expose port (use PORT env var, default to 3000 for Railway)
+EXPOSE ${PORT:-3000}
 
-# Health check
+# Health check (use PORT env var)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 
 # Start the application with proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
