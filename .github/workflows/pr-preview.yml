@@ -79,33 +79,45 @@ jobs:
           # Initialize SERVICE_ID
           SERVICE_ID=""
           
-          # Use Railway REST API directly (more reliable than CLI)
-          RAILWAY_API="https://api.railway.app/v1"
+          # Use Railway CLI (Railway uses GraphQL API internally, CLI handles it)
+          # Railway CLI automatically uses RAILWAY_TOKEN and RAILWAY_PROJECT_ID env vars
           
-          # List all services using Railway API
-          echo "📋 Listing services via Railway API..."
-          SERVICES_RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            "${RAILWAY_API}/projects/${PROJECT_ID}/services" 2>&1)
+          # Verify Railway CLI is available
+          if ! command -v railway &> /dev/null; then
+            echo "❌ Railway CLI not found in PATH"
+            echo "   Make sure Railway CLI is installed: curl -fsSL https://railway.app/install.sh | sh"
+            exit 1
+          fi
           
-          HTTP_CODE=$(echo "$SERVICES_RESPONSE" | tail -n1)
-          SERVICES_JSON=$(echo "$SERVICES_RESPONSE" | sed '$d')
+          # Verify authentication
+          echo "🔐 Verifying Railway authentication..."
+          WHOAMI_OUTPUT=$(railway whoami 2>&1 || echo "")
+          if echo "$WHOAMI_OUTPUT" | grep -qi "not authenticated\|unauthorized\|error"; then
+            echo "❌ Railway authentication failed"
+            echo "   Output: ${WHOAMI_OUTPUT}"
+            echo "   Check your RAILWAY_TOKEN"
+            exit 1
+          fi
+          echo "✅ Railway authentication verified"
           
-          echo "HTTP Status: ${HTTP_CODE}"
-          echo "Services response (first 500 chars): ${SERVICES_JSON:0:500}"
+          # List all services using Railway CLI
+          echo "📋 Listing services via Railway CLI..."
+          SERVICES_JSON=$(railway service list --json 2>&1)
+          echo "Services response: ${SERVICES_JSON}"
           
-          # Check if API call succeeded
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Railway API returned error (HTTP ${HTTP_CODE})"
-            echo "Full response: ${SERVICES_JSON}"
-            echo "⚠️ This might be an authentication issue. Check your RAILWAY_TOKEN."
+          # Check for errors
+          if echo "$SERVICES_JSON" | grep -qi "error\|unauthorized\|not found\|not authenticated"; then
+            echo "❌ Railway CLI error: ${SERVICES_JSON}"
+            echo "💡 Troubleshooting:"
+            echo "  1. Verify RAILWAY_TOKEN is valid"
+            echo "  2. Verify RAILWAY_PROJECT_ID is correct"
+            echo "  3. Try running: railway whoami"
             SERVICES_JSON="[]"
           fi
           
           # Parse JSON safely
-          if [ -z "$SERVICES_JSON" ] || [ "$SERVICES_JSON" == "[]" ] || echo "$SERVICES_JSON" | grep -qi "error\|unauthorized"; then
-            echo "📋 No services found or error response"
+          if [ -z "$SERVICES_JSON" ] || [ "$SERVICES_JSON" == "[]" ] || [ "$SERVICES_JSON" == "null" ]; then
+            echo "📋 No services found or empty response"
             SERVICES_JSON="[]"
           fi
           
@@ -116,43 +128,21 @@ jobs:
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "id=${SERVICE_ID}" >> $GITHUB_OUTPUT
           else
-            # Create new service using Railway API
-            echo "🆕 Creating service ${SERVICE_NAME} via Railway API..."
-            CREATE_RESPONSE=$(curl -s -w "\n%{http_code}" \
-              -X POST \
-              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "{\"name\":\"${SERVICE_NAME}\",\"projectId\":\"${PROJECT_ID}\"}" \
-              "${RAILWAY_API}/services" 2>&1)
+            # Create new service using Railway CLI
+            echo "🆕 Creating service ${SERVICE_NAME} via Railway CLI..."
+            SERVICE_OUTPUT=$(railway service create --name "${SERVICE_NAME}" --json 2>&1)
+            echo "CLI create output: ${SERVICE_OUTPUT}"
             
-            CREATE_HTTP_CODE=$(echo "$CREATE_RESPONSE" | tail -n1)
-            CREATE_JSON=$(echo "$CREATE_RESPONSE" | sed '$d')
+            SERVICE_ID=$(echo "$SERVICE_OUTPUT" | jq -r '.id // empty' 2>/dev/null || echo "")
             
-            echo "Create HTTP Status: ${CREATE_HTTP_CODE}"
-            echo "Create response (first 500 chars): ${CREATE_JSON:0:500}"
-            
-            SERVICE_ID=$(echo "$CREATE_JSON" | jq -r '.id // empty' 2>/dev/null || echo "")
-            
-            # If API creation failed, try Railway CLI as fallback
+            # If creation failed, try without --json flag
             if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
-              echo "⚠️ API creation failed (HTTP ${CREATE_HTTP_CODE}), trying Railway CLI fallback..."
-              SERVICE_OUTPUT=$(railway service create --name "${SERVICE_NAME}" --json 2>&1 || echo "")
-              echo "CLI create output: ${SERVICE_OUTPUT}"
-              SERVICE_ID=$(echo "$SERVICE_OUTPUT" | jq -r '.id // empty' 2>/dev/null || echo "")
-              
-              # If still failed, verify by listing again
-              if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ] || [ "$SERVICE_ID" == "" ]; then
-                echo "⚠️ CLI creation also failed, verifying by listing services..."
-                sleep 5
-                SERVICES_RESPONSE=$(curl -s -w "\n%{http_code}" \
-                  -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-                  -H "Content-Type: application/json" \
-                  "${RAILWAY_API}/projects/${PROJECT_ID}/services" 2>&1)
-                HTTP_CODE=$(echo "$SERVICES_RESPONSE" | tail -n1)
-                SERVICES_JSON=$(echo "$SERVICES_RESPONSE" | sed '$d')
-                echo "Verification HTTP Status: ${HTTP_CODE}"
-                SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
-              fi
+              echo "⚠️ JSON creation failed, trying without --json flag..."
+              railway service create "${SERVICE_NAME}" 2>&1 || echo "Create command executed"
+              sleep 5
+              # List again to get the service ID
+              SERVICES_JSON=$(railway service list --json 2>&1 || echo "[]")
+              SERVICE_ID=$(echo "$SERVICES_JSON" | jq -r ".[] | select(.name == \"${SERVICE_NAME}\") | .id" 2>/dev/null || echo "")
             fi
             
             # Final check - FAIL if service creation failed
@@ -161,13 +151,14 @@ jobs:
               echo "📋 Debug info:"
               echo "  - Project ID: ${PROJECT_ID}"
               echo "  - Service Name: ${SERVICE_NAME}"
-              echo "  - API HTTP Code: ${CREATE_HTTP_CODE}"
-              echo "  - API Response: ${CREATE_JSON}"
+              echo "  - CLI Output: ${SERVICE_OUTPUT}"
+              echo "  - Services List: ${SERVICES_JSON}"
               echo ""
               echo "💡 Troubleshooting:"
-              echo "  1. Verify RAILWAY_TOKEN is valid and has proper permissions"
+              echo "  1. Verify RAILWAY_TOKEN is valid: railway whoami"
               echo "  2. Verify RAILWAY_PROJECT_ID is correct"
               echo "  3. Check Railway dashboard for service creation errors"
+              echo "  4. Try manually: railway service create ${SERVICE_NAME}"
               echo ""
               echo "⚠️ Failing step - service is required for deployment"
               exit 1

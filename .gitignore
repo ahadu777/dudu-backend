@@ -38,3 +38,4 @@ coverage/
 build/
 *.js.map
 logs/
+.env.test
