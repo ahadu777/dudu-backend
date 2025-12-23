@@ -542,32 +542,62 @@ jobs:
                   PUBLIC_DOMAIN=$(echo "$CREATE_DOMAIN_NO_DEPLOY_RESPONSE" | jq -r '.data.domainCreate.domain')
                   echo "✅ Public domain generated (without deploymentId): ${PUBLIC_DOMAIN}"
                 else
-                  echo "⚠️ GraphQL domain creation failed"
+                  echo "⚠️ GraphQL API doesn't support domainCreate mutation"
                   echo "Response: ${CREATE_DOMAIN_NO_DEPLOY_RESPONSE}"
                   
-                  # Method 3: Try Railway REST API
-                  echo "🔧 Trying Railway REST API..."
-                  RAILWAY_API="https://api.railway.app/v1"
-                  REST_DOMAIN_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-                    -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-                    -H "Content-Type: application/json" \
-                    -d "{\"serviceId\":\"${FINAL_SERVICE_ID}\",\"public\":true}" \
-                    "${RAILWAY_API}/domains" 2>&1 || echo "")
+                  # Method 3: Use Railway CLI to generate domain
+                  # Railway CLI's `railway domain` command can generate domains
+                  echo "🔧 Using Railway CLI to generate domain..."
+                  export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
                   
-                  HTTP_CODE=$(echo "$REST_DOMAIN_RESPONSE" | tail -n1)
-                  REST_DOMAIN_JSON=$(echo "$REST_DOMAIN_RESPONSE" | sed '$d')
+                  # Railway CLI needs railway.toml (already created) and should work
+                  # The `railway domain` command generates a domain for the current service
+                  echo "📤 Running 'railway domain' to generate public domain..."
                   
-                  if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "201" ]; then
-                    REST_DOMAIN=$(echo "$REST_DOMAIN_JSON" | jq -r '.domain // empty' 2>/dev/null || echo "")
-                    if [ -n "$REST_DOMAIN" ] && [ "$REST_DOMAIN" != "null" ]; then
-                      PUBLIC_DOMAIN="$REST_DOMAIN"
-                      echo "✅ Public domain generated via REST API: ${PUBLIC_DOMAIN}"
+                  # Try railway domain command with service name (generates domain if none exists)
+                  # Railway CLI supports -s/--service flag to specify service name
+                  echo "Running: railway domain -s ${SERVICE_NAME} --port 8080"
+                  DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
+                  DOMAIN_CLI_EXIT=$?
+                  
+                  if [ $DOMAIN_CLI_EXIT -eq 0 ]; then
+                    echo "✅ Railway CLI domain command executed successfully"
+                    echo "Output: ${DOMAIN_CLI_OUTPUT}"
+                    
+                    # Wait a moment for domain to be created
+                    echo "⏳ Waiting for domain to be created..."
+                    sleep 10
+                    
+                    # Check if domain was created
+                    CHECK_DOMAIN_AFTER_CLI='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+                    CHECK_DOMAIN_AFTER_CLI_RESPONSE=$(curl -s -X POST \
+                      -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                      -H "Content-Type: application/json" \
+                      -d "$CHECK_DOMAIN_AFTER_CLI" \
+                      "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+                    
+                    CLI_GENERATED_DOMAIN=$(echo "$CHECK_DOMAIN_AFTER_CLI_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+                    
+                    if [ -n "$CLI_GENERATED_DOMAIN" ] && [ "$CLI_GENERATED_DOMAIN" != "null" ]; then
+                      PUBLIC_DOMAIN="$CLI_GENERATED_DOMAIN"
+                      echo "✅ Public domain generated via Railway CLI: ${PUBLIC_DOMAIN}"
+                    else
+                      # Try to extract domain from CLI output
+                      DOMAIN_FROM_OUTPUT=$(echo "$DOMAIN_CLI_OUTPUT" | grep -oE '[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 || echo "")
+                      if [ -n "$DOMAIN_FROM_OUTPUT" ]; then
+                        PUBLIC_DOMAIN="$DOMAIN_FROM_OUTPUT"
+                        echo "✅ Public domain extracted from CLI output: ${PUBLIC_DOMAIN}"
+                      else
+                        echo "⚠️ Domain not detected after Railway CLI command"
+                        echo "   Railway CLI may need service linking"
+                        echo "   Domain may still be provisioning - check Railway dashboard"
+                      fi
                     fi
                   else
-                    echo "⚠️ REST API also failed (HTTP ${HTTP_CODE})"
-                    echo "Response: ${REST_DOMAIN_JSON}"
+                    echo "⚠️ Railway CLI domain command failed"
+                    echo "Output: ${DOMAIN_CLI_OUTPUT}"
                     echo ""
-                    echo "💡 Domain generation via API failed"
+                    echo "💡 Domain generation via API/CLI failed"
                     echo "   Please generate domain manually:"
                     echo "   1. Go to: https://railway.app/project/${RAILWAY_PROJECT_ID}/service/${FINAL_SERVICE_ID}"
                     echo "   2. Settings → Networking → Public Networking"
