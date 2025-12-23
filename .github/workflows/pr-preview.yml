@@ -297,11 +297,32 @@ jobs:
                     echo "🔧 Trying Railway CLI to generate domain..."
                     export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
                     
+                    # Verify railway.toml exists
+                    if [ -f railway.toml ]; then
+                      echo "✅ railway.toml exists"
+                      cat railway.toml
+                    else
+                      echo "⚠️ railway.toml not found!"
+                    fi
+                    
                     # Railway CLI works with railway.toml + RAILWAY_TOKEN (no explicit linking needed)
                     # railway.toml already contains the project ID, and RAILWAY_TOKEN provides auth
                     echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
+                    echo "RAILWAY_TOKEN is set: ${RAILWAY_TOKEN:+yes} (length: ${#RAILWAY_TOKEN})"
+                    echo "SERVICE_NAME: ${SERVICE_NAME}"
+                    
+                    # Verify Railway CLI is available
+                    echo "Checking Railway CLI..."
+                    railway --version 2>&1 || echo "Railway CLI check failed"
+                    
                     DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                     DOMAIN_CLI_EXIT=$?
+                    
+                    echo "Railway CLI exit code: ${DOMAIN_CLI_EXIT}"
+                    echo "Railway CLI full output:"
+                    echo "---"
+                    echo "${DOMAIN_CLI_OUTPUT}"
+                    echo "---"
                     
                     if [ $DOMAIN_CLI_EXIT -eq 0 ]; then
                       echo "✅ Railway CLI domain command executed successfully"
