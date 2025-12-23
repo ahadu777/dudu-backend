@@ -10,6 +10,7 @@ permissions:
 
 env:
   RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  RAILWAY_PROJECT_TOKEN: ${{ secrets.RAILWAY_PROJECT_TOKEN }}
   RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
 jobs:
@@ -31,6 +32,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BRANCH: ${{ github.head_ref }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_TOKEN: ${{ secrets.RAILWAY_PROJECT_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
@@ -299,10 +301,14 @@ jobs:
                     if [ -f scripts/generate-domain.sh ]; then
                       chmod +x scripts/generate-domain.sh
                       set +e  # Don't exit on error
-                      # Pass SERVICE_NAME, PORT, PR_NUMBER, and RAILWAY_PROJECT_ID to script
+                      # Pass SERVICE_NAME, PORT, PR_NUMBER, RAILWAY_PROJECT_ID, and tokens to script
                       # Run script and capture output while also showing it in real-time using tee
                       TEMP_SCRIPT_OUTPUT=$(mktemp)
-                      PR_NUMBER="${PR_NUMBER}" RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1 | tee "${TEMP_SCRIPT_OUTPUT}"
+                      PR_NUMBER="${PR_NUMBER}" \
+                      RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" \
+                      RAILWAY_TOKEN="${RAILWAY_TOKEN}" \
+                      RAILWAY_PROJECT_TOKEN="${RAILWAY_PROJECT_TOKEN}" \
+                      ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1 | tee "${TEMP_SCRIPT_OUTPUT}"
                       DOMAIN_SCRIPT_EXIT=${PIPESTATUS[0]}
                       DOMAIN_SCRIPT_OUTPUT=$(cat "${TEMP_SCRIPT_OUTPUT}")
                       rm -f "${TEMP_SCRIPT_OUTPUT}"
@@ -705,10 +711,14 @@ jobs:
                   if [ -f scripts/generate-domain.sh ]; then
                     chmod +x scripts/generate-domain.sh
                     set +e  # Don't exit on error
-                    # Pass SERVICE_NAME, PORT, PR_NUMBER, and RAILWAY_PROJECT_ID to script
+                    # Pass SERVICE_NAME, PORT, PR_NUMBER, RAILWAY_PROJECT_ID, and tokens to script
                     # Run script and capture output while also showing it in real-time using tee
                     TEMP_SCRIPT_OUTPUT=$(mktemp)
-                    PR_NUMBER="${PR_NUMBER}" RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1 | tee "${TEMP_SCRIPT_OUTPUT}"
+                    PR_NUMBER="${PR_NUMBER}" \
+                    RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" \
+                    RAILWAY_TOKEN="${RAILWAY_TOKEN}" \
+                    RAILWAY_PROJECT_TOKEN="${RAILWAY_PROJECT_TOKEN}" \
+                    ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1 | tee "${TEMP_SCRIPT_OUTPUT}"
                     DOMAIN_SCRIPT_EXIT=${PIPESTATUS[0]}
                     DOMAIN_SCRIPT_OUTPUT=$(cat "${TEMP_SCRIPT_OUTPUT}")
                     rm -f "${TEMP_SCRIPT_OUTPUT}"

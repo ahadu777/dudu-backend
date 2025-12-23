@@ -32,11 +32,13 @@ if [ -z "$SERVICE_NAME" ]; then
   exit 1
 fi
 
-# Check if RAILWAY_TOKEN is set
-if [ -z "$RAILWAY_TOKEN" ]; then
-  echo "❌ Error: RAILWAY_TOKEN environment variable is not set"
+# Check if RAILWAY_TOKEN or RAILWAY_PROJECT_TOKEN is set
+# Railway CLI domain command requires a Project Token
+if [ -z "$RAILWAY_PROJECT_TOKEN" ] && [ -z "$RAILWAY_TOKEN" ]; then
+  echo "❌ Error: RAILWAY_TOKEN or RAILWAY_PROJECT_TOKEN environment variable is not set"
   echo ""
   echo "Set it with: export RAILWAY_TOKEN='your-token-here'"
+  echo "   OR: export RAILWAY_PROJECT_TOKEN='your-project-token-here'"
   exit 1
 fi
 
@@ -44,8 +46,13 @@ echo "🔧 Generating public domain for service: ${SERVICE_NAME}"
 echo "   Port: ${PORT}"
 echo ""
 
+# Use Project Token if available, otherwise fall back to Account Token
+# Railway CLI domain command works better with Project Token
+RAILWAY_TOKEN_TO_USE="${RAILWAY_PROJECT_TOKEN:-${RAILWAY_TOKEN}}"
+
 # Export token for Railway CLI
-export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
+export RAILWAY_TOKEN="${RAILWAY_TOKEN_TO_USE}"
+export RAILWAY_PROJECT_TOKEN="${RAILWAY_PROJECT_TOKEN:-${RAILWAY_TOKEN}}"
 
 # Create/update Railway CLI config file with token
 # Railway CLI reads from ~/.railway/config.json or RAILWAY_TOKEN env var
@@ -53,20 +60,38 @@ echo "📝 Setting up Railway CLI authentication..."
 mkdir -p ~/.railway
 
 # Always update config file to ensure token is current
+# Use Project Token if available for domain commands (Railway CLI domain command requires Project Token)
+# If Project Token is available, use it; otherwise use Account Token
+CONFIG_TOKEN="${RAILWAY_PROJECT_TOKEN:-${RAILWAY_TOKEN_TO_USE}}"
 cat > ~/.railway/config.json << CONFIG_EOF
 {
   "projects": {},
   "user": {
-    "token": "${RAILWAY_TOKEN}"
+    "token": "${CONFIG_TOKEN}"
   },
   "linkedFunctions": null
 }
 CONFIG_EOF
 echo "✅ Railway CLI config file created/updated"
+if [ -n "$RAILWAY_PROJECT_TOKEN" ]; then
+  echo "   Using Project Token in config (length: ${#RAILWAY_PROJECT_TOKEN})"
+else
+  echo "   Using Account Token in config (length: ${#RAILWAY_TOKEN_TO_USE})"
+fi
 
-# Also ensure RAILWAY_TOKEN is exported (Railway CLI checks this too)
-export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
-echo "✅ RAILWAY_TOKEN exported (length: ${#RAILWAY_TOKEN})"
+# Export tokens - Railway CLI checks both RAILWAY_TOKEN and RAILWAY_PROJECT_TOKEN
+# For domain commands, Railway CLI specifically looks for Project Token
+export RAILWAY_TOKEN="${RAILWAY_TOKEN_TO_USE}"
+if [ -n "$RAILWAY_PROJECT_TOKEN" ]; then
+  export RAILWAY_PROJECT_TOKEN="${RAILWAY_PROJECT_TOKEN}"
+  # Also set RAILWAY_TOKEN to Project Token for Railway CLI domain command
+  export RAILWAY_TOKEN="${RAILWAY_PROJECT_TOKEN}"
+  echo "✅ RAILWAY_PROJECT_TOKEN exported (length: ${#RAILWAY_PROJECT_TOKEN})"
+  echo "✅ RAILWAY_TOKEN set to Project Token for Railway CLI"
+else
+  echo "✅ RAILWAY_TOKEN exported (length: ${#RAILWAY_TOKEN_TO_USE})"
+  echo "   ⚠️ Warning: Using Account Token - Project Token required for domain commands"
+fi
 
 # Verify Railway CLI can see the token
 echo "🔍 Verifying Railway CLI authentication..."
@@ -96,18 +121,41 @@ echo "✅ Railway CLI found: $(railway --version 2>&1 | head -1)"
 echo ""
 
 # Ensure railway.toml exists with project context (needed for Railway CLI)
-if [ -n "$RAILWAY_PROJECT_ID" ] && [ ! -f railway.toml ]; then
-  echo "📝 Creating railway.toml with project context..."
-  printf 'project = "%s"\n\n[build]\nbuilder = "DOCKERFILE"\n\n[deploy]\nstartCommand = "npm start"\nhealthcheckPath = "/healthz"\n' "${RAILWAY_PROJECT_ID}" > railway.toml
-  echo "✅ railway.toml created"
-elif [ -f railway.toml ]; then
-  echo "✅ railway.toml exists"
+# Railway CLI domain command may need project token in railway.toml
+if [ -n "$RAILWAY_PROJECT_ID" ]; then
+  if [ ! -f railway.toml ]; then
+    echo "📝 Creating railway.toml with project context..."
+    printf 'project = "%s"\n\n[build]\nbuilder = "DOCKERFILE"\n\n[deploy]\nstartCommand = "npm start"\nhealthcheckPath = "/healthz"\n' "${RAILWAY_PROJECT_ID}" > railway.toml
+    echo "✅ railway.toml created"
+  else
+    echo "✅ railway.toml exists"
+    # Ensure project ID is set in railway.toml
+    if ! grep -q "project = " railway.toml; then
+      echo "📝 Adding project ID to railway.toml..."
+      sed -i "1iproject = \"${RAILWAY_PROJECT_ID}\"\n" railway.toml
+    fi
+  fi
+  
+  # Railway CLI may need project token set in environment or config
+  # Try setting it as RAILWAY_PROJECT_TOKEN environment variable
+  if [ -n "$RAILWAY_PROJECT_TOKEN" ]; then
+    export RAILWAY_PROJECT_TOKEN="${RAILWAY_PROJECT_TOKEN}"
+    echo "✅ RAILWAY_PROJECT_TOKEN set for Railway CLI"
+  fi
 fi
 
 # Try linking project if RAILWAY_PROJECT_ID is available
+# Railway CLI domain command needs project to be linked
 if [ -n "$RAILWAY_PROJECT_ID" ]; then
   echo "🔗 Attempting to link Railway project..."
-  LINK_OUTPUT=$(railway link --project "${RAILWAY_PROJECT_ID}" 2>&1 || echo "LINK_FAILED")
+  
+  # Try linking with project token if available
+  if [ -n "$RAILWAY_PROJECT_TOKEN" ]; then
+    LINK_OUTPUT=$(RAILWAY_TOKEN="${RAILWAY_PROJECT_TOKEN}" railway link --project "${RAILWAY_PROJECT_ID}" 2>&1 || echo "LINK_FAILED")
+  else
+    LINK_OUTPUT=$(railway link --project "${RAILWAY_PROJECT_ID}" 2>&1 || echo "LINK_FAILED")
+  fi
+  
   if echo "$LINK_OUTPUT" | grep -q "LINK_FAILED\|Error\|Unauthorized"; then
     echo "⚠️ Project linking failed or not needed"
     echo "   Output: ${LINK_OUTPUT}"
@@ -115,6 +163,13 @@ if [ -n "$RAILWAY_PROJECT_ID" ]; then
   else
     echo "✅ Project linked successfully"
   fi
+fi
+
+# For Railway CLI domain command, try using project token if available
+# Railway CLI domain command specifically needs a Project Token
+if [ -n "$RAILWAY_PROJECT_TOKEN" ] && [ "$RAILWAY_PROJECT_TOKEN" != "$RAILWAY_TOKEN" ]; then
+  echo "🔑 Using Project Token for domain command..."
+  export RAILWAY_TOKEN="${RAILWAY_PROJECT_TOKEN}"
 fi
 
 # Generate domain using Railway CLI
