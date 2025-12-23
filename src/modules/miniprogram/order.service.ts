@@ -479,8 +479,9 @@ export class MiniprogramOrderService {
       };
     }
 
-    // 4. 获取产品 QR 配置（颜色等）
+    // 4. 获取产品 QR 配置（颜色）和统一 logo
     let qrColorConfig;
+
     if (order.product_id) {
       const productRepo = AppDataSource.getRepository(ProductEntity);
       const product = await productRepo.findOne({ where: { id: order.product_id } });
@@ -492,8 +493,13 @@ export class MiniprogramOrderService {
       }
     }
 
-    // 5. 生成二维码
-    const qrResult = await generateSecureQR(ticketCode, expiryMinutes, undefined, qrColorConfig);
+    // 获取统一 logo（与 OTA 共用同一个硬编码 logo）
+    const { DirectusService } = await import('../../utils/directus');
+    const directusService = new DirectusService();
+    const logoBuffer = await directusService.getPartnerLogo('miniprogram');
+
+    // 5. 生成二维码（带 logo）
+    const qrResult = await generateSecureQR(ticketCode, expiryMinutes, logoBuffer || undefined, qrColorConfig);
 
     // 6. 更新 ticket.extra.current_jti（使旧二维码失效）
     const extra = ticket.extra || {};
