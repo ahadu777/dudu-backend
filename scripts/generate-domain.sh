@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# Generate Railway public domain for a service
+# Usage: ./scripts/generate-domain.sh <service-name> [port]
+#        OR set SERVICE_NAME and PORT environment variables
+# Example: ./scripts/generate-domain.sh api-pr-14 8080
+#          SERVICE_NAME=api-pr-14 PORT=8080 ./scripts/generate-domain.sh
+
+set -e
+
+# Allow service name and port to be passed as arguments or environment variables
+SERVICE_NAME="${1:-${SERVICE_NAME}}"
+PORT="${2:-${PORT:-8080}}"
+
+# If PR_NUMBER is set, construct service name dynamically
+if [ -z "$SERVICE_NAME" ] && [ -n "$PR_NUMBER" ]; then
+  SERVICE_NAME="api-pr-${PR_NUMBER}"
+fi
+
+if [ -z "$SERVICE_NAME" ]; then
+  echo "❌ Error: Service name is required"
+  echo ""
+  echo "Usage: $0 <service-name> [port]"
+  echo "   OR: SERVICE_NAME=<name> PORT=<port> $0"
+  echo "   OR: PR_NUMBER=<number> PORT=<port> $0"
+  echo ""
+  echo "Examples:"
+  echo "  $0 api-pr-14 8080"
+  echo "  SERVICE_NAME=api-pr-14 $0"
+  echo "  PR_NUMBER=14 PORT=8080 $0"
+  exit 1
+fi
+
+# Check if RAILWAY_TOKEN is set
+if [ -z "$RAILWAY_TOKEN" ]; then
+  echo "❌ Error: RAILWAY_TOKEN environment variable is not set"
+  echo ""
+  echo "Set it with: export RAILWAY_TOKEN='your-token-here'"
+  exit 1
+fi
+
+echo "🔧 Generating public domain for service: ${SERVICE_NAME}"
+echo "   Port: ${PORT}"
+echo ""
+
+# Export token for Railway CLI
+export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
+
+# Create Railway CLI config file if it doesn't exist
+if [ ! -f ~/.railway/config.json ]; then
+  echo "📝 Creating Railway CLI config file..."
+  mkdir -p ~/.railway
+  cat > ~/.railway/config.json << CONFIG_EOF
+{
+  "projects": {},
+  "user": {
+    "token": "${RAILWAY_TOKEN}"
+  },
+  "linkedFunctions": null
+}
+CONFIG_EOF
+  echo "✅ Railway CLI config file created"
+fi
+
+# Verify Railway CLI is installed
+if ! command -v railway &> /dev/null; then
+  echo "❌ Error: Railway CLI is not installed"
+  echo ""
+  echo "Install it with:"
+  echo "  curl -fsSL https://railway.app/install.sh | sh"
+  echo "  or"
+  echo "  npm install -g @railway/cli"
+  exit 1
+fi
+
+echo "✅ Railway CLI found: $(railway --version 2>&1 | head -1)"
+echo ""
+
+# Generate domain using Railway CLI
+echo "📤 Running: railway domain -s ${SERVICE_NAME} --port ${PORT}"
+echo ""
+
+DOMAIN_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port "${PORT}" 2>&1)
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+  echo "✅ Domain generation successful!"
+  echo ""
+  echo "Output:"
+  echo "${DOMAIN_OUTPUT}"
+  echo ""
+  
+  # Extract domain from output
+  # Format: "Service Domain created:\n🚀 https://api-pr-14-production.up.railway.app"
+  DOMAIN=$(echo "$DOMAIN_OUTPUT" | grep -oE 'https?://[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 | sed 's|https\?://||' || echo "$DOMAIN_OUTPUT" | grep -oE '[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 || echo "")
+  
+  if [ -n "$DOMAIN" ]; then
+    echo "✅ Public domain: ${DOMAIN}"
+    echo "   Full URL: https://${DOMAIN}"
+    echo ""
+    echo "Domain generated successfully!"
+    exit 0
+  else
+    echo "⚠️ Could not extract domain from output, but command succeeded"
+    echo "   Check Railway dashboard to verify domain was created"
+    exit 0
+  fi
+else
+  echo "❌ Domain generation failed (exit code: ${EXIT_CODE})"
+  echo ""
+  echo "Error output:"
+  echo "${DOMAIN_OUTPUT}"
+  echo ""
+  echo "💡 Troubleshooting:"
+  echo "   - Verify RAILWAY_TOKEN is valid"
+  echo "   - Check if service '${SERVICE_NAME}' exists"
+  echo "   - Ensure Railway CLI is authenticated: railway whoami"
+  echo "   - Try linking project: railway link"
+  exit 1
+fi
+
