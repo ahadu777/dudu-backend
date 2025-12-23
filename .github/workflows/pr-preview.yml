@@ -302,7 +302,7 @@ jobs:
                     echo "✅ RAILWAY_TOKEN is set (length: ${#RAILWAY_TOKEN})"
                     echo "✅ RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
                     
-                    # Railway CLI may need the project to be linked via railway.toml
+                    # Railway CLI may need the project to be linked first
                     # Verify railway.toml exists and has correct project ID
                     if [ -f railway.toml ]; then
                       echo "✅ railway.toml exists"
@@ -319,18 +319,37 @@ healthcheckPath = "/healthz"
 EOF
                     fi
                     
+                    # Railway CLI may need project to be linked before domain command works
+                    # Try linking the project non-interactively
+                    echo "🔗 Attempting to link Railway project..."
+                    LINK_OUTPUT=$(railway link --project "${RAILWAY_PROJECT_ID}" 2>&1 || echo "LINK_FAILED")
+                    if echo "$LINK_OUTPUT" | grep -q "LINK_FAILED\|Error\|Unauthorized"; then
+                      echo "⚠️ Project linking failed or not needed"
+                      echo "   Output: ${LINK_OUTPUT}"
+                      echo "   Continuing with domain command..."
+                    else
+                      echo "✅ Project linked successfully"
+                      echo "   Output: ${LINK_OUTPUT}"
+                    fi
+                    
                     # Try to generate domain using Railway CLI
                     # Project Tokens work for domain commands even if whoami fails
                     echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
-                    echo "   Note: Railway CLI may need project context from railway.toml"
+                    echo "   Note: Railway CLI may need project context from railway.toml or link"
                     
-                    # Capture both stdout and stderr
+                    # Capture both stdout and stderr with better error handling
+                    set +e  # Don't exit on error
                     DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                     DOMAIN_CLI_EXIT=$?
+                    set -e  # Re-enable exit on error
                     
                     echo "   Exit code: ${DOMAIN_CLI_EXIT}"
                     echo "   Full output:"
-                    echo "${DOMAIN_CLI_OUTPUT}" | sed 's/^/   /'
+                    if [ -n "$DOMAIN_CLI_OUTPUT" ]; then
+                      echo "${DOMAIN_CLI_OUTPUT}" | sed 's/^/   /'
+                    else
+                      echo "   (no output)"
+                    fi
                     
                     if [ $DOMAIN_CLI_EXIT -eq 0 ]; then
                       echo "✅ Railway CLI domain command executed successfully"
@@ -658,7 +677,7 @@ EOF
                   echo "✅ RAILWAY_TOKEN is set (length: ${#RAILWAY_TOKEN})"
                   echo "✅ RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
                   
-                  # Railway CLI may need the project to be linked via railway.toml
+                  # Railway CLI may need the project to be linked first
                   # Verify railway.toml exists and has correct project ID
                   if [ -f railway.toml ]; then
                     echo "✅ railway.toml exists"
@@ -675,18 +694,37 @@ healthcheckPath = "/healthz"
 EOF
                   fi
                   
+                  # Railway CLI may need project to be linked before domain command works
+                  # Try linking the project non-interactively
+                  echo "🔗 Attempting to link Railway project..."
+                  LINK_OUTPUT=$(railway link --project "${RAILWAY_PROJECT_ID}" 2>&1 || echo "LINK_FAILED")
+                  if echo "$LINK_OUTPUT" | grep -q "LINK_FAILED\|Error\|Unauthorized"; then
+                    echo "⚠️ Project linking failed or not needed"
+                    echo "   Output: ${LINK_OUTPUT}"
+                    echo "   Continuing with domain command..."
+                  else
+                    echo "✅ Project linked successfully"
+                    echo "   Output: ${LINK_OUTPUT}"
+                  fi
+                  
                   # Try to generate domain using Railway CLI
                   # Project Tokens work for domain commands even if whoami fails
                   echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
-                  echo "   Note: Railway CLI may need project context from railway.toml"
+                  echo "   Note: Railway CLI may need project context from railway.toml or link"
                   
-                  # Capture both stdout and stderr
+                  # Capture both stdout and stderr with better error handling
+                  set +e  # Don't exit on error
                   DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                   DOMAIN_CLI_EXIT=$?
+                  set -e  # Re-enable exit on error
                   
                   echo "   Exit code: ${DOMAIN_CLI_EXIT}"
                   echo "   Full output:"
-                  echo "${DOMAIN_CLI_OUTPUT}" | sed 's/^/   /'
+                  if [ -n "$DOMAIN_CLI_OUTPUT" ]; then
+                    echo "${DOMAIN_CLI_OUTPUT}" | sed 's/^/   /'
+                  else
+                    echo "   (no output)"
+                  fi
                   
                   if [ $DOMAIN_CLI_EXIT -eq 0 ]; then
                     echo "✅ Railway CLI domain command executed successfully"
