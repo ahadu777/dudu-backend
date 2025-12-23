@@ -300,8 +300,12 @@ jobs:
                       chmod +x scripts/generate-domain.sh
                       set +e  # Don't exit on error
                       # Pass SERVICE_NAME, PORT, PR_NUMBER, and RAILWAY_PROJECT_ID to script
-                      DOMAIN_SCRIPT_OUTPUT=$(PR_NUMBER="${PR_NUMBER}" RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1)
-                      DOMAIN_SCRIPT_EXIT=$?
+                      # Run script and capture output while also showing it in real-time using tee
+                      TEMP_SCRIPT_OUTPUT=$(mktemp)
+                      PR_NUMBER="${PR_NUMBER}" RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1 | tee "${TEMP_SCRIPT_OUTPUT}"
+                      DOMAIN_SCRIPT_EXIT=${PIPESTATUS[0]}
+                      DOMAIN_SCRIPT_OUTPUT=$(cat "${TEMP_SCRIPT_OUTPUT}")
+                      rm -f "${TEMP_SCRIPT_OUTPUT}"
                       set -e  # Re-enable exit on error
                       
                       if [ $DOMAIN_SCRIPT_EXIT -eq 0 ]; then
@@ -702,8 +706,12 @@ jobs:
                     chmod +x scripts/generate-domain.sh
                     set +e  # Don't exit on error
                     # Pass SERVICE_NAME, PORT, PR_NUMBER, and RAILWAY_PROJECT_ID to script
-                    DOMAIN_SCRIPT_OUTPUT=$(PR_NUMBER="${PR_NUMBER}" RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1)
-                    DOMAIN_SCRIPT_EXIT=$?
+                    # Run script and capture output while also showing it in real-time using tee
+                    TEMP_SCRIPT_OUTPUT=$(mktemp)
+                    PR_NUMBER="${PR_NUMBER}" RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1 | tee "${TEMP_SCRIPT_OUTPUT}"
+                    DOMAIN_SCRIPT_EXIT=${PIPESTATUS[0]}
+                    DOMAIN_SCRIPT_OUTPUT=$(cat "${TEMP_SCRIPT_OUTPUT}")
+                    rm -f "${TEMP_SCRIPT_OUTPUT}"
                     set -e  # Re-enable exit on error
                     
                     if [ $DOMAIN_SCRIPT_EXIT -eq 0 ]; then

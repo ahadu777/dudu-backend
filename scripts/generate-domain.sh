@@ -6,7 +6,8 @@
 # Example: ./scripts/generate-domain.sh api-pr-14 8080
 #          SERVICE_NAME=api-pr-14 PORT=8080 ./scripts/generate-domain.sh
 
-set -e
+# Don't exit on error - we want to capture and show the error
+set +e
 
 # Allow service name and port to be passed as arguments or environment variables
 SERVICE_NAME="${1:-${SERVICE_NAME}}"
@@ -46,11 +47,13 @@ echo ""
 # Export token for Railway CLI
 export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
 
-# Create Railway CLI config file if it doesn't exist
-if [ ! -f ~/.railway/config.json ]; then
-  echo "📝 Creating Railway CLI config file..."
-  mkdir -p ~/.railway
-  cat > ~/.railway/config.json << CONFIG_EOF
+# Create/update Railway CLI config file with token
+# Railway CLI reads from ~/.railway/config.json or RAILWAY_TOKEN env var
+echo "📝 Setting up Railway CLI authentication..."
+mkdir -p ~/.railway
+
+# Always update config file to ensure token is current
+cat > ~/.railway/config.json << CONFIG_EOF
 {
   "projects": {},
   "user": {
@@ -59,8 +62,24 @@ if [ ! -f ~/.railway/config.json ]; then
   "linkedFunctions": null
 }
 CONFIG_EOF
-  echo "✅ Railway CLI config file created"
+echo "✅ Railway CLI config file created/updated"
+
+# Also ensure RAILWAY_TOKEN is exported (Railway CLI checks this too)
+export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
+echo "✅ RAILWAY_TOKEN exported (length: ${#RAILWAY_TOKEN})"
+
+# Verify Railway CLI can see the token
+echo "🔍 Verifying Railway CLI authentication..."
+WHOAMI_OUTPUT=$(railway whoami 2>&1 || echo "WHOAMI_FAILED")
+if echo "$WHOAMI_OUTPUT" | grep -q "WHOAMI_FAILED\|Unauthorized\|login"; then
+  echo "⚠️ Railway CLI authentication check failed"
+  echo "   Output: ${WHOAMI_OUTPUT}"
+  echo "   Note: This may be normal for Project Tokens - continuing anyway..."
+else
+  echo "✅ Railway CLI authentication verified"
+  echo "   Output: ${WHOAMI_OUTPUT}"
 fi
+echo ""
 
 # Verify Railway CLI is installed
 if ! command -v railway &> /dev/null; then
@@ -102,12 +121,27 @@ fi
 echo "📤 Running: railway domain -s ${SERVICE_NAME} --port ${PORT}"
 echo ""
 
-DOMAIN_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port "${PORT}" 2>&1)
+# Run Railway CLI command and capture both stdout and stderr
+# Use a temporary file to ensure we capture all output even if command fails
+TEMP_OUTPUT=$(mktemp)
+railway domain -s "${SERVICE_NAME}" --port "${PORT}" > "${TEMP_OUTPUT}" 2>&1
 EXIT_CODE=$?
 
+# Read the output
+DOMAIN_OUTPUT=$(cat "${TEMP_OUTPUT}")
+rm -f "${TEMP_OUTPUT}"
+
 # Always show the output for debugging
-echo "Railway CLI output:"
-echo "${DOMAIN_OUTPUT}"
+echo "═══════════════════════════════════════════════════════════"
+echo "Railway CLI Command Output:"
+echo "═══════════════════════════════════════════════════════════"
+if [ -n "$DOMAIN_OUTPUT" ]; then
+  echo "${DOMAIN_OUTPUT}"
+else
+  echo "(no output)"
+fi
+echo "═══════════════════════════════════════════════════════════"
+echo "Exit code: ${EXIT_CODE}"
 echo ""
 
 if [ $EXIT_CODE -eq 0 ]; then
