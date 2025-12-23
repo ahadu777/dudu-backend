@@ -298,17 +298,42 @@ jobs:
                     # Note: Project Tokens work for domain commands even if 'whoami' fails
                     echo "🔧 Setting up Railway CLI authentication..."
                     export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
+                    export RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}"
                     echo "✅ RAILWAY_TOKEN is set (length: ${#RAILWAY_TOKEN})"
+                    echo "✅ RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
+                    
+                    # Railway CLI may need the project to be linked via railway.toml
+                    # Verify railway.toml exists and has correct project ID
+                    if [ -f railway.toml ]; then
+                      echo "✅ railway.toml exists"
+                      echo "   Project context should be set"
+                    else
+                      echo "⚠️ railway.toml not found - creating it..."
+                      cat > railway.toml << EOF
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/healthz"
+EOF
+                    fi
                     
                     # Try to generate domain using Railway CLI
                     # Project Tokens work for domain commands even if whoami fails
                     echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
+                    echo "   Note: Railway CLI may need project context from railway.toml"
+                    
+                    # Capture both stdout and stderr
                     DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                     DOMAIN_CLI_EXIT=$?
                     
+                    echo "   Exit code: ${DOMAIN_CLI_EXIT}"
+                    echo "   Full output:"
+                    echo "${DOMAIN_CLI_OUTPUT}" | sed 's/^/   /'
+                    
                     if [ $DOMAIN_CLI_EXIT -eq 0 ]; then
                       echo "✅ Railway CLI domain command executed successfully"
-                      echo "Output: ${DOMAIN_CLI_OUTPUT}"
                       
                       # Extract domain from CLI output
                       # Format: "Service Domain created:\n🚀 https://api-pr-13-production.up.railway.app"
@@ -341,10 +366,34 @@ jobs:
                       fi
                     else
                       echo "⚠️ Railway CLI domain command failed (exit code: ${DOMAIN_CLI_EXIT})"
-                      echo "Output: ${DOMAIN_CLI_OUTPUT}"
-                      EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
-                      PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
-                      echo "   Using expected format: ${EXPECTED_DOMAIN}"
+                      echo ""
+                      echo "💡 Possible reasons:"
+                      echo "   - Railway CLI may need interactive authentication"
+                      echo "   - Project Token may not have domain creation permissions"
+                      echo "   - Service may need to be linked to project first"
+                      echo ""
+                      echo "   Checking if domain was created anyway via GraphQL API..."
+                      
+                      # Check via GraphQL API as fallback
+                      sleep 3
+                      CHECK_DOMAIN_CLI='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+                      CHECK_DOMAIN_CLI_RESPONSE=$(curl -s -X POST \
+                        -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                        -H "Content-Type: application/json" \
+                        -d "$CHECK_DOMAIN_CLI" \
+                        "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+                      
+                      CLI_DOMAIN=$(echo "$CHECK_DOMAIN_CLI_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+                      
+                      if [ -n "$CLI_DOMAIN" ] && [ "$CLI_DOMAIN" != "null" ]; then
+                        PUBLIC_DOMAIN="$CLI_DOMAIN"
+                        echo "✅ Public domain found via GraphQL API: ${PUBLIC_DOMAIN}"
+                      else
+                        EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
+                        PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
+                        echo "⚠️ Domain not found - Railway may auto-generate after deployment"
+                        echo "   Using expected format: ${EXPECTED_DOMAIN}"
+                      fi
                     fi
                   fi
                 fi
@@ -605,17 +654,42 @@ jobs:
                   # Note: Project Tokens work for domain commands even if 'whoami' fails
                   echo "🔧 Setting up Railway CLI authentication..."
                   export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
+                  export RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}"
                   echo "✅ RAILWAY_TOKEN is set (length: ${#RAILWAY_TOKEN})"
+                  echo "✅ RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
+                  
+                  # Railway CLI may need the project to be linked via railway.toml
+                  # Verify railway.toml exists and has correct project ID
+                  if [ -f railway.toml ]; then
+                    echo "✅ railway.toml exists"
+                    echo "   Project context should be set"
+                  else
+                    echo "⚠️ railway.toml not found - creating it..."
+                    cat > railway.toml << EOF
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/healthz"
+EOF
+                  fi
                   
                   # Try to generate domain using Railway CLI
                   # Project Tokens work for domain commands even if whoami fails
                   echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
+                  echo "   Note: Railway CLI may need project context from railway.toml"
+                  
+                  # Capture both stdout and stderr
                   DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                   DOMAIN_CLI_EXIT=$?
                   
+                  echo "   Exit code: ${DOMAIN_CLI_EXIT}"
+                  echo "   Full output:"
+                  echo "${DOMAIN_CLI_OUTPUT}" | sed 's/^/   /'
+                  
                   if [ $DOMAIN_CLI_EXIT -eq 0 ]; then
                     echo "✅ Railway CLI domain command executed successfully"
-                    echo "Output: ${DOMAIN_CLI_OUTPUT}"
                     
                     # Extract domain from CLI output
                     # Format: "Service Domain created:\n🚀 https://api-pr-13-production.up.railway.app"
@@ -648,10 +722,34 @@ jobs:
                     fi
                   else
                     echo "⚠️ Railway CLI domain command failed (exit code: ${DOMAIN_CLI_EXIT})"
-                    echo "Output: ${DOMAIN_CLI_OUTPUT}"
-                    EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
-                    PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
-                    echo "   Using expected format: ${EXPECTED_DOMAIN}"
+                    echo ""
+                    echo "💡 Possible reasons:"
+                    echo "   - Railway CLI may need interactive authentication"
+                    echo "   - Project Token may not have domain creation permissions"
+                    echo "   - Service may need to be linked to project first"
+                    echo ""
+                    echo "   Checking if domain was created anyway via GraphQL API..."
+                    
+                    # Check via GraphQL API as fallback
+                    sleep 3
+                    CHECK_DOMAIN_CLI='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+                    CHECK_DOMAIN_CLI_RESPONSE=$(curl -s -X POST \
+                      -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                      -H "Content-Type: application/json" \
+                      -d "$CHECK_DOMAIN_CLI" \
+                      "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+                    
+                    CLI_DOMAIN=$(echo "$CHECK_DOMAIN_CLI_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+                    
+                    if [ -n "$CLI_DOMAIN" ] && [ "$CLI_DOMAIN" != "null" ]; then
+                      PUBLIC_DOMAIN="$CLI_DOMAIN"
+                      echo "✅ Public domain found via GraphQL API: ${PUBLIC_DOMAIN}"
+                    else
+                      EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
+                      PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
+                      echo "⚠️ Domain not found - Railway may auto-generate after deployment"
+                      echo "   Using expected format: ${EXPECTED_DOMAIN}"
+                    fi
                   fi
                 fi
               fi
