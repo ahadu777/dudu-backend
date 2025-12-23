@@ -305,16 +305,27 @@ jobs:
                       echo "⚠️ railway.toml not found!"
                     fi
                     
-                    # Railway CLI works with railway.toml + RAILWAY_TOKEN (no explicit linking needed)
-                    # railway.toml already contains the project ID, and RAILWAY_TOKEN provides auth
-                    echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
-                    echo "RAILWAY_TOKEN is set: ${RAILWAY_TOKEN:+yes} (length: ${#RAILWAY_TOKEN})"
-                    echo "SERVICE_NAME: ${SERVICE_NAME}"
+                    # Railway CLI needs project/service to be linked in CI/CD
+                    # Link project, environment, and service non-interactively
+                    echo "🔗 Linking Railway project and service..."
+                    export RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}"
+                    
+                    # Try linking with project, environment (production), and service name
+                    # Railway CLI should work with all three specified
+                    LINK_OUTPUT=$(railway link -p "${RAILWAY_PROJECT_ID}" -e production -s "${SERVICE_NAME}" 2>&1 || railway link -p "${RAILWAY_PROJECT_ID}" -e production 2>&1 || railway link -p "${RAILWAY_PROJECT_ID}" 2>&1 || echo "Link skipped - may already be linked")
+                    echo "Link output: ${LINK_OUTPUT}"
                     
                     # Verify Railway CLI is available
                     echo "Checking Railway CLI..."
                     railway --version 2>&1 || echo "Railway CLI check failed"
                     
+                    # Railway CLI works with railway.toml + RAILWAY_TOKEN + linked project/service
+                    echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
+                    echo "RAILWAY_TOKEN is set: ${RAILWAY_TOKEN:+yes} (length: ${#RAILWAY_TOKEN})"
+                    echo "RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
+                    echo "SERVICE_NAME: ${SERVICE_NAME}"
+                    
+                    # Try domain command with service name
                     DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                     DOMAIN_CLI_EXIT=$?
                     
@@ -502,9 +513,9 @@ jobs:
             echo "✅ Deployment triggered via Railway CLI!"
             echo "$DEPLOY_OUTPUT"
           else
-            echo "⚠️ Railway CLI deployment failed"
+              echo "⚠️ Railway CLI deployment failed"
             echo "Output: $DEPLOY_OUTPUT"
-            echo ""
+              echo ""
             echo "💡 Railway CLI may need service linking or project token"
             echo "   Trying alternative: trigger deployment via service update..."
             
@@ -628,8 +639,12 @@ jobs:
                   echo "🔧 Using Railway CLI to generate domain..."
                   export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
                   
-                  # Railway CLI works with railway.toml + RAILWAY_TOKEN (no explicit linking needed)
-                  # railway.toml already contains the project ID, and RAILWAY_TOKEN provides auth
+                  # Link project and service non-interactively
+                  echo "🔗 Linking Railway project and service..."
+                  LINK_OUTPUT=$(railway link -p "${RAILWAY_PROJECT_ID}" -e production -s "${SERVICE_NAME}" 2>&1 || railway link -p "${RAILWAY_PROJECT_ID}" -e production 2>&1 || railway link -p "${RAILWAY_PROJECT_ID}" 2>&1 || echo "Link skipped")
+                  echo "Link output: ${LINK_OUTPUT}"
+                  
+                  # Railway CLI works with railway.toml + RAILWAY_TOKEN + linked project/service
                   # Railway CLI supports -s/--service flag to specify service name
                   echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
                   DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
