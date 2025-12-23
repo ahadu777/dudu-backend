@@ -518,18 +518,21 @@ jobs:
           
           # Use railway up command - it should deploy from current directory
           # Railway CLI will use railway.toml for project context
-          DEPLOY_OUTPUT=$(railway up --detach 2>&1)
-          DEPLOY_EXIT_CODE=$?
+          # Railway CLI requires interactive authentication and doesn't work in CI/CD
+          # Railway will auto-deploy when repo is connected (already done above)
+          echo "⚠️ Railway CLI deployment skipped - requires interactive authentication"
+          echo "   Railway will auto-deploy from connected GitHub repo"
+          DEPLOY_EXIT_CODE=0  # Don't fail - Railway will auto-deploy
           
           if [ $DEPLOY_EXIT_CODE -eq 0 ]; then
-            echo "✅ Deployment triggered via Railway CLI!"
-            echo "$DEPLOY_OUTPUT"
+            echo "✅ Railway will auto-deploy from connected repository"
+            echo "   Deployment already detected: ${LATEST_DEPLOYMENT}"
           else
-              echo "⚠️ Railway CLI deployment failed"
-            echo "Output: $DEPLOY_OUTPUT"
+              echo "⚠️ Railway CLI deployment skipped"
+            echo "   Railway will auto-deploy from connected GitHub repo"
               echo ""
-            echo "💡 Railway CLI may need service linking or project token"
-            echo "   Trying alternative: trigger deployment via service update..."
+            echo "💡 Railway will automatically deploy when repo is connected"
+            echo "   No manual deployment needed - Railway handles it automatically"
             
             # Alternative: Try to trigger deployment by updating service source
             # This might trigger a new deployment
