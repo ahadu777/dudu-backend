@@ -186,14 +186,38 @@ jobs:
             fi
           fi
           
-          # Create or verify public domain exists
-          echo "🌐 Ensuring public domain is created..."
+          # Configure service networking: Set port 8080 and generate public domain
+          echo "🌐 Configuring service networking (port 8080 and public domain)..."
           
           # Railway CLI uses RAILWAY_TOKEN environment variable automatically
-          # No need to call login command - just ensure token is set
           export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
           
-          # Check if domain exists via GraphQL
+          # Step 1: Configure port 8080 for the service
+          # Railway uses PORT environment variable (already set), but we also need to configure networking port
+          echo "🔧 Configuring port 8080 for service networking..."
+          
+          # Try to configure port via Railway API
+          # Railway services need port configured in networking settings
+          CONFIGURE_PORT_MUTATION='{"query":"mutation { serviceUpdate(input: {id: \"'${FINAL_SERVICE_ID}'\", port: 8080}) { id } }"}'
+          CONFIGURE_PORT_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$CONFIGURE_PORT_MUTATION" \
+            "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+          
+          if echo "$CONFIGURE_PORT_RESPONSE" | jq -e '.data.serviceUpdate.id' > /dev/null 2>&1; then
+            echo "✅ Port 8080 configured for service"
+          else
+            echo "⚠️ Port configuration via API may not be supported"
+            echo "Response: ${CONFIGURE_PORT_RESPONSE}"
+            echo "💡 Port is set via PORT environment variable (already configured)"
+            echo "   If needed, configure port manually in Railway dashboard → Service Settings → Networking"
+          fi
+          
+          # Step 2: Generate public domain
+          echo "🌐 Generating public domain..."
+          
+          # Check if domain already exists
           DOMAIN_QUERY='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
           DOMAIN_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
@@ -205,7 +229,10 @@ jobs:
           PUBLIC_DOMAIN=$(echo "$DOMAIN_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
           
           if [ -z "$PUBLIC_DOMAIN" ] || [ "$PUBLIC_DOMAIN" == "null" ]; then
-            echo "📝 No public domain found, creating one..."
+            echo "📝 No public domain found, generating one..."
+            
+            # Wait a moment for deployment to be ready (if deployment was just triggered)
+            sleep 5
             
             # Get service's latest deployment (needed for domain creation)
             DEPLOYMENT_QUERY='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { deployments { edges { node { id } } } } }"}'
@@ -222,7 +249,7 @@ jobs:
               
               # Try creating public domain via GraphQL mutation
               # Railway generates domains in format: {service-name}-production.up.railway.app
-              CREATE_DOMAIN_MUTATION='{"query":"mutation { domainCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", deploymentId: \"'${DEPLOYMENT_ID}'\", public: true}) { id domain } }"}'
+              CREATE_DOMAIN_MUTATION='{"query":"mutation { domainCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", deploymentId: \"'${DEPLOYMENT_ID}'\", public: true, port: 8080}) { id domain } }"}'
               CREATE_DOMAIN_RESPONSE=$(curl -s -X POST \
                 -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
                 -H "Content-Type: application/json" \
@@ -233,11 +260,11 @@ jobs:
                 PUBLIC_DOMAIN=$(echo "$CREATE_DOMAIN_RESPONSE" | jq -r '.data.domainCreate.domain')
                 echo "✅ Public domain created via GraphQL: ${PUBLIC_DOMAIN}"
               else
-                echo "⚠️ GraphQL domain creation failed, trying alternative mutation..."
+                echo "⚠️ GraphQL domain creation with port failed, trying without port..."
                 echo "Response: ${CREATE_DOMAIN_RESPONSE}"
                 
-                # Try alternative mutation format (without deploymentId)
-                CREATE_DOMAIN_MUTATION2='{"query":"mutation { domainCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", public: true}) { id domain } }"}'
+                # Try without port parameter
+                CREATE_DOMAIN_MUTATION2='{"query":"mutation { domainCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", deploymentId: \"'${DEPLOYMENT_ID}'\", public: true}) { id domain } }"}'
                 CREATE_DOMAIN_RESPONSE2=$(curl -s -X POST \
                   -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
                   -H "Content-Type: application/json" \
@@ -246,18 +273,35 @@ jobs:
                 
                 if echo "$CREATE_DOMAIN_RESPONSE2" | jq -e '.data.domainCreate.domain' > /dev/null 2>&1; then
                   PUBLIC_DOMAIN=$(echo "$CREATE_DOMAIN_RESPONSE2" | jq -r '.data.domainCreate.domain')
-                  echo "✅ Public domain created (alternative method): ${PUBLIC_DOMAIN}"
+                  echo "✅ Public domain created via GraphQL: ${PUBLIC_DOMAIN}"
                 else
-                  echo "⚠️ All GraphQL methods failed"
-                  echo "Response: ${CREATE_DOMAIN_RESPONSE2}"
-                  echo "💡 Domain will be created automatically after deployment, or manually in Railway dashboard"
-                  echo "   Expected format: ${SERVICE_NAME}-production.up.railway.app"
+                  echo "⚠️ GraphQL domain creation failed, trying alternative mutation..."
+                  
+                  # Try alternative mutation format (without deploymentId)
+                  CREATE_DOMAIN_MUTATION3='{"query":"mutation { domainCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", public: true}) { id domain } }"}'
+                  CREATE_DOMAIN_RESPONSE3=$(curl -s -X POST \
+                    -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                    -H "Content-Type: application/json" \
+                    -d "$CREATE_DOMAIN_MUTATION3" \
+                    "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+                  
+                  if echo "$CREATE_DOMAIN_RESPONSE3" | jq -e '.data.domainCreate.domain' > /dev/null 2>&1; then
+                    PUBLIC_DOMAIN=$(echo "$CREATE_DOMAIN_RESPONSE3" | jq -r '.data.domainCreate.domain')
+                    echo "✅ Public domain created (alternative method): ${PUBLIC_DOMAIN}"
+                  else
+                    echo "⚠️ All GraphQL methods failed"
+                    echo "Response: ${CREATE_DOMAIN_RESPONSE3}"
+                    echo "💡 Domain will be created automatically after deployment, or manually in Railway dashboard"
+                    echo "   Expected format: ${SERVICE_NAME}-production.up.railway.app"
+                    echo "   After domain is created, ensure port 8080 is configured in Networking settings"
+                  fi
                 fi
               fi
             else
               echo "⚠️ No deployment found yet"
               echo "💡 Domain will be created automatically after first deployment completes"
               echo "   Expected format: ${SERVICE_NAME}-production.up.railway.app"
+              echo "   After deployment, configure port 8080 in Networking settings"
             fi
           else
             echo "✅ Public domain already exists: ${PUBLIC_DOMAIN}"
@@ -433,7 +477,55 @@ jobs:
           echo "⏳ Waiting for deployment to start..."
           sleep 20
           
-          # Query for the actual public domain (may have been created after deployment)
+          # After deployment, ensure port 8080 is configured and public domain exists
+          echo "🔧 Finalizing networking configuration..."
+          
+          # Get latest deployment to ensure we have one
+          FINAL_DEPLOYMENT_QUERY='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { deployments { edges { node { id status } } } } }"}'
+          FINAL_DEPLOYMENT_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$FINAL_DEPLOYMENT_QUERY" \
+            "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+          
+          LATEST_DEPLOY_ID=$(echo "$FINAL_DEPLOYMENT_RESPONSE" | jq -r '.data.service.deployments.edges[0].node.id // empty' 2>/dev/null || echo "")
+          
+          if [ -n "$LATEST_DEPLOY_ID" ] && [ "$LATEST_DEPLOY_ID" != "null" ]; then
+            echo "✅ Deployment found (ID: ${LATEST_DEPLOY_ID})"
+            
+            # Try to generate public domain now that we have a deployment
+            echo "🌐 Generating public domain..."
+            
+            # Method 1: Try GraphQL API
+            CREATE_DOMAIN_FINAL='{"query":"mutation { domainCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", deploymentId: \"'${LATEST_DEPLOY_ID}'\", public: true}) { id domain } }"}'
+            CREATE_DOMAIN_FINAL_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$CREATE_DOMAIN_FINAL" \
+              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+            
+            if echo "$CREATE_DOMAIN_FINAL_RESPONSE" | jq -e '.data.domainCreate.domain' > /dev/null 2>&1; then
+              PUBLIC_DOMAIN=$(echo "$CREATE_DOMAIN_FINAL_RESPONSE" | jq -r '.data.domainCreate.domain')
+              echo "✅ Public domain generated via GraphQL API: ${PUBLIC_DOMAIN}"
+            else
+              echo "⚠️ GraphQL domain creation failed, trying Railway CLI..."
+              echo "Response: ${CREATE_DOMAIN_FINAL_RESPONSE}"
+              
+              # Method 2: Try Railway CLI to generate domain
+              # Railway CLI might have a command to generate domains
+              DOMAIN_CLI_OUTPUT=$(railway domain generate --service "$SERVICE_NAME" 2>&1 || railway domain --service "$SERVICE_NAME" 2>&1 || echo "")
+              
+              if echo "$DOMAIN_CLI_OUTPUT" | grep -q "up.railway.app" 2>/dev/null; then
+                echo "✅ Domain generation attempted via Railway CLI"
+                echo "Output: ${DOMAIN_CLI_OUTPUT}"
+              else
+                echo "⚠️ Railway CLI domain generation also failed"
+                echo "Output: ${DOMAIN_CLI_OUTPUT}"
+              fi
+            fi
+          fi
+          
+          # Query for the actual public domain (may have been created)
           echo "🔍 Verifying public domain..."
           FINAL_DOMAIN_QUERY='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
           FINAL_DOMAIN_RESPONSE=$(curl -s -X POST \
@@ -447,12 +539,17 @@ jobs:
           if [ -n "$ACTUAL_DOMAIN" ] && [ "$ACTUAL_DOMAIN" != "null" ]; then
             PREVIEW_URL="https://${ACTUAL_DOMAIN}"
             echo "✅ Found public domain: ${ACTUAL_DOMAIN}"
+            echo "💡 Ensure port 8080 is configured in Railway dashboard → Service Settings → Networking"
           else
             # Fallback to expected format (Railway generates: {service-name}-production.up.railway.app)
             EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
             PREVIEW_URL="https://${EXPECTED_DOMAIN}"
             echo "⚠️ Domain not found yet, using expected format: ${EXPECTED_DOMAIN}"
-            echo "💡 Domain may still be provisioning, check Railway dashboard if URL doesn't work"
+            echo "💡 To complete setup:"
+            echo "   1. Go to: https://railway.app/project/${RAILWAY_PROJECT_ID}/service/${FINAL_SERVICE_ID}"
+            echo "   2. Settings → Networking → Set port to 8080"
+            echo "   3. Click 'Generate Domain' button"
+            echo "   Expected domain: ${EXPECTED_DOMAIN}"
           fi
           
           echo "url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
