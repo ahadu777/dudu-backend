@@ -121,6 +121,18 @@ jobs:
           
           echo "✅ Using service ID: ${FINAL_SERVICE_ID}"
           
+          # Prepare repository information
+          REPO_FULL="${GITHUB_REPOSITORY}"
+          echo "Repository: ${REPO_FULL}"
+          
+          # Railway CLI uses RAILWAY_TOKEN environment variable automatically
+          export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
+          
+          # Note: Railway services need GitHub repo connection via Railway dashboard (first time)
+          # Once connected, Railway auto-deploys on commits
+          # For now, we'll deploy directly using Railway CLI
+          echo "💡 Deploying directly - repo connection can be done in Railway dashboard if needed"
+          
           # Create or verify public domain exists
           echo "🌐 Ensuring public domain is created..."
           
@@ -258,30 +270,45 @@ jobs:
           echo "📦 Triggering deployment via Railway CLI..."
           
           # Railway CLI uses RAILWAY_TOKEN from environment automatically
-          # No need to call login - just ensure token is exported
           export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
           
           # Deploy using Railway CLI
-          railway up --service "$SERVICE_NAME" --detach 2>&1 || {
-            echo "⚠️ Railway CLI deployment failed"
-            echo ""
-            echo "💡 Service created and configured successfully!"
-            echo "   Environment variables are set:"
-            echo "   - NODE_ENV=preview"
-            echo "   - PORT=8080"
-            echo "   - USE_DATABASE=false"
-            echo "   - PR_NUMBER=${PR_NUMBER}"
-            echo ""
-            echo "   ⚠️ Deployment may need manual trigger (first time only):"
-            echo "   1. Go to: https://railway.app/project/${RAILWAY_PROJECT_ID}"
-            echo "   2. Click on service: ${SERVICE_NAME}"
-            echo "   3. Click 'Deploy' or 'Redeploy' button"
-            echo ""
-            echo "   After first manual deployment, Railway will auto-deploy on:"
-            echo "   - New commits pushed to PR"
-            echo "   - Environment variable changes"
-            echo "   - Manual redeploy triggers"
-          }
+          # railway up builds from current directory and deploys
+          # We need to ensure it deploys to the correct service
+          echo "🚀 Deploying to service: ${SERVICE_NAME}..."
+          
+          # Try railway up with service specification (if supported)
+          # Railway CLI may use different syntax, so we'll try multiple approaches
+          DEPLOY_SUCCESS=false
+          
+          # Method 1: Try railway up with --service flag
+          if railway up --service "$SERVICE_NAME" --detach 2>&1; then
+            echo "✅ Deployment triggered via railway up --service"
+            DEPLOY_SUCCESS=true
+          else
+            echo "⚠️ railway up --service failed, trying alternative..."
+            
+            # Method 2: Try railway up without service flag (may work if service is default)
+            if railway up --detach 2>&1; then
+              echo "✅ Deployment triggered via railway up"
+              DEPLOY_SUCCESS=true
+            else
+              echo "⚠️ railway up failed"
+              echo ""
+              echo "💡 Railway CLI deployment failed - service may need GitHub repo connection"
+              echo "   Service: ${SERVICE_NAME} (ID: ${FINAL_SERVICE_ID})"
+              echo "   Repository: ${REPO_FULL}"
+              echo ""
+              echo "   Next steps:"
+              echo "   1. Connect service to GitHub repository in Railway dashboard:"
+              echo "      https://railway.app/project/${RAILWAY_PROJECT_ID}/service/${FINAL_SERVICE_ID}"
+              echo "   2. Go to Settings → Connect GitHub repository"
+              echo "   3. Select: ${REPO_FULL}"
+              echo "   4. Railway will auto-deploy once connected"
+              echo ""
+              echo "   Or manually trigger deployment in Railway dashboard"
+            fi
+          fi
           
           # Wait for deployment to start
           echo "⏳ Waiting for deployment to start..."
