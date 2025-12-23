@@ -297,18 +297,8 @@ jobs:
                     echo "🔧 Trying Railway CLI to generate domain..."
                     export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
                     
-                    # Railway CLI needs project to be linked
-                    # Link project non-interactively using project ID
-                    echo "🔗 Linking Railway project..."
-                    LINK_OUTPUT=$(railway link -p "${RAILWAY_PROJECT_ID}" 2>&1)
-                    LINK_EXIT=$?
-                    
-                    if [ $LINK_EXIT -eq 0 ]; then
-                      echo "✅ Project linked successfully"
-                    else
-                      echo "⚠️ Project linking failed (may already be linked): ${LINK_OUTPUT}"
-                    fi
-                    
+                    # Railway CLI works with railway.toml + RAILWAY_TOKEN (no explicit linking needed)
+                    # railway.toml already contains the project ID, and RAILWAY_TOKEN provides auth
                     echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
                     DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                     DOMAIN_CLI_EXIT=$?
@@ -617,19 +607,8 @@ jobs:
                   echo "🔧 Using Railway CLI to generate domain..."
                   export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
                   
-                  # Railway CLI needs project to be linked
-                  # Link project non-interactively using project ID
-                  echo "🔗 Linking Railway project..."
-                  LINK_OUTPUT=$(railway link -p "${RAILWAY_PROJECT_ID}" 2>&1)
-                  LINK_EXIT=$?
-                  
-                  if [ $LINK_EXIT -eq 0 ]; then
-                    echo "✅ Project linked successfully"
-                  else
-                    echo "⚠️ Project linking failed (may already be linked): ${LINK_OUTPUT}"
-                  fi
-                  
-                  # Try railway domain command with service name (generates domain if none exists)
+                  # Railway CLI works with railway.toml + RAILWAY_TOKEN (no explicit linking needed)
+                  # railway.toml already contains the project ID, and RAILWAY_TOKEN provides auth
                   # Railway CLI supports -s/--service flag to specify service name
                   echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
                   DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
