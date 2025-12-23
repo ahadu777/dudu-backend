@@ -49,16 +49,7 @@ jobs:
           echo "✅ RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
           
           # Create railway.toml with project ID for Railway CLI context
-          cat > railway.toml << EOF
-          project = "${RAILWAY_PROJECT_ID}"
-          
-          [build]
-          builder = "DOCKERFILE"
-          
-          [deploy]
-          startCommand = "npm start"
-          healthcheckPath = "/healthz"
-          EOF
+          printf 'project = "%s"\n\n[build]\nbuilder = "DOCKERFILE"\n\n[deploy]\nstartCommand = "npm start"\nhealthcheckPath = "/healthz"\n' "${RAILWAY_PROJECT_ID}" > railway.toml
           
           echo "✅ Created railway.toml with project context"
           
@@ -302,117 +293,77 @@ jobs:
                     echo "✅ RAILWAY_TOKEN is set (length: ${#RAILWAY_TOKEN})"
                     echo "✅ RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
                     
-                    # Railway CLI may need the project to be linked first
-                    # Verify railway.toml exists and has correct project ID
-                    if [ -f railway.toml ]; then
-                      echo "✅ railway.toml exists"
-                      echo "   Project context should be set"
-                    else
-                      echo "⚠️ railway.toml not found - creating it..."
-                      cat > railway.toml << EOF
-[build]
-builder = "DOCKERFILE"
-
-[deploy]
-startCommand = "npm start"
-healthcheckPath = "/healthz"
-EOF
-                    fi
-                    
-                    # Railway CLI may need project to be linked before domain command works
-                    # Try linking the project non-interactively
-                    echo "🔗 Attempting to link Railway project..."
-                    LINK_OUTPUT=$(railway link --project "${RAILWAY_PROJECT_ID}" 2>&1 || echo "LINK_FAILED")
-                    if echo "$LINK_OUTPUT" | grep -q "LINK_FAILED\|Error\|Unauthorized"; then
-                      echo "⚠️ Project linking failed or not needed"
-                      echo "   Output: ${LINK_OUTPUT}"
-                      echo "   Continuing with domain command..."
-                    else
-                      echo "✅ Project linked successfully"
-                      echo "   Output: ${LINK_OUTPUT}"
-                    fi
-                    
-                    # Try to generate domain using Railway CLI
-                    # Project Tokens work for domain commands even if whoami fails
-                    echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
-                    echo "   Note: Railway CLI may need project context from railway.toml or link"
-                    
-                    # Capture both stdout and stderr with better error handling
-                    set +e  # Don't exit on error
-                    DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
-                    DOMAIN_CLI_EXIT=$?
-                    set -e  # Re-enable exit on error
-                    
-                    echo "   Exit code: ${DOMAIN_CLI_EXIT}"
-                    echo "   Full output:"
-                    if [ -n "$DOMAIN_CLI_OUTPUT" ]; then
-                      echo "${DOMAIN_CLI_OUTPUT}" | sed 's/^/   /'
-                    else
-                      echo "   (no output)"
-                    fi
-                    
-                    if [ $DOMAIN_CLI_EXIT -eq 0 ]; then
-                      echo "✅ Railway CLI domain command executed successfully"
+                    # Use the domain generation script (dynamic for each PR)
+                    echo "📤 Generating domain using Railway CLI script..."
+                    echo "   Service: ${SERVICE_NAME} (PR #${PR_NUMBER})"
+                    if [ -f scripts/generate-domain.sh ]; then
+                      chmod +x scripts/generate-domain.sh
+                      set +e  # Don't exit on error
+                      # Pass SERVICE_NAME and PORT, script will use PR_NUMBER if available
+                      DOMAIN_SCRIPT_OUTPUT=$(PR_NUMBER="${PR_NUMBER}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1)
+                      DOMAIN_SCRIPT_EXIT=$?
+                      set -e  # Re-enable exit on error
                       
-                      # Extract domain from CLI output
-                      # Format: "Service Domain created:\n🚀 https://api-pr-13-production.up.railway.app"
-                      DOMAIN_FROM_OUTPUT=$(echo "$DOMAIN_CLI_OUTPUT" | grep -oE 'https?://[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 | sed 's|https\?://||' || echo "$DOMAIN_CLI_OUTPUT" | grep -oE '[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 || echo "")
-                      
-                      if [ -n "$DOMAIN_FROM_OUTPUT" ]; then
-                        PUBLIC_DOMAIN="$DOMAIN_FROM_OUTPUT"
-                        echo "✅ Public domain generated via Railway CLI: ${PUBLIC_DOMAIN}"
+                      if [ $DOMAIN_SCRIPT_EXIT -eq 0 ]; then
+                        # Extract domain from script output
+                        DOMAIN_FROM_SCRIPT=$(echo "$DOMAIN_SCRIPT_OUTPUT" | grep -oE '[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 || echo "")
+                        if [ -n "$DOMAIN_FROM_SCRIPT" ]; then
+                          PUBLIC_DOMAIN="$DOMAIN_FROM_SCRIPT"
+                          echo "✅ Public domain generated via script: ${PUBLIC_DOMAIN}"
+                        else
+                          # Check via GraphQL API
+                          sleep 5
+                          CHECK_DOMAIN_SCRIPT='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+                          CHECK_DOMAIN_SCRIPT_RESPONSE=$(curl -s -X POST \
+                            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                            -H "Content-Type: application/json" \
+                            -d "$CHECK_DOMAIN_SCRIPT" \
+                            "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+                          
+                          SCRIPT_DOMAIN=$(echo "$CHECK_DOMAIN_SCRIPT_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+                          
+                          if [ -n "$SCRIPT_DOMAIN" ] && [ "$SCRIPT_DOMAIN" != "null" ]; then
+                            PUBLIC_DOMAIN="$SCRIPT_DOMAIN"
+                            echo "✅ Public domain detected via GraphQL API: ${PUBLIC_DOMAIN}"
+                          else
+                            EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
+                            PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
+                            echo "⚠️ Domain may still be provisioning"
+                            echo "   Using expected format: ${EXPECTED_DOMAIN}"
+                          fi
+                        fi
                       else
-                        # Check via GraphQL API
-                        sleep 5
-                        CHECK_DOMAIN_CLI='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
-                        CHECK_DOMAIN_CLI_RESPONSE=$(curl -s -X POST \
+                        echo "⚠️ Domain generation script failed (exit code: ${DOMAIN_SCRIPT_EXIT})"
+                        echo "Output: ${DOMAIN_SCRIPT_OUTPUT}"
+                        echo ""
+                        echo "   Checking if domain was created anyway via GraphQL API..."
+                        
+                        # Check via GraphQL API as fallback
+                        sleep 3
+                        CHECK_DOMAIN_SCRIPT='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+                        CHECK_DOMAIN_SCRIPT_RESPONSE=$(curl -s -X POST \
                           -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
                           -H "Content-Type: application/json" \
-                          -d "$CHECK_DOMAIN_CLI" \
+                          -d "$CHECK_DOMAIN_SCRIPT" \
                           "$RAILWAY_GRAPHQL" 2>&1 || echo "")
                         
-                        CLI_DOMAIN=$(echo "$CHECK_DOMAIN_CLI_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+                        SCRIPT_DOMAIN=$(echo "$CHECK_DOMAIN_SCRIPT_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
                         
-                        if [ -n "$CLI_DOMAIN" ] && [ "$CLI_DOMAIN" != "null" ]; then
-                          PUBLIC_DOMAIN="$CLI_DOMAIN"
-                          echo "✅ Public domain detected via GraphQL API: ${PUBLIC_DOMAIN}"
+                        if [ -n "$SCRIPT_DOMAIN" ] && [ "$SCRIPT_DOMAIN" != "null" ]; then
+                          PUBLIC_DOMAIN="$SCRIPT_DOMAIN"
+                          echo "✅ Public domain found via GraphQL API: ${PUBLIC_DOMAIN}"
                         else
                           EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
                           PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
-                          echo "⚠️ Domain may still be provisioning"
+                          echo "⚠️ Domain not found - Railway may auto-generate after deployment"
                           echo "   Using expected format: ${EXPECTED_DOMAIN}"
                         fi
                       fi
                     else
-                      echo "⚠️ Railway CLI domain command failed (exit code: ${DOMAIN_CLI_EXIT})"
-                      echo ""
-                      echo "💡 Possible reasons:"
-                      echo "   - Railway CLI may need interactive authentication"
-                      echo "   - Project Token may not have domain creation permissions"
-                      echo "   - Service may need to be linked to project first"
-                      echo ""
-                      echo "   Checking if domain was created anyway via GraphQL API..."
-                      
-                      # Check via GraphQL API as fallback
-                      sleep 3
-                      CHECK_DOMAIN_CLI='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
-                      CHECK_DOMAIN_CLI_RESPONSE=$(curl -s -X POST \
-                        -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-                        -H "Content-Type: application/json" \
-                        -d "$CHECK_DOMAIN_CLI" \
-                        "$RAILWAY_GRAPHQL" 2>&1 || echo "")
-                      
-                      CLI_DOMAIN=$(echo "$CHECK_DOMAIN_CLI_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
-                      
-                      if [ -n "$CLI_DOMAIN" ] && [ "$CLI_DOMAIN" != "null" ]; then
-                        PUBLIC_DOMAIN="$CLI_DOMAIN"
-                        echo "✅ Public domain found via GraphQL API: ${PUBLIC_DOMAIN}"
-                      else
-                        EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
-                        PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
-                        echo "⚠️ Domain not found - Railway may auto-generate after deployment"
-                        echo "   Using expected format: ${EXPECTED_DOMAIN}"
-                      fi
+                      echo "⚠️ Domain generation script not found, using fallback method..."
+                      EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
+                      PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
+                      echo "   Using expected format: ${EXPECTED_DOMAIN}"
                     fi
                   fi
                 fi
@@ -596,15 +547,58 @@ EOF
             fi
           fi
           
-          # Wait for deployment to start and complete
+          # Wait for deployment to start and poll for completion
+          # Railway may auto-generate domain after deployment completes
           echo "⏳ Waiting for deployment to start..."
-          sleep 20
+          sleep 10
           
-          # Wait a bit more for deployment to progress (Railway may auto-generate domain after deployment)
-          echo "⏳ Waiting for deployment to progress..."
-          sleep 15
+          # Poll for deployment completion and domain generation
+          echo "🔍 Polling for deployment completion and domain generation..."
+          MAX_POLLS=12  # Poll for up to 2 minutes (12 * 10 seconds)
+          POLL_COUNT=0
+          DOMAIN_FOUND=false
           
-          # After deployment, ensure port 8080 is configured and public domain exists
+          while [ $POLL_COUNT -lt $MAX_POLLS ] && [ "$DOMAIN_FOUND" = false ]; do
+            POLL_COUNT=$((POLL_COUNT + 1))
+            echo "   Poll attempt ${POLL_COUNT}/${MAX_POLLS}..."
+            
+            # Check deployment status
+            DEPLOYMENT_STATUS_QUERY='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { deployments { edges { node { id status } } } } }"}'
+            DEPLOYMENT_STATUS_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$DEPLOYMENT_STATUS_QUERY" \
+              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+            
+            DEPLOYMENT_STATUS=$(echo "$DEPLOYMENT_STATUS_RESPONSE" | jq -r '.data.service.deployments.edges[0].node.status // empty' 2>/dev/null || echo "")
+            LATEST_DEPLOY_ID=$(echo "$DEPLOYMENT_STATUS_RESPONSE" | jq -r '.data.service.deployments.edges[0].node.id // empty' 2>/dev/null || echo "")
+            
+            echo "   Deployment status: ${DEPLOYMENT_STATUS:-unknown}"
+            
+            # Check if domain was auto-generated
+            DOMAIN_CHECK_QUERY='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+            DOMAIN_CHECK_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$DOMAIN_CHECK_QUERY" \
+              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+            
+            AUTO_DOMAIN=$(echo "$DOMAIN_CHECK_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+            
+            if [ -n "$AUTO_DOMAIN" ] && [ "$AUTO_DOMAIN" != "null" ]; then
+              PUBLIC_DOMAIN="$AUTO_DOMAIN"
+              DOMAIN_FOUND=true
+              echo "✅ Domain auto-generated by Railway: ${PUBLIC_DOMAIN}"
+              break
+            fi
+            
+            # Wait before next poll (except on last iteration)
+            if [ $POLL_COUNT -lt $MAX_POLLS ]; then
+              sleep 10
+            fi
+          done
+          
+          # After polling, ensure port 8080 is configured and public domain exists
           echo "🔧 Finalizing networking configuration..."
           
           # Get latest deployment to ensure we have one
@@ -617,26 +611,40 @@ EOF
           
           LATEST_DEPLOY_ID=$(echo "$FINAL_DEPLOYMENT_RESPONSE" | jq -r '.data.service.deployments.edges[0].node.id // empty' 2>/dev/null || echo "")
           
+          # If domain was found during polling, use it
+          if [ "$DOMAIN_FOUND" = true ] && [ -n "$PUBLIC_DOMAIN" ]; then
+            echo "✅ Using auto-generated domain: ${PUBLIC_DOMAIN}"
+          fi
+          
           if [ -n "$LATEST_DEPLOY_ID" ] && [ "$LATEST_DEPLOY_ID" != "null" ]; then
             echo "✅ Deployment found (ID: ${LATEST_DEPLOY_ID})"
             
             # Try to generate public domain now that we have a deployment
-            echo "🌐 Generating public domain..."
-            
-            # Check if domain already exists before creating
-            CHECK_EXISTING_DOMAIN='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
-            EXISTING_DOMAIN_RESPONSE=$(curl -s -X POST \
-              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "$CHECK_EXISTING_DOMAIN" \
-              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
-            
-            EXISTING_DOMAIN=$(echo "$EXISTING_DOMAIN_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
-            
-            if [ -n "$EXISTING_DOMAIN" ] && [ "$EXISTING_DOMAIN" != "null" ]; then
-              echo "✅ Public domain already exists: ${EXISTING_DOMAIN}"
+            # Skip if domain was already found during polling
+            if [ "$DOMAIN_FOUND" != true ]; then
+              echo "🌐 Generating public domain..."
+              
+              # Check if domain already exists before creating
+              CHECK_EXISTING_DOMAIN='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+              EXISTING_DOMAIN_RESPONSE=$(curl -s -X POST \
+                -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "$CHECK_EXISTING_DOMAIN" \
+                "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+              
+              EXISTING_DOMAIN=$(echo "$EXISTING_DOMAIN_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+              
+              if [ -n "$EXISTING_DOMAIN" ] && [ "$EXISTING_DOMAIN" != "null" ]; then
+                PUBLIC_DOMAIN="$EXISTING_DOMAIN"
+                echo "✅ Public domain already exists: ${EXISTING_DOMAIN}"
+              fi
             else
-              echo "📝 No public domain found, creating one..."
+              echo "✅ Using domain found during polling: ${PUBLIC_DOMAIN}"
+            fi
+            
+            # Only try to create domain if it doesn't exist
+            if [ -z "$PUBLIC_DOMAIN" ] || [ "$PUBLIC_DOMAIN" == "null" ]; then
+              echo "📝 No public domain found, attempting to create one..."
               
               # Method 1: Try GraphQL API with deploymentId
               CREATE_DOMAIN_FINAL='{"query":"mutation { domainCreate(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", deploymentId: \"'${LATEST_DEPLOY_ID}'\", public: true}) { id domain } }"}'
@@ -684,110 +692,80 @@ EOF
                     echo "   Project context should be set"
                   else
                     echo "⚠️ railway.toml not found - creating it..."
-                    cat > railway.toml << EOF
-[build]
-builder = "DOCKERFILE"
-
-[deploy]
-startCommand = "npm start"
-healthcheckPath = "/healthz"
-EOF
+                    printf '[build]\nbuilder = "DOCKERFILE"\n\n[deploy]\nstartCommand = "npm start"\nhealthcheckPath = "/healthz"\n' > railway.toml
                   fi
                   
-                  # Railway CLI may need project to be linked before domain command works
-                  # Try linking the project non-interactively
-                  echo "🔗 Attempting to link Railway project..."
-                  LINK_OUTPUT=$(railway link --project "${RAILWAY_PROJECT_ID}" 2>&1 || echo "LINK_FAILED")
-                  if echo "$LINK_OUTPUT" | grep -q "LINK_FAILED\|Error\|Unauthorized"; then
-                    echo "⚠️ Project linking failed or not needed"
-                    echo "   Output: ${LINK_OUTPUT}"
-                    echo "   Continuing with domain command..."
-                  else
-                    echo "✅ Project linked successfully"
-                    echo "   Output: ${LINK_OUTPUT}"
-                  fi
-                  
-                  # Try to generate domain using Railway CLI
-                  # Project Tokens work for domain commands even if whoami fails
-                  echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
-                  echo "   Note: Railway CLI may need project context from railway.toml or link"
-                  
-                  # Capture both stdout and stderr with better error handling
-                  set +e  # Don't exit on error
-                  DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
-                  DOMAIN_CLI_EXIT=$?
-                  set -e  # Re-enable exit on error
-                  
-                  echo "   Exit code: ${DOMAIN_CLI_EXIT}"
-                  echo "   Full output:"
-                  if [ -n "$DOMAIN_CLI_OUTPUT" ]; then
-                    echo "${DOMAIN_CLI_OUTPUT}" | sed 's/^/   /'
-                  else
-                    echo "   (no output)"
-                  fi
-                  
-                  if [ $DOMAIN_CLI_EXIT -eq 0 ]; then
-                    echo "✅ Railway CLI domain command executed successfully"
+                  # Use the domain generation script (dynamic for each PR)
+                  echo "📤 Generating domain using Railway CLI script..."
+                  echo "   Service: ${SERVICE_NAME} (PR #${PR_NUMBER})"
+                  if [ -f scripts/generate-domain.sh ]; then
+                    chmod +x scripts/generate-domain.sh
+                    set +e  # Don't exit on error
+                    # Pass SERVICE_NAME and PORT, script will use PR_NUMBER if available
+                    DOMAIN_SCRIPT_OUTPUT=$(PR_NUMBER="${PR_NUMBER}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1)
+                    DOMAIN_SCRIPT_EXIT=$?
+                    set -e  # Re-enable exit on error
                     
-                    # Extract domain from CLI output
-                    # Format: "Service Domain created:\n🚀 https://api-pr-13-production.up.railway.app"
-                    DOMAIN_FROM_OUTPUT=$(echo "$DOMAIN_CLI_OUTPUT" | grep -oE 'https?://[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 | sed 's|https\?://||' || echo "$DOMAIN_CLI_OUTPUT" | grep -oE '[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 || echo "")
-                    
-                    if [ -n "$DOMAIN_FROM_OUTPUT" ]; then
-                      PUBLIC_DOMAIN="$DOMAIN_FROM_OUTPUT"
-                      echo "✅ Public domain generated via Railway CLI: ${PUBLIC_DOMAIN}"
+                    if [ $DOMAIN_SCRIPT_EXIT -eq 0 ]; then
+                      # Extract domain from script output
+                      DOMAIN_FROM_SCRIPT=$(echo "$DOMAIN_SCRIPT_OUTPUT" | grep -oE '[a-zA-Z0-9-]+-production\.up\.railway\.app' | head -n1 || echo "")
+                      if [ -n "$DOMAIN_FROM_SCRIPT" ]; then
+                        PUBLIC_DOMAIN="$DOMAIN_FROM_SCRIPT"
+                        echo "✅ Public domain generated via script: ${PUBLIC_DOMAIN}"
+                      else
+                        # Check via GraphQL API
+                        sleep 5
+                        CHECK_DOMAIN_SCRIPT='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+                        CHECK_DOMAIN_SCRIPT_RESPONSE=$(curl -s -X POST \
+                          -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                          -H "Content-Type: application/json" \
+                          -d "$CHECK_DOMAIN_SCRIPT" \
+                          "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+                        
+                        SCRIPT_DOMAIN=$(echo "$CHECK_DOMAIN_SCRIPT_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+                        
+                        if [ -n "$SCRIPT_DOMAIN" ] && [ "$SCRIPT_DOMAIN" != "null" ]; then
+                          PUBLIC_DOMAIN="$SCRIPT_DOMAIN"
+                          echo "✅ Public domain detected via GraphQL API: ${PUBLIC_DOMAIN}"
+                        else
+                          EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
+                          PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
+                          echo "⚠️ Domain may still be provisioning"
+                          echo "   Using expected format: ${EXPECTED_DOMAIN}"
+                        fi
+                      fi
                     else
-                      # Check via GraphQL API
-                      sleep 5
-                      CHECK_DOMAIN_CLI='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
-                      CHECK_DOMAIN_CLI_RESPONSE=$(curl -s -X POST \
+                      echo "⚠️ Domain generation script failed (exit code: ${DOMAIN_SCRIPT_EXIT})"
+                      echo "Output: ${DOMAIN_SCRIPT_OUTPUT}"
+                      echo ""
+                      echo "   Checking if domain was created anyway via GraphQL API..."
+                      
+                      # Check via GraphQL API as fallback
+                      sleep 3
+                      CHECK_DOMAIN_SCRIPT='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
+                      CHECK_DOMAIN_SCRIPT_RESPONSE=$(curl -s -X POST \
                         -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
                         -H "Content-Type: application/json" \
-                        -d "$CHECK_DOMAIN_CLI" \
+                        -d "$CHECK_DOMAIN_SCRIPT" \
                         "$RAILWAY_GRAPHQL" 2>&1 || echo "")
                       
-                      CLI_DOMAIN=$(echo "$CHECK_DOMAIN_CLI_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
+                      SCRIPT_DOMAIN=$(echo "$CHECK_DOMAIN_SCRIPT_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
                       
-                      if [ -n "$CLI_DOMAIN" ] && [ "$CLI_DOMAIN" != "null" ]; then
-                        PUBLIC_DOMAIN="$CLI_DOMAIN"
-                        echo "✅ Public domain detected via GraphQL API: ${PUBLIC_DOMAIN}"
+                      if [ -n "$SCRIPT_DOMAIN" ] && [ "$SCRIPT_DOMAIN" != "null" ]; then
+                        PUBLIC_DOMAIN="$SCRIPT_DOMAIN"
+                        echo "✅ Public domain found via GraphQL API: ${PUBLIC_DOMAIN}"
                       else
                         EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
                         PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
-                        echo "⚠️ Domain may still be provisioning"
+                        echo "⚠️ Domain not found - Railway may auto-generate after deployment"
                         echo "   Using expected format: ${EXPECTED_DOMAIN}"
                       fi
                     fi
                   else
-                    echo "⚠️ Railway CLI domain command failed (exit code: ${DOMAIN_CLI_EXIT})"
-                    echo ""
-                    echo "💡 Possible reasons:"
-                    echo "   - Railway CLI may need interactive authentication"
-                    echo "   - Project Token may not have domain creation permissions"
-                    echo "   - Service may need to be linked to project first"
-                    echo ""
-                    echo "   Checking if domain was created anyway via GraphQL API..."
-                    
-                    # Check via GraphQL API as fallback
-                    sleep 3
-                    CHECK_DOMAIN_CLI='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { domains { edges { node { id domain } } } } }"}'
-                    CHECK_DOMAIN_CLI_RESPONSE=$(curl -s -X POST \
-                      -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-                      -H "Content-Type: application/json" \
-                      -d "$CHECK_DOMAIN_CLI" \
-                      "$RAILWAY_GRAPHQL" 2>&1 || echo "")
-                    
-                    CLI_DOMAIN=$(echo "$CHECK_DOMAIN_CLI_RESPONSE" | jq -r '.data.service.domains.edges[].node.domain // empty' 2>/dev/null | grep -E '\.up\.railway\.app$' | head -n1 || echo "")
-                    
-                    if [ -n "$CLI_DOMAIN" ] && [ "$CLI_DOMAIN" != "null" ]; then
-                      PUBLIC_DOMAIN="$CLI_DOMAIN"
-                      echo "✅ Public domain found via GraphQL API: ${PUBLIC_DOMAIN}"
-                    else
-                      EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
-                      PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
-                      echo "⚠️ Domain not found - Railway may auto-generate after deployment"
-                      echo "   Using expected format: ${EXPECTED_DOMAIN}"
-                    fi
+                    echo "⚠️ Domain generation script not found, using fallback method..."
+                    EXPECTED_DOMAIN="${SERVICE_NAME}-production.up.railway.app"
+                    PUBLIC_DOMAIN="${EXPECTED_DOMAIN}"
+                    echo "   Using expected format: ${EXPECTED_DOMAIN}"
                   fi
                 fi
               fi
