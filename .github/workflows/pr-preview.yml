@@ -297,6 +297,18 @@ jobs:
                     echo "🔧 Trying Railway CLI to generate domain..."
                     export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
                     
+                    # Railway CLI needs project to be linked
+                    # Link project non-interactively using project ID
+                    echo "🔗 Linking Railway project..."
+                    LINK_OUTPUT=$(railway link -p "${RAILWAY_PROJECT_ID}" 2>&1)
+                    LINK_EXIT=$?
+                    
+                    if [ $LINK_EXIT -eq 0 ]; then
+                      echo "✅ Project linked successfully"
+                    else
+                      echo "⚠️ Project linking failed (may already be linked): ${LINK_OUTPUT}"
+                    fi
+                    
                     echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
                     DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                     DOMAIN_CLI_EXIT=$?
@@ -337,9 +349,15 @@ jobs:
                         fi
                       fi
                     else
-                      echo "⚠️ Railway CLI domain command failed"
+                      echo "⚠️ Railway CLI domain command failed (exit code: ${DOMAIN_CLI_EXIT})"
                       echo "Output: ${DOMAIN_CLI_OUTPUT}"
-                      echo "💡 Domain will be created automatically after deployment, or manually in Railway dashboard"
+                      echo ""
+                      echo "💡 Troubleshooting:"
+                      echo "   - Ensure RAILWAY_TOKEN is set correctly"
+                      echo "   - Check if project is linked: railway link -p ${RAILWAY_PROJECT_ID}"
+                      echo "   - Verify service name matches: ${SERVICE_NAME}"
+                      echo ""
+                      echo "   Domain will be created automatically after deployment, or manually in Railway dashboard"
                       echo "   Expected format: ${SERVICE_NAME}-production.up.railway.app"
                       echo "   After domain is created, ensure port 8080 is configured in Networking settings"
                     fi
@@ -599,13 +617,21 @@ jobs:
                   echo "🔧 Using Railway CLI to generate domain..."
                   export RAILWAY_TOKEN="${RAILWAY_TOKEN}"
                   
-                  # Railway CLI needs railway.toml (already created) and should work
-                  # The `railway domain` command generates a domain for the current service
-                  echo "📤 Running 'railway domain' to generate public domain..."
+                  # Railway CLI needs project to be linked
+                  # Link project non-interactively using project ID
+                  echo "🔗 Linking Railway project..."
+                  LINK_OUTPUT=$(railway link -p "${RAILWAY_PROJECT_ID}" 2>&1)
+                  LINK_EXIT=$?
+                  
+                  if [ $LINK_EXIT -eq 0 ]; then
+                    echo "✅ Project linked successfully"
+                  else
+                    echo "⚠️ Project linking failed (may already be linked): ${LINK_OUTPUT}"
+                  fi
                   
                   # Try railway domain command with service name (generates domain if none exists)
                   # Railway CLI supports -s/--service flag to specify service name
-                  echo "Running: railway domain -s ${SERVICE_NAME} --port 8080"
+                  echo "📤 Running: railway domain -s ${SERVICE_NAME} --port 8080"
                   DOMAIN_CLI_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port 8080 2>&1)
                   DOMAIN_CLI_EXIT=$?
                   
@@ -646,10 +672,15 @@ jobs:
                       fi
                     fi
                   else
-                    echo "⚠️ Railway CLI domain command failed"
+                    echo "⚠️ Railway CLI domain command failed (exit code: ${DOMAIN_CLI_EXIT})"
                     echo "Output: ${DOMAIN_CLI_OUTPUT}"
                     echo ""
-                    echo "💡 Domain generation via API/CLI failed"
+                    echo "💡 Troubleshooting:"
+                    echo "   - Ensure RAILWAY_TOKEN is set correctly"
+                    echo "   - Check if project is linked: railway link -p ${RAILWAY_PROJECT_ID}"
+                    echo "   - Verify service name matches: ${SERVICE_NAME}"
+                    echo ""
+                    echo "   Domain generation via API/CLI failed"
                     echo "   Please generate domain manually:"
                     echo "   1. Go to: https://railway.app/project/${RAILWAY_PROJECT_ID}/service/${FINAL_SERVICE_ID}"
                     echo "   2. Settings → Networking → Public Networking"
