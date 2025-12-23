@@ -185,21 +185,6 @@ export class TicketService extends BaseOTAService {
 
     const repo = await this.getOTARepository();
 
-    // 检查 batch_id 是否已存在（防止重复创建）
-    const existingBatch = await repo.findBatchById(request.batch_id!);
-    if (existingBatch) {
-      this.log('ota.tickets.bulk_generate.duplicate_batch_id', {
-        batch_id: request.batch_id,
-        partner_id: partnerId,
-        existing_partner_id: existingBatch.partner_id
-      }, 'warn');
-
-      throw {
-        code: ERR.VALIDATION_ERROR,
-        message: `Batch ID '${request.batch_id}' already exists. Please use a different batch_id or omit it to auto-generate.`
-      };
-    }
-
     // Get product from database first (needed for pricing and inventory)
     const product = await repo.findProductById(request.product_id);
     if (!product) {
@@ -298,8 +283,28 @@ export class TicketService extends BaseOTAService {
       pricing_snapshot: pricingSnapshot
     };
 
-    // Note: batch will be created in transaction with tickets later
-    // Create temporary batch object for QR generation (not saved yet)
+    // 【关键修复】在生成 QR 之前，先创建占位批次（状态 creating）
+    // 这利用数据库主键约束防止并发请求创建相同 batch_id
+    const placeholderBatch = await repo.createPlaceholderBatch(batchData);
+    if (!placeholderBatch) {
+      this.log('ota.tickets.bulk_generate.duplicate_batch_id', {
+        batch_id: request.batch_id,
+        partner_id: partnerId
+      }, 'warn');
+
+      throw {
+        code: ERR.VALIDATION_ERROR,
+        message: `Batch ID '${request.batch_id}' already exists or is being created. Please use a different batch_id or omit it to auto-generate.`
+      };
+    }
+
+    this.log('ota.tickets.bulk_generate.placeholder_created', {
+      batch_id: request.batch_id,
+      partner_id: partnerId,
+      status: 'creating'
+    });
+
+    // Create temporary batch object for QR generation
     const tempBatch = {
       batch_id: batchData.batch_id,
       distribution_mode: batchData.distribution_mode,
@@ -359,20 +364,33 @@ export class TicketService extends BaseOTAService {
     });
 
     // Generate tickets in parallel batches (using preprocessed logo)
+    // 如果 QR 生成失败，需要清理占位批次
     const qrStartTime = Date.now();
-    const tickets = await this.processInBatches(
-      ticketCodes,
-      (ticketCode) => this.generateSingleTicket(
-        ticketCode,
-        product,
-        tempBatch,  // Use temp batch object for QR generation
-        partnerId,
-        preprocessedLogo,  // Use preprocessed logo
-        qrColorConfig,
-        true  // Flag that logo is already preprocessed
-      ),
-      concurrencyLimit
-    );
+    let tickets: any[];
+    try {
+      tickets = await this.processInBatches(
+        ticketCodes,
+        (ticketCode) => this.generateSingleTicket(
+          ticketCode,
+          product,
+          tempBatch,  // Use temp batch object for QR generation
+          partnerId,
+          preprocessedLogo,  // Use preprocessed logo
+          qrColorConfig,
+          true  // Flag that logo is already preprocessed
+        ),
+        concurrencyLimit
+      );
+    } catch (qrError) {
+      // QR 生成失败，清理占位批次
+      this.log('ota.tickets.bulk_generate.qr_generation_failed', {
+        batch_id: request.batch_id,
+        error: qrError instanceof Error ? qrError.message : String(qrError)
+      }, 'error');
+
+      await repo.deletePlaceholderBatch(request.batch_id!);
+      throw qrError;
+    }
     const qrDuration = Date.now() - qrStartTime;
 
     this.log('ota.tickets.bulk_generation_qr_completed', {
@@ -382,14 +400,31 @@ export class TicketService extends BaseOTAService {
       avg_per_ticket_ms: Math.round(qrDuration / request.quantity)
     });
 
-    // Save batch AND tickets in a single transaction (atomic operation)
-    // If any step fails, everything is rolled back (batch, inventory, tickets)
+    // 完成批次创建：更新占位批次状态，插入票券
+    // 如果失败，占位批次会被清理
     const dbStartTime = Date.now();
-    const { batch, tickets: savedTickets } = await repo.createBatchWithTickets(
-      batchData,
-      tickets,
-      channelId
-    );
+    let batch: any;
+    let savedTickets: any[];
+
+    try {
+      const result = await repo.completeBatchWithTickets(
+        request.batch_id!,
+        tickets,
+        channelId
+      );
+      batch = result.batch;
+      savedTickets = result.tickets;
+    } catch (error) {
+      // 如果完成批次失败，清理占位批次
+      this.log('ota.tickets.bulk_generate.completion_failed', {
+        batch_id: request.batch_id,
+        error: error instanceof Error ? error.message : String(error)
+      }, 'error');
+
+      await repo.deletePlaceholderBatch(request.batch_id!);
+      throw error;
+    }
+
     const dbDuration = Date.now() - dbStartTime;
 
     const totalDuration = Date.now() - startTime;
@@ -398,7 +433,7 @@ export class TicketService extends BaseOTAService {
       product_id: request.product_id,
       total_generated: savedTickets.length,
       distribution_mode: batch.distribution_mode,
-      transaction_mode: 'unified',  // Indicates atomic batch+tickets creation
+      transaction_mode: 'placeholder_then_complete',  // 新的两阶段模式
       performance: {
         total_ms: totalDuration,
         qr_generation_ms: qrDuration,
@@ -408,7 +443,7 @@ export class TicketService extends BaseOTAService {
     });
 
     return {
-      batch_id: request.batch_id!,  // 已在 bulkGenerateTickets 中确保有值
+      batch_id: request.batch_id!,
       distribution_mode: batch.distribution_mode,
       pricing_snapshot: batch.pricing_snapshot,
       reseller_metadata: batch.reseller_metadata,

@@ -349,6 +349,155 @@ export class OTARepository {
   }
 
   /**
+   * 创建占位批次（状态为 creating）
+   * 利用数据库主键约束防止并发创建相同 batch_id
+   * @returns 创建的批次，如果 batch_id 已存在则返回 null
+   */
+  async createPlaceholderBatch(batchData: Partial<OTATicketBatchEntity>): Promise<OTATicketBatchEntity | null> {
+    try {
+      // 使用 INSERT IGNORE 语义：如果主键冲突则不插入
+      const result = await this.dataSource
+        .createQueryBuilder()
+        .insert()
+        .into(OTATicketBatchEntity)
+        .values({
+          ...batchData,
+          status: 'creating' as BatchStatus
+        })
+        .orIgnore() // MySQL: INSERT IGNORE
+        .execute();
+
+      // 如果没有插入任何行，说明 batch_id 已存在
+      if (result.raw.affectedRows === 0) {
+        logger.warn('ota.batch.placeholder_already_exists', {
+          batch_id: batchData.batch_id
+        });
+        return null;
+      }
+
+      logger.info('ota.batch.placeholder_created', {
+        batch_id: batchData.batch_id,
+        status: 'creating'
+      });
+
+      // 返回创建的批次
+      return this.batchRepo.findOne({
+        where: { batch_id: batchData.batch_id }
+      });
+    } catch (error) {
+      // 处理其他可能的错误（如唯一约束冲突）
+      logger.error('ota.batch.placeholder_creation_failed', {
+        batch_id: batchData.batch_id,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return null;
+    }
+  }
+
+  /**
+   * 完成批次创建：更新批次状态为 active，并插入票券
+   * 必须在占位批次创建后调用
+   */
+  async completeBatchWithTickets(
+    batchId: string,
+    tickets: Partial<PreGeneratedTicketEntity>[],
+    channelId: string = 'ota'
+  ): Promise<{ batch: OTATicketBatchEntity; tickets: PreGeneratedTicketEntity[] }> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Step 1: 获取并锁定批次记录
+      const batch = await queryRunner.manager.findOne(OTATicketBatchEntity, {
+        where: { batch_id: batchId, status: 'creating' as BatchStatus },
+        lock: { mode: 'pessimistic_write' }
+      });
+
+      if (!batch) {
+        throw new Error(`Batch ${batchId} not found or not in creating status`);
+      }
+
+      // Step 2: 更新库存
+      if (tickets.length > 0) {
+        const productId = tickets[0].product_id;
+        const quantity = tickets.length;
+
+        const inventory = await queryRunner.manager.findOne(ProductInventoryEntity, {
+          where: { product_id: productId }
+        });
+
+        if (inventory) {
+          if (!inventory.reserveInventory(channelId, quantity)) {
+            throw new Error('Insufficient inventory for reservation');
+          }
+          await queryRunner.manager.save(ProductInventoryEntity, inventory);
+
+          logger.info('ota.inventory.reserved_in_transaction', {
+            batch_id: batchId,
+            product_id: productId,
+            quantity
+          });
+        }
+      }
+
+      // Step 3: 批量插入票券
+      const BATCH_SIZE = 500;
+      let insertedCount = 0;
+
+      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
+        const chunk = tickets.slice(i, i + BATCH_SIZE);
+        await queryRunner.manager.insert(TicketEntity, chunk);
+        insertedCount += chunk.length;
+      }
+
+      logger.info('ota.tickets.inserted_in_transaction', {
+        batch_id: batchId,
+        tickets_count: insertedCount
+      });
+
+      // Step 4: 更新批次状态为 active
+      batch.status = 'active';
+      batch.total_quantity = tickets.length;
+      const savedBatch = await queryRunner.manager.save(OTATicketBatchEntity, batch);
+
+      // Step 5: 提交事务
+      await queryRunner.commitTransaction();
+
+      logger.info('ota.batch_with_tickets.transaction_committed', {
+        batch_id: batchId,
+        tickets_count: insertedCount,
+        status: 'active'
+      });
+
+      return { batch: savedBatch, tickets: tickets as unknown as PreGeneratedTicketEntity[] };
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+
+      logger.error('ota.batch_completion.transaction_rolled_back', {
+        batch_id: batchId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * 删除失败的占位批次（用于清理 creating 状态的批次）
+   */
+  async deletePlaceholderBatch(batchId: string): Promise<boolean> {
+    const result = await this.batchRepo.delete({
+      batch_id: batchId,
+      status: 'creating' as BatchStatus
+    });
+    return (result.affected || 0) > 0;
+  }
+
+  /**
    * 创建批次和票券在同一个事务中
    * 确保批次创建、库存扣减、票券插入的原子性
    * 任何步骤失败都会完全回滚

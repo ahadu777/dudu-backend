@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 import { OTAResellerEntity } from '../../../models/ota-reseller.entity';
 
-export type BatchStatus = 'active' | 'expired' | 'cancelled';
+export type BatchStatus = 'creating' | 'active' | 'expired' | 'cancelled';
 export type DistributionMode = 'direct_sale' | 'reseller_batch';
 
 interface PricingSnapshot {
@@ -122,7 +122,7 @@ export class OTATicketBatchEntity {
 
   @Column({
     type: 'enum',
-    enum: ['active', 'expired', 'cancelled'],
+    enum: ['creating', 'active', 'expired', 'cancelled'],
     default: 'active'
   })
   status!: BatchStatus;
