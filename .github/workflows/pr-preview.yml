@@ -139,28 +139,51 @@ jobs:
           echo "   Repository: ${REPO_FULL}"
           echo "   Branch: ${PR_BRANCH:-main}"
           
-          # Try to connect service to GitHub repository via Railway API
-          # This enables automatic deployments when code is pushed to the PR
-          # Note: Railway API may require different mutation format
-          CONNECT_GITHUB_MUTATION='{"query":"mutation { serviceConnectRepo(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", repo: \"'${REPO_FULL}'\", branch: \"'${PR_BRANCH:-main}'\"}) { id } }"}'
+          # Initialize repo connection status
+          REPO_CONNECTED=false
+          
+          # Use the correct GraphQL mutation: serviceConnect
+          # The mutation connects a service to a GitHub repository
+          CONNECT_GITHUB_MUTATION='{"query":"mutation { serviceConnect(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", repo: \"'${REPO_FULL}'\", branch: \"'${PR_BRANCH:-main}'\"}) { id } }"}'
           CONNECT_GITHUB_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$CONNECT_GITHUB_MUTATION" \
             "$RAILWAY_GRAPHQL" 2>&1 || echo "")
           
-          if echo "$CONNECT_GITHUB_RESPONSE" | jq -e '.data.serviceConnectRepo.id' > /dev/null 2>&1; then
-            echo "✅ Service connected to GitHub repository via API"
+          if echo "$CONNECT_GITHUB_RESPONSE" | jq -e '.data.serviceConnect.id' > /dev/null 2>&1; then
+            echo "✅ Service connected to GitHub repository via API!"
             echo "   Railway will auto-deploy on commits to branch: ${PR_BRANCH:-main}"
+            REPO_CONNECTED=true
           else
-            echo "⚠️ API connection failed (may not be supported via API)"
-            echo "Response: ${CONNECT_GITHUB_RESPONSE}"
-            echo "💡 Service will need manual GitHub connection in Railway dashboard:"
-            echo "   1. Go to: https://railway.app/project/${RAILWAY_PROJECT_ID}/service/${FINAL_SERVICE_ID}"
-            echo "   2. Settings → Connect GitHub repository"
-            echo "   3. Select: ${REPO_FULL}"
-            echo "   4. Select branch: ${PR_BRANCH:-main}"
-            echo "   After connecting, Railway will auto-deploy on commits"
+            # Check if error is about mutation format
+            if echo "$CONNECT_GITHUB_RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+              ERROR_MSG=$(echo "$CONNECT_GITHUB_RESPONSE" | jq -r '.errors[0].message' 2>/dev/null || echo "")
+              echo "⚠️ GraphQL mutation error: ${ERROR_MSG}"
+              
+              # Try alternative mutation format - serviceConnect might need different input structure
+              echo "🔧 Trying alternative mutation format..."
+              CONNECT_GITHUB_MUTATION2='{"query":"mutation { serviceConnect(input: {serviceId: \"'${FINAL_SERVICE_ID}'\", source: {repo: \"'${REPO_FULL}'\", branch: \"'${PR_BRANCH:-main}'\"}}) { id } }"}'
+              CONNECT_GITHUB_RESPONSE2=$(curl -s -X POST \
+                -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "$CONNECT_GITHUB_MUTATION2" \
+                "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+              
+              if echo "$CONNECT_GITHUB_RESPONSE2" | jq -e '.data.serviceConnect.id' > /dev/null 2>&1; then
+                echo "✅ Service connected to GitHub repository via API (alternative format)!"
+                REPO_CONNECTED=true
+              else
+                echo "⚠️ Both mutation formats failed"
+                echo "Response: ${CONNECT_GITHUB_RESPONSE2}"
+                echo "💡 Service will need manual GitHub connection in Railway dashboard"
+                REPO_CONNECTED=false
+              fi
+            else
+              echo "⚠️ API connection failed"
+              echo "Response: ${CONNECT_GITHUB_RESPONSE}"
+              REPO_CONNECTED=false
+            fi
           fi
           
           # Create or verify public domain exists
@@ -296,50 +319,77 @@ jobs:
           fi
           
           # Trigger initial deployment
-          # Since Railway CLI doesn't work well in CI/CD, we'll trigger deployment via API
-          # Once service is connected to GitHub repo, Railway will auto-deploy on commits
           echo "📦 Triggering initial deployment..."
           
-          # Railway services connected to GitHub repos auto-deploy on commits
-          # For the initial deployment, we can trigger via Railway dashboard or API
-          # Since API methods are limited, we'll provide instructions
-          echo "💡 Service is created and configured"
-          echo "   To make service online and connected to repo:"
-          echo ""
-          echo "   Option 1: Connect to GitHub repo (recommended for auto-deploy)"
-          echo "   1. Go to: https://railway.app/project/${RAILWAY_PROJECT_ID}/service/${FINAL_SERVICE_ID}"
-          echo "   2. Click 'Settings' → 'Connect GitHub repository'"
-          echo "   3. Select: ${REPO_FULL}"
-          echo "   4. Select branch: ${PR_BRANCH:-main}"
-          echo "   5. Railway will automatically deploy"
-          echo ""
-          echo "   Option 2: Manual deployment"
-          echo "   1. Go to: https://railway.app/project/${RAILWAY_PROJECT_ID}/service/${FINAL_SERVICE_ID}"
-          echo "   2. Click 'Deploy' or 'Redeploy' button"
-          echo ""
-          echo "   After first deployment, if repo is connected, Railway will auto-deploy on PR updates"
+          # If repo was connected successfully, Railway should auto-deploy
+          # But we'll also try to trigger deployment explicitly
+          if [ "$REPO_CONNECTED" = true ]; then
+            echo "✅ Repository connected - Railway should auto-deploy"
+            echo "⏳ Waiting a moment for Railway to start deployment..."
+            sleep 5
+            
+            # Check if deployment started
+            DEPLOYMENT_CHECK_QUERY='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { deployments { edges { node { id status createdAt } } } } }"}'
+            DEPLOYMENT_CHECK_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$DEPLOYMENT_CHECK_QUERY" \
+              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+            
+            LATEST_DEPLOYMENT=$(echo "$DEPLOYMENT_CHECK_RESPONSE" | jq -r '.data.service.deployments.edges[0].node.id // empty' 2>/dev/null || echo "")
+            if [ -n "$LATEST_DEPLOYMENT" ] && [ "$LATEST_DEPLOYMENT" != "null" ]; then
+              echo "✅ Deployment detected (ID: ${LATEST_DEPLOYMENT})"
+            else
+              echo "⚠️ No deployment detected yet - Railway may be starting it"
+            fi
+          else
+            echo "⚠️ Repository not connected via API"
+            echo "   Service is created and configured, but needs:"
+            echo ""
+            echo "   1. Connect to GitHub repo:"
+            echo "      https://railway.app/project/${RAILWAY_PROJECT_ID}/service/${FINAL_SERVICE_ID}"
+            echo "      Settings → Connect GitHub repository → ${REPO_FULL}"
+            echo "      Branch: ${PR_BRANCH:-main}"
+            echo ""
+            echo "   2. Or manually trigger deployment:"
+            echo "      Click 'Deploy' button in Railway dashboard"
+            echo ""
+            echo "   After connecting repo, Railway will auto-deploy on PR updates"
+          fi
           
-          # Try to trigger deployment via Railway REST API (if endpoint exists)
-          RAILWAY_API="https://api.railway.app/v1"
+          # Try to trigger deployment via Railway GraphQL API
+          # Try using deploymentRestart on latest deployment, or service update
           echo ""
-          echo "🔧 Attempting to trigger deployment via Railway API..."
+          echo "🔧 Attempting to trigger deployment via GraphQL API..."
           
-          # Try Railway REST API endpoint for triggering deployments
-          DEPLOY_API_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          # Get latest deployment to restart it
+          GET_DEPLOYMENT_QUERY='{"query":"query { service(id: \"'${FINAL_SERVICE_ID}'\") { deployments { edges { node { id } } } } }"}'
+          GET_DEPLOYMENT_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
             -H "Content-Type: application/json" \
-            "${RAILWAY_API}/services/${FINAL_SERVICE_ID}/deploy" 2>&1 || echo "")
+            -d "$GET_DEPLOYMENT_QUERY" \
+            "$RAILWAY_GRAPHQL" 2>&1 || echo "")
           
-          HTTP_CODE=$(echo "$DEPLOY_API_RESPONSE" | tail -n1)
-          DEPLOY_JSON=$(echo "$DEPLOY_API_RESPONSE" | sed '$d')
+          LATEST_DEPLOY_ID=$(echo "$GET_DEPLOYMENT_RESPONSE" | jq -r '.data.service.deployments.edges[0].node.id // empty' 2>/dev/null || echo "")
           
-          if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "201" ]; then
-            echo "✅ Deployment triggered via Railway REST API"
-            echo "Response: ${DEPLOY_JSON}"
+          if [ -n "$LATEST_DEPLOY_ID" ] && [ "$LATEST_DEPLOY_ID" != "null" ]; then
+            echo "📋 Found existing deployment (ID: ${LATEST_DEPLOY_ID}), attempting to restart..."
+            RESTART_MUTATION='{"query":"mutation { deploymentRestart(input: {deploymentId: \"'${LATEST_DEPLOY_ID}'\"}) { id } }"}'
+            RESTART_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$RESTART_MUTATION" \
+              "$RAILWAY_GRAPHQL" 2>&1 || echo "")
+            
+            if echo "$RESTART_RESPONSE" | jq -e '.data.deploymentRestart.id' > /dev/null 2>&1; then
+              echo "✅ Deployment restarted via GraphQL API"
+            else
+              echo "⚠️ Deployment restart failed: ${RESTART_RESPONSE}"
+            fi
           else
-            echo "⚠️ Railway REST API endpoint not available (HTTP ${HTTP_CODE})"
-            echo "   Service is ready but needs manual deployment trigger"
-            echo "   See instructions above"
+            echo "💡 No existing deployment found"
+            echo "   If repo is connected, Railway will create deployment automatically"
+            echo "   Otherwise, manual deployment trigger needed"
           fi
           
           # Wait for deployment to start
