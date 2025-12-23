@@ -299,8 +299,8 @@ jobs:
                     if [ -f scripts/generate-domain.sh ]; then
                       chmod +x scripts/generate-domain.sh
                       set +e  # Don't exit on error
-                      # Pass SERVICE_NAME and PORT, script will use PR_NUMBER if available
-                      DOMAIN_SCRIPT_OUTPUT=$(PR_NUMBER="${PR_NUMBER}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1)
+                      # Pass SERVICE_NAME, PORT, PR_NUMBER, and RAILWAY_PROJECT_ID to script
+                      DOMAIN_SCRIPT_OUTPUT=$(PR_NUMBER="${PR_NUMBER}" RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1)
                       DOMAIN_SCRIPT_EXIT=$?
                       set -e  # Re-enable exit on error
                       
@@ -701,8 +701,8 @@ jobs:
                   if [ -f scripts/generate-domain.sh ]; then
                     chmod +x scripts/generate-domain.sh
                     set +e  # Don't exit on error
-                    # Pass SERVICE_NAME and PORT, script will use PR_NUMBER if available
-                    DOMAIN_SCRIPT_OUTPUT=$(PR_NUMBER="${PR_NUMBER}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1)
+                    # Pass SERVICE_NAME, PORT, PR_NUMBER, and RAILWAY_PROJECT_ID to script
+                    DOMAIN_SCRIPT_OUTPUT=$(PR_NUMBER="${PR_NUMBER}" RAILWAY_PROJECT_ID="${RAILWAY_PROJECT_ID}" ./scripts/generate-domain.sh "${SERVICE_NAME}" 8080 2>&1)
                     DOMAIN_SCRIPT_EXIT=$?
                     set -e  # Re-enable exit on error
                     

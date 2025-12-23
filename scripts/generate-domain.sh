@@ -76,12 +76,39 @@ fi
 echo "✅ Railway CLI found: $(railway --version 2>&1 | head -1)"
 echo ""
 
+# Ensure railway.toml exists with project context (needed for Railway CLI)
+if [ -n "$RAILWAY_PROJECT_ID" ] && [ ! -f railway.toml ]; then
+  echo "📝 Creating railway.toml with project context..."
+  printf 'project = "%s"\n\n[build]\nbuilder = "DOCKERFILE"\n\n[deploy]\nstartCommand = "npm start"\nhealthcheckPath = "/healthz"\n' "${RAILWAY_PROJECT_ID}" > railway.toml
+  echo "✅ railway.toml created"
+elif [ -f railway.toml ]; then
+  echo "✅ railway.toml exists"
+fi
+
+# Try linking project if RAILWAY_PROJECT_ID is available
+if [ -n "$RAILWAY_PROJECT_ID" ]; then
+  echo "🔗 Attempting to link Railway project..."
+  LINK_OUTPUT=$(railway link --project "${RAILWAY_PROJECT_ID}" 2>&1 || echo "LINK_FAILED")
+  if echo "$LINK_OUTPUT" | grep -q "LINK_FAILED\|Error\|Unauthorized"; then
+    echo "⚠️ Project linking failed or not needed"
+    echo "   Output: ${LINK_OUTPUT}"
+    echo "   Continuing with domain command..."
+  else
+    echo "✅ Project linked successfully"
+  fi
+fi
+
 # Generate domain using Railway CLI
 echo "📤 Running: railway domain -s ${SERVICE_NAME} --port ${PORT}"
 echo ""
 
 DOMAIN_OUTPUT=$(railway domain -s "${SERVICE_NAME}" --port "${PORT}" 2>&1)
 EXIT_CODE=$?
+
+# Always show the output for debugging
+echo "Railway CLI output:"
+echo "${DOMAIN_OUTPUT}"
+echo ""
 
 if [ $EXIT_CODE -eq 0 ]; then
   echo "✅ Domain generation successful!"
