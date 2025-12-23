@@ -49,16 +49,7 @@ jobs:
           echo "✅ RAILWAY_PROJECT_ID: ${RAILWAY_PROJECT_ID}"
           
           # Create railway.toml with project ID for Railway CLI context
-          cat > railway.toml << EOF
-          project = "${RAILWAY_PROJECT_ID}"
-          
-          [build]
-          builder = "DOCKERFILE"
-          
-          [deploy]
-          startCommand = "npm start"
-          healthcheckPath = "/healthz"
-          EOF
+          printf 'project = "%s"\n\n[build]\nbuilder = "DOCKERFILE"\n\n[deploy]\nstartCommand = "npm start"\nhealthcheckPath = "/healthz"\n' "${RAILWAY_PROJECT_ID}" > railway.toml
           
           echo "✅ Created railway.toml with project context"
           
@@ -309,14 +300,7 @@ jobs:
                       echo "   Project context should be set"
                     else
                       echo "⚠️ railway.toml not found - creating it..."
-                      cat > railway.toml << EOF
-[build]
-builder = "DOCKERFILE"
-
-[deploy]
-startCommand = "npm start"
-healthcheckPath = "/healthz"
-EOF
+                      printf '[build]\nbuilder = "DOCKERFILE"\n\n[deploy]\nstartCommand = "npm start"\nhealthcheckPath = "/healthz"\n' > railway.toml
                     fi
                     
                     # Railway CLI may need project to be linked before domain command works
@@ -684,14 +668,7 @@ EOF
                     echo "   Project context should be set"
                   else
                     echo "⚠️ railway.toml not found - creating it..."
-                    cat > railway.toml << EOF
-[build]
-builder = "DOCKERFILE"
-
-[deploy]
-startCommand = "npm start"
-healthcheckPath = "/healthz"
-EOF
+                    printf '[build]\nbuilder = "DOCKERFILE"\n\n[deploy]\nstartCommand = "npm start"\nhealthcheckPath = "/healthz"\n' > railway.toml
                   fi
                   
                   # Railway CLI may need project to be linked before domain command works
