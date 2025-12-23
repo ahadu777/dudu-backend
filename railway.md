@@ -8,4 +8,6 @@ with auto deploy
 
 
 port check 
-public domain test
+
+
+service public domain test auto generation PR13
