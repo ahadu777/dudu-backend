@@ -1699,6 +1699,49 @@ router.get('/coverage', (req: Request, res: Response) => {
 router.get('/tests', (_req: Request, res: Response) => {
   try {
     const postmanDir = path.join(process.cwd(), 'postman/auto-generated');
+    const reportsDir = path.join(process.cwd(), 'reports/newman');
+
+    // Parse Newman XML report to get test results
+    const parseNewmanReport = (reportPath: string): { passed: number; failed: number; total: number; timestamp: string } | null => {
+      try {
+        if (!fs.existsSync(reportPath)) return null;
+        const xml = fs.readFileSync(reportPath, 'utf-8');
+
+        // Parse testsuites attributes
+        const testsuitesMatch = xml.match(/<testsuites[^>]*tests="(\d+)"[^>]*>/);
+        const timestampMatch = xml.match(/timestamp="([^"]+)"/);
+
+        // Count failures from testsuite elements
+        const failuresMatches = xml.match(/failures="(\d+)"/g) || [];
+        const errorsMatches = xml.match(/errors="(\d+)"/g) || [];
+
+        const totalFailures = failuresMatches.reduce((sum, m) => {
+          const match = m.match(/failures="(\d+)"/);
+          return sum + (match ? parseInt(match[1], 10) : 0);
+        }, 0);
+
+        const totalErrors = errorsMatches.reduce((sum, m) => {
+          const match = m.match(/errors="(\d+)"/);
+          return sum + (match ? parseInt(match[1], 10) : 0);
+        }, 0);
+
+        const total = testsuitesMatch ? parseInt(testsuitesMatch[1], 10) : 0;
+        const failed = totalFailures + totalErrors;
+        const passed = total - failed;
+
+        // Format timestamp
+        let timestamp = '';
+        if (timestampMatch) {
+          const date = new Date(timestampMatch[1]);
+          timestamp = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        return { passed, failed, total, timestamp };
+      } catch (e) {
+        return null;
+      }
+    };
+
     const collections: Array<{
       filename: string;
       name: string;
@@ -1706,7 +1749,8 @@ router.get('/tests', (_req: Request, res: Response) => {
       id: string;
       testCases: Array<{ name: string; folder: string }>;
       totalTests: number;
-      apiSequence: Array<{ step: number; name: string; method: string; path: string; folder: string }>;
+      apiSequence: Array<{ step: number; name: string; method: string; path: string; folder: string; userAction: string }>;
+      testResult: { passed: number; failed: number; total: number; timestamp: string } | null;
     }> = [];
 
     // Read all Postman collection JSON files
@@ -1717,7 +1761,7 @@ router.get('/tests', (_req: Request, res: Response) => {
         try {
           const content = JSON.parse(fs.readFileSync(path.join(postmanDir, file), 'utf-8'));
           const testCases: Array<{ name: string; folder: string }> = [];
-          const apiSequence: Array<{ step: number; name: string; method: string; path: string; folder: string }> = [];
+          const apiSequence: Array<{ step: number; name: string; method: string; path: string; folder: string; userAction: string }> = [];
           let stepCounter = 0;
 
           // Extract test names AND API sequence recursively from Postman collection structure
@@ -1744,7 +1788,9 @@ router.get('/tests', (_req: Request, res: Response) => {
                     path = item.request.url.raw.replace(/\{\{[^}]+\}\}/g, '').replace(/^https?:\/\/[^/]+/, '') || '/';
                   }
                 }
-                apiSequence.push({ step: stepCounter, name: item.name, method, path, folder });
+                // Extract user action from Postman request description (data-driven)
+                const userAction = item.description || '';
+                apiSequence.push({ step: stepCounter, name: item.name, method, path, folder, userAction });
               }
             }
           };
@@ -1765,6 +1811,11 @@ router.get('/tests', (_req: Request, res: Response) => {
             id = match ? `US-${match[1].padStart(3, '0')}` : file;
           }
 
+          // Find matching Newman report (e.g., prd-001-xxx.json -> prd-001-xxx-e2e.xml)
+          const reportBaseName = file.replace('.postman_collection.json', '').replace('.json', '');
+          const reportPath = path.join(reportsDir, `${reportBaseName}-e2e.xml`);
+          const testResult = parseNewmanReport(reportPath);
+
           collections.push({
             filename: file,
             name: content.info?.name || file,
@@ -1772,7 +1823,8 @@ router.get('/tests', (_req: Request, res: Response) => {
             id,
             testCases,
             totalTests: testCases.length,
-            apiSequence
+            apiSequence,
+            testResult
           });
         } catch (e) {
           logger.warn(`Failed to parse ${file}:`, e);
@@ -2020,14 +2072,24 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
       </div>
 
       ${collections.filter(c => c.type === 'prd' || c.type === 'story').map(c => `
-      <div style="background: white; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; overflow: hidden;" class="flow-card">
+      <div style="background: white; border: 1px solid ${c.testResult ? (c.testResult.failed === 0 ? '#27ae60' : '#e74c3c') : '#ddd'}; border-radius: 6px; margin-bottom: 12px; overflow: hidden;" class="flow-card">
         <div class="flow-header" data-target="flow-${c.filename.replace(/[^a-zA-Z0-9]/g, '-')}"
              style="padding: 12px 16px; background: ${c.type === 'prd' ? '#e8f4fd' : '#e8fdf4'}; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-          <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ${c.testResult ? (c.testResult.failed === 0
+              ? '<span style="color: #27ae60; font-size: 1.2em;">✅</span>'
+              : '<span style="color: #e74c3c; font-size: 1.2em;">❌</span>')
+              : '<span style="color: #95a5a6; font-size: 1.2em;">⏸️</span>'}
             <span style="font-weight: 600; color: #2c3e50;">${c.id}</span>
-            <span style="color: #7f8c8d; margin-left: 8px; font-size: 0.9em;">${c.name}</span>
+            <span style="color: #7f8c8d; font-size: 0.9em;">${c.name}</span>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
+            ${c.testResult ? `
+              <span style="background: ${c.testResult.failed === 0 ? '#27ae60' : '#e74c3c'}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">
+                ${c.testResult.passed}/${c.testResult.total} pass
+              </span>
+              <span style="color: #95a5a6; font-size: 0.75em;" title="Last run">${c.testResult.timestamp}</span>
+            ` : `<span style="color: #95a5a6; font-size: 0.8em;">No results</span>`}
             <span style="background: ${c.type === 'prd' ? '#2980b9' : '#27ae60'}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${c.apiSequence.length} API calls</span>
             <span style="color: #7f8c8d;">▼</span>
           </div>
@@ -2040,6 +2102,7 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
               <div style="flex: 1;">
                 <code style="color: #2c3e50;">${api.path || '/'}</code>
                 <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
+                ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
               </div>
             </div>
             `).join('')}
@@ -2050,6 +2113,187 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
 
       <div style="background: #d4edda; padding: 12px; border-radius: 4px; margin-top: 16px;">
         <p style="margin: 0; color: #155724;"><strong>✅ Key insight:</strong> Each collection above represents a complete E2E flow. Newman runs the requests in order, passing variables between steps (e.g., order_id from creation → payment → QR generation).</p>
+      </div>
+    </div>
+
+    <!-- Cross-PRD Gap Analysis - CEO's Key Concern -->
+    <div style="background: #fff5f5; border: 2px solid #e74c3c; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px;">
+      <h2 style="color: #c0392b; margin-bottom: 12px;">🔴 Cross-PRD Gap Analysis (Handoff Points)</h2>
+      <p style="color: #34495e; margin-bottom: 16px;">
+        <strong>CEO's Fear:</strong> Individual PRD tests pass, but handoffs between PRDs are untested.
+        This section automatically detects where one PRD's output should connect to another PRD's input.
+      </p>
+
+      ${(() => {
+        // Define known cross-PRD handoff points
+        const handoffs = [
+          {
+            source: { prd: 'PRD-008', output: '/miniprogram/tickets/:code/qr', desc: 'Miniprogram generates ticket QR' },
+            target: { prd: 'PRD-006', input: '/operators/validate-ticket', desc: 'Operator scans to validate' },
+            userFlow: 'User purchases on miniprogram → Shows QR → Operator scans at venue',
+            gapQuestion: 'Is there a single test that chains: order → payment → QR → operator scan?'
+          },
+          {
+            source: { prd: 'PRD-008', output: '/miniprogram/orders/:id/simulate-payment', desc: 'Payment creates ticket' },
+            target: { prd: 'PRD-006', input: '/api/tickets/validate', desc: 'Ticket needs activation check' },
+            userFlow: 'User pays → Ticket created → User checks ticket status',
+            gapQuestion: 'Does the ticket from miniprogram order work with the activation system?'
+          },
+          {
+            source: { prd: 'PRD-002', output: '/api/ota/tickets/bulk-generate', desc: 'OTA generates pre-made tickets' },
+            target: { prd: 'PRD-003', input: '/venue/scan', desc: 'Venue redeems tickets' },
+            userFlow: 'OTA partner generates tickets → Reseller distributes → Customer uses at venue',
+            gapQuestion: 'Is there an E2E test from OTA generation to venue redemption?'
+          }
+        ];
+
+        // Check which handoffs are covered by looking at test collections
+        const testedHandoffs = handoffs.map(h => {
+          // Check if any collection contains BOTH the source output and target input patterns
+          const sourcePattern = h.source.output.replace('/:code', '').replace('/:id', '').toLowerCase();
+          const targetPattern = h.target.input.replace('/:code', '').replace('/:id', '').toLowerCase();
+
+          const hasChainedTest = collections.some(c => {
+            const paths = c.apiSequence.map(a => a.path.toLowerCase());
+            const hasSource = paths.some(p => p.includes(sourcePattern.split('/').pop() || ''));
+            const hasTarget = paths.some(p => p.includes(targetPattern.split('/').pop() || ''));
+            return hasSource && hasTarget;
+          });
+
+          return { ...h, isTested: hasChainedTest };
+        });
+
+        const gaps = testedHandoffs.filter(h => !h.isTested);
+        const covered = testedHandoffs.filter(h => h.isTested);
+
+        return `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px;">
+            <div style="background: white; padding: 16px; border-radius: 6px; text-align: center; border: 2px solid ${gaps.length > 0 ? '#e74c3c' : '#27ae60'};">
+              <div style="font-size: 2em; font-weight: 700; color: ${gaps.length > 0 ? '#e74c3c' : '#27ae60'};">${gaps.length}</div>
+              <div style="color: #7f8c8d; font-size: 0.85em;">Untested Gaps</div>
+            </div>
+            <div style="background: white; padding: 16px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 2em; font-weight: 700; color: #27ae60;">${covered.length}</div>
+              <div style="color: #7f8c8d; font-size: 0.85em;">Covered Handoffs</div>
+            </div>
+            <div style="background: white; padding: 16px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 2em; font-weight: 700; color: #3498db;">${handoffs.length}</div>
+              <div style="color: #7f8c8d; font-size: 0.85em;">Total Handoffs</div>
+            </div>
+          </div>
+
+          ${gaps.length > 0 ? `
+          <div style="margin-bottom: 16px;">
+            <h3 style="color: #e74c3c; font-size: 1.1em; margin-bottom: 12px;">⚠️ Untested Cross-PRD Handoffs</h3>
+            ${gaps.map(g => `
+            <div style="background: white; border-left: 4px solid #e74c3c; padding: 16px; margin-bottom: 12px; border-radius: 0 6px 6px 0;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.85em;">${g.source.prd}</span>
+                <span style="color: #7f8c8d;">→</span>
+                <span style="background: #27ae60; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.85em;">${g.target.prd}</span>
+              </div>
+              <div style="font-weight: 600; color: #2c3e50; margin-bottom: 4px;">${g.userFlow}</div>
+              <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 8px;">
+                <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">${g.source.output}</code>
+                → <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">${g.target.input}</code>
+              </div>
+              <div style="background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 4px; font-size: 0.9em;">
+                <strong>Gap Question:</strong> ${g.gapQuestion}
+              </div>
+            </div>
+            `).join('')}
+          </div>
+          ` : ''}
+
+          ${covered.length > 0 ? `
+          <div>
+            <h3 style="color: #27ae60; font-size: 1.1em; margin-bottom: 12px;">✅ Covered Cross-PRD Handoffs</h3>
+            ${covered.map(g => `
+            <div style="background: white; border-left: 4px solid #27ae60; padding: 12px 16px; margin-bottom: 8px; border-radius: 0 6px 6px 0;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.85em;">${g.source.prd}</span>
+                <span style="color: #7f8c8d;">→</span>
+                <span style="background: #27ae60; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.85em;">${g.target.prd}</span>
+                <span style="color: #7f8c8d; font-size: 0.9em; margin-left: 8px;">${g.userFlow}</span>
+              </div>
+            </div>
+            `).join('')}
+          </div>
+          ` : ''}
+        `;
+      })()}
+    </div>
+
+    <!-- Data-Driven User Context: Future Enhancement -->
+    <div style="background: #fff8e1; border: 2px solid #f9a825; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px;">
+      <h2 style="color: #f57f17; margin-bottom: 12px;">💡 User Action Context (Data-Driven Enhancement)</h2>
+      <p style="color: #34495e; margin-bottom: 16px;">
+        To bridge "what code does" with "what user experiences", user action context should come from the
+        <strong>Postman collection description field</strong>, not hardcoded UI.
+      </p>
+
+      <div style="background: white; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+        <h3 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 1em;">The Problem</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 8px; width: 50%;"><strong>Current:</strong> Hardcoded user action mappings</td>
+            <td style="padding: 8px; color: #e74c3c;">❌ Requires code changes to update</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;"><strong>Goal:</strong> Description in Postman JSON</td>
+            <td style="padding: 8px; color: #27ae60;">✅ Update data, UI reflects automatically</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="background: white; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+        <h3 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 1em;">The Solution: Postman Request Descriptions</h3>
+        <p style="color: #7f8c8d; margin-bottom: 12px;">Each request in Postman can have a <code>description</code> field:</p>
+        <pre style="background: #2c3e50; color: #ecf0f1; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 0.85em; margin: 0;">{
+  "name": "A4.1 Create order - success",
+  "description": "User taps 'Buy Now' → fills contact info → confirms order",
+  "request": {
+    "method": "POST",
+    "url": "/miniprogram/orders"
+  }
+}</pre>
+      </div>
+
+      <div style="background: white; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+        <h3 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 1em;">Implementation Status</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+          <thead style="background: #f5f5f5;">
+            <tr>
+              <th style="padding: 8px; text-align: left;">Component</th>
+              <th style="padding: 8px; text-align: left;">Status</th>
+              <th style="padding: 8px; text-align: left;">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #eee;">
+              <td style="padding: 8px;">UI Parsing</td>
+              <td style="padding: 8px; color: #27ae60;">✅ Ready</td>
+              <td style="padding: 8px; color: #7f8c8d;">Displays 👤 badge when description exists</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #eee;">
+              <td style="padding: 8px;">Postman Collection</td>
+              <td style="padding: 8px; color: #27ae60;">✅ Has structure</td>
+              <td style="padding: 8px; color: #7f8c8d;">Collection/Folder descriptions exist</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px;">Request Descriptions</td>
+              <td style="padding: 8px; color: #f39c12;">⏳ Pending</td>
+              <td style="padding: 8px; color: #7f8c8d;">Need to add user action context</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="background: #e8f5e9; padding: 12px; border-radius: 4px;">
+        <p style="margin: 0; color: #2e7d32;">
+          <strong>Next Step:</strong> Add <code>"description": "User taps X → sees Y"</code> to Postman requests.
+          The E2E API Flows above will automatically show a 👤 badge with the user action.
+        </p>
       </div>
     </div>
 

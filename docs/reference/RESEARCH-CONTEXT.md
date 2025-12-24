@@ -45,9 +45,40 @@ Market signals      ──┘         ↓
 
 ## What We're Building
 
+### The Two-Layer System
+
+We have **two complementary layers** solving different problems:
+
+```
+UPSTREAM (Collection)              DOWNSTREAM (Output)
+─────────────────────              ────────────────────
+Research Hub                       Memo System
+├── Topics                         ├── Synthesized thinking
+├── References (links, exports)    ├── Presentation-ready content
+├── Questions to answer            ├── Tagged for audience
+└── Working notes                  └── Connected to PRDs
+
+         ↓ Build Context ↓              ↓ leads_to ↓
+         ↓ AI Synthesis  ↓              ↓          ↓
+         └──────────────────────────────┘          PRD → Product
+```
+
+### Research Hub (Implemented 2024-12)
+
+The **upstream layer** - for collecting and organizing evidence BEFORE synthesis.
+
+| What | Where | Purpose |
+|------|-------|---------|
+| Topics | `/research` | Group research by question/domain |
+| References | Per topic | Links to ChatGPT exports, Notion pages, screenshots |
+| Build Context | Button | Export everything for AI tools |
+| Insights | `/research/insights/:id` | Publish synthesis as blog |
+
+**Solves the "AI Chat Sprawl" problem:** Instead of having 200+ scattered ChatGPT/Gemini chats, you add important ones as references to a topic.
+
 ### Memo System (Implemented)
 
-A lightweight way to capture **synthesized thinking** - not raw notes, but presentation-ready strategic content that has already evolved through multiple conversations.
+The **downstream layer** - for capturing **synthesized thinking** that's ready to share.
 
 | What | Where | Purpose |
 |------|-------|---------|
@@ -161,6 +192,7 @@ This follows the same philosophy we applied to product development:
 | **Code** | Scattered implementations | Card (API contract) | Testable, reviewable |
 | **Features** | Vague requirements | Story (user capability) | Acceptance criteria |
 | **Product** | Ideas in meetings | PRD (product spec) | Prioritizable, measurable |
+| **Research** | 200+ AI chats | **Research Hub** (topics + refs) | Findable, organized |
 | **Strategy** | In Jimmy's head | **Memo** (synthesized thinking) | Shareable, traceable |
 
 **The key insight:** Structure doesn't constrain creativity—it **preserves and amplifies** it.
@@ -179,6 +211,56 @@ With structure:
 
 ---
 
+## Evolution: How This System Developed
+
+### Phase 1: Memos Only (Initial Design)
+
+We started with just the **output layer** - memos for capturing synthesized strategic thinking.
+
+```
+Problem: "Strategic thinking trapped in Jimmy's head"
+Solution: Memo system - capture when thinking becomes presentation-ready
+Gap discovered: "But where do I store all the research BEFORE it becomes a memo?"
+```
+
+### Phase 2: Research Hub (Current)
+
+We realized there's an **upstream gap** - all the evidence and exploration that happens BEFORE synthesis:
+
+```
+Original flow (broken):
+  ChatGPT chat → ... → Memo
+  ↑
+  "Where did I put that analysis?"
+
+New flow (complete):
+  ChatGPT chat → Research Hub (reference) → Build Context → AI Synthesis → Memo
+  ↑                     ↑
+  Still in ChatGPT      Now findable by topic
+```
+
+### The Key Insight
+
+**Memos are outputs, not inputs.** You can't create a memo from nothing - you need:
+- Evidence (references)
+- Questions to answer
+- Working notes
+- Time to synthesize
+
+The Research Hub provides the **workspace** where synthesis happens. Memos are the **published results**.
+
+```
+Research Hub          →          Memo
+(workspace)                      (publication)
+─────────────                    ──────────────
+Private, messy                   Public, polished
+Evidence collection              Synthesized conclusions
+Questions + exploration          Answers + recommendations
+Internal tool                    Shareable artifact
+```
+
+---
+
 ## Capture Friction: The Hard Problem
 
 ### Why This Is Difficult
@@ -189,9 +271,38 @@ Strategic thinking emerges from **scattered, informal sources**:
 |--------|----------|-----------------|
 | **WhatsApp** | Chat format, mixed with noise | Screenshots get lost |
 | **WeChat** | Same as WhatsApp | "I remember I discussed this..." |
-| **ChatGPT** | Conversations don't export easily | Copy-paste, lose context |
+| **ChatGPT** | Hundreds of chats, poor search | "Which chat had that pricing analysis?" |
+| **Gemini** | Same problem, different silo | Cross-tool context is lost |
+| **Claude** | Projects help, but still scattered | No way to link outputs to topics |
 | **Notion** | Half-formed, not synthesized | Graveyard of drafts |
 | **Verbal** | Partner calls, investor meetings | Ephemeral unless noted |
+
+### The Core Pain Point: AI Chat Sprawl
+
+> "I have so many ChatGPT/Gemini chats opened over time, it becomes hard to manage past research materials, cannot find them either."
+
+This is **exactly what the Research Hub solves**:
+
+```
+WITHOUT Research Hub:
+├── ChatGPT (147 chats)
+│   └── "Which one had the bank partnership analysis?"
+├── Gemini (89 chats)
+│   └── "Was the pricing strategy here or ChatGPT?"
+├── Claude (63 projects)
+│   └── "I explored OTA integration somewhere..."
+└── Your brain: "I researched this 3 months ago..."
+
+WITH Research Hub:
+├── Topic: "Bank Partnership"
+│   ├── Ref: ChatGPT export → Notion link
+│   ├── Ref: Claude session → Notion link
+│   ├── Ref: WhatsApp screenshots
+│   └── Synthesis: Key findings consolidated
+└── One searchable place
+```
+
+**The workflow:** When you have an important AI conversation, export it to Notion, then add the Notion link as a reference in the Research Hub. Now it's findable by topic.
 
 ### Design Choice: Synthesize First, Capture Second
 
@@ -417,14 +528,27 @@ When research session ends:
 
 ### Implementation Status
 
-**Not yet implemented.** This is a design proposal.
+**Implemented as Database-backed Research Hub** (2024-12)
 
-To implement:
-1. Create `docs/research/` directory for YAML files
-2. Create research parser (like memoParser)
-3. Build `/research` list and detail UI
-4. Add "Create Memo" flow that pre-populates from synthesis notes
-5. Add `source_research` field to memo metadata
+What we built:
+1. `/research` - Web UI for managing research topics
+2. `/research/insights/:id` - Public blog-style view with citations
+3. MySQL tables: `research_topics`, `research_references`
+4. Mock data mode for rapid prototyping (currently active)
+
+Routes:
+- `GET /research` - Research Hub UI
+- `GET /research/insights/:id` - Public blog view
+- `GET /research/api/topics` - List topics API
+- `POST /research/api/topics` - Create topic
+- `PATCH /research/api/topics/:id` - Update topic
+- `GET /research/api/topics/:id/references` - List references
+- `POST /research/api/topics/:id/references` - Add reference
+
+Key files:
+- `src/modules/research/router.ts` - Routes + UI
+- `src/modules/research/service.ts` - Business logic (TypeORM)
+- `src/migrations/026-create-research-tables.ts` - Schema
 
 ---
 

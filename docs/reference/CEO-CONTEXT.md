@@ -183,6 +183,12 @@ When answering "Is feature X ready?" or "Can user do Y?":
 
 **Lesson (2025-12-22):** Postman collection JSON already contains the E2E API sequence in its `item` array structure. The `/tests` page now parses this to show the actual request chain (method → endpoint → test name) for each collection. This makes E2E coverage visible without manual documentation.
 
+**Lesson (2025-12-24):** Cross-PRD gaps are what the CEO fears most. Individual PRD tests may pass, but if PRD-008 (miniprogram) ends at "generate QR" and PRD-006 (operator) starts at "scan QR", there's no test proving they actually connect. The system should automatically detect and surface these handoff gaps.
+
+**Lesson (2025-12-24):** API sequences show technical calls (POST /orders) but not user context (User taps "Buy Now"). For true E2E visibility, we need to map API calls to user actions/UI states. This is the bridge between "what code does" and "what user experiences".
+
+**Lesson (2025-12-25):** The solution for user action context is data-driven: use Postman request `description` field. The `/tests` UI now parses `item.description` from Postman collections and displays it with a 👤 badge. This follows the zero hardcoding principle - runbooks and markdown are prose (not machine-readable), but Postman JSON is structured data. See PRD-008 collection for reference examples.
+
 ---
 
-*Last updated: 2025-12-22*
+*Last updated: 2025-12-25*

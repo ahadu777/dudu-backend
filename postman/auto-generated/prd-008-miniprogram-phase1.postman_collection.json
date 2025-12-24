@@ -91,6 +91,7 @@
       "item": [
         {
           "name": "A1.1 Get product list (default)",
+          "description": "User opens miniprogram and views available cruise packages on home screen",
           "event": [
             {
               "listen": "test",
@@ -202,6 +203,7 @@
       "item": [
         {
           "name": "A2.1 Get product detail - cruise package",
+          "description": "User taps on product card to view package details and included services",
           "event": [
             {
               "listen": "test",
@@ -467,6 +469,7 @@
       "item": [
         {
           "name": "A4.1 Create order - success",
+          "description": "User selects guest types, travel date, and taps 'Buy Now' to create order",
           "event": [
             {
               "listen": "test",
@@ -812,6 +815,7 @@
       "item": [
         {
           "name": "A6.1 Simulate payment - success",
+          "description": "User completes WeChat Pay on checkout page, payment callback triggers ticket generation",
           "event": [
             {
               "listen": "test",
@@ -1024,6 +1028,7 @@
       "item": [
         {
           "name": "A7.1 Generate QR - success (default expiry)",
+          "description": "User opens 'My Tickets' page and views QR code for venue entry",
           "event": [
             {
               "listen": "test",

@@ -5,7 +5,22 @@ const router = Router();
 // ========== MOCK DATA ==========
 // In-memory storage for demo - will be replaced with database later
 
-let mockTopics = [
+interface MockTopic {
+  id: number;
+  topic: string;
+  status: string;
+  synthesis_notes: string | null;
+  questions: { text: string; answered: boolean }[];
+  leads_to_memo: string | null;
+  leads_to_prd: string | null;
+  memo_content: string | null;
+  started_at: string;
+  created_at: string;
+  updated_at: string;
+  reference_count: number;
+}
+
+let mockTopics: MockTopic[] = [
   {
     id: 1,
     topic: 'Bank Partnership for Rent Payments',
@@ -17,6 +32,7 @@ let mockTopics = [
       { text: '用户对自动扣款的接受度？', answered: false }
     ],
     leads_to_memo: 'MEMO-001',
+    leads_to_prd: null,
     memo_content: '# Bank Partnership Memo\n\nRecommend pursuing partnership with CMB for rent payment automation.',
     started_at: '2024-12-15',
     created_at: '2024-12-15T10:00:00Z',
@@ -33,6 +49,7 @@ let mockTopics = [
       { text: '竞品的服务模式？', answered: true }
     ],
     leads_to_memo: 'MEMO-002',
+    leads_to_prd: null,
     memo_content: null,
     started_at: '2024-11-01',
     created_at: '2024-11-01T09:00:00Z',
@@ -49,6 +66,7 @@ let mockTopics = [
       { text: '美团的分成比例？', answered: false }
     ],
     leads_to_memo: null,
+    leads_to_prd: 'PRD-012',
     memo_content: null,
     started_at: '2024-12-18',
     created_at: '2024-12-18T11:00:00Z',
@@ -62,6 +80,7 @@ let mockTopics = [
     synthesis_notes: '已完成，见相关 PRD 文档',
     questions: [],
     leads_to_memo: null,
+    leads_to_prd: 'PRD-008',
     memo_content: null,
     started_at: '2024-10-01',
     created_at: '2024-10-01T08:00:00Z',
@@ -138,6 +157,7 @@ router.post('/api/topics', (req: Request, res: Response) => {
     synthesis_notes: req.body.synthesis_notes || null,
     questions: req.body.questions || [],
     leads_to_memo: null,
+    leads_to_prd: null,
     memo_content: null,
     started_at: req.body.started_at || new Date().toISOString().split('T')[0],
     created_at: new Date().toISOString(),
@@ -166,6 +186,7 @@ router.patch('/api/topics/:id', (req: Request, res: Response) => {
   if (req.body.synthesis_notes !== undefined) topic.synthesis_notes = req.body.synthesis_notes;
   if (req.body.questions !== undefined) topic.questions = req.body.questions;
   if (req.body.leads_to_memo !== undefined) topic.leads_to_memo = req.body.leads_to_memo;
+  if (req.body.leads_to_prd !== undefined) topic.leads_to_prd = req.body.leads_to_prd;
   if (req.body.memo_content !== undefined) topic.memo_content = req.body.memo_content;
   topic.updated_at = new Date().toISOString();
 
@@ -1093,6 +1114,16 @@ const researchHubHTML = `<!DOCTYPE html>
         <button class="how-it-works-toggle" id="how-toggle">+</button>
       </div>
       <div class="how-it-works-content" id="how-content">
+        <!-- Pain Point -->
+        <div style="background: rgba(233, 69, 96, 0.1); border: 1px solid var(--accent); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+          <div style="font-weight: 600; margin-bottom: 8px; color: var(--accent);">The Problem We're Solving</div>
+          <div style="font-size: 0.9rem; color: var(--text-secondary);">
+            You have 100+ ChatGPT chats, 50+ Gemini sessions, dozens of Claude projects...
+            <strong style="color: var(--text-primary);">"Which chat had that pricing analysis?"</strong>
+            Research gets scattered across AI tools and becomes impossible to find.
+          </div>
+        </div>
+
         <div class="workflow-diagram">
           <div class="workflow-step">
             <div class="step-icon">1. Collect</div>
@@ -1115,31 +1146,31 @@ const researchHubHTML = `<!DOCTYPE html>
           <div class="workflow-step">
             <div class="step-icon">4. Synthesize</div>
             <div class="step-title">AI + Your Brain</div>
-            <div class="step-desc">Generate insights, memos, reports</div>
+            <div class="step-desc">Generate insights, memos, PRDs</div>
           </div>
           <div class="workflow-arrow">-></div>
           <div class="workflow-step">
-            <div class="step-icon">5. Publish</div>
-            <div class="step-title">Share as Blog</div>
-            <div class="step-desc">Professional output with citations</div>
+            <div class="step-icon">5. Output</div>
+            <div class="step-title">Memo or PRD</div>
+            <div class="step-desc">Link to docs or publish as blog</div>
           </div>
         </div>
         <div class="how-it-works-features">
           <div class="feature-item">
             <span class="feature-icon">*</span>
-            <span><strong>Evidence Storage</strong> - Sources don't disappear like chat history</span>
+            <span><strong>Find Past Research</strong> - No more "which chat was that in?"</span>
           </div>
           <div class="feature-item">
             <span class="feature-icon">*</span>
-            <span><strong>Tool Agnostic</strong> - Works with Claude, ChatGPT, NotebookLM, Deep Research</span>
+            <span><strong>Tool Agnostic</strong> - Works with Claude, ChatGPT, NotebookLM, Gemini</span>
           </div>
           <div class="feature-item">
             <span class="feature-icon">*</span>
-            <span><strong>Institutional Memory</strong> - Knowledge compounds over time</span>
+            <span><strong>Compounds Over Time</strong> - Knowledge base grows, never disappears</span>
           </div>
           <div class="feature-item">
             <span class="feature-icon">*</span>
-            <span><strong>Traceable Decisions</strong> - Every insight links back to evidence</span>
+            <span><strong>Research -> Product</strong> - Link directly to PRDs and Memos</span>
           </div>
         </div>
       </div>
@@ -1278,11 +1309,17 @@ const researchHubHTML = `<!DOCTYPE html>
         <button class="modal-close" onclick="closeModal('save-synthesis-modal')">&times;</button>
       </div>
       <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9rem;">
-        Paste the AI-generated synthesis here. This will be saved as your publishable memo content.
+        Paste the AI-generated synthesis here. Link to a Memo (strategic thinking) or PRD (build spec).
       </p>
-      <div class="form-group">
-        <label>Memo ID (optional)</label>
-        <input type="text" id="synthesis-memo-id" placeholder="e.g., MEMO-001">
+      <div style="display: flex; gap: 15px;">
+        <div class="form-group" style="flex: 1;">
+          <label>Memo ID (optional)</label>
+          <input type="text" id="synthesis-memo-id" placeholder="e.g., MEMO-001">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label>PRD ID (optional)</label>
+          <input type="text" id="synthesis-prd-id" placeholder="e.g., PRD-010">
+        </div>
       </div>
       <div class="form-group">
         <label>Memo Content (Markdown supported)</label>
@@ -1429,9 +1466,10 @@ Based on the research sources, here are the main insights:
 
     function showSaveSynthesisModal() {
       if (!currentTopic) return;
-      // Pre-fill with existing memo content if available
+      // Pre-fill with existing values if available
       document.getElementById('synthesis-content').value = currentTopic.memo_content || '';
       document.getElementById('synthesis-memo-id').value = currentTopic.leads_to_memo || '';
+      document.getElementById('synthesis-prd-id').value = currentTopic.leads_to_prd || '';
       document.getElementById('save-synthesis-modal').classList.add('active');
     }
 
@@ -1440,9 +1478,10 @@ Based on the research sources, here are the main insights:
 
       const memoContent = document.getElementById('synthesis-content').value.trim();
       const memoId = document.getElementById('synthesis-memo-id').value.trim();
+      const prdId = document.getElementById('synthesis-prd-id').value.trim();
 
-      if (!memoContent) {
-        showToast('Please enter memo content', true);
+      if (!memoContent && !memoId && !prdId) {
+        showToast('Please enter content or link to a Memo/PRD', true);
         return;
       }
 
@@ -1451,8 +1490,9 @@ Based on the research sources, here are the main insights:
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            memo_content: memoContent,
+            memo_content: memoContent || undefined,
             leads_to_memo: memoId || undefined,
+            leads_to_prd: prdId || undefined,
             status: 'done'  // Auto-mark as done when synthesis is saved
           })
         });
@@ -1461,17 +1501,19 @@ Based on the research sources, here are the main insights:
 
         if (result.success) {
           closeModal('save-synthesis-modal');
-          currentTopic.memo_content = memoContent;
+          currentTopic.memo_content = memoContent || null;
           currentTopic.leads_to_memo = memoId || null;
+          currentTopic.leads_to_prd = prdId || null;
           currentTopic.status = 'done';
           loadTopics();
           renderTopicDetail();
-          showToast('Memo saved! View it at /research/insights/' + currentTopic.id);
+          const output = prdId ? prdId : (memoId ? memoId : 'insights/' + currentTopic.id);
+          showToast('Saved! Output: ' + output);
         } else {
           showToast('Error: ' + result.error, true);
         }
       } catch (error) {
-        showToast('Error saving memo: ' + error.message, true);
+        showToast('Error saving: ' + error.message, true);
       }
     }
 
@@ -1629,10 +1671,11 @@ Based on the research sources, here are the main insights:
           '</div>' +
         '</div>' +
 
-        (currentTopic.leads_to_memo || currentTopic.memo_content ?
+        (currentTopic.leads_to_memo || currentTopic.leads_to_prd || currentTopic.memo_content ?
           '<div class="section" style="background: var(--bg-card); padding: 20px; border-radius: 8px;">' +
-            '<h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-secondary);">Published Output</h3>' +
-            (currentTopic.leads_to_memo ? '<p>Internal Memo: <a href="/memos/' + escapeHtml(currentTopic.leads_to_memo) + '" style="color: var(--accent);"><strong>' + escapeHtml(currentTopic.leads_to_memo) + '</strong></a></p>' : '') +
+            '<h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-secondary);">Output</h3>' +
+            (currentTopic.leads_to_memo ? '<p>Memo: <a href="/memos/' + escapeHtml(currentTopic.leads_to_memo) + '" style="color: var(--accent);"><strong>' + escapeHtml(currentTopic.leads_to_memo) + '</strong></a></p>' : '') +
+            (currentTopic.leads_to_prd ? '<p>PRD: <a href="/docs/prd/' + escapeHtml(currentTopic.leads_to_prd) + '" style="color: var(--accent);"><strong>' + escapeHtml(currentTopic.leads_to_prd) + '</strong></a></p>' : '') +
             (currentTopic.memo_content ? '<p><a href="/research/insights/' + currentTopic.id + '" target="_blank" style="color: var(--accent);">View as Public Blog Post -></a></p>' : '') +
           '</div>'
           : '');
