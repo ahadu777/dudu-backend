@@ -183,7 +183,6 @@ export class MiniprogramOrderService {
         'ticket.ticket_code',
         'ticket.customer_type',
         'ticket.status',
-        'ticket.qr_code',
         'ticket.entitlements',
         'ticket.order_id'
       ])

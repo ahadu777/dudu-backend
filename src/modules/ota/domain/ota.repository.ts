@@ -668,7 +668,29 @@ export class OTARepository {
    * Optimized for listing pages - avoids N+1 query problem
    */
   async findBatchesWithStats(partnerId?: string, limit?: number, offset?: number): Promise<OTATicketBatchWithStatsDTO[]> {
-    let query = `
+    const params: any[] = [];
+    const conditions: string[] = [];
+    if (partnerId) {
+      conditions.push('partner_id = ?');
+      params.push(partnerId);
+    }
+
+    let baseQuery = 'SELECT * FROM ota_ticket_batches';
+    if (conditions.length) {
+      baseQuery += ` WHERE ${conditions.join(' AND ')}`;
+    }
+    baseQuery += ' ORDER BY created_at DESC';
+
+    if (limit) {
+      baseQuery += ' LIMIT ?';
+      params.push(limit);
+      if (offset) {
+        baseQuery += ' OFFSET ?';
+        params.push(offset);
+      }
+    }
+
+    const query = `
       SELECT
         b.*,
         COUNT(t.ticket_code) as tickets_generated,
@@ -692,26 +714,11 @@ export class OTARepository {
             )
           ELSE 0
         END) as total_revenue_realized
-      FROM ota_ticket_batches b
+      FROM (${baseQuery}) b
       LEFT JOIN tickets t ON t.batch_id = b.batch_id AND t.channel = 'ota'
+      GROUP BY b.batch_id
+      ORDER BY b.created_at DESC
     `;
-
-    const params: any[] = [];
-    if (partnerId) {
-      query += ' WHERE b.partner_id = ?';
-      params.push(partnerId);
-    }
-
-    query += ' GROUP BY b.batch_id ORDER BY b.created_at DESC';
-
-    if (limit) {
-      query += ' LIMIT ?';
-      params.push(limit);
-      if (offset) {
-        query += ' OFFSET ?';
-        params.push(offset);
-      }
-    }
 
     const results = await this.dataSource.query(query, params);
     return results.map((row: any) => this.mapRowToBatchWithStats(row));
