@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "prd-008-miniprogram-phase1",
-    "name": "PRD-008 DeepTravel 小程序 Phase 1 - Package Booking",
-    "description": "PRD-008 Phase 1+: Package Product Booking Foundation\n\n验收标准覆盖:\n- A1: Display all active package products from direct channel\n- A2: Show package inclusions and pricing\n- A3: Dynamic pricing (customer type + weekend)\n- A4: Inventory availability real-time display\n- A5: Order creation with pricing context (requires USE_DATABASE=true)\n- A6: Order management (requires USE_DATABASE=true)\n- A7: Simulate payment (requires USE_DATABASE=true)\n- A8: Ticket QR generation (requires USE_DATABASE=true)\n\nNOTE: Order/Payment/QR tests (A5-A8) require database mode. Run with USE_DATABASE=true.\n\nEndpoints:\n- GET /miniprogram/products\n- GET /miniprogram/products/:id\n- GET /miniprogram/products/:id/availability\n- POST /miniprogram/orders\n- GET /miniprogram/orders\n- GET /miniprogram/orders/:id\n- POST /miniprogram/orders/:id/simulate-payment\n- POST /miniprogram/tickets/:code/qr",
+    "name": "PRD-008 DeepTravel \u5c0f\u7a0b\u5e8f Phase 1 - Package Booking",
+    "description": "PRD-008 Phase 1+: Package Product Booking Foundation\n\n\u9a8c\u6536\u6807\u51c6\u8986\u76d6:\n- A1: Display all active package products from direct channel\n- A2: Show package inclusions and pricing\n- A3: Dynamic pricing (customer type + weekend)\n- A4: Inventory availability real-time display\n- A5: Order creation with pricing context (requires USE_DATABASE=true)\n- A6: Order management (requires USE_DATABASE=true)\n- A7: Simulate payment (requires USE_DATABASE=true)\n- A8: Ticket QR generation (requires USE_DATABASE=true)\n\nNOTE: Order/Payment/QR tests (A5-A8) require database mode. Run with USE_DATABASE=true.\n\nEndpoints:\n- GET /miniprogram/products\n- GET /miniprogram/products/:id\n- GET /miniprogram/products/:id/availability\n- POST /miniprogram/orders\n- GET /miniprogram/orders\n- GET /miniprogram/orders/:id\n- POST /miniprogram/orders/:id/simulate-payment\n- POST /miniprogram/tickets/:code/qr",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,7 +12,7 @@
     },
     {
       "key": "auth_token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjEsImVtYWlsIjoiIiwiaWF0IjoxNzY1ODU2MjIyLCJleHAiOjE3NjY0NjEwMjJ9.vzzxbm2_WxBZYhsfyFjj-rZ0mjd0fNfmUULkLiDMWbc"
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjEsImVtYWlsIjoiIiwiaWF0IjoxNzY2NDg4MDc0LCJleHAiOjE3NjcwOTI4NzR9.0uMoglshbbWWvRI3rnTFpzF7QsLU0jQkBQhKxqqEr9w"
     },
     {
       "key": "test_product_id",
@@ -833,7 +833,7 @@
                   "pm.test('Returns success message', function() {",
                   "    const data = pm.response.json();",
                   "    pm.expect(data).to.have.property('message');",
-                  "    pm.expect(data.message).to.include('成功');",
+                  "    pm.expect(data.message).to.include('\u6210\u529f');",
                   "});",
                   "",
                   "pm.test('Order status is paid/confirmed', function() {",

@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-003 Event Venue Operations Tests" tests="8" time="19.959">
-  <testsuite name="3.1 Operator Login" id="fbc02592-3990-4e61-9d54-1a336ca9a37e" timestamp="2025-12-20T04:04:10.240Z" tests="2" failures="0" errors="0" time="0.376">
-    <testcase name="Status code is 200" time="0.376" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Returns operator token" time="0.376" classname="Prd003EventVenueOperationsTests"/>
+<testsuites name="PRD-003 Event Venue Operations Tests" tests="8" time="28.593">
+  <testsuite name="3.1 Operator Login" id="cbe5a287-7372-497c-979c-bcfc3bdc528d" timestamp="2025-12-23T11:00:59.793Z" tests="2" failures="0" errors="0" time="0.538">
+    <testcase name="Status code is 200" time="0.538" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Returns operator token" time="0.538" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3.2 Generate Ticket (OTA)" id="b06b297e-1eeb-4162-b89b-49f218455e42" timestamp="2025-12-20T04:04:10.240Z" tests="2" failures="0" errors="0" time="4.355">
-    <testcase name="Status code is 201" time="4.355" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Ticket generated" time="4.355" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3.2 Generate Ticket (OTA)" id="9607f11f-03a9-45ac-aeff-a2e2d104c220" timestamp="2025-12-23T11:00:59.793Z" tests="2" failures="0" errors="0" time="5.633">
+    <testcase name="Status code is 201" time="5.633" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Ticket generated" time="5.633" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3.3 Activate Ticket" id="f699a213-b6da-4cf7-915b-bb933b324bc6" timestamp="2025-12-20T04:04:10.240Z" tests="2" failures="0" errors="0" time="4.629">
-    <testcase name="Status code is 200" time="4.629" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Ticket activated" time="4.629" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3.3 Activate Ticket" id="a90879d4-162d-4e9f-a285-6c7a12f714cc" timestamp="2025-12-23T11:00:59.793Z" tests="2" failures="0" errors="0" time="7.331">
+    <testcase name="Status code is 200" time="7.331" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Ticket activated" time="7.331" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3.4 Generate QR Code" id="0024f300-2c5a-4506-89c9-4e6d582a3ec1" timestamp="2025-12-20T04:04:10.240Z" tests="2" failures="0" errors="0" time="3.301">
-    <testcase name="Status code is 200" time="3.301" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="QR code generated" time="3.301" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3.4 Generate QR Code" id="9a6dae44-a766-470f-8f09-c17fb8640b1d" timestamp="2025-12-23T11:00:59.793Z" tests="2" failures="0" errors="0" time="4.219">
+    <testcase name="Status code is 200" time="4.219" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="QR code generated" time="4.219" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3.5 Decrypt QR Code (View Info)" id="4c11759c-aae5-44de-bf9b-380102e473fe" timestamp="2025-12-20T04:04:10.240Z" tests="3" failures="0" errors="0" time="1.707">
-    <testcase name="Status code is 200" time="1.707" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="QR decrypted with ticket info" time="1.707" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Has entitlements" time="1.707" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3.5 Decrypt QR Code (View Info)" id="5278385c-b2dd-41dd-b7e5-09644994306f" timestamp="2025-12-23T11:00:59.793Z" tests="3" failures="0" errors="0" time="2.808">
+    <testcase name="Status code is 200" time="2.808" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="QR decrypted with ticket info" time="2.808" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Has entitlements" time="2.808" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3.6 Venue Scan (Redeem Ferry)" id="f2eb6aec-ffa2-44b3-ae7a-708e2f5e770d" timestamp="2025-12-20T04:04:10.240Z" tests="2" failures="0" errors="0" time="3.733">
-    <testcase name="Status code is 200" time="3.733" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Redemption successful" time="3.733" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3.6 Venue Scan (Redeem Ferry)" id="117e336d-9dbc-4feb-bade-3e2beb55cc50" timestamp="2025-12-23T11:00:59.793Z" tests="2" failures="0" errors="0" time="5.317">
+    <testcase name="Status code is 200" time="5.317" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Redemption successful" time="5.317" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3.7 Duplicate Redemption (Fraud Detection)" id="48e11334-654b-4b9f-9ab7-131bfe5cb728" timestamp="2025-12-20T04:04:10.240Z" tests="2" failures="0" errors="0" time="1.543">
-    <testcase name="Status code is 422 (Rejected)" time="1.543" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Fraud detection triggered" time="1.543" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3.7 Duplicate Redemption (Fraud Detection)" id="87d17fd8-0164-4f75-a0bc-88bbddc320bc" timestamp="2025-12-23T11:00:59.793Z" tests="2" failures="0" errors="0" time="2.377">
+    <testcase name="Status code is 422 (Rejected)" time="2.377" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Fraud detection triggered" time="2.377" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3.8 List Venues" id="cf8beb7d-053d-4970-866b-9e60312f59f2" timestamp="2025-12-20T04:04:10.240Z" tests="2" failures="0" errors="0" time="0.315">
-    <testcase name="Status code is 200" time="0.315" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Returns venues list" time="0.315" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3.8 List Venues" id="618b2613-5362-47e5-b63b-01b5bf21361b" timestamp="2025-12-23T11:00:59.793Z" tests="2" failures="0" errors="0" time="0.370">
+    <testcase name="Status code is 200" time="0.370" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Returns venues list" time="0.370" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
 </testsuites>

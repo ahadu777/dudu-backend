@@ -42,7 +42,9 @@ export interface TicketEntitlement {
 @Index(['user_id'])
 @Index(['travel_date'])
 @Index(['batch_id'])
+@Index(['batch_id', 'channel'])
 @Index(['partner_id'])
+@Index(['partner_id', 'created_at'])
 @Index(['partner_id', 'status'])
 @Index(['channel'])
 export class TicketEntity {

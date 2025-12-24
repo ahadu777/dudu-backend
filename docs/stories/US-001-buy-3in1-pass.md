@@ -10,11 +10,9 @@ status: "Done"
 priority: High
 business_requirement: "PRD-001"
 cards:
-  - db-baseline               # 数据库基础架构
   - catalog-endpoint
   - order-create
   - payment-webhook
-  - tickets-issuance
   - my-tickets
   - qr-generation-api
   - operators-login
@@ -68,4 +66,4 @@ Enable a user to purchase a package with multiple functions (bus, ferry, museum)
 
 ## Links
 - OAS: `/openapi/openapi.json`  
-- Related cards: `order-create`, `payment-webhook`, `tickets-issuance`, `my-tickets`, `qr-generation-api`, `venue-enhanced-scanning`
+- Related cards: `order-create`, `payment-webhook`, `my-tickets`, `qr-generation-api`, `venue-enhanced-scanning`

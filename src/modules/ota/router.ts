@@ -19,6 +19,35 @@ interface AuthenticatedRequest extends Request {
 }
 
 /**
+ * 生成符合 RFC 5987 的 Content-Disposition header 值
+ * 支持非 ASCII 字符（如中文）的文件名
+ * @param filename 原始文件名（可能包含中文等 Unicode 字符）
+ * @returns 格式化的 Content-Disposition header 值
+ */
+function encodeContentDisposition(filename: string): string {
+  // 检查是否只包含 ASCII 字符
+  const isAscii = /^[\x00-\x7F]*$/.test(filename);
+
+  if (isAscii) {
+    // 纯 ASCII，直接使用
+    return `attachment; filename="${filename}"`;
+  }
+
+  // 包含非 ASCII 字符，使用 RFC 5987 编码
+  // filename* 使用 UTF-8 编码并进行 percent-encoding
+  const encodedFilename = encodeURIComponent(filename)
+    .replace(/'/g, '%27')  // 单引号需要编码
+    .replace(/\(/g, '%28') // 括号需要编码
+    .replace(/\)/g, '%29');
+
+  // 提供 ASCII fallback (用于旧客户端) + UTF-8 版本 (用于现代客户端)
+  // ASCII fallback: 移除非 ASCII 字符，保留基本结构
+  const asciiFallback = filename.replace(/[^\x00-\x7F]/g, '_');
+
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedFilename}`;
+}
+
+/**
  * Extract partner ID with fallback logic
  * 1. Primary: Use partner ID from middleware (req.ota_partner.id)
  * 2. Fallback: Default to 'ota' if middleware didn't set partner info
@@ -359,7 +388,7 @@ router.get('/tickets/:code/pdf', async (req: AuthenticatedRequest, res: Response
 
     // 设置响应头
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${ticketCode}.pdf"`);
+    res.setHeader('Content-Disposition', encodeContentDisposition(`${ticketCode}.pdf`));
     res.setHeader('Content-Length', pdfBuffer.length);
 
     // 发送 PDF
@@ -401,7 +430,7 @@ router.get('/batches/:id/pdf', async (req: AuthenticatedRequest, res: Response) 
 
     // 设置响应头
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${batchId}.pdf"`);
+    res.setHeader('Content-Disposition', encodeContentDisposition(`${batchId}.pdf`));
     res.setHeader('Content-Length', pdfBuffer.length);
 
     // 发送 PDF
@@ -444,7 +473,7 @@ router.get('/batches/:id/export-zip', async (req: AuthenticatedRequest, res: Res
 
     // 设置响应头（流式传输）
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${batchId}.zip"`);
+    res.setHeader('Content-Disposition', encodeContentDisposition(`${batchId}.zip`));
     res.setHeader('Transfer-Encoding', 'chunked');
 
     // 流式导出 ZIP

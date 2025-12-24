@@ -133,41 +133,64 @@ export class MiniprogramOrderService {
    * 获取订单详情
    */
   async getOrderDetail(userId: number, orderId: number): Promise<OrderDetailResponse | null> {
+    // 优化：一次查询订单和票券
     const order = await this.orderRepo.findOne({
-      where: { id: orderId, user_id: userId }
+      where: { id: orderId, user_id: userId },
+      relations: ['tickets']
     });
 
     if (!order) {
       return null;
     }
 
-    // 获取关联的票券
-    const tickets = await this.ticketRepo.find({
-      where: { order_id: orderId }
-    });
-
-    return this.formatOrderDetailResponse(order, tickets);
+    return this.formatOrderDetailResponse(order, order.tickets || []);
   }
 
   /**
    * 获取用户订单列表
    */
   async getOrderList(userId: number, page: number, pageSize: number): Promise<{ orders: OrderListItem[], total: number }> {
-    const [orders, total] = await this.orderRepo.findAndCount({
-      where: { user_id: userId },
-      order: { created_at: 'DESC' },
-      skip: (page - 1) * pageSize,
-      take: pageSize
-    });
+    // 优化：分页查询订单后，再批量查询票券，避免 join 放大导致慢查询与分页不准
+    const [orders, total] = await this.orderRepo
+      .createQueryBuilder('order')
+      .select([
+        'order.id',
+        'order.order_no',
+        'order.status',
+        'order.product_id',
+        'order.product_name',
+        'order.quantity',
+        'order.total',
+        'order.travel_date',
+        'order.created_at',
+        'order.paid_at'
+      ])
+      .where('order.user_id = :userId', { userId })
+      .orderBy('order.created_at', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
 
-    // 获取所有订单的票券
+    if (orders.length === 0) {
+      return { orders: [], total };
+    }
+
     const orderIds = orders.map(o => Number(o.id));
-    const tickets = orderIds.length > 0
-      ? await this.ticketRepo.find({ where: orderIds.map(id => ({ order_id: id })) })
-      : [];
+    const tickets = await this.ticketRepo
+      .createQueryBuilder('ticket')
+      .select([
+        'ticket.id',
+        'ticket.ticket_code',
+        'ticket.customer_type',
+        'ticket.status',
+        'ticket.entitlements',
+        'ticket.order_id'
+      ])
+      .where('ticket.order_id IN (:...orderIds)', { orderIds })
+      .getMany();
 
     // 按订单ID分组票券
-    const ticketsByOrderId = new Map<number, typeof tickets>();
+    const ticketsByOrderId = new Map<number, TicketEntity[]>();
     for (const ticket of tickets) {
       const orderId = Number(ticket.order_id);
       if (!ticketsByOrderId.has(orderId)) {
@@ -479,8 +502,9 @@ export class MiniprogramOrderService {
       };
     }
 
-    // 4. 获取产品 QR 配置（颜色等）
+    // 4. 获取产品 QR 配置（颜色）和统一 logo
     let qrColorConfig;
+
     if (order.product_id) {
       const productRepo = AppDataSource.getRepository(ProductEntity);
       const product = await productRepo.findOne({ where: { id: order.product_id } });
@@ -492,8 +516,13 @@ export class MiniprogramOrderService {
       }
     }
 
-    // 5. 生成二维码
-    const qrResult = await generateSecureQR(ticketCode, expiryMinutes, undefined, qrColorConfig);
+    // 获取统一 logo（与 OTA 共用同一个硬编码 logo）
+    const { DirectusService } = await import('../../utils/directus');
+    const directusService = new DirectusService();
+    const logoBuffer = await directusService.getPartnerLogo('miniprogram');
+
+    // 5. 生成二维码（带 logo）
+    const qrResult = await generateSecureQR(ticketCode, expiryMinutes, logoBuffer || undefined, qrColorConfig);
 
     // 6. 更新 ticket.extra.current_jti（使旧二维码失效）
     const extra = ticket.extra || {};
