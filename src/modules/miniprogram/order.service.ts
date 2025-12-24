@@ -159,20 +159,10 @@ export class MiniprogramOrderService {
         'order.status',
         'order.product_id',
         'order.product_name',
-        'order.travel_date',
         'order.quantity',
         'order.total',
         'order.created_at',
         'order.paid_at'
-      ])
-      .leftJoin('order.tickets', 'ticket')
-      .addSelect([
-        'ticket.id',
-        'ticket.ticket_code',
-        'ticket.customer_type',
-        'ticket.status',
-        'ticket.qr_code',
-        'ticket.entitlements'
       ])
       .where('order.user_id = :userId', { userId })
       .orderBy('order.created_at', 'DESC')
