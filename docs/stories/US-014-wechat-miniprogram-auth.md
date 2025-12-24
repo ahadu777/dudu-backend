@@ -6,7 +6,7 @@ status: "Done"
 priority: High
 created_date: "2025-01-06"
 last_updated: "2025-01-12"
-business_requirement: "PRD-004"
+business_requirement: "PRD-008"
 depends_on: []
 enhances: ["US-001", "US-009", "US-010A"]
 cards:

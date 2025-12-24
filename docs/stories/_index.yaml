@@ -265,7 +265,7 @@ stories:
         - reports/collections/us-013-venue-operations.json
   - id: US-014
     title: 微信小程序用户认证
-    status: Draft
+    status: Done
     cards:
       - wechat-auth-login
       - wechat-phone-binding
@@ -279,7 +279,7 @@ stories:
     enhances: [US-001, US-009, US-010A]
     enhanced_by: []
     # Business requirements
-    business_requirement: "PRD-004"
+    business_requirement: "PRD-008"
     deadline: "2025-01-20"
     implicit_dependencies: [user-profile-endpoint, order-create]
     # E2E validation assets
