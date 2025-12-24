@@ -24,7 +24,7 @@ export const AppDataSource = new DataSource({
   subscribers: [],
   charset: 'utf8mb4',
   timezone: 'Z', // Use UTC for consistency across all servers
-  maxQueryExecutionTime: 1000, // 慢查询警告（超过 1 秒）
+  maxQueryExecutionTime: 2000, // 慢查询警告（超过 2 秒）
   // ssl: false, // Disable SSL for local connections
   extra: {
     connectionLimit: 10,

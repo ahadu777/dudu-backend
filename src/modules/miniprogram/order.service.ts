@@ -150,10 +150,30 @@ export class MiniprogramOrderService {
    * 获取用户订单列表
    */
   async getOrderList(userId: number, page: number, pageSize: number): Promise<{ orders: OrderListItem[], total: number }> {
-    // 优化：使用 QueryBuilder 一次查询订单和票券
+    // 优化：只选择需要的字段，减少数据传输量
     const [orders, total] = await this.orderRepo
       .createQueryBuilder('order')
-      .leftJoinAndSelect('order.tickets', 'ticket')
+      .select([
+        'order.id',
+        'order.order_no',
+        'order.status',
+        'order.product_id',
+        'order.product_name',
+        'order.travel_date',
+        'order.quantity',
+        'order.total',
+        'order.created_at',
+        'order.paid_at'
+      ])
+      .leftJoin('order.tickets', 'ticket')
+      .addSelect([
+        'ticket.id',
+        'ticket.ticket_code',
+        'ticket.customer_type',
+        'ticket.status',
+        'ticket.qr_code',
+        'ticket.entitlements'
+      ])
       .where('order.user_id = :userId', { userId })
       .orderBy('order.created_at', 'DESC')
       .skip((page - 1) * pageSize)
