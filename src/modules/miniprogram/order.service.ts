@@ -150,7 +150,7 @@ export class MiniprogramOrderService {
    * 获取用户订单列表
    */
   async getOrderList(userId: number, page: number, pageSize: number): Promise<{ orders: OrderListItem[], total: number }> {
-    // 优化：只选择需要的字段，减少数据传输量
+    // 优化：分页查询订单后，再批量查询票券，避免 join 放大导致慢查询与分页不准
     const [orders, total] = await this.orderRepo
       .createQueryBuilder('order')
       .select([
@@ -161,6 +161,7 @@ export class MiniprogramOrderService {
         'order.product_name',
         'order.quantity',
         'order.total',
+        'order.travel_date',
         'order.created_at',
         'order.paid_at'
       ])
@@ -170,11 +171,27 @@ export class MiniprogramOrderService {
       .take(pageSize)
       .getManyAndCount();
 
-    // 从关联中提取票券（已在上面一次性查出）
-    const tickets: TicketEntity[] = orders.flatMap(o => o.tickets || []);
+    if (orders.length === 0) {
+      return { orders: [], total };
+    }
+
+    const orderIds = orders.map(o => Number(o.id));
+    const tickets = await this.ticketRepo
+      .createQueryBuilder('ticket')
+      .select([
+        'ticket.id',
+        'ticket.ticket_code',
+        'ticket.customer_type',
+        'ticket.status',
+        'ticket.qr_code',
+        'ticket.entitlements',
+        'ticket.order_id'
+      ])
+      .where('ticket.order_id IN (:...orderIds)', { orderIds })
+      .getMany();
 
     // 按订单ID分组票券
-    const ticketsByOrderId = new Map<number, typeof tickets>();
+    const ticketsByOrderId = new Map<number, TicketEntity[]>();
     for (const ticket of tickets) {
       const orderId = Number(ticket.order_id);
       if (!ticketsByOrderId.has(orderId)) {
