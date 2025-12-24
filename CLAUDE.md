@@ -137,10 +137,11 @@ When a memo leads to building something:
 | Step | 名称 | 关键动作 |
 |------|------|----------|
 | 0 | Intent Analysis | 解析用户意图 → 匹配任务类型 → 加载参考文档 |
-| 1 | Reality Check | 验证服务状态、文档状态、代码现状 |
+| 0.5 | Proposal | 生成提案 → 等待用户确认 (复杂任务) |
+| 1 | Reality Check | 上下文恢复检查 → 验证服务/文档/代码状态 |
 | 2 | Execute | 按规范执行，更新 Card 状态 |
 | 3 | Verify | 测试验证，文档一致性检查 |
-| 4 | Learn (可选) | 记录经验教训，改进工作流 |
+| 4 | Learn (条件必须) | 返工/新模式/用户反馈时记录经验 |
 
 ### 快速判断：是否需要完整工作流？
 
@@ -206,6 +207,8 @@ npm run test:story 014        # 指定 Story
 
 # 文档校验
 npm run validate:docs         # 检查 PRD→Stories→Cards→Code 一致性
+npm run sync:card-index       # 同步 Card 索引
+npm run generate:openapi      # 从 Card 生成 OpenAPI
 
 # 搜索
 grep -ri "关键词" docs/
@@ -256,8 +259,10 @@ grep -ri "关键词" docs/
 | **文档规范** | [docs/reference/DOCUMENT-SPEC.md](docs/reference/DOCUMENT-SPEC.md) | PRD/Story/Card 模板、关系、生命周期 |
 | 详细工作流 | [docs/reference/](docs/reference/) | 各类任务的详细指南 |
 | 案例研究 | [docs/cases/](docs/cases/) | 实际案例分析 |
+| 案例索引 | [docs/cases/_index.yaml](docs/cases/_index.yaml) | 经验案例快速导航 |
 | PRDs | [docs/prd/](docs/prd/) | 产品需求文档 |
 | Stories | [docs/stories/](docs/stories/) | 用户故事 |
 | Cards | [docs/cards/](docs/cards/) | 技术卡片 |
+| Card 索引 | [docs/cards/_index.yaml](docs/cards/_index.yaml) | Card 状态追踪与快速查询 |
 | 测试覆盖率 | [docs/test-coverage/_index.yaml](docs/test-coverage/_index.yaml) | 测试状态追踪 |
 | OpenAPI 规范 | [openapi/openapi.json](openapi/openapi.json) | API 文档 |

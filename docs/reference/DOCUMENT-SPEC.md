@@ -662,6 +662,154 @@ ls docs/prd/_deprecated/ docs/stories/_deprecated/ docs/cards/_deprecated/ 2>/de
 
 ---
 
+## 九、变更历史规范 (Delta 格式)
+
+### 目标
+
+标准化 Card 变更记录，使用结构化的 ADDED/MODIFIED/REMOVED 格式，便于追踪 API 演进和回顾变更。
+
+### Delta 格式定义
+
+| 类型 | 含义 | 典型内容 |
+|------|------|----------|
+| **ADDED** | 新增内容 | 新 API 端点、新请求/响应字段、新业务规则 |
+| **MODIFIED** | 修改内容 | 字段类型变更、验证规则调整、行为变化 |
+| **REMOVED** | 移除内容 | 废弃的字段、删除的端点、移除的规则 |
+
+### Card Frontmatter 扩展
+
+在 Card 的 frontmatter 中添加 `changelog` 字段：
+
+```yaml
+---
+card: "Order create API"
+slug: order-create
+status: "Done"
+last_update: "2025-12-24T10:00:00+08:00"
+
+changelog:
+  - version: "1.2.0"
+    date: "2025-12-24"
+    summary: "添加订单取消功能"
+    breaking: false
+    delta:
+      added:
+        - "POST /orders/:id/cancel 端点"
+        - "cancel_reason 请求字段"
+        - "cancelled 订单状态"
+      modified:
+        - "订单状态流转规则：已支付订单可取消"
+      removed: []
+
+  - version: "1.1.0"
+    date: "2025-12-01"
+    summary: "支持复杂定价"
+    breaking: false
+    delta:
+      added:
+        - "pricing_context 请求字段"
+        - "pricing_breakdown 响应字段"
+      modified: []
+      removed: []
+
+  - version: "1.0.0"
+    date: "2025-10-26"
+    summary: "初始版本"
+    breaking: false
+    delta:
+      added:
+        - "POST /orders 端点"
+        - "基础订单创建功能"
+      modified: []
+      removed: []
+---
+```
+
+### Changelog 字段说明
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `version` | string | 是 | 语义化版本号 (SemVer) |
+| `date` | string | 是 | 变更日期 (YYYY-MM-DD) |
+| `summary` | string | 是 | 变更摘要 (一句话) |
+| `breaking` | boolean | 否 | 是否是破坏性变更，默认 false |
+| `delta.added` | string[] | 否 | 新增内容列表 |
+| `delta.modified` | string[] | 否 | 修改内容列表 |
+| `delta.removed` | string[] | 否 | 移除内容列表 |
+
+### 版本号规则 (SemVer)
+
+| 类型 | 版本变更 | 示例场景 |
+|------|----------|----------|
+| **Major (X.0.0)** | Breaking change | 移除必填字段、变更 API 路径、不兼容的响应格式 |
+| **Minor (0.X.0)** | 新增功能（向后兼容） | 新增可选字段、新增端点、新增业务规则 |
+| **Patch (0.0.X)** | Bug 修复、文档更新 | 修复计算错误、更新描述、优化性能 |
+
+### Markdown Changelog 章节（可选）
+
+除了 frontmatter，可在 Card 正文添加人类可读的变更日志：
+
+```markdown
+## Changelog
+
+### v1.2.0 (2025-12-24) - 订单取消功能
+
+**ADDED:**
+- POST /orders/:id/cancel 端点
+- `cancel_reason` 请求字段：取消原因
+- `cancelled` 订单状态
+
+**MODIFIED:**
+- 订单状态流转规则：已支付订单在发货前可取消
+
+---
+
+### v1.1.0 (2025-12-01) - 复杂定价支持
+
+**ADDED:**
+- `pricing_context` 请求字段：支持多变量定价
+- `pricing_breakdown` 响应字段：详细价格分解
+```
+
+### 何时记录变更
+
+| 场景 | 是否记录 | 说明 |
+|------|---------|------|
+| 新增 API 端点 | ✅ 是 | version +0.1.0 |
+| 新增可选字段 | ✅ 是 | version +0.1.0 |
+| 修改字段类型 | ✅ 是 | version +1.0.0 (breaking) |
+| 修复 bug | ⚠️ 视情况 | 如影响行为则记录 |
+| 更新文档描述 | ❌ 通常不需要 | 除非是重要澄清 |
+| 重构代码（无行为变化） | ❌ 否 | 不影响 API 契约 |
+
+### 工作流集成
+
+在 AI 工作流 Step 2 (Execute) 中，修改现有 Card 时：
+
+1. 更新 `last_update` 字段
+2. 在 `changelog` 数组开头添加新版本记录
+3. 使用 ADDED/MODIFIED/REMOVED 结构描述变更
+4. 根据变更类型确定版本号
+
+### 示例：Breaking Change
+
+```yaml
+changelog:
+  - version: "2.0.0"
+    date: "2025-12-24"
+    summary: "channel_id 重命名为 partner_id"
+    breaking: true
+    delta:
+      added:
+        - "partner_id 字段 (string)"
+      modified:
+        - "订单归属逻辑：从渠道改为合作伙伴"
+      removed:
+        - "channel_id 字段 (已废弃，将在 2026-03 移除)"
+```
+
+---
+
 ## 相关文档
 
 - [DOCUMENT-LAYER-DECISION.md](DOCUMENT-LAYER-DECISION.md) - 文档层级决策树
