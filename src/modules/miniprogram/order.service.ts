@@ -133,38 +133,35 @@ export class MiniprogramOrderService {
    * 获取订单详情
    */
   async getOrderDetail(userId: number, orderId: number): Promise<OrderDetailResponse | null> {
+    // 优化：一次查询订单和票券
     const order = await this.orderRepo.findOne({
-      where: { id: orderId, user_id: userId }
+      where: { id: orderId, user_id: userId },
+      relations: ['tickets']
     });
 
     if (!order) {
       return null;
     }
 
-    // 获取关联的票券
-    const tickets = await this.ticketRepo.find({
-      where: { order_id: orderId }
-    });
-
-    return this.formatOrderDetailResponse(order, tickets);
+    return this.formatOrderDetailResponse(order, order.tickets || []);
   }
 
   /**
    * 获取用户订单列表
    */
   async getOrderList(userId: number, page: number, pageSize: number): Promise<{ orders: OrderListItem[], total: number }> {
-    const [orders, total] = await this.orderRepo.findAndCount({
-      where: { user_id: userId },
-      order: { created_at: 'DESC' },
-      skip: (page - 1) * pageSize,
-      take: pageSize
-    });
+    // 优化：使用 QueryBuilder 一次查询订单和票券
+    const [orders, total] = await this.orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.tickets', 'ticket')
+      .where('order.user_id = :userId', { userId })
+      .orderBy('order.created_at', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
 
-    // 获取所有订单的票券
-    const orderIds = orders.map(o => Number(o.id));
-    const tickets = orderIds.length > 0
-      ? await this.ticketRepo.find({ where: orderIds.map(id => ({ order_id: id })) })
-      : [];
+    // 从关联中提取票券（已在上面一次性查出）
+    const tickets: TicketEntity[] = orders.flatMap(o => o.tickets || []);
 
     // 按订单ID分组票券
     const ticketsByOrderId = new Map<number, typeof tickets>();
