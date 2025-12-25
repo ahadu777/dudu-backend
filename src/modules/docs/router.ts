@@ -1876,6 +1876,53 @@ router.get('/tests', (_req: Request, res: Response) => {
     const missingTestPrds = prdDocIds.filter(id => !prdTestIds.includes(id));
     const prdGap = missingTestPrds.length;
 
+    // Get actual Story docs count for gap analysis
+    const storyDocs = loadStoriesIndex();
+    const storyDocsCount = storyDocs.length;
+    const storyCollectionsCount = collections.filter(c => c.type === 'story').length;
+
+    // Extract Story IDs from docs (e.g., "US-001", "US-010A", "US-010B")
+    const storyDocIds = storyDocs.map(story => story.id).filter(Boolean) as string[];
+
+    // Extract Story IDs from test collections (e.g., "018" from "us-018-ota-pdf-export.postman_collection.json")
+    // Need to normalize to compare: "US-018" from "us-018-..."
+    const storyTestIds = collections
+      .filter(c => c.type === 'story')
+      .map(c => {
+        const match = c.filename.match(/^us-(\d+[a-zA-Z]?)/i);
+        return match ? 'US-' + match[1].toUpperCase() : null;
+      })
+      .filter(Boolean) as string[];
+
+    // Find Stories without tests
+    const missingTestStories = storyDocIds.filter(id => !storyTestIds.includes(id));
+    const storyGap = missingTestStories.length;
+
+    // Detect test cases missing description field (userAction = item.description from Postman)
+    interface TestCaseWithoutDescription {
+      collectionId: string;
+      collectionName: string;
+      testName: string;
+    }
+    const testCasesWithoutDescription: TestCaseWithoutDescription[] = [];
+
+    collections.forEach(c => {
+      c.apiSequence.forEach(api => {
+        // userAction is parsed from Postman's item.description field
+        if (!api.userAction || api.userAction.trim() === '') {
+          testCasesWithoutDescription.push({
+            collectionId: c.id,
+            collectionName: c.name,
+            testName: api.name
+          });
+        }
+      });
+    });
+
+    const totalApiCalls = collections.reduce((sum, c) => sum + c.apiSequence.length, 0);
+    const missingDescriptionCount = testCasesWithoutDescription.length;
+    const descriptionCoverage = totalApiCalls > 0 ? Math.round((totalApiCalls - missingDescriptionCount) / totalApiCalls * 100) : 100;
+
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2104,19 +2151,98 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
           ? `<div style="color: #e74c3c; font-size: 0.8em; margin-top: 4px;">⚠️ Missing: ${missingTestPrds.map(id => 'PRD-' + id).join(', ')}</div>`
           : `<div style="color: #27ae60; font-size: 0.8em; margin-top: 4px;">✅ All PRDs have tests</div>`}
       </div>
-      <div class="stat-card">
-        <div class="number" style="color: #27ae60;">${collections.filter(c => c.type === 'story').length}</div>
-        <div class="label">Story Collections</div>
+      <div class="stat-card" style="border: 2px solid ${storyGap === 0 ? '#27ae60' : '#e74c3c'};">
+        <div class="number" style="color: ${storyGap === 0 ? '#27ae60' : '#e74c3c'};">${storyCollectionsCount}/${storyDocsCount}</div>
+        <div class="label">Story Test Coverage</div>
+        ${storyGap > 0
+          ? `<div style="color: #e74c3c; font-size: 0.8em; margin-top: 4px;">⚠️ ${storyGap} stories missing tests</div>`
+          : `<div style="color: #27ae60; font-size: 0.8em; margin-top: 4px;">✅ All Stories have tests</div>`}
+      </div>
+      <div class="stat-card" style="border: 2px solid ${descriptionCoverage >= 80 ? '#27ae60' : descriptionCoverage >= 50 ? '#f39c12' : '#e74c3c'};">
+        <div class="number" style="color: ${descriptionCoverage >= 80 ? '#27ae60' : descriptionCoverage >= 50 ? '#f39c12' : '#e74c3c'};">${descriptionCoverage}%</div>
+        <div class="label">User Action Context</div>
+        ${missingDescriptionCount > 0
+          ? `<div style="color: ${descriptionCoverage >= 50 ? '#f39c12' : '#e74c3c'}; font-size: 0.8em; margin-top: 4px;">⚠️ ${missingDescriptionCount} API calls missing 👤 description</div>`
+          : `<div style="color: #27ae60; font-size: 0.8em; margin-top: 4px;">✅ All API calls have descriptions</div>`}
       </div>
       <div class="stat-card">
-        <div class="number" style="color: #e67e22;">${collections.filter(c => c.type === 'other').length}</div>
-        <div class="label">Other Collections</div>
-      </div>
-      <div class="stat-card">
-        <div class="number" style="color: #9b59b6;">${collections.reduce((sum, c) => sum + c.apiSequence.length, 0)}</div>
+        <div class="number" style="color: #9b59b6;">${totalApiCalls}</div>
         <div class="label">Total API Calls</div>
       </div>
     </div>
+
+    <!-- Coverage Gap Details -->
+    ${storyGap > 0 || missingDescriptionCount > 0 ? `
+    <div style="background: #fdf2f2; border: 2px solid #e74c3c; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px;">
+      <h2 style="color: #c0392b; margin-bottom: 16px;">📋 Coverage Gaps Details</h2>
+
+      ${storyGap > 0 ? `
+      <details style="margin-bottom: 16px;">
+        <summary style="cursor: pointer; font-weight: 600; color: #c0392b; padding: 8px 0;">
+          ⚠️ Stories Missing Tests (${storyGap}/${storyDocsCount}) - Click to expand
+        </summary>
+        <div style="background: white; padding: 12px; border-radius: 4px; margin-top: 8px; max-height: 300px; overflow-y: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+            <tr style="background: #fce4e4;">
+              <th style="padding: 8px; text-align: left; border: 1px solid #e74c3c;">Story ID</th>
+              <th style="padding: 8px; text-align: left; border: 1px solid #e74c3c;">Title</th>
+              <th style="padding: 8px; text-align: left; border: 1px solid #e74c3c;">Status</th>
+              <th style="padding: 8px; text-align: left; border: 1px solid #e74c3c;">Action</th>
+            </tr>
+            ${missingTestStories.map(id => {
+              const story = storyDocs.find(s => s.id === id);
+              return `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #e74c3c;"><code>${id}</code></td>
+                <td style="padding: 8px; border: 1px solid #e74c3c;">${story?.title || 'Unknown'}</td>
+                <td style="padding: 8px; border: 1px solid #e74c3c;">${story?.status || 'Unknown'}</td>
+                <td style="padding: 8px; border: 1px solid #e74c3c;"><code>us-${id.replace('US-', '').toLowerCase()}-*.json</code></td>
+              </tr>`;
+            }).join('')}
+          </table>
+          <p style="color: #856404; margin-top: 12px; font-size: 0.85em;">
+            <strong>To fix:</strong> Create Postman collection with naming convention <code>postman/auto-generated/us-{NNN}-{description}.postman_collection.json</code>
+          </p>
+        </div>
+      </details>
+      ` : ''}
+
+      ${missingDescriptionCount > 0 ? `
+      <details>
+        <summary style="cursor: pointer; font-weight: 600; color: #c0392b; padding: 8px 0;">
+          ⚠️ API Calls Missing User Action Description (${missingDescriptionCount}/${totalApiCalls}) - Click to expand
+        </summary>
+        <div style="background: white; padding: 12px; border-radius: 4px; margin-top: 8px; max-height: 300px; overflow-y: auto;">
+          <p style="color: #666; margin-bottom: 12px; font-size: 0.9em;">
+            Per <strong>CEO-CONTEXT.md (2025-12-25)</strong>: API calls should have <code>description</code> field in Postman to show user context (👤 badge).
+          </p>
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+            <tr style="background: #fce4e4;">
+              <th style="padding: 8px; text-align: left; border: 1px solid #e74c3c;">Collection</th>
+              <th style="padding: 8px; text-align: left; border: 1px solid #e74c3c;">Test Name</th>
+            </tr>
+            ${testCasesWithoutDescription.slice(0, 20).map(tc => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #e74c3c;"><code>${tc.collectionId}</code></td>
+                <td style="padding: 8px; border: 1px solid #e74c3c;">${tc.testName}</td>
+              </tr>
+            `).join('')}
+            ${testCasesWithoutDescription.length > 20 ? `
+              <tr>
+                <td colspan="2" style="padding: 8px; border: 1px solid #e74c3c; color: #856404; text-align: center;">
+                  ... and ${testCasesWithoutDescription.length - 20} more
+                </td>
+              </tr>
+            ` : ''}
+          </table>
+          <p style="color: #856404; margin-top: 12px; font-size: 0.85em;">
+            <strong>To fix:</strong> Add <code>"description": "User taps Buy Now button"</code> to each request in Postman collection JSON.
+          </p>
+        </div>
+      </details>
+      ` : ''}
+    </div>
+    ` : ''}
 
     <!-- Search Box -->
     <div class="search-box">
