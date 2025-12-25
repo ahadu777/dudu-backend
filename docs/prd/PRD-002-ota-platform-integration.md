@@ -10,18 +10,18 @@ status: "Done"
 version: "2.0"
 created_date: "2025-11-03"
 last_updated: "2025-12-12"
-related_stories: ["US-012", "US-018"]
+related_stories: ["US-012", "US-017", "US-018"]
 implementation_cards: ["ota-order-retrieval", "ota-premade-tickets", "ota-reservation-management"]
 # deprecated_cards: ["ota-channel-management", "ota-reseller-management"] - moved to _deprecated/
+# merged: "PRD-005" - 2025-12-25 合并，原文件见 _deprecated/PRD-005-reseller-billing-analytics.md
 enhances: "PRD-001"
-enables: "PRD-005"
 ```
 
 ## Executive Summary
 
 **Problem Statement**: External OTA platforms need guaranteed inventory access to sell our cruise packages at scale, but current system only supports direct sales channel, limiting market reach and revenue potential.
 
-**Solution Overview**: Multi-channel inventory management system with dedicated OTA API endpoints, enabling external platforms to reserve and sell cruise packages while maintaining inventory separation and pricing consistency. Foundation for advanced B2B2C billing workflows (see PRD-005).
+**Solution Overview**: Multi-channel inventory management system with dedicated OTA API endpoints, enabling external platforms to reserve and sell cruise packages while maintaining inventory separation and pricing consistency. Includes reseller billing capabilities for B2B2C revenue sharing.
 
 **Success Metrics**:
 | Metric | Target | Status |
@@ -95,6 +95,13 @@ enables: "PRD-005"
 - On-demand generation with configurable expiry (1-1440 minutes)
 - AES-256-GCM encryption with HMAC-SHA256 signature
 - Partner isolation ensures secure ticket access
+
+### Reseller Billing & Analytics (merged from PRD-005)
+Usage-based billing for B2B2C reseller distribution
+- **Current Implementation**: Reseller data in batch metadata (`reseller_metadata`), manual query for billing reconciliation
+- **Billing Model**: Charge on redemption (not purchase), commission calculation from batch pricing snapshot
+- **Future Enhancement**: Automated billing engine, 7-year audit retention (when business scales)
+- **Priority**: Medium
 
 ---
 

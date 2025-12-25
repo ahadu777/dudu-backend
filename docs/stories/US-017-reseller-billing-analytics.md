@@ -6,7 +6,7 @@ status: "Done"
 priority: High
 created_date: "2025-12-17"
 last_updated: "2025-12-17"
-business_requirement: "PRD-005"
+business_requirement: "PRD-002"
 depends_on:
   - US-012  # OTA 平台集成（票券批次生成）
 enhances:
