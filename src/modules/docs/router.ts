@@ -1852,6 +1852,30 @@ router.get('/tests', (_req: Request, res: Response) => {
       return a.id.localeCompare(b.id);
     });
 
+    // Get actual PRD docs count for gap analysis
+    const prdDocs = loadPRDDocuments();
+    const prdDocsCount = prdDocs.length;
+    const prdCollectionsCount = collections.filter(c => c.type === 'prd').length;
+
+    // Extract PRD IDs from docs (e.g., "PRD-001" from filename "PRD-001-cruise-ticketing-platform.md")
+    const prdDocIds = prdDocs.map(doc => {
+      const match = doc.filename?.match(/^PRD-(\d+)/i);
+      return match ? match[1] : null;
+    }).filter(Boolean) as string[];
+
+    // Extract PRD IDs from test collections (e.g., "001" from "prd-001-cruise-ticketing.postman_collection.json")
+    const prdTestIds = collections
+      .filter(c => c.type === 'prd')
+      .map(c => {
+        const match = c.filename.match(/^prd-(\d+)/i);
+        return match ? match[1] : null;
+      })
+      .filter(Boolean) as string[];
+
+    // Find PRDs without tests
+    const missingTestPrds = prdDocIds.filter(id => !prdTestIds.includes(id));
+    const prdGap = missingTestPrds.length;
+
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2073,9 +2097,12 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
 
     <!-- Stats Row -->
     <div class="stats-row">
-      <div class="stat-card">
-        <div class="number" style="color: #2980b9;">${collections.filter(c => c.type === 'prd').length}</div>
-        <div class="label">PRD Collections</div>
+      <div class="stat-card" style="border: 2px solid ${prdGap === 0 ? '#27ae60' : '#e74c3c'};">
+        <div class="number" style="color: ${prdGap === 0 ? '#27ae60' : '#e74c3c'};">${prdCollectionsCount}/${prdDocsCount}</div>
+        <div class="label">PRD Test Coverage</div>
+        ${prdGap > 0
+          ? `<div style="color: #e74c3c; font-size: 0.8em; margin-top: 4px;">⚠️ Missing: ${missingTestPrds.map(id => 'PRD-' + id).join(', ')}</div>`
+          : `<div style="color: #27ae60; font-size: 0.8em; margin-top: 4px;">✅ All PRDs have tests</div>`}
       </div>
       <div class="stat-card">
         <div class="number" style="color: #27ae60;">${collections.filter(c => c.type === 'story').length}</div>
