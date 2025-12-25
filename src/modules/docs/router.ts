@@ -1930,6 +1930,11 @@ router.get('/tests', (_req: Request, res: Response) => {
     .search-box input:focus { outline: none; border-color: #3498db; }
     .search-hint { color: #7f8c8d; font-size: 0.85em; margin-top: 8px; }
 
+    /* Flow card transitions for search */
+    .flow-card {
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
     /* Collection Cards */
     .collection-card {
       background: white;
@@ -2064,6 +2069,32 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
         <li>"Does the QR scan flow have coverage?" → Search "QR" or "scan" to find actual tests</li>
       </ul>
       <p style="margin-top: 12px;"><strong>Trust level:</strong> ✅ These are the actual executable tests from Newman/Postman collections.</p>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="number" style="color: #2980b9;">${collections.filter(c => c.type === 'prd').length}</div>
+        <div class="label">PRD Collections</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="color: #27ae60;">${collections.filter(c => c.type === 'story').length}</div>
+        <div class="label">Story Collections</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="color: #e67e22;">${collections.filter(c => c.type === 'other').length}</div>
+        <div class="label">Other Collections</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="color: #9b59b6;">${collections.reduce((sum, c) => sum + c.apiSequence.length, 0)}</div>
+        <div class="label">Total API Calls</div>
+      </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-box">
+      <input type="text" id="flowSearchInput" placeholder="Search API calls, test names, or descriptions..." />
+      <div class="search-hint">💡 Type to filter. Matching cards will be highlighted, non-matching will be dimmed.</div>
     </div>
 
     <!-- E2E API Flows - Dynamically Parsed from Postman Collections -->
@@ -2448,6 +2479,31 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
             }
           });
         });
+
+        // Search functionality
+        var searchInput = document.getElementById('flowSearchInput');
+        if (searchInput) {
+          searchInput.addEventListener('input', function() {
+            var query = this.value.toLowerCase().trim();
+            var flowCards = document.querySelectorAll('.flow-card');
+
+            flowCards.forEach(function(card) {
+              var cardText = card.textContent.toLowerCase();
+              if (query === '' || cardText.includes(query)) {
+                card.style.opacity = '1';
+                card.style.transform = 'scale(1)';
+                // Expand matching cards if searching
+                if (query !== '') {
+                  var flowContent = card.querySelector('[id^="flow-"]');
+                  if (flowContent) flowContent.style.display = 'block';
+                }
+              } else {
+                card.style.opacity = '0.3';
+                card.style.transform = 'scale(0.98)';
+              }
+            });
+          });
+        }
       });
     </script>
 </body>
