@@ -349,7 +349,7 @@ stories:
     enhances: [US-012, US-013]
     enhanced_by: []
     # Business requirements
-    business_requirement: "PRD-005"
+    business_requirement: "PRD-002"  # 原 PRD-005 已合并到 PRD-002
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-017-runbook.md

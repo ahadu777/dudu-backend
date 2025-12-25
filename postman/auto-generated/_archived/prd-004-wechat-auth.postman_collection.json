@@ -15,6 +15,7 @@
   "item": [
     {
       "name": "4.1 WeChat Login - Empty Code (Validation)",
+      "description": "用户授权微信登录时传入空授权码，系统拒绝并提示参数错误",
       "request": {
         "method": "POST",
         "header": [
@@ -60,6 +61,7 @@
     },
     {
       "name": "4.2 WeChat Login - Missing Code",
+      "description": "用户授权微信登录时未传入授权码，系统拒绝并提示必填字段缺失",
       "request": {
         "method": "POST",
         "header": [
@@ -100,6 +102,7 @@
     },
     {
       "name": "4.3 WeChat Login - Invalid Code (WeChat Rejects)",
+      "description": "用户传入过期或伪造的授权码，微信服务器拒绝验证",
       "request": {
         "method": "POST",
         "header": [
@@ -140,6 +143,7 @@
     },
     {
       "name": "4.4 Phone Binding - No JWT Token",
+      "description": "未登录用户尝试绑定手机号，系统要求先完成微信登录",
       "request": {
         "method": "POST",
         "header": [
@@ -179,6 +183,7 @@
     },
     {
       "name": "4.5 Phone Binding - Invalid JWT Token",
+      "description": "用户使用伪造或过期的令牌尝试绑定手机号，系统拒绝操作",
       "request": {
         "method": "POST",
         "header": [
@@ -222,6 +227,7 @@
     },
     {
       "name": "4.6 Login Response Time (<500ms)",
+      "description": "验证微信登录接口在高并发场景下响应时间不超过 500 毫秒",
       "request": {
         "method": "POST",
         "header": [
