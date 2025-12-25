@@ -1841,11 +1841,6 @@ router.get('/tests', (_req: Request, res: Response) => {
       return a.id.localeCompare(b.id);
     });
 
-    // Calculate stats
-    const prdCollections = collections.filter(c => c.type === 'prd');
-    const storyCollections = collections.filter(c => c.type === 'story');
-    const totalTests = collections.reduce((sum, c) => sum + c.totalTests, 0);
-
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2071,10 +2066,10 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
         <span style="color: #7f8c8d; margin-left: 12px; align-self: center;">Click a collection to see its API sequence</span>
       </div>
 
-      ${collections.filter(c => c.type === 'prd' || c.type === 'story').map(c => `
+      ${collections.map(c => `
       <div style="background: white; border: 1px solid ${c.testResult ? (c.testResult.failed === 0 ? '#27ae60' : '#e74c3c') : '#ddd'}; border-radius: 6px; margin-bottom: 12px; overflow: hidden;" class="flow-card">
         <div class="flow-header" data-target="flow-${c.filename.replace(/[^a-zA-Z0-9]/g, '-')}"
-             style="padding: 12px 16px; background: ${c.type === 'prd' ? '#e8f4fd' : '#e8fdf4'}; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+             style="padding: 12px 16px; background: ${c.type === 'prd' ? '#e8f4fd' : c.type === 'story' ? '#e8fdf4' : '#fdf4e8'}; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 8px;">
             ${c.testResult ? (c.testResult.failed === 0
               ? '<span style="color: #27ae60; font-size: 1.2em;">✅</span>'
@@ -2090,7 +2085,7 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
               </span>
               <span style="color: #95a5a6; font-size: 0.75em;" title="Last run">${c.testResult.timestamp}</span>
             ` : `<span style="color: #95a5a6; font-size: 0.8em;">No results</span>`}
-            <span style="background: ${c.type === 'prd' ? '#2980b9' : '#27ae60'}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${c.apiSequence.length} API calls</span>
+            <span style="background: ${c.type === 'prd' ? '#2980b9' : c.type === 'story' ? '#27ae60' : '#e67e22'}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${c.apiSequence.length} API calls</span>
             <span style="color: #7f8c8d;">▼</span>
           </div>
         </div>
@@ -2327,169 +2322,6 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
         });
       });
     </script>
-
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="number">${collections.length}</div>
-        <div class="label">Test Collections</div>
-      </div>
-      <div class="stat-card">
-        <div class="number">${totalTests}</div>
-        <div class="label">Total Test Cases</div>
-      </div>
-      <div class="stat-card">
-        <div class="number">${prdCollections.length}</div>
-        <div class="label">PRD Collections</div>
-      </div>
-      <div class="stat-card">
-        <div class="number">${storyCollections.length}</div>
-        <div class="label">Story Collections</div>
-      </div>
-    </div>
-
-    <div class="search-box">
-      <div style="display: flex; gap: 12px; align-items: center;">
-        <input type="text" id="searchInput" placeholder="Search test cases... (e.g., 'operator scan', 'QR', 'AC-3.2')" style="flex: 1;">
-        <button id="expandAllBtn" style="padding: 10px 16px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Expand All</button>
-        <button id="collapseAllBtn" style="padding: 10px 16px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Collapse All</button>
-      </div>
-      <p class="search-hint">Search across all ${totalTests} test cases. Matching tests will be highlighted.</p>
-    </div>
-
-    ${collections.map(c => `
-    <div class="collection-card" data-collection="${c.filename}">
-      <div class="collection-header" data-filename="${c.filename}">
-        <span class="collection-title">${c.id || c.name}</span>
-        <div class="collection-meta">
-          <span class="badge badge-${c.type}">${c.type.toUpperCase()}</span>
-          <span class="test-count">${c.totalTests} tests</span>
-        </div>
-      </div>
-      <div class="test-list" id="list-${c.filename.replace(/\./g, '-')}">
-        ${c.testCases.map(t => `
-        <div class="test-item ${t.name.includes('AC-') ? 'ac-test' : ''}" data-name="${t.name.toLowerCase()}">
-          ${t.folder ? `<div class="folder">📁 ${t.folder}</div>` : ''}
-          <div class="name">${t.name}</div>
-        </div>
-        `).join('')}
-      </div>
-    </div>
-    `).join('')}
-  </div>
-
-  <script>
-    // Track which collections user has manually toggled
-    const userToggledCollections = new Set();
-
-    function expandAll() {
-      document.querySelectorAll('.test-list').forEach(list => {
-        list.classList.add('expanded');
-      });
-      // Also show all test items (in case search had hidden some)
-      document.querySelectorAll('.test-item').forEach(item => {
-        item.style.display = '';
-      });
-      // Clear the toggle tracking since user explicitly expanded all
-      userToggledCollections.clear();
-    }
-
-    function collapseAll() {
-      document.querySelectorAll('.test-list').forEach(list => {
-        list.classList.remove('expanded');
-      });
-      // Clear the toggle tracking since user explicitly collapsed all
-      userToggledCollections.clear();
-    }
-
-    function toggleCollection(filename) {
-      const listId = 'list-' + filename.replace(/\\./g, '-');
-      const list = document.getElementById(listId);
-      const isExpanded = list.classList.contains('expanded');
-
-      // Track user's manual toggle
-      if (isExpanded) {
-        userToggledCollections.add(filename + '-collapsed');
-        userToggledCollections.delete(filename + '-expanded');
-      } else {
-        userToggledCollections.add(filename + '-expanded');
-        userToggledCollections.delete(filename + '-collapsed');
-      }
-
-      list.classList.toggle('expanded');
-    }
-
-    // Search functionality
-    document.getElementById('searchInput').addEventListener('input', function(e) {
-      const query = e.target.value.toLowerCase();
-      const testItems = document.querySelectorAll('.test-item');
-      const collections = document.querySelectorAll('.collection-card');
-
-      if (!query) {
-        // Clear search: remove highlights and collapse all (unless user manually expanded)
-        testItems.forEach(item => {
-          item.classList.remove('highlight');
-          item.style.display = '';
-        });
-        collections.forEach(c => {
-          const filename = c.getAttribute('data-collection');
-          // Only collapse if user hasn't manually expanded this one
-          if (!userToggledCollections.has(filename + '-expanded')) {
-            c.querySelector('.test-list').classList.remove('expanded');
-          }
-        });
-        return;
-      }
-
-      // During search: show/hide items and auto-expand matching collections
-      collections.forEach(c => {
-        const filename = c.getAttribute('data-collection');
-        const list = c.querySelector('.test-list');
-        const items = c.querySelectorAll('.test-item');
-        let hasMatch = false;
-
-        items.forEach(item => {
-          const name = item.getAttribute('data-name');
-          if (name.includes(query)) {
-            item.classList.add('highlight');
-            item.style.display = '';
-            hasMatch = true;
-          } else {
-            item.classList.remove('highlight');
-            item.style.display = 'none';
-          }
-        });
-
-        // Auto-expand collections with matches, collapse those without
-        // But respect user's manual toggle
-        if (hasMatch) {
-          if (!userToggledCollections.has(filename + '-collapsed')) {
-            list.classList.add('expanded');
-          }
-        } else {
-          if (!userToggledCollections.has(filename + '-expanded')) {
-            list.classList.remove('expanded');
-          }
-        }
-      });
-    });
-
-    // Attach event listeners (CSP-compliant, no inline handlers)
-    document.getElementById('expandAllBtn').addEventListener('click', expandAll);
-    document.getElementById('collapseAllBtn').addEventListener('click', collapseAll);
-
-    // Collection header click handlers
-    document.querySelectorAll('.collection-header').forEach(header => {
-      header.addEventListener('click', function() {
-        const filename = this.getAttribute('data-filename');
-        toggleCollection(filename);
-      });
-    });
-
-    // Expand all if URL has ?expand=all
-    if (window.location.search.includes('expand=all')) {
-      document.querySelectorAll('.test-list').forEach(list => list.classList.add('expanded'));
-    }
-  </script>
 </body>
 </html>`;
 
