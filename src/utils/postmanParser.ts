@@ -6,6 +6,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface FlowMetadata {
+  sequence: number;
+  page: string;
+  trigger: string;
+  produces: string[];
+  consumes: string[];
+}
+
 export interface PostmanRequest {
   name: string;
   method: string;
@@ -13,6 +21,8 @@ export interface PostmanRequest {
   body?: string;
   headers?: Record<string, string>;
   assertions: string[];
+  description?: string;
+  flow?: FlowMetadata;
 }
 
 export interface PostmanCollection {
@@ -108,12 +118,27 @@ function parseRequestItem(item: any, variables: any[]): PostmanRequest | null {
     }
   }
 
+  // 解析 x-flow 扩展字段
+  let flow: FlowMetadata | undefined;
+  if (item['x-flow']) {
+    const xFlow = item['x-flow'];
+    flow = {
+      sequence: xFlow.sequence ?? 0,
+      page: xFlow.page ?? '',
+      trigger: xFlow.trigger ?? '',
+      produces: xFlow.produces ?? [],
+      consumes: xFlow.consumes ?? []
+    };
+  }
+
   return {
     name: item.name || 'Unnamed Request',
     method: req.method || 'GET',
     url: url || '/',
     body,
-    assertions
+    assertions,
+    description: item.description,
+    flow
   };
 }
 
@@ -166,4 +191,112 @@ export function findRequestByTestName(
     r.name.toLowerCase().includes(normalizedName) ||
     normalizedName.includes(r.name.replace(/^\d+\.\d+\s*/, '').toLowerCase())
   );
+}
+
+/**
+ * 数据流节点
+ */
+export interface DataFlowNode {
+  variable: string;
+  producedBy: string[];  // 请求名称列表
+  consumedBy: string[];  // 请求名称列表
+}
+
+/**
+ * 页面分组
+ */
+export interface PageGroup {
+  page: string;
+  icon: string;
+  color: string;
+  requests: PostmanRequest[];
+}
+
+/**
+ * 页面图标和颜色映射
+ */
+const PAGE_STYLES: Record<string, { icon: string; color: string }> = {
+  'system': { icon: '⚙️', color: '#6b7280' },
+  'product-list': { icon: '🏠', color: '#3b82f6' },
+  'product-detail': { icon: '📦', color: '#10b981' },
+  'order-confirm': { icon: '💳', color: '#f59e0b' },
+  'my-orders': { icon: '📋', color: '#8b5cf6' },
+  'order-detail': { icon: '📄', color: '#6366f1' },
+  'checkout': { icon: '💰', color: '#ef4444' },
+  'my-tickets': { icon: '🎫', color: '#14b8a6' },
+  'venue-scan': { icon: '📷', color: '#ec4899' }
+};
+
+/**
+ * 分析数据流
+ */
+export function analyzeDataFlow(collection: PostmanCollection): DataFlowNode[] {
+  const variableMap = new Map<string, { producedBy: Set<string>; consumedBy: Set<string> }>();
+
+  for (const request of collection.requests) {
+    if (!request.flow) continue;
+
+    // 记录 produces
+    for (const variable of request.flow.produces) {
+      if (!variableMap.has(variable)) {
+        variableMap.set(variable, { producedBy: new Set(), consumedBy: new Set() });
+      }
+      variableMap.get(variable)!.producedBy.add(request.name);
+    }
+
+    // 记录 consumes
+    for (const variable of request.flow.consumes) {
+      if (!variableMap.has(variable)) {
+        variableMap.set(variable, { producedBy: new Set(), consumedBy: new Set() });
+      }
+      variableMap.get(variable)!.consumedBy.add(request.name);
+    }
+  }
+
+  return Array.from(variableMap.entries()).map(([variable, data]) => ({
+    variable,
+    producedBy: Array.from(data.producedBy),
+    consumedBy: Array.from(data.consumedBy)
+  }));
+}
+
+/**
+ * 按页面分组请求
+ */
+export function groupRequestsByPage(collection: PostmanCollection): PageGroup[] {
+  const pageMap = new Map<string, PostmanRequest[]>();
+
+  for (const request of collection.requests) {
+    const page = request.flow?.page || 'unknown';
+    if (!pageMap.has(page)) {
+      pageMap.set(page, []);
+    }
+    pageMap.get(page)!.push(request);
+  }
+
+  // 按序列号排序每个页面内的请求
+  for (const requests of pageMap.values()) {
+    requests.sort((a, b) => (a.flow?.sequence ?? 0) - (b.flow?.sequence ?? 0));
+  }
+
+  // 转换为数组并按序列号排序页面
+  const groups: PageGroup[] = [];
+  for (const [page, requests] of pageMap.entries()) {
+    const style = PAGE_STYLES[page] || { icon: '📄', color: '#6b7280' };
+    groups.push({
+      page,
+      icon: style.icon,
+      color: style.color,
+      requests
+    });
+  }
+
+  // 按第一个请求的序列号排序
+  groups.sort((a, b) => {
+    const seqA = a.requests[0]?.flow?.sequence ?? 0;
+    const seqB = b.requests[0]?.flow?.sequence ?? 0;
+    return seqA - seqB;
+  });
+
+  return groups;
 }

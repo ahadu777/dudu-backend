@@ -35,6 +35,7 @@
   "item": [
     {
       "name": "2.1 Query OTA Inventory",
+      "description": "OTA 合作方查询可分销商品的实时库存和定价信息",
       "request": {
         "method": "GET",
         "header": [
@@ -83,6 +84,7 @@
     },
     {
       "name": "2.2 List OTA Tickets",
+      "description": "OTA 运营人员查看已生成的票券列表和状态",
       "request": {
         "method": "GET",
         "header": [
@@ -120,6 +122,7 @@
     },
     {
       "name": "2.3 Bulk Generate Tickets",
+      "description": "OTA 系统批量生成预制票券，用于线下销售或分销渠道",
       "request": {
         "method": "POST",
         "header": [
@@ -174,6 +177,7 @@
     },
     {
       "name": "2.4 Activate Pre-Made Ticket",
+      "description": "客户购买预制票后，OTA 系统激活票券并绑定客户信息",
       "request": {
         "method": "POST",
         "header": [
@@ -219,6 +223,7 @@
     },
     {
       "name": "2.5 List Batches",
+      "description": "OTA 运营人员查看所有票券批次的生成记录和状态",
       "request": {
         "method": "GET",
         "header": [
@@ -256,6 +261,7 @@
     },
     {
       "name": "2.6 List Resellers",
+      "description": "平台管理员查看所有分销商列表及其销售数据",
       "request": {
         "method": "GET",
         "header": [
@@ -293,6 +299,7 @@
     },
     {
       "name": "2.7 Billing Summary",
+      "description": "财务人员查看指定月份的分销商账单汇总",
       "request": {
         "method": "GET",
         "header": [
@@ -335,6 +342,7 @@
     },
     {
       "name": "2.8 Batch Analytics",
+      "description": "运营人员查看单个批次的激活率、核销率等分析数据",
       "request": {
         "method": "GET",
         "header": [

@@ -35,6 +35,7 @@
   "item": [
     {
       "name": "3.1 Operator Login",
+      "description": "场馆操作员上班时登录验票终端，获取操作权限",
       "request": {
         "method": "POST",
         "header": [
@@ -75,6 +76,7 @@
     },
     {
       "name": "3.2 Generate Ticket (OTA)",
+      "description": "测试准备：通过 OTA 接口生成测试用票券",
       "request": {
         "method": "POST",
         "header": [
@@ -120,6 +122,7 @@
     },
     {
       "name": "3.3 Activate Ticket",
+      "description": "测试准备：激活票券并绑定客户信息，使其可用于入场",
       "request": {
         "method": "POST",
         "header": [
@@ -163,6 +166,7 @@
     },
     {
       "name": "3.4 Generate QR Code",
+      "description": "客户在小程序中点击「我的票券」生成入场二维码",
       "request": {
         "method": "POST",
         "header": [
@@ -205,6 +209,7 @@
     },
     {
       "name": "3.5 Decrypt QR Code (View Info)",
+      "description": "操作员扫描客户二维码后，系统解密并显示票券信息和权益列表",
       "request": {
         "method": "POST",
         "header": [
@@ -251,6 +256,7 @@
     },
     {
       "name": "3.6 Venue Scan (Redeem Ferry)",
+      "description": "客户在渡轮入口扫码，操作员核销登船权益允许通行",
       "request": {
         "method": "POST",
         "header": [
@@ -295,6 +301,7 @@
     },
     {
       "name": "3.7 Duplicate Redemption (Fraud Detection)",
+      "description": "客户尝试重复使用已核销的权益，系统检测并拒绝欺诈行为",
       "request": {
         "method": "POST",
         "header": [
@@ -339,6 +346,7 @@
     },
     {
       "name": "3.8 List Venues",
+      "description": "管理员查看所有可用场馆列表和配置信息",
       "request": {
         "method": "GET",
         "header": [],

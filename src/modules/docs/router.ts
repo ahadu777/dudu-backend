@@ -1761,7 +1761,7 @@ router.get('/tests', (_req: Request, res: Response) => {
         try {
           const content = JSON.parse(fs.readFileSync(path.join(postmanDir, file), 'utf-8'));
           const testCases: Array<{ name: string; folder: string }> = [];
-          const apiSequence: Array<{ step: number; name: string; method: string; path: string; folder: string; userAction: string }> = [];
+          const apiSequence: Array<{ step: number; name: string; method: string; path: string; folder: string; userAction: string; flow?: { sequence: number; page: string; trigger: string; produces: string[]; consumes: string[] } }> = [];
           let stepCounter = 0;
 
           // Extract test names AND API sequence recursively from Postman collection structure
@@ -1790,7 +1790,18 @@ router.get('/tests', (_req: Request, res: Response) => {
                 }
                 // Extract user action from Postman request description (data-driven)
                 const userAction = item.description || '';
-                apiSequence.push({ step: stepCounter, name: item.name, method, path, folder, userAction });
+
+                // Extract x-flow extension field for page context and data flow
+                const xFlow = item['x-flow'];
+                const flow = xFlow ? {
+                  sequence: xFlow.sequence ?? 0,
+                  page: xFlow.page ?? '',
+                  trigger: xFlow.trigger ?? '',
+                  produces: xFlow.produces ?? [],
+                  consumes: xFlow.consumes ?? []
+                } : undefined;
+
+                apiSequence.push({ step: stepCounter, name: item.name, method, path, folder, userAction, flow });
               }
             }
           };
@@ -2095,18 +2106,135 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
           </div>
         </div>
         <div id="flow-${c.filename.replace(/[^a-zA-Z0-9]/g, '-')}" style="display: none; padding: 16px; background: #fafbfc;">
-          <div style="font-family: monospace; font-size: 0.85em;">
-            ${c.apiSequence.map((api, idx) => `
-            <div style="display: flex; align-items: flex-start; margin-bottom: 8px; ${idx < c.apiSequence.length - 1 ? 'border-left: 2px solid #3498db; padding-left: 16px; margin-left: 8px;' : 'padding-left: 16px; margin-left: 8px;'}">
-              <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center; margin-right: 8px;">${api.method}</span>
-              <div style="flex: 1;">
-                <code style="color: #2c3e50;">${api.path || '/'}</code>
-                <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
-                ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
+          ${(() => {
+            // 页面图标和颜色映射
+            const PAGE_STYLES: Record<string, { icon: string; color: string }> = {
+              'system': { icon: '⚙️', color: '#6b7280' },
+              'product-list': { icon: '🏠', color: '#3b82f6' },
+              'product-detail': { icon: '📦', color: '#10b981' },
+              'order-confirm': { icon: '💳', color: '#f59e0b' },
+              'my-orders': { icon: '📋', color: '#8b5cf6' },
+              'order-detail': { icon: '📄', color: '#6366f1' },
+              'checkout': { icon: '💰', color: '#ef4444' },
+              'my-tickets': { icon: '🎫', color: '#14b8a6' },
+              'venue-scan': { icon: '📷', color: '#ec4899' }
+            };
+
+            // 检查是否有 x-flow 数据
+            const hasFlowData = c.apiSequence.some((api: any) => api.flow?.page);
+
+            if (!hasFlowData) {
+              // 没有 x-flow 数据时使用原始列表视图
+              return `
+                <div style="font-family: monospace; font-size: 0.85em;">
+                  ${c.apiSequence.map((api: any, idx: number) => `
+                  <div style="display: flex; align-items: flex-start; margin-bottom: 8px; ${idx < c.apiSequence.length - 1 ? 'border-left: 2px solid #3498db; padding-left: 16px; margin-left: 8px;' : 'padding-left: 16px; margin-left: 8px;'}">
+                    <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center; margin-right: 8px;">${api.method}</span>
+                    <div style="flex: 1;">
+                      <code style="color: #2c3e50;">${api.path || '/'}</code>
+                      <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
+                      ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
+                    </div>
+                  </div>
+                  `).join('')}
+                </div>
+              `;
+            }
+
+            // 有 x-flow 数据时使用页面分组视图
+            // 按页面分组
+            const pageGroups = new Map<string, any[]>();
+            for (const api of c.apiSequence as any[]) {
+              const page = api.flow?.page || 'unknown';
+              if (!pageGroups.has(page)) {
+                pageGroups.set(page, []);
+              }
+              pageGroups.get(page)!.push(api);
+            }
+
+            // 按序列号排序页面
+            const sortedPages = Array.from(pageGroups.entries()).sort((a, b) => {
+              const seqA = a[1][0]?.flow?.sequence ?? 0;
+              const seqB = b[1][0]?.flow?.sequence ?? 0;
+              return seqA - seqB;
+            });
+
+            // 收集数据流
+            const dataFlowMap = new Map<string, { producedBy: string[]; consumedBy: string[] }>();
+            for (const api of c.apiSequence as any[]) {
+              if (!api.flow) continue;
+              for (const v of api.flow.produces || []) {
+                if (!dataFlowMap.has(v)) dataFlowMap.set(v, { producedBy: [], consumedBy: [] });
+                dataFlowMap.get(v)!.producedBy.push(api.name);
+              }
+              for (const v of api.flow.consumes || []) {
+                if (!dataFlowMap.has(v)) dataFlowMap.set(v, { producedBy: [], consumedBy: [] });
+                dataFlowMap.get(v)!.consumedBy.push(api.name);
+              }
+            }
+
+            return `
+              <!-- 数据流面板 -->
+              ${dataFlowMap.size > 0 ? `
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 16px; margin-bottom: 16px; color: white;">
+                <div style="font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                  <span>🔗</span> 数据流 Data Flow
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                  ${Array.from(dataFlowMap.entries()).map(([variable, data]) => `
+                    <div style="background: rgba(255,255,255,0.2); border-radius: 6px; padding: 8px 12px; font-size: 0.85em;">
+                      <code style="background: rgba(255,255,255,0.3); padding: 2px 6px; border-radius: 3px; font-weight: 600;">${variable}</code>
+                      <div style="margin-top: 4px; opacity: 0.9; font-size: 0.85em;">
+                        ${data.producedBy.length > 0 ? `<span title="Produced by">⬆️ ${data.producedBy.length}</span>` : ''}
+                        ${data.consumedBy.length > 0 ? `<span style="margin-left: 8px;" title="Consumed by">⬇️ ${data.consumedBy.length}</span>` : ''}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
-            </div>
-            `).join('')}
-          </div>
+              ` : ''}
+
+              <!-- 页面分组视图 -->
+              <div style="font-family: monospace; font-size: 0.85em;">
+                ${sortedPages.map(([page, apis], pageIdx) => {
+                  const style = PAGE_STYLES[page] || { icon: '📄', color: '#6b7280' };
+                  return `
+                  <div style="margin-bottom: 16px;">
+                    <!-- 页面标题 -->
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px 12px; background: ${style.color}15; border-left: 4px solid ${style.color}; border-radius: 0 6px 6px 0;">
+                      <span style="font-size: 1.2em;">${style.icon}</span>
+                      <span style="font-weight: 600; color: ${style.color};">${page}</span>
+                      <span style="color: #95a5a6; font-size: 0.9em;">(${apis.length} requests)</span>
+                    </div>
+
+                    <!-- 页面内的请求 -->
+                    ${apis.map((api: any, idx: number) => `
+                    <div style="display: flex; align-items: flex-start; margin-bottom: 8px; padding-left: 24px; ${idx < apis.length - 1 ? 'border-left: 2px solid ' + style.color + '40; margin-left: 16px;' : 'margin-left: 16px;'}">
+                      <div style="display: flex; flex-direction: column; align-items: center; margin-right: 12px;">
+                        <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center;">${api.method}</span>
+                        ${api.flow?.sequence !== undefined ? `<span style="color: #95a5a6; font-size: 0.7em; margin-top: 2px;">#${api.flow.sequence}</span>` : ''}
+                      </div>
+                      <div style="flex: 1;">
+                        <code style="color: #2c3e50;">${api.path || '/'}</code>
+                        <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
+                        ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
+                        ${api.flow?.trigger ? `<div style="color: #2980b9; font-size: 0.8em; margin-top: 4px;"><span style="background: #e8f4fd; padding: 2px 6px; border-radius: 3px;">🖱️ ${api.flow.trigger}</span></div>` : ''}
+                        ${(api.flow?.produces?.length > 0 || api.flow?.consumes?.length > 0) ? `
+                        <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                          ${api.flow?.produces?.map((v: string) => `<span style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬆️ ${v}</span>`).join('') || ''}
+                          ${api.flow?.consumes?.map((v: string) => `<span style="background: #cce5ff; color: #004085; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬇️ ${v}</span>`).join('') || ''}
+                        </div>
+                        ` : ''}
+                      </div>
+                    </div>
+                    `).join('')}
+                  </div>
+                  ${pageIdx < sortedPages.length - 1 ? `<div style="text-align: center; margin: 12px 0; color: #95a5a6;">↓</div>` : ''}
+                  `;
+                }).join('')}
+              </div>
+            `;
+          })()}
         </div>
       </div>
       `).join('')}
