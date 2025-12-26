@@ -744,79 +744,80 @@ export class OTARepository {
     const limit = Math.min(filters.limit || 20, 100);
     const offset = (page - 1) * limit;
 
-    // Build WHERE conditions
-    const conditions: string[] = ['b.partner_id = ?'];
-    const params: any[] = [partnerId];
+    const query = this.batchRepo.createQueryBuilder('b')
+      .where('b.partner_id = :partnerId', { partnerId });
 
     if (filters.status) {
-      conditions.push('b.status = ?');
-      params.push(filters.status);
+      query.andWhere('b.status = :status', { status: filters.status });
     }
 
     if (filters.product_id) {
-      conditions.push('b.product_id = ?');
-      params.push(filters.product_id);
+      query.andWhere('b.product_id = :productId', { productId: filters.product_id });
     }
 
     if (filters.reseller) {
-      conditions.push("JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = ?");
-      params.push(filters.reseller);
+      query.andWhere("JSON_UNQUOTE(JSON_EXTRACT(b.reseller_metadata, '$.intended_reseller')) = :reseller", {
+        reseller: filters.reseller
+      });
     }
 
     if (filters.created_after) {
-      conditions.push('b.created_at >= ?');
-      params.push(filters.created_after);
+      query.andWhere('b.created_at >= :createdAfter', { createdAfter: filters.created_after });
     }
 
     if (filters.created_before) {
-      conditions.push('b.created_at <= ?');
-      params.push(filters.created_before);
+      query.andWhere('b.created_at <= :createdBefore', { createdBefore: filters.created_before });
     }
 
-    const whereClause = conditions.join(' AND ');
+    query.orderBy('b.created_at', 'DESC').skip(offset).take(limit);
 
-    // Count total for pagination
-    const countResult = await this.dataSource.query(
-      `SELECT COUNT(*) as total FROM ota_ticket_batches b WHERE ${whereClause}`,
-      params
+    const [batchEntities, total] = await query.getManyAndCount();
+    if (batchEntities.length === 0) {
+      return { batches: [], total };
+    }
+
+    const batchIds = batchEntities.map(batch => batch.batch_id);
+    const statsRows = await this.ticketRepo.createQueryBuilder('t')
+      .select('t.batch_id', 'batch_id')
+      .addSelect('COUNT(t.ticket_code)', 'tickets_generated')
+      .addSelect("SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END)", 'tickets_activated')
+      .addSelect("SUM(CASE WHEN t.status = 'VERIFIED' THEN 1 ELSE 0 END)", 'tickets_redeemed')
+      .addSelect("SUM(CASE WHEN t.status = 'VERIFIED' AND t.customer_type = 'adult' THEN 1 ELSE 0 END)", 'redeemed_adult')
+      .addSelect("SUM(CASE WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN 1 ELSE 0 END)", 'redeemed_child')
+      .addSelect("SUM(CASE WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN 1 ELSE 0 END)", 'redeemed_elderly')
+      .where('t.batch_id IN (:...batchIds)', { batchIds })
+      .andWhere('t.channel = :channel', { channel: 'ota' })
+      .groupBy('t.batch_id')
+      .getRawMany();
+
+    const statsByBatchId = new Map<string, any>(
+      statsRows.map(row => [row.batch_id, row])
     );
-    const total = parseInt(countResult[0]?.total) || 0;
 
-    // Main query with stats
-    const query = `
-      SELECT
-        b.*,
-        COUNT(t.ticket_code) as tickets_generated,
-        SUM(CASE WHEN t.status IN ('ACTIVATED', 'VERIFIED') THEN 1 ELSE 0 END) as tickets_activated,
-        SUM(CASE WHEN t.status = 'VERIFIED' THEN 1 ELSE 0 END) as tickets_redeemed,
-        SUM(CASE
-          WHEN t.status = 'VERIFIED' AND t.customer_type = 'adult' THEN
-            COALESCE(
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[0].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
-            )
-          WHEN t.status = 'VERIFIED' AND t.customer_type = 'child' THEN
-            COALESCE(
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[1].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
-            )
-          WHEN t.status = 'VERIFIED' AND t.customer_type = 'elderly' THEN
-            COALESCE(
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.customer_type_pricing[2].unit_price')) AS DECIMAL(10,2)),
-              CAST(JSON_UNQUOTE(JSON_EXTRACT(b.pricing_snapshot, '$.base_price')) AS DECIMAL(10,2))
-            )
-          ELSE 0
-        END) as total_revenue_realized
-      FROM ota_ticket_batches b
-      LEFT JOIN tickets t ON t.batch_id = b.batch_id AND t.channel = 'ota'
-      WHERE ${whereClause}
-      GROUP BY b.batch_id
-      ORDER BY b.created_at DESC
-      LIMIT ? OFFSET ?
-    `;
+    const batches = batchEntities.map(batch => {
+      const stats = statsByBatchId.get(batch.batch_id);
+      const snapshot = typeof batch.pricing_snapshot === 'string'
+        ? JSON.parse(batch.pricing_snapshot)
+        : batch.pricing_snapshot;
 
-    const results = await this.dataSource.query(query, [...params, limit, offset]);
-    const batches = results.map((row: any) => this.mapRowToBatchWithStats(row));
+      const redeemedAdult = Number(stats?.redeemed_adult) || 0;
+      const redeemedChild = Number(stats?.redeemed_child) || 0;
+      const redeemedElderly = Number(stats?.redeemed_elderly) || 0;
+
+      const adultPrice = this.getSnapshotUnitPrice(snapshot, 'adult');
+      const childPrice = this.getSnapshotUnitPrice(snapshot, 'child');
+      const elderlyPrice = this.getSnapshotUnitPrice(snapshot, 'elderly');
+
+      const dto = Object.assign(new OTATicketBatchWithStatsDTO(), batch);
+      dto.tickets_generated = Number(stats?.tickets_generated) || 0;
+      dto.tickets_activated = Number(stats?.tickets_activated) || 0;
+      dto.tickets_redeemed = Number(stats?.tickets_redeemed) || 0;
+      dto.total_revenue_realized = (redeemedAdult * adultPrice)
+        + (redeemedChild * childPrice)
+        + (redeemedElderly * elderlyPrice);
+
+      return dto;
+    });
 
     return { batches, total };
   }
@@ -854,6 +855,23 @@ export class OTARepository {
     batch.total_revenue_realized = parseFloat(row.total_revenue_realized) || 0;
 
     return batch;
+  }
+
+  private getSnapshotUnitPrice(
+    pricingSnapshot: any,
+    customerType: 'adult' | 'child' | 'elderly'
+  ): number {
+    if (pricingSnapshot?.customer_type_pricing && Array.isArray(pricingSnapshot.customer_type_pricing)) {
+      const index = customerType === 'adult' ? 0 : customerType === 'child' ? 1 : 2;
+      const entry = pricingSnapshot.customer_type_pricing[index];
+      const unitPrice = Number(entry?.unit_price);
+      if (!Number.isNaN(unitPrice)) {
+        return unitPrice;
+      }
+    }
+
+    const basePrice = Number(pricingSnapshot?.base_price);
+    return Number.isNaN(basePrice) ? 0 : basePrice;
   }
 
   /**
