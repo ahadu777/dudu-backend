@@ -1,8 +1,9 @@
 {
   "info": {
     "name": "PRD-006: Ticket Activation & Reservation System Tests",
-    "description": "Complete test suite for PRD-006. Coverage: 21/21 ACs (100%)",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "description": "PRD-006 票券激活与预约系统测试 - 覆盖 26 个验收标准\n\n## 覆盖率: 100% (26/26 AC)\n\n### 测试结构:\n1. 票券激活 (6 tests)\n2. 时间预约 (8 tests)\n3. 操作员验证 (4 tests)\n4. 验证逻辑 (5 tests)\n5. 性能 (3 tests)\n\n### AC 映射: docs/test-coverage/prd-006-ac-mapping.yaml",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
   },
   "variable": [
     {

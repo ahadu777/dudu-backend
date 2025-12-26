@@ -1,9 +1,10 @@
 {
   "info": {
     "_postman_id": "prd-008-miniprogram-phase1",
-    "name": "PRD-008 DeepTravel \u5c0f\u7a0b\u5e8f Phase 1 - Package Booking",
-    "description": "PRD-008 Phase 1+: Package Product Booking Foundation\n\n\u9a8c\u6536\u6807\u51c6\u8986\u76d6:\n- A1: Display all active package products from direct channel\n- A2: Show package inclusions and pricing\n- A3: Dynamic pricing (customer type + weekend)\n- A4: Inventory availability real-time display\n- A5: Order creation with pricing context (requires USE_DATABASE=true)\n- A6: Order management (requires USE_DATABASE=true)\n- A7: Simulate payment (requires USE_DATABASE=true)\n- A8: Ticket QR generation (requires USE_DATABASE=true)\n\nNOTE: Order/Payment/QR tests (A5-A8) require database mode. Run with USE_DATABASE=true.\n\nEndpoints:\n- GET /miniprogram/products\n- GET /miniprogram/products/:id\n- GET /miniprogram/products/:id/availability\n- POST /miniprogram/orders\n- GET /miniprogram/orders\n- GET /miniprogram/orders/:id\n- POST /miniprogram/orders/:id/simulate-payment\n- POST /miniprogram/tickets/:code/qr",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "name": "PRD-008 DeepTravel 小程序 Phase 1 - Package Booking",
+    "description": "PRD-008 小程序预约平台测试 - 覆盖 26 个验收标准 (Phase 1)\n\n## 覆盖率: 100% (26/26 AC)\n\n### 测试结构:\n0. 微信认证 (5 tests)\n1. 产品目录 (4 tests)\n2. 订单管理 (5 tests)\n3. 支付集成 (4 tests)\n4. 票券发放 (5 tests)\n5. 取消退款 (3 tests)\n\n### AC 映射: docs/test-coverage/prd-008-ac-mapping.yaml",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
   },
   "variable": [
     {
@@ -42,7 +43,10 @@
             "sequence": 0,
             "page": "system",
             "trigger": "auto:test-setup",
-            "produces": ["auth_token", "test_order_no"],
+            "produces": [
+              "auth_token",
+              "test_order_no"
+            ],
             "consumes": []
           },
           "event": [
@@ -110,7 +114,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -118,8 +125,14 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/wechat/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "login"
+              ]
             }
           },
           "event": [
@@ -160,7 +173,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -168,8 +184,14 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/wechat/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "login"
+              ]
             }
           },
           "event": [
@@ -205,7 +227,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -213,8 +238,14 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/wechat/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "login"
+              ]
             }
           },
           "event": [
@@ -250,7 +281,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -258,8 +292,14 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/wechat/phone",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "phone"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "phone"
+              ]
             }
           },
           "event": [
@@ -294,8 +334,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer invalid.jwt.token" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid.jwt.token"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -303,8 +349,14 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/wechat/phone",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "phone"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "phone"
+              ]
             }
           },
           "event": [
@@ -339,7 +391,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -347,8 +402,14 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/wechat/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "wechat", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "wechat",
+                "login"
+              ]
             }
           },
           "event": [
@@ -505,7 +566,9 @@
             "sequence": 2,
             "page": "product-detail",
             "trigger": "tap:product-card",
-            "produces": ["test_product_id"],
+            "produces": [
+              "test_product_id"
+            ],
             "consumes": []
           },
           "event": [
@@ -663,7 +726,9 @@
             "page": "product-detail",
             "trigger": "auto:page-load",
             "produces": [],
-            "consumes": ["test_product_id"]
+            "consumes": [
+              "test_product_id"
+            ]
           },
           "event": [
             {
@@ -718,7 +783,9 @@
             "page": "product-detail",
             "trigger": "input:quantity-change",
             "produces": [],
-            "consumes": ["test_product_id"]
+            "consumes": [
+              "test_product_id"
+            ]
           },
           "event": [
             {
@@ -818,8 +885,14 @@
             "sequence": 3,
             "page": "order-confirm",
             "trigger": "button:立即预订",
-            "produces": ["test_order_id"],
-            "consumes": ["test_product_id", "test_order_no", "auth_token"]
+            "produces": [
+              "test_order_id"
+            ],
+            "consumes": [
+              "test_product_id",
+              "test_order_no",
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -896,7 +969,9 @@
             "page": "order-confirm",
             "trigger": "button:立即预订",
             "produces": [],
-            "consumes": ["auth_token"]
+            "consumes": [
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -949,7 +1024,9 @@
             "page": "order-confirm",
             "trigger": "button:立即预订",
             "produces": [],
-            "consumes": ["auth_token"]
+            "consumes": [
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1053,7 +1130,9 @@
             "page": "my-orders",
             "trigger": "tap:我的订单",
             "produces": [],
-            "consumes": ["auth_token"]
+            "consumes": [
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1112,7 +1191,10 @@
             "page": "order-detail",
             "trigger": "tap:order-card",
             "produces": [],
-            "consumes": ["test_order_id", "auth_token"]
+            "consumes": [
+              "test_order_id",
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1219,8 +1301,13 @@
             "sequence": 5,
             "page": "checkout",
             "trigger": "callback:wechat-pay",
-            "produces": ["test_ticket_code"],
-            "consumes": ["test_order_id", "auth_token"]
+            "produces": [
+              "test_ticket_code"
+            ],
+            "consumes": [
+              "test_order_id",
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1243,7 +1330,7 @@
                   "pm.test('Returns success message', function() {",
                   "    const data = pm.response.json();",
                   "    pm.expect(data).to.have.property('message');",
-                  "    pm.expect(data.message).to.include('\u6210\u529f');",
+                  "    pm.expect(data.message).to.include('成功');",
                   "});",
                   "",
                   "pm.test('Order status is paid/confirmed', function() {",
@@ -1301,7 +1388,9 @@
             "page": "checkout",
             "trigger": "callback:wechat-pay",
             "produces": [],
-            "consumes": ["auth_token"]
+            "consumes": [
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1352,7 +1441,10 @@
             "page": "checkout",
             "trigger": "button:重复支付",
             "produces": [],
-            "consumes": ["test_order_id", "auth_token"]
+            "consumes": [
+              "test_order_id",
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1464,7 +1556,10 @@
             "page": "my-tickets",
             "trigger": "tap:显示二维码",
             "produces": [],
-            "consumes": ["test_ticket_code", "auth_token"]
+            "consumes": [
+              "test_ticket_code",
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1551,7 +1646,10 @@
             "page": "my-tickets",
             "trigger": "tap:延长有效期",
             "produces": [],
-            "consumes": ["test_ticket_code", "auth_token"]
+            "consumes": [
+              "test_ticket_code",
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1623,7 +1721,9 @@
             "page": "my-tickets",
             "trigger": "tap:显示二维码",
             "produces": [],
-            "consumes": ["auth_token"]
+            "consumes": [
+              "auth_token"
+            ]
           },
           "event": [
             {
@@ -1685,7 +1785,10 @@
             "page": "my-tickets",
             "trigger": "input:expiry-invalid",
             "produces": [],
-            "consumes": ["test_ticket_code", "auth_token"]
+            "consumes": [
+              "test_ticket_code",
+              "auth_token"
+            ]
           },
           "event": [
             {

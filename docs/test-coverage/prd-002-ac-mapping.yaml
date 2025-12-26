@@ -1,0 +1,191 @@
+# PRD-002 Acceptance Criteria Mapping
+# 从 PRD 文档提取的完整验收标准，映射到测试用例
+
+prd_id: PRD-002
+title: OTA Platform Integration
+last_updated: 2025-12-25
+coverage_principle: "Coverage % = (有测试的AC数 / 总AC数) × 100"
+
+# ===== ACCEPTANCE CRITERIA =====
+
+acceptance_criteria:
+
+  # === 1. Multi-Channel Inventory Management ===
+  inventory_management:
+    - ac_id: AC-INV-1
+      description: "查询 OTA 渠道库存，返回 available_quantities"
+      prd_source: "Core Features > Multi-Channel Inventory Management"
+      test_id: "1.1"
+      status: tested
+
+    - ac_id: AC-INV-2
+      description: "按 product_ids 筛选库存"
+      prd_source: "Core Features > Multi-Channel Inventory Management"
+      test_id: "1.2"
+      status: tested
+
+    - ac_id: AC-INV-3
+      description: "无效 product_ids 返回 422"
+      prd_source: "Error Handling"
+      test_id: "1.3"
+      status: tested
+
+    - ac_id: AC-INV-4
+      description: "定价上下文包含 weekday/weekend 价格"
+      prd_source: "Business Rules > Pricing Consistency"
+      test_id: "1.4"
+      status: tested
+
+  # === 2. B2B2C Reseller Batch Management ===
+  batch_management:
+    - ac_id: AC-BATCH-1
+      description: "批量生成票券 (direct_sale 模式，7天过期)"
+      prd_source: "Core Features > B2B2C Reseller Batch Management"
+      test_id: "2.1"
+      status: tested
+
+    - ac_id: AC-BATCH-2
+      description: "批量生成票券 (reseller_batch 模式，30天过期)"
+      prd_source: "Core Features > B2B2C Reseller Batch Management"
+      test_id: "2.2"
+      status: tested
+
+    - ac_id: AC-BATCH-3
+      description: "reseller_batch 模式必须包含 intended_reseller"
+      prd_source: "Core Features > B2B2C Reseller Batch Management"
+      test_id: "2.3"
+      status: tested
+
+    - ac_id: AC-BATCH-4
+      description: "批次元数据支持 campaign_type (early_bird/flash_sale)"
+      prd_source: "Core Features > Special Batch Pricing Override"
+      test_id: "2.4, 2.5"
+      status: tested
+
+    - ac_id: AC-BATCH-5
+      description: "批次特殊定价覆盖 (base_price, weekend_premium)"
+      prd_source: "Core Features > Special Batch Pricing Override"
+      test_id: "2.4"
+      status: tested
+
+  # === 3. Ticket Lifecycle Management ===
+  ticket_lifecycle:
+    - ac_id: AC-TICKET-1
+      description: "激活票券 (PRE_GENERATED → ACTIVE)"
+      prd_source: "Core Features > Ticket Lifecycle Management"
+      test_id: "3.1"
+      status: tested
+
+    - ac_id: AC-TICKET-2
+      description: "激活时 visit_date 应用周末定价"
+      prd_source: "Business Rules > Pricing Consistency"
+      test_id: "3.2"
+      status: needs_fix
+      note: "API 返回 500，需要调查后端实现"
+
+    - ac_id: AC-TICKET-3
+      description: "visit_date 无效格式返回 400"
+      prd_source: "Error Handling"
+      test_id: "3.3"
+      status: tested
+
+    - ac_id: AC-TICKET-4
+      description: "票券状态自动转换 (ACTIVE → USED)"
+      prd_source: "Core Features > Ticket Lifecycle Management"
+      test_id: "4.x"
+      status: needs_fix
+      note: "venue/scan API 需要操作员认证"
+
+  # === 4. Batch & Reseller Analytics ===
+  analytics:
+    - ac_id: AC-ANALYTICS-1
+      description: "查询批次列表 (分页)"
+      prd_source: "Core Features > B2B2C Reseller Batch Management"
+      test_id: "5.1"
+      status: tested
+
+    - ac_id: AC-ANALYTICS-2
+      description: "查询批次分析 (激活率、收入)"
+      prd_source: "Reseller Billing & Analytics"
+      test_id: "5.2"
+      status: tested
+
+    - ac_id: AC-ANALYTICS-3
+      description: "查询分销商列表"
+      prd_source: "Reseller Billing & Analytics"
+      test_id: "5.3"
+      status: tested
+
+    - ac_id: AC-ANALYTICS-4
+      description: "查询计费汇总"
+      prd_source: "Reseller Billing & Analytics"
+      test_id: "5.4"
+      status: tested
+
+  # === 5. API Security ===
+  api_security:
+    - ac_id: AC-SEC-1
+      description: "缺少 API Key 返回 401"
+      prd_source: "Core Features > OTA API Gateway"
+      test_id: "6.1"
+      status: tested
+
+    - ac_id: AC-SEC-2
+      description: "无效 API Key 返回 401"
+      prd_source: "Core Features > OTA API Gateway"
+      test_id: "6.2"
+      status: tested
+
+# ===== COVERAGE SUMMARY =====
+
+coverage_summary:
+  total_ac: 18
+  tested: 16
+  needs_fix: 2
+  coverage_percentage: "89% (16/18)"
+
+  needs_fix_details:
+    - ac_id: AC-TICKET-2
+      issue: "周末定价激活返回 500"
+    - ac_id: AC-TICKET-4
+      issue: "venue/scan 需要操作员 JWT"
+
+# ===== TEST STRUCTURE (合并后) =====
+
+merged_test_structure:
+  - folder: "1. 库存管理"
+    tests:
+      - "1.1 查询OTA渠道库存"
+      - "1.2 按产品ID筛选库存"
+      - "1.3 无效product_ids (422)"
+      - "1.4 定价上下文完整性"
+
+  - folder: "2. 批次生成"
+    tests:
+      - "2.1 直销模式 (direct_sale, 7天)"
+      - "2.2 分销模式 (reseller_batch, 30天)"
+      - "2.3 分销模式缺少reseller (400)"
+      - "2.4 早鸟票批次 (campaign_type)"
+      - "2.5 闪购批次 (flash_sale)"
+
+  - folder: "3. 票券激活"
+    tests:
+      - "3.1 激活预制票券"
+      - "3.2 周末日期激活 [需修复]"
+      - "3.3 无效日期格式 (400)"
+
+  - folder: "4. 票券状态转换"
+    tests:
+      - "4.1-4.6 权益核销测试 [需修复]"
+
+  - folder: "5. 分析与查询"
+    tests:
+      - "5.1 批次列表 (分页)"
+      - "5.2 批次分析"
+      - "5.3 分销商列表"
+      - "5.4 计费汇总"
+
+  - folder: "6. API 安全"
+    tests:
+      - "6.1 缺少API Key (401)"
+      - "6.2 无效API Key (401)"

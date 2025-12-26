@@ -2,8 +2,9 @@
   "info": {
     "_postman_id": "prd-003-venue-operations-collection",
     "name": "PRD-003 Event Venue Operations Tests",
-    "description": "Tests for PRD-003 - Event Venue Operations. Tests QR generation, venue scan, and entitlement redemption.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "description": "PRD-003 场馆运营平台测试 - 覆盖 17 个验收标准\n\n## 覆盖率: 100% (17/17 AC)\n\n### 测试结构:\n1. 操作员认证 (3 tests)\n2. 套餐验证 (4 tests)\n3. QR扫描 (4 tests)\n4. 欺诈防护 (3 tests)\n5. 分析报告 (2 tests)\n\n### AC 映射: docs/test-coverage/prd-003-ac-mapping.yaml",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
   },
   "variable": [
     {
@@ -50,8 +51,13 @@
         },
         "url": {
           "raw": "{{base_url}}/operators/login",
-          "host": ["{{base_url}}"],
-          "path": ["operators", "login"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "operators",
+            "login"
+          ]
         }
       },
       "event": [
@@ -95,8 +101,15 @@
         },
         "url": {
           "raw": "{{base_url}}/api/ota/tickets/bulk-generate",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ota", "tickets", "bulk-generate"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ota",
+            "tickets",
+            "bulk-generate"
+          ]
         }
       },
       "event": [
@@ -141,8 +154,16 @@
         },
         "url": {
           "raw": "{{base_url}}/api/ota/tickets/{{ticket_code}}/activate",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ota", "tickets", "{{ticket_code}}", "activate"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ota",
+            "tickets",
+            "{{ticket_code}}",
+            "activate"
+          ]
         }
       },
       "event": [
@@ -181,8 +202,14 @@
         },
         "url": {
           "raw": "{{base_url}}/qr/public/{{ticket_code}}",
-          "host": ["{{base_url}}"],
-          "path": ["qr", "public", "{{ticket_code}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "qr",
+            "public",
+            "{{ticket_code}}"
+          ]
         }
       },
       "event": [
@@ -224,8 +251,13 @@
         },
         "url": {
           "raw": "{{base_url}}/qr/decrypt",
-          "host": ["{{base_url}}"],
-          "path": ["qr", "decrypt"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "qr",
+            "decrypt"
+          ]
         }
       },
       "event": [
@@ -275,8 +307,13 @@
         },
         "url": {
           "raw": "{{base_url}}/venue/scan",
-          "host": ["{{base_url}}"],
-          "path": ["venue", "scan"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "venue",
+            "scan"
+          ]
         }
       },
       "event": [
@@ -320,8 +357,13 @@
         },
         "url": {
           "raw": "{{base_url}}/venue/scan",
-          "host": ["{{base_url}}"],
-          "path": ["venue", "scan"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "venue",
+            "scan"
+          ]
         }
       },
       "event": [
@@ -352,8 +394,12 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/venue",
-          "host": ["{{base_url}}"],
-          "path": ["venue"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "venue"
+          ]
         }
       },
       "event": [

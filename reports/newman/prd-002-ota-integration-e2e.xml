@@ -1,37 +1,109 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-002 OTA Platform Integration Tests" tests="8" time="25.243">
-  <testsuite name="2.1 Query OTA Inventory" id="50eb4561-75fd-4d75-89bb-23934c196997" timestamp="2025-12-23T11:00:33.624Z" tests="3" failures="0" errors="0" time="0.334">
-    <testcase name="Status code is 200" time="0.334" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has inventory data" time="0.334" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Product 106 inventory available" time="0.334" classname="Prd002OtaPlatformIntegrationTests"/>
+<testsuites name="PRD-002 OTA Platform Integration Tests" tests="21" time="53.589">
+  <testsuite name="1. 库存管理 / 1.1 查询OTA渠道库存 [AC-INV-1]" id="bbcaae99-0948-47bf-98ad-26f483354ce5" timestamp="2025-12-25T08:45:07.643Z" tests="4" failures="0" errors="0" time="1.259">
+    <testcase name="Status code is 200" time="1.259" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response contains available_quantities" time="1.259" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response contains pricing_context" time="1.259" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response contains product_info" time="1.259" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.2 List OTA Tickets" id="1b47ee6f-7aa9-4b58-b8ff-b146189c854f" timestamp="2025-12-23T11:00:33.624Z" tests="2" failures="0" errors="0" time="5.877">
-    <testcase name="Status code is 200" time="5.877" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has paginated data" time="5.877" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="1. 库存管理 / 1.2 按产品ID筛选库存 [AC-INV-2]" id="b5bdfa04-8cbc-4e23-8610-78a7fc5829e6" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="0.355">
+    <testcase name="Status code is 200" time="0.355" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Only requested products returned" time="0.355" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.3 Bulk Generate Tickets" id="dcb25c1e-ef37-4c98-8e84-a67ee6818af1" timestamp="2025-12-23T11:00:33.624Z" tests="3" failures="0" errors="0" time="6.354">
-    <testcase name="Status code is 201" time="6.354" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Tickets generated" time="6.354" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Save batch_id and ticket_code" time="6.354" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="1. 库存管理 / 1.3 无效product_ids参数 (422) [AC-INV-3]" id="22bc6470-2725-4c3c-beef-9d0012ce87fc" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 422" time="0.002" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Error indicates invalid product ID" time="0.002" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.4 Activate Pre-Made Ticket" id="355a81dd-bde5-48f5-910c-d9dfde1ff270" timestamp="2025-12-23T11:00:33.624Z" tests="2" failures="0" errors="0" time="5.853">
-    <testcase name="Status code is 200" time="5.853" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Ticket activated" time="5.853" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="1. 库存管理 / 1.4 定价上下文完整性 [AC-INV-4]" id="4bcb4025-a68d-4dd9-90d4-0b7f77dd47d3" timestamp="2025-12-25T08:45:07.643Z" tests="3" failures="0" errors="0" time="0.367">
+    <testcase name="Status code is 200" time="0.367" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Base prices have weekday/weekend" time="0.367" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Customer discounts exist" time="0.367" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.5 List Batches" id="62348bb3-9584-47a9-b28b-4abc3b048134" timestamp="2025-12-23T11:00:33.624Z" tests="2" failures="0" errors="0" time="0.886">
-    <testcase name="Status code is 200" time="0.886" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has paginated batches" time="0.886" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2. 批次生成 / 2.1 直销模式 (direct_sale, 7天) [AC-BATCH-1]" id="422b9337-4f72-42b1-9858-df3032fedcb1" timestamp="2025-12-25T08:45:07.643Z" tests="4" failures="0" errors="0" time="6.032">
+    <testcase name="Status code is 201" time="6.032" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Distribution mode is direct_sale" time="6.032" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Expires_at is ~7 days from now" time="6.032" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Save batch_id and ticket_code" time="6.032" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.6 List Resellers" id="be04aec1-c69c-468a-8efb-e916665060a1" timestamp="2025-12-23T11:00:33.624Z" tests="2" failures="0" errors="0" time="0.350">
-    <testcase name="Status code is 200" time="0.350" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has paginated resellers" time="0.350" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2. 批次生成 / 2.2 分销模式 (reseller_batch, 30天) [AC-BATCH-2]" id="bfec4432-3b8b-47b3-b0f6-06a6edb41011" timestamp="2025-12-25T08:45:07.643Z" tests="5" failures="0" errors="0" time="5.621">
+    <testcase name="Status code is 201" time="5.621" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Distribution mode is reseller_batch" time="5.621" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Contains reseller_metadata" time="5.621" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Expires_at is ~30 days from now" time="5.621" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Save reseller batch info" time="5.621" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.7 Billing Summary" id="39f48c69-0576-4f75-9236-b5231944a81d" timestamp="2025-12-23T11:00:33.624Z" tests="2" failures="0" errors="0" time="4.764">
-    <testcase name="Status code is 200" time="4.764" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Response has billing data" time="4.764" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2. 批次生成 / 2.3 分销模式缺少reseller (400) [AC-BATCH-3]" id="77232eea-bc69-48b1-b8b2-129ea159d016" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Error mentions intended_reseller" time="0.001" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
-  <testsuite name="2.8 Batch Analytics" id="d07bc9b5-a2be-445e-a4fb-e15dbbd13ea5" timestamp="2025-12-23T11:00:33.624Z" tests="2" failures="0" errors="0" time="0.825">
-    <testcase name="Status code is 200" time="0.825" classname="Prd002OtaPlatformIntegrationTests"/>
-    <testcase name="Has analytics data" time="0.825" classname="Prd002OtaPlatformIntegrationTests"/>
+  <testsuite name="2. 批次生成 / 2.4 早鸟票批次 (campaign_type) [AC-BATCH-4]" id="8e335980-5092-4ac0-bb96-0790c5ee81ec" timestamp="2025-12-25T08:45:07.643Z" tests="4" failures="0" errors="0" time="5.628">
+    <testcase name="Status code is 201" time="5.628" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Batch metadata contains campaign_type" time="5.628" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Batch metadata contains marketing_tags" time="5.628" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Save early bird batch info" time="5.628" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="2. 批次生成 / 2.5 闪购批次 (flash_sale) [AC-BATCH-4]" id="9e626537-0d34-4cac-8500-d7d8844d0e41" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="5.655">
+    <testcase name="Status code is 201" time="5.655" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Campaign type is flash_sale" time="5.655" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="3. 票券激活 / 3.1 激活预制票券 [AC-TICKET-1]" id="921eaaf7-3645-4e82-9ab0-e5ab7432e73b" timestamp="2025-12-25T08:45:07.643Z" tests="3" failures="0" errors="0" time="4.897">
+    <testcase name="Status code is 200" time="4.897" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Ticket status is ACTIVE" time="4.897" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Has ticket_code" time="4.897" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="3. 票券激活 / 3.2 周末日期激活 [AC-TICKET-2] [NEEDS_FIX]" id="9c7e9e3e-837f-402c-aeb4-5049094c8bf0" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="4.803">
+    <testcase name="Status code is 200 or 500 (known issue)" time="4.803" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Ticket status is ACTIVE" time="4.803" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="3. 票券激活 / 3.3 无效日期格式 (400) [AC-TICKET-3]" id="a9a13395-5fd0-4c3a-a126-5e83e4edc195" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="Status code is 400" time="0.004" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Error mentions date format" time="0.004" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="4. 票券状态转换 / 4.0 操作员登录获取Token" id="0262396c-70c5-4274-a60b-ec03a887d786" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="1" errors="0" time="0.351">
+    <testcase name="Status code is 200" time="0.351" classname="Prd002OtaPlatformIntegrationTests">
+      <failure type="AssertionFailure" message="expected response to have status code 200 but got 401">
+        <![CDATA[Failed 1 times.]]>
+        <![CDATA[Collection JSON ID: prd-002-ota-integration-v2.]]>
+        <![CDATA[Collection name: PRD-002 OTA Platform Integration Tests.]]>
+        <![CDATA[Request name: 4. 票券状态转换 / 4.0 操作员登录获取Token.]]>
+        <![CDATA[Test description: Status code is 200.]]>
+        <![CDATA[Error message: expected response to have status code 200 but got 401.]]>
+        <![CDATA[Stacktrace: AssertionError: expected response to have status code 200 but got 401
+   at Object.eval sandbox-script.js:1:13).]]>
+      </failure>
+    </testcase>
+    <testcase name="Save operator token" time="0.351" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="4. 票券状态转换 / 4.1 生成QR码" id="1298de07-d034-4a06-80ca-252854d8e4ff" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="6.732">
+    <testcase name="Status code is 200" time="6.732" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Has encrypted_data" time="6.732" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="4. 票券状态转换 / 4.2 查询票券信息" id="15df959c-0266-463c-a034-3ef3ee3a3cb8" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="1.032">
+    <testcase name="Status code is 200" time="1.032" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Has ticket info" time="1.032" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="5. 分析与查询 / 5.1 批次列表 (分页) [AC-ANALYTICS-1]" id="9c6f40ec-e68e-4975-8eee-9b57591fbdff" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="4.434">
+    <testcase name="Status code is 200" time="4.434" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response has paginated batches" time="4.434" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="5. 分析与查询 / 5.2 批次分析 [AC-ANALYTICS-2]" id="d30d7437-7d1a-444c-8387-eb8bee2d40a6" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="0.646">
+    <testcase name="Status code is 200" time="0.646" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Has analytics data" time="0.646" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="5. 分析与查询 / 5.3 分销商列表 [AC-ANALYTICS-3]" id="e4c6f0da-6030-45c8-857a-1f2204c8d4a0" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="0.389">
+    <testcase name="Status code is 200" time="0.389" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response has paginated resellers" time="0.389" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="5. 分析与查询 / 5.4 计费汇总 [AC-ANALYTICS-4]" id="3a970971-7c35-41ff-a8f7-16e67ae9deeb" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="5.380">
+    <testcase name="Status code is 200" time="5.380" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Response has billing data" time="5.380" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="6. API 安全 / 6.1 缺少API Key (401) [AC-SEC-1]" id="aa2cd61d-56b5-4ef3-9d8f-2b7308101f9a" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 401" time="0.001" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Error indicates missing API key" time="0.001" classname="Prd002OtaPlatformIntegrationTests"/>
+  </testsuite>
+  <testsuite name="6. API 安全 / 6.2 无效API Key (401) [AC-SEC-2]" id="e83ed44f-78ed-489a-a287-6097b820771a" timestamp="2025-12-25T08:45:07.643Z" tests="2" failures="0" errors="0" time="0.000">
+    <testcase name="Status code is 401" time="0.000" classname="Prd002OtaPlatformIntegrationTests"/>
+    <testcase name="Error indicates invalid API key" time="0.000" classname="Prd002OtaPlatformIntegrationTests"/>
   </testsuite>
 </testsuites>
