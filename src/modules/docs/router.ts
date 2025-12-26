@@ -14,6 +14,7 @@ import { loadAllTestCases, FeatureTestCases } from '../../utils/testCaseParser';
 import { loadPRDCoverageWithTests, PRDCoverage } from '../../utils/acParser';
 import { extractPrdTestData, PrdTestData, TestCaseDetail } from '../../utils/newmanParser';
 import { extractStoryTestData, StoryTestData, RunbookTestCase, groupTestCasesByFunction, FunctionGroup, MergedTestCase } from '../../utils/runbookParser';
+import { discoverCrossPRDHandoffs, Handoff } from '../../utils/handoffDiscovery';
 import { baseLayout, sharedStyles } from './templates/base';
 import { componentStyles, pageHeader } from './templates/components';
 import { projectDocsStyles } from './styles';
@@ -2432,48 +2433,58 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
       </p>
 
       ${(() => {
-        // Define known cross-PRD handoff points
-        const handoffs = [
-          {
-            source: { prd: 'PRD-008', output: '/miniprogram/tickets/:code/qr', desc: 'Miniprogram generates ticket QR' },
-            target: { prd: 'PRD-006', input: '/operators/validate-ticket', desc: 'Operator scans to validate' },
-            userFlow: 'User purchases on miniprogram → Shows QR → Operator scans at venue',
-            gapQuestion: 'Is there a single test that chains: order → payment → QR → operator scan?'
-          },
-          {
-            source: { prd: 'PRD-008', output: '/miniprogram/orders/:id/simulate-payment', desc: 'Payment creates ticket' },
-            target: { prd: 'PRD-006', input: '/api/tickets/validate', desc: 'Ticket needs activation check' },
-            userFlow: 'User pays → Ticket created → User checks ticket status',
-            gapQuestion: 'Does the ticket from miniprogram order work with the activation system?'
-          },
-          {
-            source: { prd: 'PRD-002', output: '/api/ota/tickets/bulk-generate', desc: 'OTA generates pre-made tickets' },
-            target: { prd: 'PRD-003', input: '/venue/scan', desc: 'Venue redeems tickets' },
-            userFlow: 'OTA partner generates tickets → Reseller distributes → Customer uses at venue',
-            gapQuestion: 'Is there an E2E test from OTA generation to venue redemption?'
-          }
-        ];
+        // 自动发现跨 PRD Handoff Points (从 Story depends_on 推导)
+        const discoveredHandoffs = discoverCrossPRDHandoffs();
 
-        // Check which handoffs are covered by looking at test collections
-        const testedHandoffs = handoffs.map(h => {
-          // Check if any collection contains BOTH the source output and target input patterns
-          const sourcePattern = h.source.output.replace('/:code', '').replace('/:id', '').toLowerCase();
-          const targetPattern = h.target.input.replace('/:code', '').replace('/:id', '').toLowerCase();
+        // 转换为渲染需要的格式并检测测试覆盖
+        const testedHandoffs = discoveredHandoffs.map(h => {
+          // 提取 source 和 target 的 API 路径
+          const sourcePaths = h.source.paths || [];
+          const targetPaths = h.target.paths || [];
 
+          // 检查是否有测试集合同时覆盖 source 和 target 的 API
           const hasChainedTest = collections.some(c => {
-            const paths = c.apiSequence.map(a => a.path.toLowerCase());
-            const hasSource = paths.some(p => p.includes(sourcePattern.split('/').pop() || ''));
-            const hasTarget = paths.some(p => p.includes(targetPattern.split('/').pop() || ''));
+            const collectionPaths = c.apiSequence.map(a => a.path.toLowerCase());
+
+            // 检查是否包含任意一个 source path
+            const hasSource = sourcePaths.some(sp =>
+              collectionPaths.some(cp => cp.includes(sp.split('/').pop()?.toLowerCase() || ''))
+            );
+
+            // 检查是否包含任意一个 target path
+            const hasTarget = targetPaths.some(tp =>
+              collectionPaths.some(cp => cp.includes(tp.split('/').pop()?.toLowerCase() || ''))
+            );
+
             return hasSource && hasTarget;
           });
 
-          return { ...h, isTested: hasChainedTest };
+          return {
+            source: {
+              prd: h.source.prd,
+              output: sourcePaths[0] || h.source.story || '',
+              desc: h.source.action || h.source.story || ''
+            },
+            target: {
+              prd: h.target.prd,
+              input: targetPaths[0] || h.target.story || '',
+              desc: h.target.action || h.target.story || ''
+            },
+            userFlow: h.userFlow,
+            gapQuestion: h.gapQuestion,
+            isTested: hasChainedTest,
+            autoDiscovered: h.autoDiscovered
+          };
         });
 
         const gaps = testedHandoffs.filter(h => !h.isTested);
         const covered = testedHandoffs.filter(h => h.isTested);
 
         return `
+          <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 4px; margin-bottom: 16px; display: inline-block;">
+            <span style="color: #2e7d32; font-size: 0.85em;">🤖 <strong>Auto-discovered</strong> from Story <code>depends_on</code> fields</span>
+          </div>
+
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px;">
             <div style="background: white; padding: 16px; border-radius: 6px; text-align: center; border: 2px solid ${gaps.length > 0 ? '#e74c3c' : '#27ae60'};">
               <div style="font-size: 2em; font-weight: 700; color: ${gaps.length > 0 ? '#e74c3c' : '#27ae60'};">${gaps.length}</div>
@@ -2484,10 +2495,16 @@ PRD/Story doc → AI generates Postman collection → This page parses JSON → 
               <div style="color: #7f8c8d; font-size: 0.85em;">Covered Handoffs</div>
             </div>
             <div style="background: white; padding: 16px; border-radius: 6px; text-align: center;">
-              <div style="font-size: 2em; font-weight: 700; color: #3498db;">${handoffs.length}</div>
+              <div style="font-size: 2em; font-weight: 700; color: #3498db;">${testedHandoffs.length}</div>
               <div style="color: #7f8c8d; font-size: 0.85em;">Total Handoffs</div>
             </div>
           </div>
+
+          ${testedHandoffs.length === 0 ? `
+          <div style="background: #fff3cd; padding: 16px; border-radius: 6px; color: #856404;">
+            <strong>💡 提示:</strong> 未发现跨 PRD 依赖。请检查 Story 文件中的 <code>depends_on</code> 字段是否正确配置。
+          </div>
+          ` : ''}
 
           ${gaps.length > 0 ? `
           <div style="margin-bottom: 16px;">
