@@ -1,71 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-001 Cruise Package Ticketing Platform Tests" tests="18" time="0.417">
-  <testsuite name="0. Setup / F0.1 Health Check" id="02f72783-cfbf-4705-9662-56c41b61d529" timestamp="2025-12-26T06:14:29.051Z" tests="1" failures="0" errors="0" time="0.019">
-    <testcase name="Server is healthy" time="0.019" classname="Prd001CruisePackageTicketingPlatformTests"/>
+<testsuites name="PRD-001 Cruise Package Ticketing Platform Tests" tests="18" time="5.141">
+  <testsuite name="0. Setup / F0.1 Health Check" id="e202b66e-4b40-4926-9583-aa7ed6237c9d" timestamp="2025-12-26T07:26:26.146Z" tests="1" failures="0" errors="0" time="0.014">
+    <testcase name="Server is healthy" time="0.014" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="1. 产品目录 / F1.1 产品列表 [AC-CATALOG-1]" id="e8879b8e-17d3-41f4-bd6a-cbca76da8e43" timestamp="2025-12-26T06:14:29.051Z" tests="3" failures="0" errors="0" time="0.114">
-    <testcase name="Status code is 200" time="0.114" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Response has products array" time="0.114" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Products have required fields" time="0.114" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="1. 产品目录 / F1.1 产品列表 [AC-CATALOG-1]" id="779bfe50-aa69-4233-981c-2d32b98229de" timestamp="2025-12-26T07:26:26.146Z" tests="3" failures="0" errors="0" time="1.096">
+    <testcase name="Status code is 200" time="1.096" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Response has products array" time="1.096" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Products have required fields" time="1.096" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="1. 产品目录 / F1.2 产品详情 [AC-CATALOG-2]" id="4ebac18c-4429-40c8-83ce-3bc9f8ca0a16" timestamp="2025-12-26T06:14:29.051Z" tests="3" failures="0" errors="0" time="0.048">
-    <testcase name="Status code is 200" time="0.048" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Product has functions" time="0.048" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Product has pricing info" time="0.048" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="1. 产品目录 / F1.2 产品详情 [AC-CATALOG-2]" id="1191fe8a-2bea-4598-ac53-eb5f06c66054" timestamp="2025-12-26T07:26:26.146Z" tests="3" failures="0" errors="0" time="0.388">
+    <testcase name="Status code is 200" time="0.388" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Product has functions" time="0.388" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Product has pricing info" time="0.388" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="1. 产品目录 / F1.3 库存可用性 [AC-CATALOG-3]" id="5adb61a5-65c7-4dbe-a534-d40ce8a87243" timestamp="2025-12-26T06:14:29.051Z" tests="2" failures="0" errors="0" time="0.067">
-    <testcase name="Status code is 200" time="0.067" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Has availability info" time="0.067" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="1. 产品目录 / F1.3 库存可用性 [AC-CATALOG-3]" id="7f513849-ba49-4efb-903b-0a923bf8eca5" timestamp="2025-12-26T07:26:26.146Z" tests="2" failures="0" errors="0" time="1.014">
+    <testcase name="Status code is 200" time="1.014" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Has availability info" time="1.014" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="1. 产品目录 / F1.4 无效产品ID [AC-CATALOG-4]" id="13d40b1c-db59-47b3-b7b8-bf03fb41ea4e" timestamp="2025-12-26T06:14:29.051Z" tests="2" failures="0" errors="0" time="0.019">
-    <testcase name="Status code is 404" time="0.019" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Has error response" time="0.019" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="1. 产品目录 / F1.4 无效产品ID [AC-CATALOG-4]" id="ac2a5bb8-a383-4ebb-8f66-f6c710072b25" timestamp="2025-12-26T07:26:26.146Z" tests="2" failures="0" errors="0" time="0.386">
+    <testcase name="Status code is 404" time="0.386" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Has error response" time="0.386" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="2. 动态定价 / F2.1 工作日/周末价格 [AC-PRICE-1]" id="2f1b2f14-1922-47ae-abc8-5abc3a35ef1d" timestamp="2025-12-26T06:14:29.051Z" tests="3" failures="0" errors="0" time="0.023">
-    <testcase name="Status code is 200" time="0.023" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Has base price and weekend premium" time="0.023" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Weekend premium is positive" time="0.023" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="2. 动态定价 / F2.1 工作日/周末价格 [AC-PRICE-1]" id="d0151d34-1488-4f09-b68f-fd1d2d1e2861" timestamp="2025-12-26T07:26:26.146Z" tests="3" failures="0" errors="0" time="0.383">
+    <testcase name="Status code is 200" time="0.383" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Has base price and weekend premium" time="0.383" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Weekend premium is positive" time="0.383" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="2. 动态定价 / F2.2 客户类型折扣 [AC-PRICE-2]" id="390e6b7d-3b3c-4b42-beb9-6dacb2c039ed" timestamp="2025-12-26T06:14:29.051Z" tests="2" failures="0" errors="0" time="0.023">
-    <testcase name="Status code is 200" time="0.023" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Has customer discounts" time="0.023" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="2. 动态定价 / F2.2 客户类型折扣 [AC-PRICE-2]" id="688a815a-c7ed-4731-a5bd-d2cc84506d57" timestamp="2025-12-26T07:26:26.146Z" tests="2" failures="0" errors="0" time="0.357">
+    <testcase name="Status code is 200" time="0.357" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Has customer discounts" time="0.357" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="2. 动态定价 / F2.3 套餐等级定价 [AC-PRICE-3]" id="e92c966e-a28a-473f-812a-40cdc972e2ea" timestamp="2025-12-26T06:14:29.051Z" tests="2" failures="0" errors="0" time="0.028">
-    <testcase name="Status code is 200" time="0.028" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Products have tier-based pricing" time="0.028" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="2. 动态定价 / F2.3 套餐等级定价 [AC-PRICE-3]" id="2ffccb07-690c-4768-b34d-faaa020740c9" timestamp="2025-12-26T07:26:26.146Z" tests="2" failures="0" errors="0" time="0.390">
+    <testcase name="Status code is 200" time="0.390" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Products have tier-based pricing" time="0.390" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="2. 动态定价 / F2.4 未认证创建订单 [AC-PRICE-4]" id="5d5c68c0-6928-47f1-9de0-9070d2346276" timestamp="2025-12-26T06:14:29.051Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="Status code is 401 (requires auth)" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="2. 动态定价 / F2.4 未认证创建订单 [AC-PRICE-4]" id="c36db02d-6f1f-4aca-8251-e722a6ca5e6a" timestamp="2025-12-26T07:26:26.146Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Status code is 401 (requires auth)" time="0.003" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Error response returned" time="0.003" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  </testsuite>
+  <testsuite name="3. 订单管理 (需认证) / F3.1 创建订单 [AC-ORDER-1]" id="aad7aaaa-e226-48a2-8a99-332eb6fc972c" timestamp="2025-12-26T07:26:26.146Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="Requires valid auth_token - skipped" time="0.002" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  </testsuite>
+  <testsuite name="3. 订单管理 (需认证) / F3.2 订单响应时间 [AC-ORDER-2]" id="a11778fc-371c-48fe-b31e-47811e0e6321" timestamp="2025-12-26T07:26:26.146Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="Requires valid auth_token - skipped" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  </testsuite>
+  <testsuite name="3. 订单管理 (需认证) / F3.3 订单列表查询 [AC-ORDER-3]" id="ef6ce38b-49e3-4ae3-8707-fd26af601d59" timestamp="2025-12-26T07:26:26.146Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="Requires valid auth_token - skipped" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  </testsuite>
+  <testsuite name="4. QR票券 (需票券) / F4.1 生成QR码 [AC-QR-1]" id="9398f175-0d4e-4608-97d2-23b69b3bad13" timestamp="2025-12-26T07:26:26.146Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="Requires valid ticket_code - skipped" time="0.002" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  </testsuite>
+  <testsuite name="4. QR票券 (需票券) / F4.2 QR码包含权益 [AC-QR-2]" id="7607a6a7-b0cd-4aca-a6df-40c2b92aa318" timestamp="2025-12-26T07:26:26.146Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="Requires valid ticket_code - skipped" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  </testsuite>
+  <testsuite name="4. QR票券 (需票券) / F4.3 无效QR码解密 [AC-QR-3]" id="1caf814e-666f-47c6-b71d-0486634d6175" timestamp="2025-12-26T07:26:26.146Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400 (invalid QR)" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
     <testcase name="Error response returned" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="3. 订单管理 (需认证) / F3.1 创建订单 [AC-ORDER-1]" id="cd444f5f-426c-4bcf-abb7-ceb052d6f3b8" timestamp="2025-12-26T06:14:29.051Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="Requires valid auth_token - skipped" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="5. 套餐功能 / F5.1 Premium Plan 功能 [AC-FUNC-1]" id="0f58416e-ac40-4bbd-afb2-ae0802940133" timestamp="2025-12-26T07:26:26.146Z" tests="2" failures="0" errors="0" time="0.410">
+    <testcase name="Status code is 200" time="0.410" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Premium Plan has functions" time="0.410" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="3. 订单管理 (需认证) / F3.2 订单响应时间 [AC-ORDER-2]" id="3c88c43c-62c3-44e6-ad43-14bcce87f0b7" timestamp="2025-12-26T06:14:29.051Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="Requires valid auth_token - skipped" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="5. 套餐功能 / F5.2 Pet Plan 功能 [AC-FUNC-2]" id="570f75ec-169a-4292-a6e6-03d5676d4fe4" timestamp="2025-12-26T07:26:26.146Z" tests="1" failures="0" errors="0" time="0.356">
+    <testcase name="Product 107 not found - skipped" time="0.356" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
-  <testsuite name="3. 订单管理 (需认证) / F3.3 订单列表查询 [AC-ORDER-3]" id="917eac1f-8879-409a-a1fe-b4ff667c87c6" timestamp="2025-12-26T06:14:29.051Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="Requires valid auth_token - skipped" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
-  </testsuite>
-  <testsuite name="4. QR票券 (需票券) / F4.1 生成QR码 [AC-QR-1]" id="cf680784-e21e-48db-aefd-0945b3fb5fe0" timestamp="2025-12-26T06:14:29.051Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="Requires valid ticket_code - skipped" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
-  </testsuite>
-  <testsuite name="4. QR票券 (需票券) / F4.2 QR码包含权益 [AC-QR-2]" id="8167600c-0eda-4d23-a728-83daad173466" timestamp="2025-12-26T06:14:29.051Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="Requires valid ticket_code - skipped" time="0.001" classname="Prd001CruisePackageTicketingPlatformTests"/>
-  </testsuite>
-  <testsuite name="4. QR票券 (需票券) / F4.3 无效QR码解密 [AC-QR-3]" id="534c6473-6a81-47cd-b82e-a9215ede3975" timestamp="2025-12-26T06:14:29.051Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 400 (invalid QR)" time="0.002" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Error response returned" time="0.002" classname="Prd001CruisePackageTicketingPlatformTests"/>
-  </testsuite>
-  <testsuite name="5. 套餐功能 / F5.1 Premium Plan 功能 [AC-FUNC-1]" id="dbf9d66d-dcf8-41c5-a882-6db65542d539" timestamp="2025-12-26T06:14:29.051Z" tests="2" failures="0" errors="0" time="0.021">
-    <testcase name="Status code is 200" time="0.021" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Premium Plan has functions" time="0.021" classname="Prd001CruisePackageTicketingPlatformTests"/>
-  </testsuite>
-  <testsuite name="5. 套餐功能 / F5.2 Pet Plan 功能 [AC-FUNC-2]" id="f161052f-24f5-4eba-99fb-c2359629204c" timestamp="2025-12-26T06:14:29.051Z" tests="1" failures="0" errors="0" time="0.023">
-    <testcase name="Product 107 not found - skipped" time="0.023" classname="Prd001CruisePackageTicketingPlatformTests"/>
-  </testsuite>
-  <testsuite name="5. 套餐功能 / F5.3 Deluxe Tea Set 功能 [AC-FUNC-3]" id="3041bc93-6e91-4dde-8fb8-4ef32d47c7bb" timestamp="2025-12-26T06:14:29.051Z" tests="2" failures="0" errors="0" time="0.024">
-    <testcase name="Status code is 200" time="0.024" classname="Prd001CruisePackageTicketingPlatformTests"/>
-    <testcase name="Deluxe Tea Set has functions" time="0.024" classname="Prd001CruisePackageTicketingPlatformTests"/>
+  <testsuite name="5. 套餐功能 / F5.3 Deluxe Tea Set 功能 [AC-FUNC-3]" id="b7397de1-b6ff-47b9-a55d-6725318a6eca" timestamp="2025-12-26T07:26:26.146Z" tests="2" failures="0" errors="0" time="0.336">
+    <testcase name="Status code is 200" time="0.336" classname="Prd001CruisePackageTicketingPlatformTests"/>
+    <testcase name="Deluxe Tea Set has functions" time="0.336" classname="Prd001CruisePackageTicketingPlatformTests"/>
   </testsuite>
 </testsuites>
