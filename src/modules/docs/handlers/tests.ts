@@ -6,139 +6,89 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import yaml from 'js-yaml';
 import { logger } from '../../../utils/logger';
 import { loadPRDDocuments, loadStoriesIndex } from '../../../utils/prdParser';
 import { discoverCrossPRDHandoffs } from '../../../utils/handoffDiscovery';
 import { parseAllNewmanReports, NewmanReport } from '../../../utils/newmanParser';
+import { AppDataSource } from '../../../config/database';
+import { QaVerificationRepository, ManualCheck } from '../domain/qa-verification.repository';
 
-// 断言标签映射文件路径
-const ASSERTION_LABELS_PATH = path.join(process.cwd(), 'docs/test-coverage/assertion-labels.yaml');
-// 手动验证记录文件路径
-const MANUAL_CHECKS_PATH = path.join(process.cwd(), 'docs/test-coverage/manual-checks.yaml');
-
-// 断言标签缓存
+// 断言标签缓存（从数据库加载）
 let assertionLabelsCache: Map<string, string> | null = null;
 let assertionLabelsCacheTime = 0;
 const CACHE_TTL = 5000; // 5秒缓存
 
-// 手动验证记录类型
-interface ManualCheck {
-  id: string;
-  description: string;
-  verified_by: string;
-  date: string;
-  status: 'passed' | 'failed' | 'pending';
-}
-
-interface ManualChecksData {
-  checks: Record<string, ManualCheck[]>;
-}
-
 // 手动验证缓存
-let manualChecksCache: ManualChecksData | null = null;
+let manualChecksCache: Record<string, ManualCheck[]> | null = null;
 let manualChecksCacheTime = 0;
 
 /**
- * 加载手动验证记录
+ * 获取 QA Repository 实例
  */
-function loadManualChecks(): ManualChecksData {
+function getQaRepository(): QaVerificationRepository | null {
+  if (!AppDataSource.isInitialized) {
+    return null;
+  }
+  return new QaVerificationRepository(AppDataSource);
+}
+
+/**
+ * 加载手动验证记录（从数据库）
+ */
+async function loadManualChecks(): Promise<Record<string, ManualCheck[]>> {
   const now = Date.now();
   if (manualChecksCache && (now - manualChecksCacheTime) < CACHE_TTL) {
     return manualChecksCache;
   }
 
-  let data: ManualChecksData = { checks: {} };
-  try {
-    if (fs.existsSync(MANUAL_CHECKS_PATH)) {
-      const content = fs.readFileSync(MANUAL_CHECKS_PATH, 'utf-8');
-      const parsed = yaml.load(content) as ManualChecksData;
-      if (parsed?.checks) {
-        data = parsed;
-      }
-    }
-  } catch (e) {
-    logger.warn('Failed to load manual checks:', e);
+  const repo = getQaRepository();
+  if (!repo) {
+    logger.warn('Database not initialized, returning empty manual checks');
+    return {};
   }
 
-  manualChecksCache = data;
-  manualChecksCacheTime = now;
-  return data;
+  try {
+    const data = await repo.findAllManualChecksGroupedByPrd();
+    manualChecksCache = data;
+    manualChecksCacheTime = now;
+    return data;
+  } catch (e) {
+    logger.warn('Failed to load manual checks from database:', e);
+    return {};
+  }
 }
 
 /**
- * 保存手动验证记录
+ * 加载断言标签映射（从数据库）
  */
-function saveManualChecks(data: ManualChecksData): void {
-  const yamlContent = `# Manual Checks - QA 手动验证记录
-#
-# 此文件由 /tests 页面维护，记录 QA 手动测试的验证点
-#
-# 格式:
-#   checks:
-#     PRD-XXX:
-#       - id: "唯一ID"
-#         description: "验证描述"
-#         verified_by: "验证人"
-#         date: "验证日期"
-#         status: "passed | failed | pending"
-
-checks:
-${Object.entries(data.checks)
-  .filter(([, items]) => items.length > 0)
-  .map(([prd, items]) => `  ${prd}:
-${items.map(item => `    - id: "${item.id}"
-      description: "${item.description.replace(/"/g, '\\"')}"
-      verified_by: "${item.verified_by}"
-      date: "${item.date}"
-      status: "${item.status}"`).join('\n')}`).join('\n') || '  {}'}
-`;
-  fs.writeFileSync(MANUAL_CHECKS_PATH, yamlContent, 'utf-8');
-  manualChecksCache = null; // 清除缓存
-}
-
-/**
- * 生成唯一ID
- */
-function generateCheckId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-}
-
-/**
- * 加载断言标签映射
- */
-function loadAssertionLabels(): Map<string, string> {
+async function loadAssertionLabels(): Promise<Map<string, string>> {
   const now = Date.now();
   if (assertionLabelsCache && (now - assertionLabelsCacheTime) < CACHE_TTL) {
     return assertionLabelsCache;
   }
 
-  const labels = new Map<string, string>();
-  try {
-    if (fs.existsSync(ASSERTION_LABELS_PATH)) {
-      const content = fs.readFileSync(ASSERTION_LABELS_PATH, 'utf-8');
-      const data = yaml.load(content) as { labels?: Record<string, string> };
-      if (data?.labels) {
-        for (const [key, value] of Object.entries(data.labels)) {
-          labels.set(key, value);
-        }
-      }
-    }
-  } catch (e) {
-    logger.warn('Failed to load assertion labels:', e);
+  const repo = getQaRepository();
+  if (!repo) {
+    logger.warn('Database not initialized, returning empty assertion labels');
+    return new Map();
   }
 
-  assertionLabelsCache = labels;
-  assertionLabelsCacheTime = now;
-  return labels;
+  try {
+    const labels = await repo.findAllAssertionLabels();
+    assertionLabelsCache = labels;
+    assertionLabelsCacheTime = now;
+    return labels;
+  } catch (e) {
+    logger.warn('Failed to load assertion labels from database:', e);
+    return new Map();
+  }
 }
 
 /**
- * 获取断言的人性化标签
+ * 获取断言的人性化标签（同步版本，使用缓存）
  */
-function getAssertionLabel(name: string): string {
-  const labels = loadAssertionLabels();
-  return labels.get(name) || name;
+function getAssertionLabel(name: string, labelsCache: Map<string, string>): string {
+  return labelsCache.get(name) || name;
 }
 
 // ============ 类型定义 ============
@@ -605,7 +555,7 @@ function getStyles(): string {
 /**
  * 生成 E2E 流程卡片 HTML
  */
-function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): string {
+function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labelsCache: Map<string, string>): string {
   const PAGE_STYLES: Record<string, { icon: string; color: string }> = {
     'system': { icon: '⚙️', color: '#6b7280' },
     'product-list': { icon: '🏠', color: '#3b82f6' },
@@ -638,7 +588,7 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): strin
             <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
               <div style="font-size: 0.85em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
               ${api.assertions.map(a => {
-                const label = getAssertionLabel(a.name);
+                const label = getAssertionLabel(a.name, labelsCache);
                 const isCustom = label !== a.name;
                 return `<div class="assertion-item" style="font-size: 0.85em; color: ${a.passed ? '#27ae60' : '#e74c3c'}; display: flex; align-items: center; gap: 4px;">
                   <span>${a.passed ? '✓' : '✗'} ${label}</span>
@@ -648,6 +598,27 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): strin
               }).join('')}
             </div>
             ` : ''}
+            ${(() => {
+              const apiChecks = manualChecks.filter(check => check.api === api.name);
+              return `
+              <div style="margin-top: 6px; padding: 6px 8px; background: #fff8e6; border-radius: 4px; border-left: 3px solid #f39c12;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-size: 0.8em; color: #666;">手动验证 (${apiChecks.length})</span>
+                  <button class="add-api-check-btn" data-prd="${c.id}" data-api="${api.name}" style="background: #f39c12; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em;">+</button>
+                </div>
+                ${apiChecks.length > 0 ? apiChecks.map(check => `
+                <div class="manual-check-item api-level" data-id="${check.id}" style="font-size: 0.8em; display: flex; align-items: center; gap: 4px; padding: 2px 0;">
+                  <button class="check-status-btn" data-id="${check.id}" data-status="${check.status}" style="background: none; border: none; cursor: pointer; font-size: 0.9em;">
+                    ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
+                  </button>
+                  <span style="flex: 1; color: #2c3e50;">${check.description}</span>
+                  <span style="color: #999; font-size: 0.85em;">${check.verified_by} · ${check.date}</span>
+                  <button class="delete-check-btn" data-id="${check.id}" data-prd="${c.id}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.8em;">🗑️</button>
+                </div>
+                `).join('') : '<div style="font-size: 0.75em; color: #999;">点击 + 添加验证</div>'}
+              </div>
+              `;
+            })()}
           </div>
         </div>
         `).join('')}
@@ -731,7 +702,7 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): strin
               <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
                 <div style="font-size: 0.75em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
                 ${api.assertions.map(a => {
-                  const label = getAssertionLabel(a.name);
+                  const label = getAssertionLabel(a.name, labelsCache);
                   const isCustom = label !== a.name;
                   return `<div class="assertion-item" style="font-size: 0.75em; color: ${a.passed ? '#27ae60' : '#e74c3c'}; display: flex; align-items: center; gap: 4px;">
                     <span>${a.passed ? '✓' : '✗'} ${label}</span>
@@ -741,6 +712,27 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): strin
                 }).join('')}
               </div>
               ` : ''}
+              ${(() => {
+                const apiChecks = manualChecks.filter(check => check.api === api.name);
+                return `
+                <div style="margin-top: 6px; padding: 6px 8px; background: #fff8e6; border-radius: 4px; border-left: 3px solid #f39c12;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 0.75em; color: #666;">手动验证 (${apiChecks.length})</span>
+                    <button class="add-api-check-btn" data-prd="${c.id}" data-api="${api.name}" style="background: #f39c12; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 0.7em;">+</button>
+                  </div>
+                  ${apiChecks.length > 0 ? apiChecks.map(check => `
+                  <div class="manual-check-item api-level" data-id="${check.id}" style="font-size: 0.75em; display: flex; align-items: center; gap: 4px; padding: 2px 0;">
+                    <button class="check-status-btn" data-id="${check.id}" data-status="${check.status}" style="background: none; border: none; cursor: pointer; font-size: 0.85em;">
+                      ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
+                    </button>
+                    <span style="flex: 1; color: #2c3e50;">${check.description}</span>
+                    <span style="color: #999; font-size: 0.9em;">${check.verified_by} · ${check.date}</span>
+                    <button class="delete-check-btn" data-id="${check.id}" data-prd="${c.id}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.75em;">🗑️</button>
+                  </div>
+                  `).join('') : '<div style="font-size: 0.7em; color: #999;">点击 + 添加验证</div>'}
+                </div>
+                `;
+              })()}
             </div>
           </div>
           `).join('')}
@@ -804,15 +796,18 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): strin
         </div>
         ` : ''}
 
-        <!-- 手动验证区域 -->
+        <!-- PRD 级别手动验证区域 -->
+        ${(() => {
+          const prdLevelChecks = manualChecks.filter(check => !check.api);
+          return `
         <div style="margin-top: 16px; padding: 12px; background: #fff8e6; border-radius: 6px; border-left: 4px solid #f39c12;" class="manual-checks-section" data-prd="${c.id}">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-weight: 600; color: #2c3e50;">📝 QA 手动验证 (${manualChecks.length})</span>
+            <span style="font-weight: 600; color: #2c3e50;">📝 QA 手动验证 - PRD 级别 (${prdLevelChecks.length})</span>
             <button class="add-check-btn" data-prd="${c.id}" style="background: #f39c12; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">+ 添加</button>
           </div>
-          ${manualChecks.length > 0 ? `
+          ${prdLevelChecks.length > 0 ? `
           <div class="manual-checks-list" style="font-size: 0.85em;">
-            ${manualChecks.map(check => `
+            ${prdLevelChecks.map(check => `
             <div class="manual-check-item" data-id="${check.id}" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;">
               <button class="check-status-btn" data-id="${check.id}" data-status="${check.status}" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">
                 ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
@@ -825,10 +820,12 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): strin
           </div>
           ` : `
           <div style="color: #999; font-size: 0.85em; text-align: center; padding: 12px;">
-            暂无手动验证记录，点击"+ 添加"开始记录
+            暂无 PRD 级别验证记录，点击"+ 添加"开始记录
           </div>
           `}
         </div>
+          `;
+        })()}
       </div>
     </div>
   `;
@@ -934,20 +931,30 @@ function getScripts(): string {
         checkVerifiedBy: !!checkVerifiedBy
       });
 
-      function openModal(prd) {
-        console.log('openModal called with prd:', prd);
+      function openModal(prd, api) {
+        console.log('openModal called with prd:', prd, 'api:', api);
         // 直接从 DOM 获取元素
         var prdInput = document.getElementById('checkPrd');
+        var apiInput = document.getElementById('checkApi');
+        var apiContext = document.getElementById('apiContext');
+        var apiContextName = document.getElementById('apiContextName');
         var descInput = document.getElementById('checkDescription');
         var verifiedByInput = document.getElementById('checkVerifiedBy');
         var modalEl = document.getElementById('addCheckModal');
         var pendingRadio = document.querySelector('input[name="checkStatus"][value="pending"]');
 
-        console.log('openModal elements:', { prdInput: !!prdInput, descInput: !!descInput, modalEl: !!modalEl });
-
         if (prdInput) {
           prdInput.value = prd || '';
-          console.log('Set prdInput.value to:', prdInput.value);
+        }
+        if (apiInput) {
+          apiInput.value = api || '';
+        }
+        // 显示 API 上下文
+        if (api && apiContext && apiContextName) {
+          apiContext.style.display = 'block';
+          apiContextName.textContent = api;
+        } else if (apiContext) {
+          apiContext.style.display = 'none';
         }
         if (descInput) {
           descInput.value = '';
@@ -973,18 +980,19 @@ function getScripts(): string {
       function saveCheck() {
         // 直接从 DOM 获取元素，避免变量作用域问题
         var prdInput = document.getElementById('checkPrd');
+        var apiInput = document.getElementById('checkApi');
         var descInput = document.getElementById('checkDescription');
         var verifiedByInput = document.getElementById('checkVerifiedBy');
         var statusRadio = document.querySelector('input[name="checkStatus"]:checked');
         var saveBtn = document.getElementById('modalSave');
 
         var prd = prdInput ? prdInput.value : '';
+        var api = apiInput ? apiInput.value : '';
         var description = descInput ? descInput.value.trim() : '';
         var verifiedBy = verifiedByInput ? verifiedByInput.value.trim() || 'QA' : 'QA';
         var status = statusRadio ? statusRadio.value : 'pending';
 
-        console.log('saveCheck:', { prd: prd, description: description, verifiedBy: verifiedBy, status: status });
-        console.log('Elements found:', { prdInput: !!prdInput, descInput: !!descInput });
+        console.log('saveCheck:', { prd: prd, api: api, description: description, verifiedBy: verifiedBy, status: status });
 
         if (!prd) {
           alert('系统错误：无法获取 PRD ID，请刷新页面重试');
@@ -1002,55 +1010,68 @@ function getScripts(): string {
           saveBtn.textContent = '保存中...';
         }
 
+        var requestBody = {
+          prd: prd,
+          description: description,
+          verified_by: verifiedBy,
+          status: status
+        };
+        if (api) {
+          requestBody.api = api;
+        }
+
         fetch('/api/manual-checks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prd: prd,
-            description: description,
-            verified_by: verifiedBy,
-            status: status
-          })
+          body: JSON.stringify(requestBody)
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
           if (data.success) {
             // 动态添加到列表，不刷新页面
             var check = data.check;
-            var section = document.querySelector('.manual-checks-section[data-prd="' + prd + '"]');
-            if (section) {
-              var list = section.querySelector('.manual-checks-list');
-              var emptyMsg = section.querySelector('div[style*="text-align: center"]');
+            var statusIcon = check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳';
 
-              // 如果是空状态，创建列表容器
-              if (!list) {
-                if (emptyMsg) emptyMsg.remove();
-                list = document.createElement('div');
-                list.className = 'manual-checks-list';
-                list.style.fontSize = '0.85em';
-                section.appendChild(list);
-              }
+            if (api) {
+              // API 级别断言：找到对应 API 下的手动验证区域
+              // 需要刷新页面以正确显示，因为 API 级别的 DOM 结构比较复杂
+              location.reload();
+            } else {
+              // PRD 级别断言
+              var section = document.querySelector('.manual-checks-section[data-prd="' + prd + '"]');
+              if (section) {
+                var list = section.querySelector('.manual-checks-list');
+                var emptyMsg = section.querySelector('div[style*="text-align: center"]');
 
-              // 创建新的验证项
-              var statusIcon = check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳';
-              var newItem = document.createElement('div');
-              newItem.className = 'manual-check-item';
-              newItem.setAttribute('data-id', check.id);
-              newItem.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;';
-              newItem.innerHTML = '<button class="check-status-btn" data-id="' + check.id + '" data-status="' + check.status + '" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">' + statusIcon + '</button>' +
-                '<span style="flex: 1; color: #2c3e50;">' + check.description + '</span>' +
-                '<span style="color: #999; font-size: 0.8em;">' + check.verified_by + ' · ' + check.date + '</span>' +
-                '<button class="delete-check-btn" data-id="' + check.id + '" data-prd="' + prd + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>';
-              list.appendChild(newItem);
+                // 如果是空状态，创建列表容器
+                if (!list) {
+                  if (emptyMsg) emptyMsg.remove();
+                  list = document.createElement('div');
+                  list.className = 'manual-checks-list';
+                  list.style.fontSize = '0.85em';
+                  section.appendChild(list);
+                }
 
-              // 绑定新按钮的事件
-              bindCheckEvents(newItem);
+                // 创建新的验证项
+                var newItem = document.createElement('div');
+                newItem.className = 'manual-check-item';
+                newItem.setAttribute('data-id', check.id);
+                newItem.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;';
+                newItem.innerHTML = '<button class="check-status-btn" data-id="' + check.id + '" data-status="' + check.status + '" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">' + statusIcon + '</button>' +
+                  '<span style="flex: 1; color: #2c3e50;">' + check.description + '</span>' +
+                  '<span style="color: #999; font-size: 0.8em;">' + check.verified_by + ' · ' + check.date + '</span>' +
+                  '<button class="delete-check-btn" data-id="' + check.id + '" data-prd="' + prd + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>';
+                list.appendChild(newItem);
 
-              // 更新计数
-              var countSpan = section.querySelector('span[style*="font-weight: 600"]');
-              if (countSpan) {
-                var count = section.querySelectorAll('.manual-check-item').length;
-                countSpan.textContent = '📝 QA 手动验证 (' + count + ')';
+                // 绑定新按钮的事件
+                bindCheckEvents(newItem);
+
+                // 更新计数
+                var countSpan = section.querySelector('span[style*="font-weight: 600"]');
+                if (countSpan) {
+                  var count = section.querySelectorAll('.manual-check-item').length;
+                  countSpan.textContent = '📝 QA 手动验证 (' + count + ')';
+                }
               }
             }
 
@@ -1163,12 +1184,22 @@ function getScripts(): string {
         }
       });
 
-      // 手动验证 - 添加按钮
+      // 手动验证 - PRD 级别添加按钮
       document.querySelectorAll('.add-check-btn').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
           e.stopPropagation();
           var prd = this.getAttribute('data-prd');
-          openModal(prd);
+          openModal(prd, null);
+        });
+      });
+
+      // 手动验证 - API 级别添加按钮
+      document.querySelectorAll('.add-api-check-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var prd = this.getAttribute('data-prd');
+          var api = this.getAttribute('data-api');
+          openModal(prd, api);
         });
       });
 
@@ -1185,10 +1216,11 @@ function getScripts(): string {
 /**
  * 处理 /tests 路由
  */
-export function handleTests(_req: Request, res: Response): void {
+export async function handleTests(_req: Request, res: Response): Promise<void> {
   try {
     const collections = loadCollections();
-    const manualChecksData = loadManualChecks();
+    const manualChecksData = await loadManualChecks();
+    const labelsCache = await loadAssertionLabels();
 
     // 加载文档统计
     const prdDocs = loadPRDDocuments();
@@ -1348,7 +1380,7 @@ export function handleTests(_req: Request, res: Response): void {
         <button id="hideAllFlowsBtn" style="padding: 8px 16px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer;">Hide All</button>
       </div>
 
-      ${collections.map(c => generateFlowCardHtml(c, manualChecksData.checks[c.id] || [])).join('')}
+      ${collections.map(c => generateFlowCardHtml(c, manualChecksData[c.id] || [], labelsCache)).join('')}
     </div>
 
     <!-- Cross-PRD Gap Analysis -->
@@ -1415,6 +1447,11 @@ export function handleTests(_req: Request, res: Response): void {
         </div>
         <div class="modal-body">
           <input type="hidden" id="checkPrd" value="">
+          <input type="hidden" id="checkApi" value="">
+          <div id="apiContext" style="display: none; margin-bottom: 12px; padding: 8px 12px; background: #e8f4fd; border-radius: 6px; font-size: 0.9em;">
+            <span style="color: #666;">API: </span>
+            <span id="apiContextName" style="font-weight: 500; color: #2980b9;"></span>
+          </div>
           <div class="form-group">
             <label for="checkDescription">验证描述 *</label>
             <textarea id="checkDescription" placeholder="例如：周末价格在移动端正确显示"></textarea>
@@ -1458,7 +1495,7 @@ export function handleTests(_req: Request, res: Response): void {
  * POST /api/assertion-labels
  * Body: { original: string, label: string }
  */
-export function handleSaveAssertionLabel(req: Request, res: Response): void {
+export async function handleSaveAssertionLabel(req: Request, res: Response): Promise<void> {
   try {
     const { original, label } = req.body;
 
@@ -1472,40 +1509,19 @@ export function handleSaveAssertionLabel(req: Request, res: Response): void {
       return;
     }
 
-    // 读取现有 YAML
-    let labelsData: { labels: Record<string, string> } = { labels: {} };
-    if (fs.existsSync(ASSERTION_LABELS_PATH)) {
-      const content = fs.readFileSync(ASSERTION_LABELS_PATH, 'utf-8');
-      labelsData = yaml.load(content) as { labels: Record<string, string> } || { labels: {} };
+    const repo = getQaRepository();
+    if (!repo) {
+      res.status(503).json({ error: 'Database not initialized' });
+      return;
     }
 
-    // 更新标签
     const trimmedLabel = label.trim();
     if (trimmedLabel === original) {
       // 如果标签与原始名称相同，删除自定义标签
-      delete labelsData.labels[original];
+      await repo.deleteAssertionLabel(original);
     } else {
-      labelsData.labels[original] = trimmedLabel;
+      await repo.saveAssertionLabel(original, trimmedLabel);
     }
-
-    // 写回 YAML
-    const yamlContent = `# Assertion Labels - QA 维护的断言人性化描述
-#
-# 格式: "原始断言名称": "人性化描述"
-#
-# 可以在 /tests 页面上直接编辑，保存后自动更新此文件
-#
-# 示例:
-#   "Status code is 200": "接口响应正常"
-#   "Response has products array": "返回产品列表数据"
-
-labels:
-${Object.entries(labelsData.labels)
-  .sort(([a], [b]) => a.localeCompare(b))
-  .map(([k, v]) => `  "${k}": "${v}"`)
-  .join('\n')}
-`;
-    fs.writeFileSync(ASSERTION_LABELS_PATH, yamlContent, 'utf-8');
 
     // 清除缓存
     assertionLabelsCache = null;
@@ -1523,34 +1539,35 @@ ${Object.entries(labelsData.labels)
 /**
  * 添加手动验证
  * POST /api/manual-checks
- * Body: { prd: string, description: string, verified_by: string, status: string }
+ * Body: { prd: string, description: string, verified_by: string, status: string, api?: string }
  */
-export function handleAddManualCheck(req: Request, res: Response): void {
+export async function handleAddManualCheck(req: Request, res: Response): Promise<void> {
   try {
-    const { prd, description, verified_by, status } = req.body;
+    const { prd, description, verified_by, status, api } = req.body;
 
     if (!prd || !description) {
       res.status(400).json({ error: 'Missing required fields: prd, description' });
       return;
     }
 
-    const data = loadManualChecks();
-    if (!data.checks[prd]) {
-      data.checks[prd] = [];
+    const repo = getQaRepository();
+    if (!repo) {
+      res.status(503).json({ error: 'Database not initialized' });
+      return;
     }
 
-    const newCheck: ManualCheck = {
-      id: generateCheckId(),
+    const newCheck = await repo.createManualCheck({
+      prd_id: prd,
+      api_name: api,
       description: description.trim(),
       verified_by: verified_by || 'QA',
-      date: new Date().toISOString().split('T')[0],
-      status: (status as 'passed' | 'failed' | 'pending') || 'pending'
-    };
+      status: status || 'pending'
+    });
 
-    data.checks[prd].push(newCheck);
-    saveManualChecks(data);
+    // 清除缓存
+    manualChecksCache = null;
 
-    logger.info('Manual check added', { prd, id: newCheck.id });
+    logger.info('Manual check added', { prd, api, id: newCheck.id });
     res.json({ success: true, check: newCheck });
   } catch (error) {
     logger.error('Error adding manual check:', error);
@@ -1563,7 +1580,7 @@ export function handleAddManualCheck(req: Request, res: Response): void {
  * PUT /api/manual-checks/:id
  * Body: { status: string }
  */
-export function handleUpdateManualCheck(req: Request, res: Response): void {
+export async function handleUpdateManualCheck(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -1573,26 +1590,21 @@ export function handleUpdateManualCheck(req: Request, res: Response): void {
       return;
     }
 
-    const data = loadManualChecks();
-    let found = false;
-
-    for (const prd of Object.keys(data.checks)) {
-      const checks = data.checks[prd];
-      const check = checks.find(c => c.id === id);
-      if (check) {
-        check.status = status;
-        check.date = new Date().toISOString().split('T')[0];
-        found = true;
-        break;
-      }
+    const repo = getQaRepository();
+    if (!repo) {
+      res.status(503).json({ error: 'Database not initialized' });
+      return;
     }
 
-    if (!found) {
+    const updated = await repo.updateManualCheckStatus(id, status);
+    if (!updated) {
       res.status(404).json({ error: 'Check not found' });
       return;
     }
 
-    saveManualChecks(data);
+    // 清除缓存
+    manualChecksCache = null;
+
     logger.info('Manual check updated', { id, status });
     res.json({ success: true });
   } catch (error) {
@@ -1602,10 +1614,10 @@ export function handleUpdateManualCheck(req: Request, res: Response): void {
 }
 
 /**
- * 删除手动验证
+ * 删除手动验证（软删除）
  * DELETE /api/manual-checks/:id?prd=XXX
  */
-export function handleDeleteManualCheck(req: Request, res: Response): void {
+export async function handleDeleteManualCheck(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const prd = req.query.prd as string;
@@ -1615,21 +1627,21 @@ export function handleDeleteManualCheck(req: Request, res: Response): void {
       return;
     }
 
-    const data = loadManualChecks();
-    if (!data.checks[prd]) {
-      res.status(404).json({ error: 'PRD not found' });
+    const repo = getQaRepository();
+    if (!repo) {
+      res.status(503).json({ error: 'Database not initialized' });
       return;
     }
 
-    const initialLength = data.checks[prd].length;
-    data.checks[prd] = data.checks[prd].filter(c => c.id !== id);
-
-    if (data.checks[prd].length === initialLength) {
+    const deleted = await repo.softDeleteManualCheck(id);
+    if (!deleted) {
       res.status(404).json({ error: 'Check not found' });
       return;
     }
 
-    saveManualChecks(data);
+    // 清除缓存
+    manualChecksCache = null;
+
     logger.info('Manual check deleted', { id, prd });
     res.json({ success: true });
   } catch (error) {

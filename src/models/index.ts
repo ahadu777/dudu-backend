@@ -19,6 +19,7 @@ export * from './reservation-slot.entity';
 export * from './ticket-reservation.entity';
 export * from './product.entity';
 export * from './product-inventory.entity';
+export * from './qa-verification-record.entity';
 
 // Export entity array for TypeORM registration
 // This is the SINGLE SOURCE OF TRUTH for shared entities
@@ -32,6 +33,7 @@ import { ReservationSlotEntity } from './reservation-slot.entity';
 import { TicketReservationEntity } from './ticket-reservation.entity';
 import { ProductEntity } from './product.entity';
 import { ProductInventoryEntity } from './product-inventory.entity';
+import { QaVerificationRecordEntity } from './qa-verification-record.entity';
 
 export const SHARED_ENTITIES = [
   UserEntity,
@@ -44,4 +46,5 @@ export const SHARED_ENTITIES = [
   TicketReservationEntity,
   ProductEntity,
   ProductInventoryEntity,
+  QaVerificationRecordEntity,
 ] as const;

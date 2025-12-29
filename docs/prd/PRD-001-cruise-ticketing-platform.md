@@ -71,9 +71,9 @@ implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engi
 - **Business Value**: Revenue optimization through demand-based pricing
 - **User Value**: Transparent pricing that reflects value and timing preferences
 - **Acceptance Criteria**:
-  - Pricing varies by weekday/weekend (+$30 premium for adults on weekends)
-  - Customer type discounts (child/elderly: fixed $188 regardless of package/timing)
-  - Package tier pricing (Entry: $188, Standard: $288/$318, Luxury: $788/$888)
+  - ~~Pricing varies by weekday/weekend (+$30 premium for adults on weekends)~~ **[SKIP - 暂未启用，见 order.service.ts:571]**
+  - Customer type discounts (child/elderly pricing via `product.customer_discounts`)
+  - Package tier pricing (via `product.base_price`)
 - **Priority**: High
 
 **Package Component System**
@@ -99,14 +99,14 @@ implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engi
 ## Business Rules & Logic
 
 ### Pricing Strategy
-- **Pricing Model**: Dynamic pricing with multiple variables
-- **Price Points**:
-  - **Premium Plan**: $288 weekday / $318 weekend (adults), $188 child/elderly
-  - **Pet Plan**: $188 flat rate (all customer types, all times)
-  - **Deluxe Tea Set**: $788 weekday / $888 weekend (adults), $188 child/elderly
+- **Pricing Model**: Base price + customer type discounts (周末加价暂未启用)
+- **Price Points** (当前实现):
+  - **Premium Plan**: `base_price` - `customer_discounts[type]`
+  - **Pet Plan**: `base_price` - `customer_discounts[type]`
+  - **Deluxe Tea Set**: `base_price` - `customer_discounts[type]`
 - **Discounts**:
-  - Child/elderly: Standardized $188 pricing across all packages and times
-  - Advance booking: Future enhancement opportunity
+  - Child/elderly: Via `product.customer_discounts` 配置
+  - ~~Weekend premium~~ **[SKIP - 暂未启用]**
 - **Currency**: HKD (Hong Kong Dollars)
 
 ### Business Logic

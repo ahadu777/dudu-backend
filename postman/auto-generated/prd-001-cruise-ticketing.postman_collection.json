@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "prd-001-cruise-ticketing-v4",
     "name": "PRD-001 Cruise Package Ticketing Platform Tests",
-    "description": "PRD-001 游轮套餐售票平台测试 - 覆盖 17 个验收标准\n\n## 覆盖率: 100% (17/17 AC)\n\n### 测试结构:\n0. Setup (1 test)\n1. 产品目录 (4 tests)\n2. 动态定价 (4 tests)\n3. 订单管理 (3 tests) - 需要认证\n4. QR票券 (3 tests) - 需要票券\n5. 套餐功能 (3 tests)\n\n### 用户旅程:\n浏览产品 → 查看详情 → 下单 → 支付 → 获取票券\n\n### AC 映射: docs/test-coverage/prd-001-ac-mapping.yaml",
+    "description": "PRD-001 游轮套餐售票平台测试\n\n## 覆盖率: 16/17 AC (1 SKIP)\n\n### 跳过的 AC:\n- AC-PRICE-1 周末加价 [SKIP - 暂未启用，见 order.service.ts:571]\n\n### 测试结构:\n0. Setup (1 test)\n1. 产品目录 (4 tests)\n2. 动态定价 (4 tests) - AC-PRICE-1 已 SKIP\n3. 订单管理 (3 tests) - 需要认证\n4. QR票券 (3 tests) - 需要票券\n5. 套餐功能 (3 tests)\n\n### 用户旅程:\n浏览产品 → 查看详情 → 下单 → 支付 → 获取票券\n\n### AC 映射: docs/test-coverage/prd-001-ac-mapping.yaml",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "version": "4.0.0"
   },

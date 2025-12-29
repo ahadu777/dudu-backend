@@ -12,6 +12,22 @@ export class AddDeletedAtAndPartnerIdToVenues1736064000019 implements MigrationI
   name = 'AddDeletedAtAndPartnerIdToVenues1736064000019';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // NOTE: 如果 venues 表是通过 Migration 007 创建的，这些字段已经存在
+    // 此 Migration 仅用于从旧版本升级的兼容性
+
+    // 检查 deleted_at 列是否存在
+    const columns = await queryRunner.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'venues'
+        AND COLUMN_NAME = 'deleted_at'
+    `);
+
+    if (columns.length > 0) {
+      console.log('Migration 019: deleted_at and partner_id already exist, skipping');
+      return;
+    }
+
     // 1. Add deleted_at column for soft delete
     await queryRunner.addColumn(
       'venues',
@@ -51,6 +67,8 @@ export class AddDeletedAtAndPartnerIdToVenues1736064000019 implements MigrationI
         columnNames: ['partner_id'],
       }),
     );
+
+    console.log('Migration 019: Added deleted_at and partner_id to venues table');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

@@ -16,6 +16,22 @@ export class AddWeChatAuthFields1736064000008 implements MigrationInterface {
   name = 'AddWeChatAuthFields1736064000008';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // NOTE: 如果 users 表是通过 Migration 005 创建的，这些字段已经存在
+    // 此 Migration 仅用于从旧版本升级的兼容性
+
+    // 检查 wechat_openid 列是否存在
+    const columns = await queryRunner.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND COLUMN_NAME = 'wechat_openid'
+    `);
+
+    if (columns.length > 0) {
+      console.log('Migration 008: WeChat fields already exist, skipping');
+      return;
+    }
+
     // 1. Add wechat_openid column (unique identifier for WeChat users)
     await queryRunner.addColumn(
       'users',
@@ -80,6 +96,8 @@ export class AddWeChatAuthFields1736064000008 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX idx_auth_type ON users (auth_type)`,
     );
+
+    console.log('Migration 008: Added WeChat auth fields to users table');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

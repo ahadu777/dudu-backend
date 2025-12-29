@@ -22,7 +22,8 @@ export class CreateOrders1733000100000 implements MigrationInterface {
           {
             name: 'user_id',
             type: 'bigint',
-            comment: '用户ID',
+            isNullable: true,
+            comment: '用户ID（小程序用户，OTA订单为null）',
           },
           {
             name: 'order_no',
