@@ -195,10 +195,10 @@ let mockReferences: Record<number, any[]> = {
     { id: 402, research_topic_id: 4, type: 'notion', title: 'Claude对话 - 小程序架构', url: 'https://notion.so/miniprogram-arch', notes: null, reference_date: '2024-10-05', created_at: '2024-10-05T10:00:00Z' }
   ],
   5: [
-    { id: 501, research_topic_id: 5, type: 'url', title: 'PRD-009: Loan Management System', url: '/docs/prd/PRD-009-loan-management-system', notes: 'Complete PRD with 10 modules, architecture, data models', reference_date: '2025-12-29', created_at: '2025-12-29T10:00:00Z' },
-    { id: 502, research_topic_id: 5, type: 'url', title: 'US-LMS-001: Borrower Onboarding', url: '/docs/stories/US-LMS-001-borrower-onboarding', notes: 'KYC/AML verification with mock providers', reference_date: '2025-12-29', created_at: '2025-12-29T10:30:00Z' },
-    { id: 503, research_topic_id: 5, type: 'url', title: 'US-LMS-002: Loan Application', url: '/docs/stories/US-LMS-002-loan-application', notes: 'Application submission with credit bureau pull', reference_date: '2025-12-29', created_at: '2025-12-29T10:35:00Z' },
-    { id: 504, research_topic_id: 5, type: 'url', title: 'US-LMS-003: Credit Decision', url: '/docs/stories/US-LMS-003-credit-decision', notes: 'Automated decisioning with adverse action', reference_date: '2025-12-29', created_at: '2025-12-29T10:40:00Z' },
+    { id: 501, research_topic_id: 5, type: 'url', title: 'PRD-009: Loan Management System', url: '/prd/PRD-009', notes: 'Complete PRD with 10 modules, architecture, data models', reference_date: '2025-12-29', created_at: '2025-12-29T10:00:00Z' },
+    { id: 502, research_topic_id: 5, type: 'url', title: 'US-LMS-001: Borrower Onboarding', url: '/story/US-LMS-001', notes: 'KYC/AML verification with mock providers', reference_date: '2025-12-29', created_at: '2025-12-29T10:30:00Z' },
+    { id: 503, research_topic_id: 5, type: 'url', title: 'US-LMS-002: Loan Application', url: '/story/US-LMS-002', notes: 'Application submission with credit bureau pull', reference_date: '2025-12-29', created_at: '2025-12-29T10:35:00Z' },
+    { id: 504, research_topic_id: 5, type: 'url', title: 'US-LMS-003: Credit Decision', url: '/story/US-LMS-003', notes: 'Automated decisioning with adverse action', reference_date: '2025-12-29', created_at: '2025-12-29T10:40:00Z' },
     { id: 505, research_topic_id: 5, type: 'url', title: 'LendFusion Platform Reference', url: 'https://lendfusion.com', notes: 'Competitor analysis - enterprise LMS platform', reference_date: '2025-12-29', created_at: '2025-12-29T09:00:00Z' },
     { id: 506, research_topic_id: 5, type: 'notion', title: 'Claude对话 - LMS Architecture', url: 'https://notion.so/lms-architecture', notes: 'AI-assisted design session for loan lifecycle', reference_date: '2025-12-29', created_at: '2025-12-29T09:30:00Z' }
   ]
