@@ -178,3 +178,51 @@ export function getCardStats(): {
     byTeam
   };
 }
+
+/**
+ * Contract section extracted from Card
+ */
+export interface ContractSection {
+  paths?: Record<string, unknown>;
+  components?: {
+    schemas?: Record<string, unknown>;
+    securitySchemes?: Record<string, unknown>;
+  };
+}
+
+/**
+ * Extract OAS 3.0 Contract section from Card content
+ * Matches "## 2) Contract" or similar section headers
+ */
+export function extractContract(content: string): ContractSection | null {
+  // Match Contract section header (handles variations like "## 2) Contract", "## Contract")
+  const contractSectionRegex = /##\s*(?:\d+\)\s*)?Contract.*?\n```yaml\n([\s\S]*?)\n```/i;
+  const match = content.match(contractSectionRegex);
+
+  if (!match) {
+    return null;
+  }
+
+  try {
+    const contractYaml = yaml.load(match[1]) as ContractSection;
+    return contractYaml;
+  } catch (e) {
+    // Invalid YAML in Contract section
+    return null;
+  }
+}
+
+/**
+ * Load all Cards with their Contract sections
+ */
+export function loadCardsWithContracts(): Array<{
+  card: CardDocument;
+  contract: ContractSection | null;
+}> {
+  const cards = loadCardDocuments();
+
+  return cards.map(card => ({
+    card,
+    contract: extractContract(card.content)
+  }));
+}

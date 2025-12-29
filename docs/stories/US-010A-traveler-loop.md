@@ -18,13 +18,13 @@ cards:
   - miniprogram-order              # Done - 订单创建/列表/详情
   # 支付 - 已完成
   - wallyt-payment                 # Done - 微信支付（替代 wechat-payment-session）
-  - bundle-ticket-engine           # Done - 票券生成（已在 miniprogram/order.service.ts 实现）
+  - payment-webhook                # Done - 票券生成（出票逻辑已合并到此 Card）
   # DEPRECATED
   # - travel-search-hub            # DEPRECATED - 线路/套票搜索 (模块已删除，功能整合到 miniprogram-product-catalog)
   # - seat-lock-service            # DEPRECATED - 锁座服务 (模块已删除，功能整合到 miniprogram-order)
   # - wechat-payment-session       # DEPRECATED - 被 wallyt-payment 替代
 related_features:
-  - tickets-issuance
+  - payment-webhook
   - my-tickets
   - qr-token
 ---
@@ -106,4 +106,4 @@ related_features:
 | Card | Status | Description |
 |------|--------|-------------|
 | wallyt-payment | Done | 微信支付集成 (替代 wechat-payment-session) |
-| bundle-ticket-engine | Done | 多乘客票券批量生成（已在 miniprogram/order.service.ts 实现） |
+| payment-webhook | Done | 多乘客票券批量生成（出票逻辑已合并到 payment-webhook） |

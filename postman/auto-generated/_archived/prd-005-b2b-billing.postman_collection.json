@@ -30,6 +30,7 @@
   "item": [
     {
       "name": "5.1 Query Resellers List",
+      "description": "财务人员查看所有分销商列表，了解合作伙伴基本信息",
       "request": {
         "method": "GET",
         "header": [
@@ -74,6 +75,7 @@
     },
     {
       "name": "5.2 Bulk Generate Tickets for Billing",
+      "description": "分销商批量采购票券，系统记录交易用于后续账单生成",
       "request": {
         "method": "POST",
         "header": [
@@ -125,6 +127,7 @@
     },
     {
       "name": "5.3 Query Batches List",
+      "description": "财务人员查看所有票券批次记录，用于对账和审计",
       "request": {
         "method": "GET",
         "header": [
@@ -162,6 +165,7 @@
     },
     {
       "name": "5.4 Batch Analytics",
+      "description": "运营人员查看批次销售分析：激活率、核销率、转化漏斗",
       "request": {
         "method": "GET",
         "header": [
@@ -200,6 +204,7 @@
     },
     {
       "name": "5.5 Billing Summary",
+      "description": "财务人员生成月度账单汇总，按分销商统计应收款项",
       "request": {
         "method": "GET",
         "header": [
@@ -242,6 +247,7 @@
     },
     {
       "name": "5.6 OTA Inventory Check",
+      "description": "分销商下单前查询商品库存和定价，确保有足够配额",
       "request": {
         "method": "GET",
         "header": [

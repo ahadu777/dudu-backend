@@ -12,8 +12,8 @@ newman_report: "reports/newman/reservation-slot-management.xml"
 last_update: "2025-11-14T19:30:00+08:00"
 related_stories: ["US-015", "US-016"]
 relationships:
-  depends_on: ["tickets-issuance"]
-  enhances: ["tickets-issuance"]
+  depends_on: ["payment-webhook"]
+  enhances: ["payment-webhook"]
   data_dependencies: ["ReservationSlot"]
   integration_points:
     data_stores: ["slots.repository.ts"]

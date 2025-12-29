@@ -58,3 +58,45 @@ pm.collectionVariables.set('productId', String(j.products[0].id));
 ## Evidence
 - Newman report saved to `reports/newman/catalog.json`.
 - Example response captured in `/docs/examples/catalog-200.json` (optional).
+
+## Acceptance — Given / When / Then
+
+### 正常流程
+
+#### AC-1: 获取活跃商品列表
+- **Given** 服务运行中，数据库中有 status='active' 的产品
+- **When** `GET /catalog`
+- **Then** 返回 200，`products[]` 至少包含 1 个产品
+- **And** 每个产品包含 `id`, `sku`, `name`, `status`, `functions[]`
+- **And** 每个产品的 `functions.length >= 1`
+- **And** 产品按 `id ASC` 排序
+
+#### AC-2: 产品包含完整功能信息
+- **Given** 产品 101 有 3 个功能 (bus, ferry, mrt)
+- **When** `GET /catalog`
+- **Then** 产品 101 的 `functions[]` 包含 3 项
+- **And** 每项包含 `function_code`, `label`, `quantity`
+
+### 异常流程
+
+#### AC-3: 无活跃产品
+- **Given** 数据库中所有产品 status='inactive'
+- **When** `GET /catalog`
+- **Then** 返回 200，`products: []` 空数组
+
+#### AC-4: 数据库连接失败
+- **Given** 数据库不可用
+- **When** `GET /catalog`
+- **Then** 返回 500，`{ error: "INTERNAL_ERROR" }`
+
+### 边界情况
+
+#### AC-5: 产品无功能定义
+- **Given** 产品存在但 product_functions 表无对应记录
+- **When** `GET /catalog`
+- **Then** 该产品的 `functions: []` 为空数组（不报错）
+
+#### AC-6: 高并发读取
+- **Given** 100 个并发请求 GET /catalog
+- **When** 同时发起请求
+- **Then** 所有请求返回 200，响应一致

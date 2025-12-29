@@ -252,6 +252,61 @@ Everything is **dynamically discovered at runtime**:
 4. Applies suggested fixes
 5. Refreshes dashboard to verify (score improves instantly)
 
+**AI as a Story-Telling Guide:**
+
+The compliance dashboard doesn't just report errors - it **tells the story** of what's wrong and guides you to the solution:
+
+- **Understands Context**: "PRD-003 links to US-001, but US-001 links to PRD-001" (explains the relationship mismatch)
+- **Provides Guidance**: "Remove 'US-001' from related_stories in PRD-003" (specific fix, not just "error")
+- **Explains Impact**: "Story won't appear under this PRD on sitemap" (helps you understand why it matters)
+- **Adapts in Real-Time**: Score improves from -28% → -26% instantly when you fix one violation
+
+This creates an **intelligent learning loop** where the AI helps you understand the documentation rules rather than just enforcing them.
+
+**Developer Workflow Integration:**
+
+The compliance dashboard integrates seamlessly into your development workflow:
+
+1. **During Development**: Create docs alongside code, check `/compliance` before committing
+2. **Code Review**: Reviewer can verify compliance score is acceptable (e.g., >80%)
+3. **Onboarding**: New developers learn documentation standards through immediate feedback
+4. **Refactoring**: When reorganizing docs, instantly see what breaks and how to fix it
+5. **Quality Gates**: Can be integrated into CI/CD to enforce documentation standards
+
+**Example workflow:**
+```bash
+# 1. Create feature branch
+git checkout -b feat/loyalty-program
+
+# 2. Write docs (PRD, stories, cards)
+vim docs/prd/PRD-009-loyalty-program.md
+vim docs/stories/_index.yaml
+vim docs/cards/loyalty-points-earn.md
+
+# 3. Implement code
+vim src/modules/loyalty/...
+
+# 4. Check compliance BEFORE committing
+open http://localhost:8080/compliance
+# See: Score 75% - need bidirectional links
+
+# 5. Fix violations
+# Add related_stories fields, update PRD links
+
+# 6. Re-check compliance
+# Score: 100% ✅
+
+# 7. Commit with confidence
+git add . && git commit -m "Add loyalty program with full docs"
+```
+
+**Benefits:**
+- Documentation becomes part of development, not an afterthought
+- Quality is enforced automatically, not manually
+- Developers learn through use, not reading manuals
+- Compliance is measurable (score goes from -26% → 0% → 80%)
+- Trust in documentation increases because it's always validated
+
 ---
 
 ### 10. Test Coverage - `/coverage`
@@ -295,6 +350,41 @@ PRD-006 | Ticket Activation System | ✅ Complete (100%)
 - Relationships from YAML frontmatter across all files
 
 **Use case:** Visual exploration of project structure and dependencies
+
+---
+
+### 12. Product Architecture - `/architecture` ⭐ NEW
+
+**Visual architecture diagram** with Mermaid flowchart rendering.
+
+**What it shows:**
+- Product architecture flowchart
+- System component relationships
+- Data flow between modules
+- Interactive Mermaid diagrams (pan, zoom)
+
+**Data source:**
+- File: `docs/product-architecture-flowchart.md`
+- Renders Mermaid code blocks as interactive diagrams
+- Uses Mermaid.js CDN for client-side rendering
+
+**Use case:** Understand system architecture and component relationships at a glance
+
+**Features:**
+- ✅ Mermaid diagram support (flowcharts, sequence diagrams, etc.)
+- ✅ Automatic code block detection and rendering
+- ✅ Styled markdown content alongside diagrams
+- ✅ Navigation bar consistent with other pages
+
+**Example Mermaid block:**
+```markdown
+```mermaid
+graph TD
+    A[User] --> B[API Gateway]
+    B --> C[Service Layer]
+    C --> D[Database]
+```
+```
 
 ---
 
@@ -378,7 +468,52 @@ coverage_registry:
 
 ---
 
-#### 4. `src/utils/sitemapBuilder.ts` (New)
+#### 4. `src/utils/complianceAuditor.ts` (New)
+
+**Responsibilities:**
+- Audit all PRDs, Stories, and Cards for compliance violations
+- Validate status values against allowed values per document type
+- Check bidirectional relationship consistency (PRD ↔ Story ↔ Card)
+- Detect missing required fields in YAML frontmatter
+- Generate actionable fix suggestions with impact explanations
+
+**Key functions:**
+```typescript
+runComplianceAudit(): ComplianceReport     // Full audit of all docs
+```
+
+**Interfaces:**
+```typescript
+interface ComplianceViolation {
+  type: 'error' | 'warning';
+  category: string;
+  file: string;
+  issue: string;
+  fix: string;
+  impact: string;
+}
+
+interface ComplianceReport {
+  violations: ComplianceViolation[];
+  stats: {
+    totalFiles: number;
+    errors: number;
+    warnings: number;
+    score: number;
+  };
+}
+```
+
+**Validation rules:**
+- PRD status: `Draft`, `In Progress`, `Done`
+- Story status: `Draft`, `In Progress`, `Done`
+- Card status: `Ready`, `In Progress`, `Done`
+- Bidirectional: If PRD claims story, story must claim PRD back
+- Required fields per document type (see "Developer Maintenance Requirements")
+
+---
+
+#### 5. `src/utils/sitemapBuilder.ts` (New)
 
 **Responsibilities:**
 - Build hierarchical PRD → Story → Card tree
@@ -604,16 +739,22 @@ docs/
 │   └── ...
 ├── test-coverage/
 │   └── _index.yaml               # Coverage data
-└── reference/
-    └── DOCUMENTATION-SITE.md     # This file
+├── reference/
+│   └── DOCUMENTATION-SITE.md     # This file
+└── product-architecture-flowchart.md  # Architecture diagram (Mermaid)
 
 src/
+├── modules/
+│   └── docs/
+│       └── router.ts             # Documentation route handlers
 ├── utils/
 │   ├── prdParser.ts              # PRD & Story loader
 │   ├── cardParser.ts             # Card loader
 │   ├── coverageParser.ts         # Coverage loader
-│   └── sitemapBuilder.ts         # Hierarchy builder
-└── app.ts                         # Route handlers
+│   ├── sitemapBuilder.ts         # Hierarchy builder
+│   ├── complianceAuditor.ts      # Compliance audit engine
+│   └── markdown.ts               # Markdown to HTML converter
+└── app.ts                         # Main application
 ```
 
 ---
@@ -1316,6 +1457,113 @@ The documentation visualization site provides a **zero-maintenance, PM-friendly 
 
 ---
 
-**Last Updated:** 2025-11-30
+## Foundation Evaluation Framework
+
+### Why Evaluate?
+Regular evaluation ensures the documentation system continues to serve the team effectively. Use these questions to assess health from different perspectives.
+
+### Quick Health Check (Run Anytime)
+```bash
+# 1. Compliance Score - Are docs well-structured?
+curl -s http://localhost:8080/compliance | grep -o '<div class="score-number">[^<]*</div>'
+
+# 2. Test Suite - Is the system working?
+npm run test:prd
+
+# 3. Document Counts - Is everything tracked?
+echo "PRDs: $(ls docs/prd/*.md | wc -l)"
+echo "Stories: $(grep '^  - id:' docs/stories/_index.yaml | wc -l)"
+echo "Cards: $(ls docs/cards/*.md | wc -l)"
+```
+
+### Evaluation Questions by Role
+
+#### For Product Managers
+| Question | Where to Check | Target |
+|----------|----------------|--------|
+| Can I see all features at a glance? | `/sitemap` | All PRDs visible with stories |
+| What's the implementation progress? | `/project-docs` | Clear status counts |
+| Are requirements fully covered by tests? | `/coverage` | 100% per PRD |
+| Can I trace a feature from idea to code? | `/prd/:id` → Story → Card | Complete chain |
+
+#### For Developers
+| Question | Where to Check | Target |
+|----------|----------------|--------|
+| Is the API contract clear? | `/cards/:slug` | Complete spec with examples |
+| What stories does my card support? | Card frontmatter | `related_stories` populated |
+| Are my changes breaking anything? | `npm run test:prd` | All tests pass |
+| Is my documentation compliant? | `/compliance` | Score >90% |
+
+#### For QA Engineers
+| Question | Where to Check | Target |
+|----------|----------------|--------|
+| What test collections exist? | `docs/test-coverage/_index.yaml` | All PRDs have collections |
+| Are all acceptance criteria tested? | PRD coverage details | AC coverage = 100% |
+| What's the overall test pass rate? | `npm run test:prd` | 100% pass |
+| Are there manual test runbooks? | `docs/integration/*.md` | E2E flows documented |
+
+#### For Tech Leads
+| Question | Where to Check | Target |
+|----------|----------------|--------|
+| Are PRD→Story→Card relationships intact? | `/compliance` | No broken links |
+| Is the architecture documented? | `/architecture` | Mermaid diagrams current |
+| Are deprecated items clearly marked? | PRD/Card status | `Deprecated` status used |
+| Is test coverage measurable? | `/coverage` | Statistics accurate |
+
+### Evaluation Scorecard Template
+
+Use this template for periodic reviews:
+
+```markdown
+## Foundation Evaluation - [DATE]
+
+### Metrics
+- Compliance Score: ___%
+- PRD Test Pass Rate: ___/___
+- Story Test Pass Rate: ___/___
+- Cards Completed: ___/___
+
+### Health by Layer
+| Layer | Count | Done | In Progress | Issues |
+|-------|-------|------|-------------|--------|
+| PRDs  |       |      |             |        |
+| Stories |     |      |             |        |
+| Cards |       |      |             |        |
+
+### Action Items
+1. [ ] ...
+2. [ ] ...
+
+### Questions for Team Discussion
+1. ...
+2. ...
+```
+
+### Latest Evaluation (2025-12-20)
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| Compliance Score | 92% | ✅ Excellent |
+| PRDs | 8 (4 Done, 1 In Progress, 3 Draft) | ⚠️ 3 drafts |
+| Stories | 19 | ✅ |
+| Cards | 39 (100% Done) | ✅ |
+| PRD Tests | 5/8 passing | ⚠️ PRD-006,007,008 failing |
+| Story Tests | 0/1 passing | ❌ US-018 failing |
+
+**Key Observations:**
+1. Compliance jumped from -26% to 92% (team fixed relationship issues)
+2. PRD-007 deprecated and merged into PRD-006
+3. PRD-008 tests require database mode (`USE_DATABASE=true`)
+4. US-018 (OTA PDF Export) is new - tests need review
+5. Stories now have `sequence` and `enhances` fields for dependency tracking
+
+**Action Items:**
+- [ ] Fix PRD-008 tests for mock mode compatibility
+- [ ] Review US-018 test collection
+- [ ] Move 3 Draft PRDs to In Progress or mark as future
+
+---
+
+**Last Updated:** 2025-12-20
 **Maintainer:** Development Team
 **Related:** [CLAUDE.md](../CLAUDE.md), [KNOWLEDGE-GRAPH.md](KNOWLEDGE-GRAPH.md)

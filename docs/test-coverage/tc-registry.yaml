@@ -1,0 +1,382 @@
+# TC 注册表 - 测试用例中央索引
+# 规范文档: docs/reference/TC-REGISTRY-SPEC.md
+#
+# 新增 TC 前必须:
+# 1. 查询本表确认不存在相似 TC
+# 2. 使用标准模块代码
+# 3. 更新本索引
+
+last_updated: "2025-12-20"
+maintainer: "QA Team"
+
+# ===== 标准模块定义 =====
+modules:
+
+  # ----- 平台能力层 (platform) -----
+  AUTH:
+    description: 认证/登录
+    category: platform
+    prd: PRD-004
+    test_cases:
+      - id: TC-AUTH-001
+        name: 微信一键登录（新用户）
+        status: active
+        priority: P0
+        source_stories: [US-010A, US-014]
+        runbook: docs/integration/US-010A-frontend-e2e-runbook.md
+        note: 合并自 TC-WX-101, TC-LOGIN-001
+      - id: TC-AUTH-002
+        name: Token 过期重新登录
+        status: active
+        priority: P0
+        source_stories: [US-010A]
+      - id: TC-AUTH-003
+        name: 登出清理会话
+        status: active
+        priority: P1
+        source_stories: [US-010A]
+      # TC-AUTH-004 ~ TC-AUTH-010 保留原有定义
+    next_available_id: 011
+
+  ADM:
+    description: 后台管理
+    category: platform
+    test_cases:
+      - id: TC-ADM-001
+        name: 管理员登录
+        status: active
+        priority: P0
+    next_available_id: 011
+
+  NOTIFY:
+    description: 消息通知
+    category: platform
+    test_cases:
+      - id: TC-NOTIFY-001
+        name: 订单通知发送
+        status: active
+        priority: P1
+      - id: TC-NOTIFY-002
+        name: 预约提醒通知
+        status: active
+        priority: P1
+    next_available_id: 003
+
+  PDF:
+    description: PDF 生成
+    category: platform
+    test_cases:
+      - id: TC-PDF-001
+        name: 票券 PDF 生成
+        status: active
+        priority: P1
+    next_available_id: 006
+
+  # ----- 核心业务层 (core) -----
+  ORDER:
+    description: 订单管理
+    category: core
+    prd: PRD-001
+    test_cases:
+      - id: TC-ORDER-001
+        name: 创建订单
+        status: active
+        priority: P0
+        source_stories: [US-001, US-010A]
+      - id: TC-ORDER-002
+        name: 订单查询
+        status: active
+        priority: P0
+      - id: TC-ORDER-003
+        name: 订单状态变更
+        status: active
+        priority: P0
+    next_available_id: 009
+
+  PAY:
+    description: 支付
+    category: core
+    prd: PRD-001
+    test_cases:
+      - id: TC-PAY-001
+        name: 微信支付发起
+        status: active
+        priority: P0
+        source_stories: [US-010A]
+      - id: TC-PAY-002
+        name: 支付回调处理
+        status: active
+        priority: P0
+      - id: TC-PAY-003
+        name: 支付状态查询
+        status: active
+        priority: P0
+    next_available_id: 010
+
+  TKT:
+    description: 票券
+    category: core
+    prd: PRD-001
+    test_cases:
+      - id: TC-TKT-001
+        name: 票券生成
+        status: active
+        priority: P0
+      - id: TC-TKT-002
+        name: 票券状态查询
+        status: active
+        priority: P0
+    next_available_id: 010
+
+  ACT:
+    description: 票券激活
+    category: core
+    prd: PRD-006
+    test_cases:
+      - id: TC-ACT-001
+        name: 票券激活
+        status: active
+        priority: P0
+        source_stories: [US-016]
+      - id: TC-ACT-002
+        name: 激活状态查询
+        status: active
+        priority: P0
+    next_available_id: 013
+
+  RSV:
+    description: 预约
+    category: core
+    prd: PRD-006
+    test_cases:
+      - id: TC-RSV-001
+        name: 查询可用时段
+        status: active
+        priority: P0
+        source_stories: [US-015, US-016]
+      - id: TC-RSV-002
+        name: 创建预约
+        status: active
+        priority: P0
+      - id: TC-RSV-003
+        name: 修改预约
+        status: active
+        priority: P1
+      - id: TC-RSV-004
+        name: 取消预约
+        status: active
+        priority: P1
+    next_available_id: 016
+
+  VERIFY:
+    description: 核销验证
+    category: core
+    prd: PRD-006
+    test_cases:
+      - id: TC-VERIFY-001
+        name: 验证已激活票券
+        status: active
+        priority: P0
+        source_stories: [US-015]
+      - id: TC-VERIFY-002
+        name: 验证未激活票券
+        status: active
+        priority: P0
+      - id: TC-VERIFY-003
+        name: 验证已核销票券
+        status: active
+        priority: P0
+    next_available_id: 008
+
+  SCAN:
+    description: 扫描
+    category: core
+    test_cases:
+      - id: TC-SCAN-001
+        name: QR 码扫描验证
+        status: active
+        priority: P0
+    next_available_id: 005
+
+  QR:
+    description: 二维码
+    category: core
+    test_cases:
+      - id: TC-QR-001
+        name: QR 码生成
+        status: active
+        priority: P0
+    next_available_id: 004
+
+  PROD:
+    description: 产品
+    category: core
+    prd: PRD-001
+    test_cases:
+      - id: TC-PROD-001
+        name: 产品列表查询
+        status: active
+        priority: P0
+      - id: TC-PROD-002
+        name: 产品详情查询
+        status: active
+        priority: P0
+    next_available_id: 003
+
+  PRC:
+    description: 定价
+    category: core
+    prd: PRD-001
+    test_cases:
+      - id: TC-PRC-001
+        name: 基础价格计算
+        status: active
+        priority: P0
+      - id: TC-PRC-002
+        name: 峰值定价
+        status: active
+        priority: P0
+    next_available_id: 013
+
+  # ----- 渠道层 (channel) -----
+  OTA:
+    description: OTA 渠道
+    category: channel
+    prd: PRD-002
+    test_cases:
+      - id: TC-OTA-001
+        name: OTA 库存同步
+        status: active
+        priority: P0
+        source_stories: [US-012]
+      - id: TC-OTA-002
+        name: OTA 订单创建
+        status: active
+        priority: P0
+    next_available_id: 021
+
+  # ----- 运营层 (operation) -----
+  OPR:
+    description: 操作员
+    category: operation
+    prd: PRD-003
+    test_cases:
+      - id: TC-OPR-001
+        name: 操作员登录
+        status: active
+        priority: P0
+        source_stories: [US-013, US-015]
+      - id: TC-OPR-002
+        name: 操作员扫描验票
+        status: active
+        priority: P0
+    next_available_id: 010
+
+  VEN:
+    description: 场馆
+    category: operation
+    prd: PRD-003
+    test_cases:
+      - id: TC-VEN-001
+        name: 场馆信息查询
+        status: active
+        priority: P1
+    next_available_id: 014
+
+  RPT:
+    description: 报表
+    category: operation
+    prd: PRD-003
+    test_cases:
+      - id: TC-RPT-001
+        name: 日报生成
+        status: active
+        priority: P1
+    next_available_id: 010
+
+  # ----- 其他 -----
+  PRF:
+    description: 性能测试
+    category: testing
+    test_cases:
+      - id: TC-PRF-001
+        name: API 响应时间
+        status: active
+        priority: P1
+    next_available_id: 011
+
+  E2E:
+    description: 端到端测试
+    category: testing
+    test_cases: []
+    next_available_id: 001
+
+# ===== 废弃的模块代码 =====
+# 这些代码不应再使用，新 TC 必须使用标准代码
+deprecated_modules:
+  LOGIN:
+    reason: "统一使用 AUTH"
+    migrate_to: AUTH
+  WX:
+    reason: "统一使用 AUTH（微信登录）或具体功能模块"
+    migrate_to: AUTH
+  ORD:
+    reason: "统一使用 ORDER"
+    migrate_to: ORDER
+  TICKET:
+    reason: "统一使用 TKT"
+    migrate_to: TKT
+  PRO:
+    reason: "统一使用 PROD"
+    migrate_to: PROD
+  PRODUCT:
+    reason: "统一使用 PROD"
+    migrate_to: PROD
+  OP:
+    reason: "统一使用 OPR"
+    migrate_to: OPR
+  OPS:
+    reason: "统一使用 OPR"
+    migrate_to: OPR
+  ADMIN:
+    reason: "统一使用 ADM"
+    migrate_to: ADM
+  REPORT:
+    reason: "统一使用 RPT"
+    migrate_to: RPT
+
+# ===== 废弃的 TC（保留历史记录）=====
+deprecated_test_cases:
+  - id: TC-WX-101
+    original_name: 首次登录（新用户）
+    reason: "与 TC-AUTH-001 重复，功能相同"
+    migrated_to: TC-AUTH-001
+    deprecated_date: "2025-12-20"
+    original_location: docs/integration/US-014-runbook.md
+
+  - id: TC-LOGIN-001
+    original_name: 首次登录授权手机号
+    reason: "与 TC-AUTH-001 重复，功能相同"
+    migrated_to: TC-AUTH-001
+    deprecated_date: "2025-12-20"
+    original_location: docs/integration/US-010A-frontend-e2e-runbook.md
+
+  - id: TC-LOGIN-002
+    original_name: 登录相关
+    reason: "模块代码废弃，迁移到 AUTH"
+    migrated_to: TC-AUTH-002
+    deprecated_date: "2025-12-20"
+
+  - id: TC-LOGIN-003
+    original_name: 登录相关
+    reason: "模块代码废弃，迁移到 AUTH"
+    migrated_to: TC-AUTH-003
+    deprecated_date: "2025-12-20"
+
+# ===== 统计信息 =====
+statistics:
+  total_active_modules: 16
+  total_active_test_cases: "~300"
+  deprecated_modules: 10
+  deprecated_test_cases: 4
+  last_audit_date: "2025-12-20"

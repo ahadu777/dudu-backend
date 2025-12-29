@@ -1,226 +1,290 @@
-# US-006 — Operator Authentication
+# US-006: Operator Authentication Runbook
 
-Operator authentication workflow: Login → Use token for scanning operations
+操作员认证完整测试：登录认证 → Token 验证 → 多操作员 → 错误处理
 
-**Updated**: 2025-11 (Session management deprecated, simplified to token-based auth)
+---
 
-## Prerequisites
-- **Base URL**: `http://localhost:8080`
-- **Operator credentials**: alice/secret123, bob/secret456 (seeded)
-- **Server running**: `npm run build && PORT=8080 npm start`
+## 📋 Metadata
 
-## Architecture Change Notice
+| 字段 | 值 |
+|------|-----|
+| **Story** | US-006 |
+| **PRD** | PRD-003 |
+| **Status** | Done |
+| **Last Updated** | 2025-12-17 |
+| **Test Type** | API (Newman) + Manual |
+| **Automation** | ✅ 全自动化 |
 
-> **Important**: The `/validators/sessions` endpoint has been **deprecated**.
->
-> **Old Flow**: Login → Create Session → Use session_id for scanning
->
-> **New Flow**: Login → Use operator_token directly for scanning
+### 关联测试资产
 
-## Step-by-Step Flow
+| 资产类型 | 路径/命令 |
+|---------|----------|
+| Newman Collection | `postman/auto-generated/us-006-*.json` |
+| Newman Command | `npm run test:story 006` |
+| Related Cards | `operators-login` |
 
-### 1. Operator Login
-Authenticate as gate operator:
-```bash
-curl -s -X POST http://localhost:8080/operators/login \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "username": "alice",
-    "password": "secret123"
-  }' | jq '.'
+---
+
+## 🎯 Business Context
+
+### 用户旅程
+
+```
+操作员到达工位
+  → 输入用户名密码
+  → 获取认证 Token
+  → Token 用于扫描操作
+  → 班次结束登出
 ```
 
-**Expected Response**:
-```json
-{
-  "operator_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
+### 测试目标
 
-**Save token for subsequent operations**:
-```bash
-export OPERATOR_TOKEN="<token_from_response>"
-```
+- [ ] 验证操作员登录
+- [ ] 验证 Token 格式
+- [ ] 验证错误凭证拒绝
+- [ ] 验证 Token 可用于扫描
 
-### 2. Verify Token
-Test token validity with a venue scan (dry run):
-```bash
-curl -s -X POST http://localhost:8080/venue/scan \
-  -H "Authorization: Bearer $OPERATOR_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "test-invalid-token",
-    "function_code": "ferry"
-  }' | jq '.'
-```
+---
 
-**Expected**: Error response (invalid QR), but confirms operator token is valid (not 401)
+## 🔧 Prerequisites
 
-### 3. Multiple Operators
-Test with different operator credentials:
-```bash
-# Alice login
-ALICE_RESP=$(curl -s -X POST http://localhost:8080/operators/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"alice","password":"secret123"}')
-ALICE_TOKEN=$(echo $ALICE_RESP | jq -r '.operator_token')
-echo "Alice Token: ${ALICE_TOKEN:0:50}..."
+| 项目 | 值 | 说明 |
+|------|-----|------|
+| **Base URL** | `http://localhost:8080` | 本地开发环境 |
+| **操作员 1** | `alice / secret123` | 测试操作员 |
+| **操作员 2** | `bob / secret456` | 测试操作员 |
 
-# Bob login
-BOB_RESP=$(curl -s -X POST http://localhost:8080/operators/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"bob","password":"secret456"}')
-BOB_TOKEN=$(echo $BOB_RESP | jq -r '.operator_token')
-echo "Bob Token: ${BOB_TOKEN:0:50}..."
-```
+---
 
-### 4. Use Token for Scanning
-Once authenticated, use token for venue scanning:
-```bash
-# Generate test QR (see US-002/US-013 for full flow)
-# Then scan with operator token
-curl -s -X POST http://localhost:8080/venue/scan \
-  -H "Authorization: Bearer $OPERATOR_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "qr_token": "<QR_TOKEN>",
-    "function_code": "ferry",
-    "venue_code": "central-pier"
-  }' | jq '.'
-```
+## 🧪 Test Scenarios
 
-## Complete Authentication Flow
-```bash
-export BASE=http://localhost:8080
+### Module 1: 操作员登录
 
-echo "=== Operator Authentication Test ==="
+**Related Card**: `operators-login`
+**Coverage**: 4/4 ACs (100%)
 
-# Step 1: Alice login
-echo "Step 1: Alice Login"
-ALICE_RESP=$(curl -s -X POST $BASE/operators/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"alice","password":"secret123"}')
-ALICE_TOKEN=$(echo $ALICE_RESP | jq -r '.operator_token')
+#### TC-AUTH-001: Alice 登录成功
 
-if [ "$ALICE_TOKEN" != "null" ] && [ -n "$ALICE_TOKEN" ]; then
-  echo "✅ Alice authenticated: ${ALICE_TOKEN:0:30}..."
-else
-  echo "❌ Alice login failed"
-  exit 1
-fi
+**AC Reference**: `operators-login.AC-1`
 
-# Step 2: Bob login
-echo "Step 2: Bob Login"
-BOB_RESP=$(curl -s -X POST $BASE/operators/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"bob","password":"secret456"}')
-BOB_TOKEN=$(echo $BOB_RESP | jq -r '.operator_token')
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 有效凭证 alice/secret123 | POST /operators/login | 返回 200，包含 operator_token |
 
-if [ "$BOB_TOKEN" != "null" ] && [ -n "$BOB_TOKEN" ]; then
-  echo "✅ Bob authenticated: ${BOB_TOKEN:0:30}..."
-else
-  echo "❌ Bob login failed"
-  exit 1
-fi
+**验证点**:
+- [ ] 返回状态码 200
+- [ ] 返回 JWT 格式的 operator_token
+- [ ] Token 以 "eyJ" 开头
 
-# Step 3: Test invalid credentials
-echo "Step 3: Test Invalid Credentials"
-INVALID_RESP=$(curl -s -X POST $BASE/operators/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"alice","password":"wrongpassword"}')
-INVALID_TOKEN=$(echo $INVALID_RESP | jq -r '.operator_token')
+---
 
-if [ "$INVALID_TOKEN" = "null" ] || [ -z "$INVALID_TOKEN" ]; then
-  echo "✅ Invalid credentials correctly rejected"
-else
-  echo "❌ Security issue: invalid credentials accepted"
-fi
+#### TC-AUTH-002: Bob 登录成功
 
-# Step 4: Verify tokens work for scanning
-echo "Step 4: Verify Token Works"
-SCAN_TEST=$(curl -s -X POST $BASE/venue/scan \
-  -H "Authorization: Bearer $ALICE_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"qr_token":"test","function_code":"ferry"}')
+**AC Reference**: `operators-login.AC-1`
 
-# Should get validation error, not auth error
-if echo "$SCAN_TEST" | grep -q "INTERNAL_ERROR\|No operator token"; then
-  echo "❌ Token not working for scanning"
-else
-  echo "✅ Token accepted for scanning (QR validation error expected)"
-fi
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 有效凭证 bob/secret456 | POST /operators/login | 返回 200，包含 operator_token |
 
-echo "=== Authentication Test Complete ==="
-echo ""
-echo "Tokens ready for use:"
-echo "  ALICE_TOKEN=$ALICE_TOKEN"
-echo "  BOB_TOKEN=$BOB_TOKEN"
-```
+**验证点**:
+- [ ] 返回状态码 200
+- [ ] 返回不同于 Alice 的 Token
+- [ ] 两个 Token 可同时有效
 
-## Error Scenarios
+---
 
-| Scenario | Request | Expected Response |
-|----------|---------|-------------------|
-| Invalid username | `{"username":"unknown","password":"x"}` | `401 Unauthorized` |
-| Invalid password | `{"username":"alice","password":"wrong"}` | `401 Unauthorized` |
-| Missing credentials | `{}` | `400 Bad Request` |
-| Expired token | Use old token after expiry | `401 Unauthorized` |
-| Malformed token | `Authorization: Bearer invalid` | `401 Unauthorized` |
+#### TC-AUTH-003: 错误密码被拒绝
 
-## Testing Error Cases
-```bash
-# Invalid credentials
-curl -s -X POST http://localhost:8080/operators/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"alice","password":"wrongpassword"}'
-# Expected: 401 or error response
+**AC Reference**: `operators-login.AC-2`
 
-# Missing password
-curl -s -X POST http://localhost:8080/operators/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"alice"}'
-# Expected: 400 Bad Request
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 错误密码 alice/wrongpassword | POST /operators/login | 返回 401 |
 
-# No authorization header
-curl -s -X POST http://localhost:8080/venue/scan \
-  -H 'Content-Type: application/json' \
-  -d '{"qr_token":"test","function_code":"ferry"}'
-# Expected: {"code":"INTERNAL_ERROR","message":"No operator token provided"}
-```
+**验证点**:
+- [ ] 返回状态码 401
+- [ ] 不返回 token
+- [ ] 提示凭证无效
 
-## Expected Results
-- ✅ **Authentication**: Valid operator tokens issued
-- ✅ **Token format**: JWT with proper claims
-- ✅ **Invalid credentials**: Properly rejected with 401
-- ✅ **Token usage**: Can be used directly for `/venue/scan`
+---
+
+#### TC-AUTH-004: 不存在用户被拒绝
+
+**AC Reference**: `operators-login.AC-3`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 不存在的用户名 | POST /operators/login | 返回 401 |
+
+**验证点**:
+- [ ] 返回状态码 401
+- [ ] 不泄露用户是否存在
+
+---
+
+### Module 2: 凭证验证
+
+**Related Card**: `operators-login`
+**Coverage**: 3/3 ACs (100%)
+
+#### TC-AUTH-005: 缺少用户名
+
+**AC Reference**: `operators-login.AC-4`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 请求体只有 password | POST /operators/login | 返回 400 |
+
+**验证点**:
+- [ ] 返回状态码 400
+- [ ] 提示缺少 username
+
+---
+
+#### TC-AUTH-006: 缺少密码
+
+**AC Reference**: `operators-login.AC-5`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 请求体只有 username | POST /operators/login | 返回 400 |
+
+**验证点**:
+- [ ] 返回状态码 400
+- [ ] 提示缺少 password
+
+---
+
+#### TC-AUTH-007: 空请求体
+
+**AC Reference**: `operators-login.AC-6`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 空 JSON {} | POST /operators/login | 返回 400 |
+
+**验证点**:
+- [ ] 返回状态码 400
+- [ ] 验证错误提示
+
+---
+
+### Module 3: Token 使用验证
+
+**Related Card**: `operators-login`
+**Coverage**: 3/3 ACs (100%)
+
+#### TC-AUTH-008: Token 可用于扫描
+
+**AC Reference**: `operators-login.AC-7`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 有效 operator_token | POST /venue/scan | 不返回认证错误 |
+
+**验证点**:
+- [ ] 不返回 401
+- [ ] 可能返回 QR 验证错误（非认证错误）
+- [ ] Token 被系统接受
+
+---
+
+#### TC-AUTH-009: 无效 Token 被拒绝
+
+**AC Reference**: `operators-login.AC-8`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 无效的 Token 字符串 | POST /venue/scan | 返回 401 |
+
+**验证点**:
+- [ ] 返回状态码 401
+- [ ] 提示 Token 无效
+
+---
+
+#### TC-AUTH-010: 无 Token 被拒绝
+
+**AC Reference**: `operators-login.AC-9`
+
+| 状态 | Given | When | Then |
+|------|-------|------|------|
+| pending | 无 Authorization header | POST /venue/scan | 返回错误 |
+
+**验证点**:
+- [ ] 提示需要 operator token
+- [ ] 无法执行扫描
+
+---
+
+## 📊 Summary
+
+| Module | Test Cases | Status |
+|--------|-----------|--------|
+| 操作员登录 | 4 | pending |
+| 凭证验证 | 3 | pending |
+| Token 使用验证 | 3 | pending |
+| **Total** | **10** | **0/10 通过** |
+
+---
+
+## 🔗 Related Documentation
+
+- [operators-login](../cards/operators-login.md)
+
+## Security Notes
+
+- **Token 有效期**: 8 小时（典型班次时长）
+- **Token 存储**: 客户端应安全存储，登出时清除
+- **审计日志**: 所有认证事件都会记录
+- **速率限制**: 生产环境需考虑实现
+
+## 🧪 QA E2E Checklist
+
+> 本节为 QA 手动测试清单，从 Story 业务流程生成。
+
+### Round 1: 核心功能 (3 scenarios)
+
+- [ ] **TC-AUTH-E2E-001**: 操作员登录成功
+  - 操作: 提供有效凭证 (alice/secret123) → POST /operators/login
+  - **Expected**: 返回 200，包含有效的 JWT operator_token
+
+- [ ] **TC-AUTH-E2E-002**: 带 Token 的扫描操作
+  - 操作: 使用有效 operator_token → POST /venue/scan 扫描票券
+  - **Expected**: Token 被系统接受，扫描操作执行（可能返回 QR 相关错误，但不应返回认证错误）
+
+- [ ] **TC-AUTH-E2E-003**: Token 有效性维持
+  - 操作: 使用相同 Token 进行多次扫描操作 → 验证 Token 在有效期内持续可用
+  - **Expected**: 所有扫描请求都不返回 401，Token 在班次期间保持有效
+
+### Round 2: 异常场景 (3 scenarios)
+
+- [ ] **TC-AUTH-E2E-004**: 错误凭证被拒绝
+  - 操作: 提供错误密码 (alice/wrongpassword) → POST /operators/login
+  - **Expected**: 返回 401，不提供 Token，提示凭证无效
+
+- [ ] **TC-AUTH-E2E-005**: 无效 Token 被拒绝
+  - 操作: 使用伪造或无效的 Token → POST /venue/scan
+  - **Expected**: 返回 401，提示 Token 无效，拒绝扫描操作
+
+- [ ] **TC-AUTH-E2E-006**: 缺少认证信息
+  - 操作: 不提供 Authorization header → POST /venue/scan
+  - **Expected**: 返回错误，提示需要 operator token
+
+---
 
 ## API Reference
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/operators/login` | POST | None | Authenticate operator |
-| `/venue/scan` | POST | Operator Token | Scan and redeem tickets |
-
-## Integration with Other Stories
-- **US-001**: Operator login for final redemption step
-- **US-002**: Operator authentication for scanning
-- **US-013**: Venue operations with operator context
-
-## Security Notes
-- **Token duration**: 8 hours (typical shift length)
-- **Token storage**: Client should store securely, clear on logout
-- **Audit trail**: All authentication events are logged
-- **Rate limiting**: Consider implementing for production
+| `/operators/login` | POST | None | 操作员认证 |
+| `/venue/scan` | POST | Operator Token | 扫描核销票券 |
 
 ---
 
-## Deprecated Features
+## 📝 Revision History
 
-> **The following features have been deprecated:**
->
-> - `POST /validators/sessions` - No longer needed
-> - `GET /validators/sessions/:id` - Removed
-> - `DELETE /validators/sessions/:id` - Removed
-> - `session_id` parameter in scanning - No longer used
->
-> **Migration**: Simply use the `operator_token` from login directly in the `Authorization` header for all authenticated requests.
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| v1.1 | 2025-12-18 | 添加 QA E2E Checklist |
+| v1.0 | 2025-12-17 | 初始版本 |

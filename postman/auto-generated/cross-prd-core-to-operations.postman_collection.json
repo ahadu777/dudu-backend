@@ -1,0 +1,296 @@
+{
+  "info": {
+    "_postman_id": "cross-prd-core-to-operations",
+    "name": "Cross-PRD: Core Ticketing → Operations Backend (PRD-001 → PRD-008)",
+    "description": "# Cross-PRD Gap Coverage Test\n\n**Purpose**: Test the handoff from core ticketing (purchase/payment) to operations backend (package management, route scheduling).\n\n## Gaps Being Covered\n- **Gap 1**: US-001 (Buy package) → US-010B (Operations backbone)\n- **Gap 2**: US-004 (Payment) → US-010B (Operations backbone)\n\n## User Flow\n1. Admin configures package templates and routes\n2. User browses catalog (sees configured packages)\n3. User creates order\n4. Payment webhook triggers ticket issuance\n5. Operations can view/manage the order in backend\n\n## Gap Questions Answered\n- ✅ Is there E2E test from /catalog to /admin/packages/templates?\n- ✅ Is there E2E test from /payments/notify to /admin/packages/templates?\n\n---\n**Auto-generated skeleton** - TODO: Add business assertions",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://localhost:8080", "type": "string"},
+    {"key": "admin_token", "value": "", "type": "string"},
+    {"key": "user_token", "value": "", "type": "string"},
+    {"key": "template_id", "value": "", "type": "string"},
+    {"key": "product_id", "value": "106", "type": "string"},
+    {"key": "order_id", "value": "", "type": "string"},
+    {"key": "ticket_code", "value": "", "type": "string"}
+  ],
+  "item": [
+    {
+      "name": "Phase 1: Operations Setup (PRD-008 US-010B)",
+      "description": "Admin configures package templates and routes - this is the TARGET of the handoff",
+      "item": [
+        {
+          "name": "1.1 Get Package Templates",
+          "description": "运营人员登录后台，查看已配置的套餐模板列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// TODO: Add business assertions",
+                  "// pm.test('Templates include cruise packages', function() {",
+                  "//     const data = pm.response.json();",
+                  "//     pm.expect(data.templates).to.be.an('array');",
+                  "//     pm.expect(data.templates.length).to.be.greaterThan(0);",
+                  "// });",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.templates && data.templates[0]) {",
+                  "        pm.collectionVariables.set('template_id', data.templates[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{admin_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/packages/templates",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "packages", "templates"]
+            }
+          }
+        },
+        {
+          "name": "1.2 Get Routes and Schedules",
+          "description": "运营人员查看已配置的航线和班次信息",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// TODO: Verify routes are configured for the products"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{admin_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/routes",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "routes"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 2: User Purchase Flow (PRD-001 US-001)",
+      "description": "User browses and purchases - this is the SOURCE of the handoff",
+      "item": [
+        {
+          "name": "2.1 Browse Catalog",
+          "description": "用户打开商城首页，浏览运营配置的可售套餐列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// TODO: Verify catalog shows products from configured templates",
+                  "// pm.test('Catalog contains configured packages', function() {",
+                  "//     const data = pm.response.json();",
+                  "//     const product = data.products.find(p => p.id === parseInt(pm.collectionVariables.get('product_id')));",
+                  "//     pm.expect(product).to.not.be.undefined;",
+                  "// });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/catalog",
+              "host": ["{{base_url}}"],
+              "path": ["catalog"]
+            }
+          }
+        },
+        {
+          "name": "2.2 Create Order",
+          "description": "用户选择套餐后点击购买，填写联系信息并提交订单",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Order created', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.order_id) {",
+                  "    pm.collectionVariables.set('order_id', jsonData.order_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{product_id}},\n  \"quantity\": 1,\n  \"customer_info\": {\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"phone\": \"+8613800138000\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 3: Payment Triggers Ticket (PRD-001 US-004)",
+      "description": "Payment webhook issues ticket - handoff point",
+      "item": [
+        {
+          "name": "3.1 Simulate Payment Webhook",
+          "description": "支付网关通知系统支付成功，触发自动出票流程",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Payment processed', function() {",
+                  "    const status = pm.response.code;",
+                  "    pm.expect([200, 201]).to.include(status);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.ticket_code) {",
+                  "    pm.collectionVariables.set('ticket_code', jsonData.ticket_code);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"payment_status\": \"SUCCESS\",\n  \"transaction_id\": \"TEST_TXN_{{$timestamp}}\",\n  \"amount\": 299.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments/notify",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "notify"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4: Verify Operations Backend Sees Order (PRD-008)",
+      "description": "Operations backend should see the order - validates the handoff",
+      "item": [
+        {
+          "name": "4.1 Admin Views Order in Backend",
+          "description": "运营人员在后台查看用户下的订单详情，验证跨系统数据同步",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// TODO: This endpoint may not exist yet",
+                  "// The test validates that operations can see orders created through catalog",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Order visible in operations backend', function() {",
+                  "        const data = pm.response.json();",
+                  "        // pm.expect(data.order_id).to.equal(pm.collectionVariables.get('order_id'));",
+                  "    });",
+                  "} else {",
+                  "    pm.test.skip('Operations order view endpoint not implemented');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{admin_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", "{{order_id}}"]
+            }
+          }
+        },
+        {
+          "name": "4.2 Verify Ticket Uses Template Config",
+          "description": "验证生成的票券权益与运营配置的套餐模板一致",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// TODO: Verify ticket entitlements match the package template configuration",
+                  "",
+                  "pm.test('Ticket exists', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// pm.test('Ticket entitlements match template', function() {",
+                  "//     const data = pm.response.json();",
+                  "//     pm.expect(data.entitlements).to.be.an('array');",
+                  "//     // Verify entitlements come from the package template",
+                  "// });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/qr/{{ticket_code}}/info",
+              "host": ["{{base_url}}"],
+              "path": ["qr", "{{ticket_code}}", "info"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

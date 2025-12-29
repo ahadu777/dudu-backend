@@ -7,7 +7,6 @@ stories:
       - catalog-endpoint
       - order-create
       - payment-webhook
-      - tickets-issuance
       - my-tickets
       - qr-generation-api
       - venue-enhanced-scanning
@@ -17,9 +16,8 @@ stories:
     sequence:
       - catalog-endpoint → order-create
       - order-create → payment-webhook
-      - payment-webhook → tickets-issuance
-      - tickets-issuance → my-tickets
-      - tickets-issuance → qr-generation-api
+      - payment-webhook → my-tickets
+      - payment-webhook → qr-generation-api
       - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
     # Cross-story relationships
     enhances: []
@@ -46,7 +44,7 @@ stories:
       - my-tickets
       - qr-generation-api
     sequence:
-      - tickets-issuance → my-tickets
+      - payment-webhook → my-tickets
       - my-tickets → qr-generation-api
     enhances: [US-001]
     # Business requirements
@@ -57,10 +55,8 @@ stories:
     status: Done
     cards:
       - payment-webhook
-      - tickets-issuance
     sequence:
       - order-create → payment-webhook
-      - payment-webhook → tickets-issuance
     enhances: [US-001]
     # Business requirements
     business_requirement: "PRD-001"
@@ -133,7 +129,7 @@ stories:
     title: DeepTravel 小程序全链路购票与核销体验
     status: Draft
     cards:
-      - bundle-ticket-engine
+      - payment-webhook
       - merchant-redemption-console
       - admin-package-config
       - notification-orchestrator
@@ -155,25 +151,20 @@ stories:
         - reports/collections/us-010b-operations-backbone.json
   - id: US-010A
     title: DeepTravel 旅客闭环体验
-    status: In Progress
+    status: Done
     cards:
-      - travel-search-hub
-      - seat-lock-service
-      - wechat-payment-session
-      - bundle-ticket-engine
+      # deprecated: [travel-search-hub, seat-lock-service, wechat-payment-session]
+      - payment-webhook
       - route-schedule-management
       - schedule-pricing-rules
       - miniprogram-product-catalog
       - miniprogram-order
       - wallyt-payment
     sequence:
-      - catalog-endpoint → travel-search-hub
-      - travel-search-hub → seat-lock-service
-      - seat-lock-service → order-create
-      - order-create → bundle-ticket-engine
-      - bundle-ticket-engine → tickets-issuance
-      - order-create → wechat-payment-session
-      - wechat-payment-session → payment-webhook
+      - catalog-endpoint → miniprogram-product-catalog
+      - miniprogram-product-catalog → miniprogram-order
+      - miniprogram-order → wallyt-payment
+      - wallyt-payment → payment-webhook
     enhances: [US-001, US-003, US-004]
     # Business requirements
     business_requirement: "PRD-008"
@@ -266,7 +257,7 @@ stories:
     business_requirement: "PRD-003"
     deadline: "2025-11-04"
     implementation_date: "2025-11-03"
-    implicit_dependencies: [qr-generation-api, tickets-issuance]
+    implicit_dependencies: [qr-generation-api, payment-webhook]
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-013-runbook.md
@@ -274,7 +265,7 @@ stories:
         - reports/collections/us-013-venue-operations.json
   - id: US-014
     title: 微信小程序用户认证
-    status: Draft
+    status: Done
     cards:
       - wechat-auth-login
       - wechat-phone-binding
@@ -288,7 +279,7 @@ stories:
     enhances: [US-001, US-009, US-010A]
     enhanced_by: []
     # Business requirements
-    business_requirement: "PRD-004"
+    business_requirement: "PRD-008"
     deadline: "2025-01-20"
     implicit_dependencies: [user-profile-endpoint, order-create]
     # E2E validation assets
@@ -305,16 +296,16 @@ stories:
       - operator-validation-scanner
     # Sequence dependencies
     sequence:
-      - tickets-issuance → reservation-slot-management
+      - payment-webhook → reservation-slot-management
       - reservation-slot-management → customer-reservation-portal
       - "[operators-login, customer-reservation-portal] → operator-validation-scanner"
     # Cross-story relationships
     enhances: [US-001, US-002]
     enhanced_by: []
     # Business requirements
-    business_requirement: "PRD-007"
+    business_requirement: "PRD-006"  # 原 PRD-007 已合并到 PRD-006
     deadline: "2025-12-31"
-    implicit_dependencies: [tickets-issuance, order-create, operators-login]
+    implicit_dependencies: [payment-webhook, order-create, operators-login]
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-015-runbook.md
@@ -330,7 +321,7 @@ stories:
     # deprecated: [ticket-lifecycle-daemon]
     # Sequence dependencies
     sequence:
-      - tickets-issuance → ticket-activation
+      - payment-webhook → ticket-activation
       - ticket-activation → time-slot-reservation
       - "[operators-login, time-slot-reservation] → reservation-validation-scanning"
     # Cross-story relationships
@@ -339,10 +330,122 @@ stories:
     # Business requirements
     business_requirement: "PRD-006"
     deadline: "2025-12-31"
-    implicit_dependencies: [tickets-issuance, order-create, operators-login]
+    implicit_dependencies: [payment-webhook, order-create, operators-login]
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-016-runbook.md
       newman:
         - reports/collections/us-016-activation-reservation.json
 
+  - id: US-017
+    title: 分销商账单与数据分析
+    status: Done
+    cards:
+      - ota-premade-tickets  # 批次元数据中包含分销商信息
+    # Sequence dependencies
+    sequence:
+      - ota-premade-tickets → venue-enhanced-scanning
+    # Cross-story relationships
+    enhances: [US-012, US-013]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-002"  # 原 PRD-005 已合并到 PRD-002
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-017-runbook.md
+
+  - id: US-018
+    title: OTA Ticket PDF Export
+    status: Done
+    cards:
+      - ota-pdf-export
+    # Sequence dependencies
+    sequence:
+      - ota-premade-tickets → ota-pdf-export
+    # Cross-story relationships
+    enhances: [US-012]
+    enhanced_by: []
+    # Business requirements
+    business_requirement: "PRD-002"
+    # E2E validation assets
+    validation_assets:
+      runbook: docs/integration/US-018-runbook.md
+      newman:
+        - postman/auto-generated/us-018-ota-pdf-export.postman_collection.json
+
+  # ========================================
+  # LMS (Loan Management System) Stories
+  # ========================================
+  - id: US-LMS-001
+    title: Borrower Registration with KYC/AML Verification
+    status: Draft
+    cards:
+      - lms-borrower-registration
+      - lms-kyc-verification
+      - lms-aml-screening
+    sequence:
+      - lms-borrower-registration → lms-kyc-verification
+      - lms-kyc-verification → lms-aml-screening
+    enhances: []
+    business_requirement: "PRD-009"
+
+  - id: US-LMS-002
+    title: Loan Application Submission
+    status: Draft
+    cards:
+      - lms-loan-application
+      - lms-credit-pull
+    sequence:
+      - lms-loan-application → lms-credit-pull
+    enhances: [US-LMS-001]
+    business_requirement: "PRD-009"
+
+  - id: US-LMS-003
+    title: Automated Credit Decision Engine
+    status: Draft
+    cards:
+      - lms-decision-engine
+      - lms-adverse-action
+    sequence:
+      - lms-credit-pull → lms-decision-engine
+      - lms-decision-engine → lms-adverse-action
+    enhances: [US-LMS-002]
+    business_requirement: "PRD-009"
+
+  - id: US-LMS-004
+    title: Loan Offers, Signing, and Disbursement
+    status: Draft
+    cards:
+      - lms-offer-generation
+      - lms-document-signing
+      - lms-disbursement
+    sequence:
+      - lms-decision-engine → lms-offer-generation
+      - lms-offer-generation → lms-document-signing
+      - lms-document-signing → lms-disbursement
+    enhances: [US-LMS-003]
+    business_requirement: "PRD-009"
+
+  - id: US-LMS-005
+    title: Loan Servicing & Borrower Portal
+    status: Draft
+    cards:
+      - lms-borrower-portal
+      - lms-payment-processing
+      - lms-payoff-quote
+    sequence:
+      - lms-disbursement → lms-borrower-portal
+      - lms-borrower-portal → lms-payment-processing
+      - lms-borrower-portal → lms-payoff-quote
+    enhances: [US-LMS-004]
+    business_requirement: "PRD-009"
+
+  - id: US-LMS-006
+    title: Compliance & Audit Trail
+    status: Draft
+    cards:
+      - lms-audit-trail
+      - lms-rbac
+    sequence: []
+    enhances: [US-LMS-001, US-LMS-002, US-LMS-003]
+    business_requirement: "PRD-009"

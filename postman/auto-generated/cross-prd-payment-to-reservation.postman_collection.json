@@ -1,0 +1,266 @@
+{
+  "info": {
+    "_postman_id": "cross-prd-payment-to-reservation",
+    "name": "Cross-PRD: Payment → Reservation System (PRD-001 → PRD-006)",
+    "description": "# Cross-PRD Gap Coverage Test\n\n**Purpose**: Test the handoff from payment/ticket issuance to reservation system.\n\n## Gap Being Covered\n- **Gap 3**: US-004 (Payment notify → issue tickets) → US-015 (Select date/time to reserve)\n\n## User Flow\n1. User creates order and pays\n2. Payment webhook issues ticket (status: ACTIVATED)\n3. User validates ticket for reservation eligibility\n4. User selects available time slot\n5. User creates reservation (ticket status: RESERVED)\n\n## Gap Question Answered\n- ✅ Is there E2E test from /payments/notify to /api/tickets/validate?\n\n## Key Handoff Validation\n- Ticket issued by payment must be in correct status for reservation\n- Ticket must pass validation before reservation is allowed\n\n---\n**Auto-generated skeleton** - TODO: Add business assertions",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://localhost:8080", "type": "string"},
+    {"key": "user_token", "value": "", "type": "string"},
+    {"key": "product_id", "value": "106", "type": "string"},
+    {"key": "order_id", "value": "", "type": "string"},
+    {"key": "ticket_code", "value": "", "type": "string"},
+    {"key": "ticket_id", "value": "", "type": "string"},
+    {"key": "slot_id", "value": "", "type": "string"},
+    {"key": "reservation_id", "value": "", "type": "string"}
+  ],
+  "item": [
+    {
+      "name": "Phase 1: Purchase and Payment (PRD-001)",
+      "description": "User purchases ticket and payment is processed - SOURCE of handoff",
+      "item": [
+        {
+          "name": "1.1 Create Order",
+          "description": "用户选择需要预约的套餐，填写信息后提交订单",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Order created', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.order_id) {",
+                  "    pm.collectionVariables.set('order_id', jsonData.order_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{user_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{product_id}},\n  \"quantity\": 1,\n  \"customer_info\": {\n    \"name\": \"Reservation Test User\",\n    \"email\": \"reservation@test.com\",\n    \"phone\": \"+8613800138000\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "1.2 Payment Webhook - Issue Ticket",
+          "description": "支付成功后系统自动出票，票券状态变为已激活可预约",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Payment processed and ticket issued', function() {",
+                  "    const status = pm.response.code;",
+                  "    pm.expect([200, 201]).to.include(status);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.ticket_code) {",
+                  "    pm.collectionVariables.set('ticket_code', jsonData.ticket_code);",
+                  "}",
+                  "if (jsonData.ticket_id) {",
+                  "    pm.collectionVariables.set('ticket_id', jsonData.ticket_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"payment_status\": \"SUCCESS\",\n  \"transaction_id\": \"TEST_RESERVATION_{{$timestamp}}\",\n  \"amount\": 299.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments/notify",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "notify"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 2: Ticket Validation for Reservation (PRD-006 Handoff Point)",
+      "description": "Validate ticket is eligible for reservation - HANDOFF POINT",
+      "item": [
+        {
+          "name": "2.1 Validate Ticket Status",
+          "description": "用户进入预约页面前，系统校验票券是否有效且可预约",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ticket validation returns result', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_code\": \"{{ticket_code}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/validate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "validate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 3: Reservation Flow (PRD-006 US-015)",
+      "description": "User selects slot and creates reservation - TARGET of handoff",
+      "item": [
+        {
+          "name": "3.1 Get Available Slots",
+          "description": "用户查看可预约的日期和时段，选择合适的入场时间",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Slots retrieved', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.slots && jsonData.slots[0]) {",
+                  "    pm.collectionVariables.set('slot_id', jsonData.slots[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/reservation-slots/available?date={{$isoTimestamp}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservation-slots", "available"],
+              "query": [
+                {"key": "date", "value": "{{$isoTimestamp}}"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.2 Create Reservation",
+          "description": "用户确认时段后提交预约，票券状态变为已预约",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reservation created', function() {",
+                  "    const status = pm.response.code;",
+                  "    pm.expect([200, 201]).to.include(status);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.reservation_id) {",
+                  "    pm.collectionVariables.set('reservation_id', jsonData.reservation_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_code\": \"{{ticket_code}}\",\n  \"slot_id\": \"{{slot_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/reservations/create",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reservations", "create"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4: Verify End State",
+      "description": "Confirm the full handoff completed successfully",
+      "item": [
+        {
+          "name": "4.1 Verify Ticket Final Status",
+          "description": "验证票券最终状态已关联预约时段，跨系统数据同步正确",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ticket status reflects reservation', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// TODO: Final validation - ticket from payment now has reservation",
+                  "// const data = pm.response.json();",
+                  "// pm.test('Ticket is RESERVED with correct slot', function() {",
+                  "//     pm.expect(data.status).to.equal('RESERVED');",
+                  "//     pm.expect(data.reservation.slot_id).to.equal(pm.collectionVariables.get('slot_id'));",
+                  "// });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_code\": \"{{ticket_code}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/validate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "validate"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

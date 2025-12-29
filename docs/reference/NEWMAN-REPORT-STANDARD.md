@@ -42,15 +42,16 @@ npx newman run postman/auto-generated/prd-006-ticket-activation.postman_collecti
 
 **Output:** `reports/newman/prd-006-e2e.xml` (5.9KB, 25 assertions)
 
-### PRD-007 Reservation Validation
+### ~~PRD-007 Reservation Validation~~ (Deprecated)
+
+> **Note:** PRD-007 已合并到 PRD-006，测试现在通过 `npm run test:prd 006` 运行。
 
 ```bash
-npx newman run postman/auto-generated/prd-007-reservation-validation.postman_collection.json \
-  --reporters cli,junit \
-  --reporter-junit-export reports/newman/prd-007-e2e.xml
+# 历史命令（已废弃）
+# npx newman run postman/auto-generated/prd-007-reservation-validation.postman_collection.json
+# 现在使用:
+npm run test:prd 006
 ```
-
-**Output:** `reports/newman/prd-007-e2e.xml` (8.5KB, 36 assertions)
 
 ### Story E2E Test (via script)
 
@@ -82,8 +83,8 @@ node scripts/run-e2e-by-context.mjs --story US-012
 ```
 reports/
 └── newman/
-    ├── prd-006-e2e.xml           # PRD-006 测试报告
-    ├── prd-007-e2e.xml           # PRD-007 测试报告
+    ├── prd-006-e2e.xml           # PRD-006 测试报告 (含原 PRD-007)
+    # prd-007-e2e.xml             # 已废弃，合并到 PRD-006
     ├── us-010a-e2e.xml           # Story US-010A 报告
     ├── us-010b-e2e.xml           # Story US-010B 报告
     ├── us-012-e2e.xml            # Story US-012 报告

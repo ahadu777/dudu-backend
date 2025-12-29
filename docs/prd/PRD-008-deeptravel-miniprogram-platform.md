@@ -3,13 +3,14 @@
 ## Document Metadata
 ```yaml
 prd_id: "PRD-008"
+category: "customer"
 product_area: "B2C Direct Sales"
 owner: "Product Manager"
 status: "In Progress"
 version: "2.0"
 created_date: "2025-11-21"
 last_updated: "2025-12-12"
-related_stories: ["US-010", "US-010A", "US-010B"]
+related_stories: ["US-010", "US-010A", "US-010B", "US-014"]
 business_channel: "WeChat Mini-Program (direct)"
 phase_status:
   phase_1_package_booking: "Done"
@@ -19,6 +20,8 @@ implementation_cards:
   - miniprogram-product-catalog
   - miniprogram-order
   - wallyt-payment
+  - wechat-auth-login
+  - wechat-phone-binding
 ```
 
 ## Executive Summary
@@ -69,6 +72,13 @@ Our Role: Ticketing platform technology provider
 ---
 
 ## Core Features
+
+### Feature 0: WeChat Authentication ✅ Done
+Native WeChat login with optional phone binding (merged from PRD-004)
+- **Business Value**: Reduce registration friction, leverage WeChat ecosystem
+- **User Value**: 5-second login vs 2-minute email registration
+- **Priority**: Critical (prerequisite for all other features)
+- **Success Metrics**: >98% login success rate, <500ms response time
 
 ### Feature 1: Package Product Booking ✅ Done
 Pre-bundled products with multiple entitlements (ferry + dining + entertainment)

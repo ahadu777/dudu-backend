@@ -20,6 +20,28 @@
 
 **职责**：定义产品愿景、业务目标和成功指标
 
+**PRD 定位**：
+
+在本项目中，PRD 的定位是 **Epic/Feature Request**（需求级），而非产品模块级：
+
+```
+Category = 产品模块（core, customer, channel, operation, platform）
+PRD      = 需求/Epic（一个完整的业务目标，1-3 个月可完成）
+Story    = 用户能力（用户能做什么）
+Card     = 技术实现（API 契约、数据结构）
+```
+
+**为什么这样定义**：
+- 更灵活：按需求创建，不需要预先规划完整产品架构
+- 更务实：中小团队常见做法，降低文档维护成本
+- 有约束：通过 category 标签实现逻辑分组，避免混乱
+
+**约束规则**：
+1. **同 category 的 PRD 应共享 Card** - 避免重复实现相同功能
+2. **新 PRD 前检查** - 同 category 是否已有相关 PRD，优先扩展已有 PRD
+3. **合并触发** - 功能重叠 >50% 时必须合并（如 PRD-006 + PRD-007）
+4. **粒度控制** - 一个 PRD 应能在 1-3 个月内完成，过大则拆分
+
 **应该包含**：
 - 需求背景（为什么要做）
 - 解决方案概述（做什么）
@@ -34,6 +56,38 @@
 - ❌ Given/When/Then 验收标准 → 放 Story
 - ❌ API 路径、数据结构 → 放 Card
 - ❌ 实现细节、代码文件 → 放 Card
+
+**Category 分类**（必填）：
+
+每个 PRD 必须指定一个 category，用于标识其在产品架构中的位置：
+
+| Category | 职责 | 典型功能 |
+|----------|------|----------|
+| `core` | 核心业务 | 购买、激活、预约、核销、库存、定价 |
+| `customer` | 用户端 | 小程序、Web 预约、订单查询 |
+| `channel` | 渠道 | OTA API、分销商、批量操作 |
+| `operation` | 运营 | 场馆管理、操作员工具、报表 |
+| `platform` | 平台 | 认证、多租户、通知服务 |
+
+> 详见 [PRODUCT-ARCHITECTURE.md](./PRODUCT-ARCHITECTURE.md)
+
+**新建 PRD 检查清单**：
+
+新建 PRD 前，必须确认以下事项：
+
+- [ ] 参考 [PRODUCT-ARCHITECTURE.md](./PRODUCT-ARCHITECTURE.md)，选择正确的 category
+- [ ] 检查同 category 下是否已有相关 PRD，优先扩展已有 PRD
+- [ ] 功能与已有 PRD 重叠度 < 30%
+- [ ] 预估可在 1-3 个月内完成
+- [ ] 明确与相邻 PRD 的边界
+
+**规模建议**：
+
+| 指标 | 建议值 | 警告值 |
+|------|--------|--------|
+| Stories 数量 | 3-8 | >15 需考虑拆分 |
+| Cards 数量 | 5-20 | >30 需考虑拆分 |
+| 完成周期 | 1-3 个月 | >6 个月需拆分 |
 
 ---
 
@@ -176,12 +230,14 @@ graph TD
 ## 元数据
 ​```yaml
 prd_id: "PRD-XXX"
+category: "core | customer | channel | operation | platform"  # 必填，产品架构分类
 product_area: "[产品领域]"
 owner: "[负责人]"
 status: "Draft | In Progress | Done | Deprecated | On Hold"
 created_date: "YYYY-MM-DD"
 last_updated: "YYYY-MM-DD"
 stories: ["US-XXX", "US-YYY"]  # 关联的 Stories
+merged_into: ""  # 可选，废弃合并时指向目标 PRD
 ​```
 
 ## 变更日志
@@ -438,6 +494,21 @@ deprecated_by: "[操作人]"
 superseded_by: "[替代文档，如有]"  # 可选
 ```
 
+### 废弃文档存放
+
+废弃的文档应移动到对应目录的 `_deprecated/` 子目录：
+
+```
+docs/prd/_deprecated/           # 废弃的 PRD
+docs/stories/_deprecated/       # 废弃的 Story
+docs/cards/_deprecated/         # 废弃的 Card
+```
+
+**规则**：
+1. 文件保留原名，便于追溯
+2. 每个 `_deprecated/` 目录应有 README.md 记录废弃清单
+3. 废弃文档不删除，作为历史记录保留
+
 ---
 
 ## 五、废弃级联规则
@@ -585,8 +656,156 @@ grep -l "business_requirement: \"PRD-008\"" docs/stories/*.md
 # 查看 Story 的所有 Cards
 grep -l "related_stories:.*US-010A" docs/cards/*.md
 
-# 查看废弃的文档
-grep -l "status: Deprecated" docs/prd/*.md docs/stories/*.md docs/cards/*.md
+# 查看废弃的文档（已移动到 _deprecated 目录）
+ls docs/prd/_deprecated/ docs/stories/_deprecated/ docs/cards/_deprecated/ 2>/dev/null
+```
+
+---
+
+## 九、变更历史规范 (Delta 格式)
+
+### 目标
+
+标准化 Card 变更记录，使用结构化的 ADDED/MODIFIED/REMOVED 格式，便于追踪 API 演进和回顾变更。
+
+### Delta 格式定义
+
+| 类型 | 含义 | 典型内容 |
+|------|------|----------|
+| **ADDED** | 新增内容 | 新 API 端点、新请求/响应字段、新业务规则 |
+| **MODIFIED** | 修改内容 | 字段类型变更、验证规则调整、行为变化 |
+| **REMOVED** | 移除内容 | 废弃的字段、删除的端点、移除的规则 |
+
+### Card Frontmatter 扩展
+
+在 Card 的 frontmatter 中添加 `changelog` 字段：
+
+```yaml
+---
+card: "Order create API"
+slug: order-create
+status: "Done"
+last_update: "2025-12-24T10:00:00+08:00"
+
+changelog:
+  - version: "1.2.0"
+    date: "2025-12-24"
+    summary: "添加订单取消功能"
+    breaking: false
+    delta:
+      added:
+        - "POST /orders/:id/cancel 端点"
+        - "cancel_reason 请求字段"
+        - "cancelled 订单状态"
+      modified:
+        - "订单状态流转规则：已支付订单可取消"
+      removed: []
+
+  - version: "1.1.0"
+    date: "2025-12-01"
+    summary: "支持复杂定价"
+    breaking: false
+    delta:
+      added:
+        - "pricing_context 请求字段"
+        - "pricing_breakdown 响应字段"
+      modified: []
+      removed: []
+
+  - version: "1.0.0"
+    date: "2025-10-26"
+    summary: "初始版本"
+    breaking: false
+    delta:
+      added:
+        - "POST /orders 端点"
+        - "基础订单创建功能"
+      modified: []
+      removed: []
+---
+```
+
+### Changelog 字段说明
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `version` | string | 是 | 语义化版本号 (SemVer) |
+| `date` | string | 是 | 变更日期 (YYYY-MM-DD) |
+| `summary` | string | 是 | 变更摘要 (一句话) |
+| `breaking` | boolean | 否 | 是否是破坏性变更，默认 false |
+| `delta.added` | string[] | 否 | 新增内容列表 |
+| `delta.modified` | string[] | 否 | 修改内容列表 |
+| `delta.removed` | string[] | 否 | 移除内容列表 |
+
+### 版本号规则 (SemVer)
+
+| 类型 | 版本变更 | 示例场景 |
+|------|----------|----------|
+| **Major (X.0.0)** | Breaking change | 移除必填字段、变更 API 路径、不兼容的响应格式 |
+| **Minor (0.X.0)** | 新增功能（向后兼容） | 新增可选字段、新增端点、新增业务规则 |
+| **Patch (0.0.X)** | Bug 修复、文档更新 | 修复计算错误、更新描述、优化性能 |
+
+### Markdown Changelog 章节（可选）
+
+除了 frontmatter，可在 Card 正文添加人类可读的变更日志：
+
+```markdown
+## Changelog
+
+### v1.2.0 (2025-12-24) - 订单取消功能
+
+**ADDED:**
+- POST /orders/:id/cancel 端点
+- `cancel_reason` 请求字段：取消原因
+- `cancelled` 订单状态
+
+**MODIFIED:**
+- 订单状态流转规则：已支付订单在发货前可取消
+
+---
+
+### v1.1.0 (2025-12-01) - 复杂定价支持
+
+**ADDED:**
+- `pricing_context` 请求字段：支持多变量定价
+- `pricing_breakdown` 响应字段：详细价格分解
+```
+
+### 何时记录变更
+
+| 场景 | 是否记录 | 说明 |
+|------|---------|------|
+| 新增 API 端点 | ✅ 是 | version +0.1.0 |
+| 新增可选字段 | ✅ 是 | version +0.1.0 |
+| 修改字段类型 | ✅ 是 | version +1.0.0 (breaking) |
+| 修复 bug | ⚠️ 视情况 | 如影响行为则记录 |
+| 更新文档描述 | ❌ 通常不需要 | 除非是重要澄清 |
+| 重构代码（无行为变化） | ❌ 否 | 不影响 API 契约 |
+
+### 工作流集成
+
+在 AI 工作流 Step 2 (Execute) 中，修改现有 Card 时：
+
+1. 更新 `last_update` 字段
+2. 在 `changelog` 数组开头添加新版本记录
+3. 使用 ADDED/MODIFIED/REMOVED 结构描述变更
+4. 根据变更类型确定版本号
+
+### 示例：Breaking Change
+
+```yaml
+changelog:
+  - version: "2.0.0"
+    date: "2025-12-24"
+    summary: "channel_id 重命名为 partner_id"
+    breaking: true
+    delta:
+      added:
+        - "partner_id 字段 (string)"
+      modified:
+        - "订单归属逻辑：从渠道改为合作伙伴"
+      removed:
+        - "channel_id 字段 (已废弃，将在 2026-03 移除)"
 ```
 
 ---

@@ -1,5 +1,129 @@
 # AI Development Guide
 
+## CEO Context
+
+**If Jimmy (CEO/CTO) is asking questions**, read this first:
+- `docs/reference/CEO-CONTEXT.md` - His goals, philosophy, and evaluation framework
+
+Jimmy focuses on **evaluating the foundation**, not implementing features. He wants data-driven answers that hold the team accountable.
+
+---
+
+## AI Project Knowledge Base (Critical)
+
+### Why This Matters
+
+The `/ai-sitemap` endpoint is the **machine-readable institutional knowledge** of this project. It solves a fundamental problem:
+
+```
+Problem: AI context is ephemeral. Conversations reset. Knowledge is lost.
+Solution: The project itself exposes its complete state as structured data.
+```
+
+**This enables:**
+- **AI Onboarding**: Any AI agent can understand the entire project in one request
+- **Knowledge Continuity**: When context is lost, fetch `/ai-sitemap` to reconstruct
+- **Verification**: AI can answer "Is X ready?" by checking actual sources, not summaries
+- **External Integration**: Other systems/AI tools can programmatically navigate the project
+
+### The Endpoint
+
+```
+GET http://localhost:8080/ai-sitemap
+```
+
+### What It Contains (v3.0)
+
+| Section | Purpose |
+|---------|---------|
+| `project` | What is this? Tech stack, description |
+| `knowledge_sources.documentation` | PRDs → Stories → Cards → Memos (full hierarchy with items) |
+| `knowledge_sources.reference_guides` | How to work here (all docs/reference/*.md with purposes) |
+| `knowledge_sources.case_studies` | What we learned (real implementation examples) |
+| `knowledge_sources.integration_runbooks` | How to test (E2E flows per story) |
+| `knowledge_sources.testing` | What's actually tested (Postman JSON = source of truth) |
+| `knowledge_sources.codebase` | Where's the code (modules, key files) |
+| `verification_guide` | How to verify "Is feature X ready?" |
+| `summary` | Quick counts across all documentation |
+
+### AI Recovery Protocol
+
+When starting a new session or losing context:
+
+```
+1. Fetch /ai-sitemap
+2. Read project.description and summary
+3. For specific questions, navigate knowledge_sources
+4. For "Is X ready?" questions, follow verification_guide
+```
+
+### Trust Hierarchy
+
+| Source | Trust | Why |
+|--------|-------|-----|
+| `/ai-sitemap` | ✅ HIGH | Dynamically generated from actual files |
+| `/tests` | ✅ HIGH | Parses actual Postman JSON |
+| `postman/auto-generated/*.json` | ✅ HIGH | Executable tests |
+| `src/modules/**/*.ts` | ✅ HIGH | Actual implementation |
+| `/coverage` | ⚠️ MEDIUM | YAML summary, manually maintained |
+| `docs/test-coverage/_index.yaml` | ⚠️ MEDIUM | May be outdated |
+
+---
+
+## Research Context
+
+**Full context:** `docs/reference/RESEARCH-CONTEXT.md`
+
+**Goal:** Transform scattered research into systematic business value drivers.
+
+```
+Scattered Sources          Synthesized Memos         Business Outcomes
+─────────────────          ─────────────────         ─────────────────
+ChatGPT analysis    ──┐
+Claude strategy     ──┼──▶  MEMO-001              ──▶  Investor deck
+WeChat insights     ──┤     MEMO-002              ──▶  Team alignment
+Partner feedback    ──┤     MEMO-003              ──▶  PRD → Product
+Market signals      ──┘         ↓
+                           leads_to: PRD-XXX       ──▶  Revenue
+```
+
+### Pathways to Synthesized Ideas
+
+| Pathway | Example | Capture Trigger |
+|---------|---------|-----------------|
+| Market exploration | "What should we charge?" | Deep analysis emerges |
+| Client conversation | Client asks → pricing strategy | Strategic response worth keeping |
+| Investor prep | Value proposition articulation | Pitch content crystallizes |
+| Partner negotiation | Deal structure | Terms documented |
+
+### When to Create a Memo
+
+| User says | Action |
+|-----------|--------|
+| "Save this as a memo" | Create memo from conversation content |
+| "This is worth keeping" | Prompt for memo title and tags |
+| Strategic analysis, value prop, pitch content | Suggest saving as memo |
+
+### Memo System
+
+| What | Where | Purpose |
+|------|-------|---------|
+| **Memos** | `docs/memos/` | Synthesized strategic thinking |
+| **Web UI** | `/memos` | Browse, filter by tag, share |
+| **Reference** | `docs/reference/RESEARCH-CONTEXT.md` | Full strategic framework |
+
+### Memo → PRD Connection
+
+```
+Memo (strategic thinking) → PRD (when ready to build) → Story → Card → Code
+```
+
+When a memo leads to building something:
+- PRD adds `source_memo: "MEMO-001"`
+- Memo adds `leads_to: ["PRD-010"]`
+
+---
+
 ## ⚠️ MANDATORY WORKFLOW
 
 **所有开发任务必须遵循 5 步工作流，详见 skill：**
@@ -13,10 +137,11 @@
 | Step | 名称 | 关键动作 |
 |------|------|----------|
 | 0 | Intent Analysis | 解析用户意图 → 匹配任务类型 → 加载参考文档 |
-| 1 | Reality Check | 验证服务状态、文档状态、代码现状 |
+| 0.5 | Proposal | 生成提案 → 等待用户确认 (复杂任务) |
+| 1 | Reality Check | 上下文恢复检查 → 验证服务/文档/代码状态 |
 | 2 | Execute | 按规范执行，更新 Card 状态 |
 | 3 | Verify | 测试验证，文档一致性检查 |
-| 4 | Learn (可选) | 记录经验教训，改进工作流 |
+| 4 | Learn (条件必须) | 返工/新模式/用户反馈时记录经验 |
 
 ### 快速判断：是否需要完整工作流？
 
@@ -82,6 +207,8 @@ npm run test:story 014        # 指定 Story
 
 # 文档校验
 npm run validate:docs         # 检查 PRD→Stories→Cards→Code 一致性
+npm run sync:card-index       # 同步 Card 索引
+npm run generate:openapi      # 从 Card 生成 OpenAPI
 
 # 搜索
 grep -ri "关键词" docs/
@@ -132,8 +259,10 @@ grep -ri "关键词" docs/
 | **文档规范** | [docs/reference/DOCUMENT-SPEC.md](docs/reference/DOCUMENT-SPEC.md) | PRD/Story/Card 模板、关系、生命周期 |
 | 详细工作流 | [docs/reference/](docs/reference/) | 各类任务的详细指南 |
 | 案例研究 | [docs/cases/](docs/cases/) | 实际案例分析 |
+| 案例索引 | [docs/cases/_index.yaml](docs/cases/_index.yaml) | 经验案例快速导航 |
 | PRDs | [docs/prd/](docs/prd/) | 产品需求文档 |
 | Stories | [docs/stories/](docs/stories/) | 用户故事 |
 | Cards | [docs/cards/](docs/cards/) | 技术卡片 |
+| Card 索引 | [docs/cards/_index.yaml](docs/cards/_index.yaml) | Card 状态追踪与快速查询 |
 | 测试覆盖率 | [docs/test-coverage/_index.yaml](docs/test-coverage/_index.yaml) | 测试状态追踪 |
 | OpenAPI 规范 | [openapi/openapi.json](openapi/openapi.json) | API 文档 |

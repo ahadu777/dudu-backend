@@ -1,7 +1,7 @@
 # Frontend Integration Guide: Ticket Reservation & Operator Validation APIs
 
 ## Document Overview
-This guide provides complete API documentation for frontend teams to integrate the ticket reservation and operator validation system (PRD-006/PRD-007 Week 1-3 implementation).
+This guide provides complete API documentation for frontend teams to integrate the ticket reservation and operator validation system (PRD-006 Week 1-3 implementation).
 
 **Last Updated:** 2025-11-25
 **API Version:** 1.0

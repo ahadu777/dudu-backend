@@ -27,7 +27,8 @@
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
       "Bash(npm run test:prd006:*)",
-      "Bash(npm run validate:docs:*)"
+      "Bash(npm run validate:docs:*)",
+      "Bash(npm run test:story:*)"
     ],
     "deny": [],
     "ask": []

@@ -55,7 +55,7 @@ NOT: Endpoints tested / Endpoints defined
 | PRD | Claimed | Actual | Gap |
 |-----|---------|--------|-----|
 | PRD-006 | 100% | 43% | -57% |
-| PRD-007 | 100% | 57% | -43% |
+| PRD-007 | 100% | 57% | -43% | *(已合并到 PRD-006)*
 
 ---
 
@@ -91,8 +91,8 @@ cat postman/auto-generated/prd-xxx.postman_collection.json
 
 This failure led to:
 - Updated `docs/test-coverage/_index.yaml` with honest coverage numbers
-- PRD-006: 43% (was claimed 100%)
-- PRD-007: 57% (was claimed 100%)
+- PRD-006: 43% (was claimed 100%) - 现已含 PRD-007
+- PRD-007: 已合并到 PRD-006
 - Overall project coverage: ~85% (was claimed 98%)
 
 ---

@@ -378,7 +378,7 @@
 
 **Related Documents:**
 - Data Model: `docs/directus-data-model-reservation-system.md`
-- PRDs: PRD-006, PRD-007
+- PRDs: PRD-006
 - Stories: US-015, US-016
 - Runbooks: `docs/integration/US-015-runbook.md`, `docs/integration/US-016-runbook.md`
 - Week 1 Status: `docs/implementation-status-week1.md`

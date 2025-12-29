@@ -1,0 +1,159 @@
+# PRD-003 Acceptance Criteria Mapping
+# Event Venue Operations Platform
+
+prd_id: PRD-003
+title: Event Venue Operations Platform
+last_updated: 2025-12-25
+coverage_principle: "Coverage % = (有测试的AC数 / 总AC数) × 100"
+
+# ===== ACCEPTANCE CRITERIA =====
+
+acceptance_criteria:
+
+  # === 1. Operator Authentication ===
+  operator_auth:
+    - ac_id: AC-AUTH-1
+      description: "操作员登录获取 JWT Token"
+      prd_source: "Business Rules > Operator Session Rules"
+      test_id: "1.1"
+      status: tested
+
+    - ac_id: AC-AUTH-2
+      description: "操作员会话绑定特定终端位置"
+      prd_source: "Business Rules > Operator Session Rules"
+      test_id: "1.2"
+      status: tested
+
+    - ac_id: AC-AUTH-3
+      description: "无效凭据返回 401"
+      prd_source: "Error Handling"
+      test_id: "1.3"
+      status: tested
+
+  # === 2. Multi-Function Package Validation ===
+  package_validation:
+    - ac_id: AC-VALIDATE-1
+      description: "Premium Plan: ferry 无限次, gift 单次, tokens 计数"
+      prd_source: "Core Features > Multi-Function Package Validation"
+      test_id: "2.1"
+      status: tested
+
+    - ac_id: AC-VALIDATE-2
+      description: "Pet Plan: ferry + pet transport + gift"
+      prd_source: "Core Features > Multi-Function Package Validation"
+      test_id: "2.2"
+      status: tested
+
+    - ac_id: AC-VALIDATE-3
+      description: "Deluxe Tea Set: ferry + tea service + souvenir"
+      prd_source: "Core Features > Multi-Function Package Validation"
+      test_id: "2.3"
+      status: tested
+
+    - ac_id: AC-VALIDATE-4
+      description: "权益用尽返回 NO_REMAINING_USES"
+      prd_source: "Business Rules > Multi-Function Validation Rules"
+      test_id: "2.4"
+      status: tested
+
+  # === 3. QR Ticket Scanning ===
+  qr_scanning:
+    - ac_id: AC-SCAN-1
+      description: "生成加密 QR 码"
+      prd_source: "Technical Requirements"
+      test_id: "3.1"
+      status: tested
+
+    - ac_id: AC-SCAN-2
+      description: "扫描 QR 码验证权益"
+      prd_source: "Core Features > Multi-Function Package Validation"
+      test_id: "3.2"
+      status: tested
+
+    - ac_id: AC-SCAN-3
+      description: "扫描响应 <2秒"
+      prd_source: "Technical Requirements > Performance"
+      test_id: "3.3"
+      status: tested
+
+    - ac_id: AC-SCAN-4
+      description: "无效 QR 码返回错误"
+      prd_source: "Error Handling"
+      test_id: "3.4"
+      status: tested
+
+  # === 4. Cross-Terminal Fraud Prevention ===
+  fraud_prevention:
+    - ac_id: AC-FRAUD-1
+      description: "阻止跨终端 JTI 重复使用"
+      prd_source: "Core Features > Cross-Terminal JTI Fraud Prevention"
+      test_id: "4.1"
+      status: tested
+
+    - ac_id: AC-FRAUD-2
+      description: "已兑换权益显示 ALREADY_REDEEMED"
+      prd_source: "Core Features > Cross-Terminal JTI Fraud Prevention"
+      test_id: "4.2"
+      status: tested
+
+    - ac_id: AC-FRAUD-3
+      description: "不可变审计追踪记录所有扫描"
+      prd_source: "Technical Requirements > Audit & Compliance"
+      test_id: "4.3"
+      status: tested
+
+  # === 5. Analytics & Reporting ===
+  analytics:
+    - ac_id: AC-ANALYTICS-1
+      description: "查询兑换历史"
+      prd_source: "Core Features > Real-Time Ferry Package Analytics"
+      test_id: "5.1"
+      status: tested
+
+    - ac_id: AC-ANALYTICS-2
+      description: "查询操作员活动统计"
+      prd_source: "Core Features > Real-Time Ferry Package Analytics"
+      test_id: "5.2"
+      status: tested
+
+# ===== COVERAGE SUMMARY =====
+
+coverage_summary:
+  total_ac: 17
+  tested: 17
+  needs_fix: 0
+  coverage_percentage: "100% (17/17)"
+
+# ===== TEST STRUCTURE =====
+
+test_structure:
+  - folder: "1. 操作员认证"
+    tests:
+      - "1.1 操作员登录"
+      - "1.2 会话终端绑定"
+      - "1.3 无效凭据 (401)"
+
+  - folder: "2. 套餐验证"
+    tests:
+      - "2.1 Premium Plan 验证"
+      - "2.2 Pet Plan 验证"
+      - "2.3 Deluxe Tea Set 验证"
+      - "2.4 权益用尽处理"
+
+  - folder: "3. QR扫描"
+    tests:
+      - "3.1 生成加密QR码"
+      - "3.2 扫描验证权益"
+      - "3.3 响应时间 <2s"
+      - "3.4 无效QR码处理"
+
+  - folder: "4. 欺诈防护"
+    tests:
+      - "4.1 JTI重复检测"
+      - "4.2 已兑换提示"
+      - "4.3 审计追踪"
+
+  - folder: "5. 分析报告"
+    tests:
+      - "5.1 兑换历史"
+      - "5.2 操作员统计"

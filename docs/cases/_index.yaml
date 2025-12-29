@@ -1,0 +1,87 @@
+# Case Studies Index - 经验案例索引
+#
+# 记录 AI 工作流中的经验教训、成功模式和失败分析
+# 用于知识积累和工作流改进
+#
+# 最后更新: 2025-12-24
+
+summary:
+  total: 3
+  categories:
+    workflow: 1      # AI 工作流相关
+    implementation: 1 # 功能实现案例
+    testing: 1       # 测试相关
+
+# 案例列表
+cases:
+  - id: CASE-DISCOVER-AI-WORKFLOW
+    title: AI-Guided Workflow Discovery
+    file: CASE-DISCOVER-AI-WORKFLOW.md
+    category: workflow
+    type: evolution    # 演进型案例（持续更新）
+    description: "AI 工作流发现和演进过程，记录多次迭代的经验"
+    entries: 10        # 记录条目数
+    last_updated: "2025-12-19"
+    key_learnings:
+      - "Step 0 Intent Analysis 防止上下文干扰"
+      - "Step 3 检查清单必须显式化"
+      - "简单规则比复杂系统更有效"
+
+  - id: CASE-US013
+    title: Event Venue Operations Platform
+    file: CASE-US013.md
+    category: implementation
+    type: snapshot     # 快照型案例（单次记录）
+    description: "US-013 场地运营平台实现的完整案例分析"
+    outcome: success
+    last_updated: "2025-11-03"
+    key_learnings:
+      - "Reality Check 在复杂功能中的价值"
+      - "防欺诈检测的设计模式"
+
+  - id: CASE-006-TEST-COVERAGE
+    title: Test Coverage Workflow Analysis
+    file: CASE-006-TEST-COVERAGE.md
+    category: testing
+    type: failure      # 失败分析型案例
+    description: "测试覆盖率工作流的失败分析和改进"
+    outcome: learned
+    last_updated: "2025-12-20"
+    key_learnings:
+      - "测试通过不等于覆盖完整"
+      - "需要诚实评估覆盖率"
+
+# 快速导航：最近的学习
+recent_learnings:
+  - date: "2025-12-19"
+    case: CASE-DISCOVER-AI-WORKFLOW
+    learning: "Step 3 检查清单必须显式化，不能依赖 AI 记忆"
+    applied_to: "SKILL.md Step 3 重构"
+
+  - date: "2025-12-15"
+    case: CASE-DISCOVER-AI-WORKFLOW
+    learning: "Intent Analysis 需要检查上下文干扰"
+    applied_to: "SKILL.md Step 0 添加 0.1 章节"
+
+  - date: "2025-12-20"
+    case: CASE-006-TEST-COVERAGE
+    learning: "测试通过率和覆盖率是不同指标"
+    applied_to: "测试工作流文档更新"
+
+# 分类索引
+by_category:
+  workflow:
+    - CASE-DISCOVER-AI-WORKFLOW
+  implementation:
+    - CASE-US013
+  testing:
+    - CASE-006-TEST-COVERAGE
+
+# 按结果索引
+by_outcome:
+  success:
+    - CASE-US013
+  learned:       # 从失败中学习
+    - CASE-006-TEST-COVERAGE
+  evolution:     # 持续演进
+    - CASE-DISCOVER-AI-WORKFLOW

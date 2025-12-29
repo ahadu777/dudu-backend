@@ -346,5 +346,5 @@ Before going live:
 ---
 
 **Last Updated:** 2025-11-25
-**Related PRDs:** PRD-006, PRD-007
+**Related PRDs:** PRD-006
 **Related Stories:** US-015, US-016

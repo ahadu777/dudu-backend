@@ -1,0 +1,166 @@
+# PRD-001 Acceptance Criteria Mapping
+# Cruise Package Ticketing Platform
+
+prd_id: PRD-001
+title: Cruise Package Ticketing Platform
+last_updated: 2025-12-25
+coverage_principle: "Coverage % = (有测试的AC数 / 总AC数) × 100"
+
+# ===== ACCEPTANCE CRITERIA =====
+
+acceptance_criteria:
+
+  # === 1. Product Catalog ===
+  product_catalog:
+    - ac_id: AC-CATALOG-1
+      description: "查询产品列表，返回所有可用套餐"
+      prd_source: "Core Features > Package Component System"
+      test_id: "1.1"
+      status: tested
+
+    - ac_id: AC-CATALOG-2
+      description: "查询产品详情，包含 function_codes 和定价"
+      prd_source: "Core Features > Package Component System"
+      test_id: "1.2"
+      status: tested
+
+    - ac_id: AC-CATALOG-3
+      description: "库存可用性检查 (指定日期)"
+      prd_source: "Data Requirements > Inventory"
+      test_id: "1.3"
+      status: tested
+
+    - ac_id: AC-CATALOG-4
+      description: "无效产品ID返回404"
+      prd_source: "Error Handling"
+      test_id: "1.4"
+      status: tested
+
+  # === 2. Dynamic Pricing ===
+  dynamic_pricing:
+    - ac_id: AC-PRICE-1
+      description: "工作日/周末价格差异 (成人周末 +$30)"
+      prd_source: "Core Features > Dynamic Package Pricing"
+      test_id: "2.1"
+      status: tested
+
+    - ac_id: AC-PRICE-2
+      description: "客户类型折扣 (小童/长者固定 $188)"
+      prd_source: "Business Rules > Customer Type Rules"
+      test_id: "2.2"
+      status: tested
+
+    - ac_id: AC-PRICE-3
+      description: "套餐等级定价 (Entry/Standard/Luxury)"
+      prd_source: "Business Rules > Package Tier Rules"
+      test_id: "2.3"
+      status: tested
+
+    - ac_id: AC-PRICE-4
+      description: "混合订单支持多种客户类型"
+      prd_source: "Business Rules > Customer Type Rules"
+      test_id: "2.4"
+      status: tested
+
+  # === 3. Order Creation ===
+  order_management:
+    - ac_id: AC-ORDER-1
+      description: "创建订单，包含正确定价"
+      prd_source: "Implementation Evidence"
+      test_id: "3.1"
+      status: tested
+
+    - ac_id: AC-ORDER-2
+      description: "订单创建响应时间 <2s"
+      prd_source: "Product Metrics > Performance Metrics"
+      test_id: "3.2"
+      status: tested
+
+    - ac_id: AC-ORDER-3
+      description: "订单状态查询"
+      prd_source: "Implementation Evidence"
+      test_id: "3.3"
+      status: tested
+
+  # === 4. QR Ticket Generation ===
+  qr_tickets:
+    - ac_id: AC-QR-1
+      description: "为票券生成 QR 码"
+      prd_source: "Core Features > QR-Based Digital Tickets"
+      test_id: "4.1"
+      status: tested
+
+    - ac_id: AC-QR-2
+      description: "QR 码包含权益信息 (entitlements)"
+      prd_source: "Core Features > QR-Based Digital Tickets"
+      test_id: "4.2"
+      status: tested
+
+    - ac_id: AC-QR-3
+      description: "QR 码可被扫描验证"
+      prd_source: "Core Features > QR-Based Digital Tickets"
+      test_id: "4.3"
+      status: tested
+
+  # === 5. Package Functions ===
+  package_functions:
+    - ac_id: AC-FUNC-1
+      description: "Premium Plan 包含 ferry + monchhichi_gift + playground_tokens"
+      prd_source: "Package Function Mapping > Product 106"
+      test_id: "5.1"
+      status: tested
+
+    - ac_id: AC-FUNC-2
+      description: "Pet Plan 包含 pet_ferry + pet_playground"
+      prd_source: "Package Function Mapping > Product 107"
+      test_id: "5.2"
+      status: tested
+
+    - ac_id: AC-FUNC-3
+      description: "Deluxe Tea Set 包含 vip_ferry + tea_set + monchhichi_gift_x2"
+      prd_source: "Package Function Mapping > Product 108"
+      test_id: "5.3"
+      status: tested
+
+# ===== COVERAGE SUMMARY =====
+
+coverage_summary:
+  total_ac: 17
+  tested: 17
+  needs_fix: 0
+  coverage_percentage: "100% (17/17)"
+
+# ===== TEST STRUCTURE =====
+
+test_structure:
+  - folder: "1. 产品目录"
+    tests:
+      - "1.1 查询产品列表"
+      - "1.2 查询产品详情"
+      - "1.3 库存可用性检查"
+      - "1.4 无效产品ID (404)"
+
+  - folder: "2. 动态定价"
+    tests:
+      - "2.1 工作日/周末价格"
+      - "2.2 客户类型折扣"
+      - "2.3 套餐等级定价"
+      - "2.4 混合订单定价"
+
+  - folder: "3. 订单管理"
+    tests:
+      - "3.1 创建订单"
+      - "3.2 订单响应时间"
+      - "3.3 订单状态查询"
+
+  - folder: "4. QR票券"
+    tests:
+      - "4.1 生成QR码"
+      - "4.2 QR码包含权益"
+      - "4.3 QR码扫描验证"
+
+  - folder: "5. 套餐功能"
+    tests:
+      - "5.1 Premium Plan 功能"
+      - "5.2 Pet Plan 功能"
+      - "5.3 Deluxe Tea Set 功能"

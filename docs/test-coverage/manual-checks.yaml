@@ -1,0 +1,15 @@
+# Manual Checks - QA 手动验证记录
+#
+# 此文件由 /tests 页面维护，记录 QA 手动测试的验证点
+#
+# 格式:
+#   checks:
+#     PRD-XXX:
+#       - id: "唯一ID"
+#         description: "验证描述"
+#         verified_by: "验证人"
+#         date: "验证日期"
+#         status: "passed | failed | pending"
+
+checks:
+  {}

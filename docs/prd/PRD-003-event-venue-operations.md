@@ -3,6 +3,7 @@
 ## Document Metadata
 ```yaml
 prd_id: "PRD-003"
+category: "operation"
 product_area: "Operations"
 owner: "Product Management"
 status: "Draft"

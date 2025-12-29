@@ -92,6 +92,7 @@ export enum OrderChannel {
  */
 @Entity('orders')
 @Index(['user_id', 'order_no'], { unique: true })
+@Index(['user_id', 'created_at'])  // 优化：用户订单列表查询
 @Index(['status'])
 @Index(['travel_date'])
 @Index(['created_at'])

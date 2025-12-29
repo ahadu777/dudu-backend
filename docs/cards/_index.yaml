@@ -1,0 +1,410 @@
+# Card 索引文件 - 由脚本自动生成
+# 用于快速查询 Card 状态、支持上下文恢复
+#
+# 同步命令: npm run sync:card-index
+# 最后同步: 2025-12-24
+# 生成器: scripts/sync-card-index.js
+
+summary:
+  total: 36
+  by_status:
+    Done: 36
+  by_team:
+    A - Commerce: 17
+    B - Fulfillment: 5
+    C - Gate: 5
+    C - Identity & Access: 6
+    B - Tickets: 2
+    C - Operations: 1
+in_progress: []
+drafts: []
+cards:
+  - slug: admin-package-config
+    title: Admin package configuration
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-010
+      - US-010B
+    oas_paths:
+      - /admin/packages/templates
+      - /admin/packages/templates/{templateId}/versions
+      - /admin/routes/fares
+      - /admin/routes/fares/{routeCode}
+      - /admin/routes/fares/{routeCode}/history
+      - /admin/routes/fares/{routeCode}/restore
+    last_update: "2025-10-28"
+  - slug: cancellation-policies
+    title: Cancellation policies and business rules
+    status: Done
+    team: B - Fulfillment
+    related_stories:
+      - US-007
+    oas_paths:
+      - /cancellation-policies
+    last_update: "2025-10-20"
+  - slug: catalog-endpoint
+    title: Catalog endpoint (real)
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-001
+    oas_paths:
+      - /catalog
+    last_update: "2025-10-19"
+  - slug: complex-pricing-engine
+    title: Complex multi-variable pricing calculation engine
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-011
+    oas_paths:
+      - /pricing/calculate
+      - /pricing/rules/{product_id}
+    last_update: "2025-11-05"
+  - slug: customer-reservation-portal
+    title: Customer Reservation Portal - Ticket Validation & Booking
+    status: Done
+    team: B - Fulfillment
+    related_stories:
+      - US-015
+      - US-016
+    oas_paths:
+      - /api/tickets/validate
+      - /api/reservations/create
+    last_update: "2025-11-26"
+  - slug: merchant-redemption-console
+    title: Merchant redemption console
+    status: Done
+    team: C - Gate
+    related_stories:
+      - US-010
+      - US-010B
+    oas_paths:
+      - /merchant/tickets/scan
+      - /merchant/orders/{orderId}
+      - /merchant/redemptions
+    last_update: "2025-10-24"
+  - slug: miniprogram-order
+    title: Mini-program order management
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-010A
+    oas_paths:
+      - /miniprogram/orders
+      - /miniprogram/orders/{orderId}
+      - /miniprogram/orders/{orderId}/cancel
+      - /miniprogram/orders/{orderId}/simulate-payment
+      - /miniprogram/tickets/{code}/qr
+    last_update: "2025-12-05"
+  - slug: miniprogram-product-catalog
+    title: Mini-program product catalog
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-010A
+    oas_paths:
+      - /miniprogram/products
+      - /miniprogram/products/{productId}
+      - /miniprogram/products/{productId}/availability
+    last_update: "2025-12-11"
+  - slug: miniprogram-profile
+    title: Miniprogram user profile management
+    status: Done
+    team: C - Identity & Access
+    related_stories:
+      - US-009
+    oas_paths:
+      - /miniprogram/profile
+    last_update: "2025-12-11"
+  - slug: my-tickets
+    title: My tickets — list assigned tickets with entitlements
+    status: Done
+    team: B - Tickets
+    related_stories:
+      - US-001
+      - US-003
+    oas_paths:
+      - /my/tickets
+    last_update: "2025-10-20"
+  - slug: notification-orchestrator
+    title: Notification orchestrator
+    status: Done
+    team: B - Fulfillment
+    related_stories:
+      - US-010
+      - US-010B
+    oas_paths:
+      - /notifications/preview
+      - /notifications/templates
+    last_update: "2025-10-24"
+  - slug: operator-validation-scanner
+    title: Operator Validation Scanner - QR Code Entry Validation
+    status: Done
+    team: C - Operations
+    related_stories:
+      - US-015
+      - US-016
+    oas_paths:
+      - /operators/auth
+      - /operators/validate-ticket
+      - /operators/verify-ticket
+    last_update: "2025-12-16"
+  - slug: operators-login
+    title: Operator login — issue operator_token
+    status: Done
+    team: C - Gate
+    related_stories:
+      - US-001
+      - US-002
+      - US-006
+    oas_paths:
+      - /operators/login
+    last_update: "2025-10-30"
+  - slug: order-create
+    title: Order create (idempotent) with complex pricing support
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-001
+      - US-011
+    oas_paths:
+      - /orders
+    last_update: "2025-10-26"
+  - slug: ota-order-retrieval
+    title: OTA Order and Ticket Retrieval - Customer Access Management
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-012
+    oas_paths:
+      - /api/ota/orders
+      - /api/ota/orders/:id/tickets
+    last_update: "2025-11-04"
+  - slug: ota-pdf-export
+    title: OTA Ticket PDF Export
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-018
+    oas_paths:
+      - /api/ota/tickets/:code/pdf
+      - /api/ota/batches/:id/pdf
+      - /api/ota/batches/:id/export-zip
+    last_update: "2025-12-18"
+  - slug: ota-premade-tickets
+    title: OTA Pre-made Ticket Management - Bulk Generation and B2B2C Activation
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-012
+      - US-017
+    oas_paths:
+      - /api/ota/batches
+      - /api/ota/tickets/bulk-generate
+      - /api/ota/tickets/:code/activate
+    last_update: "2025-12-10"
+  - slug: ota-reservation-management
+    title: OTA Reservation Management - Lifecycle and Operations
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-012
+    oas_paths:
+      - /api/ota/reservations
+      - /api/ota/reservations/:id
+      - /api/ota/reservations/:id/activate
+      - /api/ota/reservations/cleanup
+    last_update: "2025-11-04"
+  - slug: payment-webhook
+    title: Payment webhook
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-001
+      - US-004
+      - US-010
+      - US-010A
+    oas_paths:
+      - /payments/notify
+    last_update: "2025-12-22"
+  - slug: promotion-detail-endpoint
+    title: Promotion detail endpoint for enhanced product information
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-008
+    oas_paths:
+      - /catalog/promotions/{id}
+    last_update: "2025-10-21"
+  - slug: qr-generation-api
+    title: Unified QR Code Generation API
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-012
+      - US-001
+      - US-003
+    oas_paths:
+      - /qr/:code
+      - /qr/:code/info
+      - /qr/decrypt
+    last_update: "2025-11-14"
+  - slug: refund-processing
+    title: Refund processing and payment reversal
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-007
+    oas_paths:
+      - /payments/refund
+      - /my/refunds
+    last_update: "2025-10-20"
+  - slug: reports-redemptions
+    title: Reporting — list redemption events
+    status: Done
+    team: B - Tickets
+    related_stories:
+      - US-001
+      - US-005
+    oas_paths:
+      - /reports/redemptions
+    last_update: "2025-10-19"
+  - slug: reservation-slot-management
+    title: Reservation Slot Management - Capacity & Availability
+    status: Done
+    team: B - Fulfillment
+    related_stories:
+      - US-015
+      - US-016
+    oas_paths:
+      - /api/reservation-slots/available
+      - /api/reservation-slots/create
+    last_update: "2025-11-14"
+  - slug: route-schedule-management
+    title: Route and schedule management
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-010
+      - US-010A
+      - US-010B
+    oas_paths:
+      - /admin/routes
+      - /admin/routes/{routeId}
+      - /admin/routes/{routeId}/schedules
+      - /admin/schedules/{scheduleId}
+      - /admin/schedules/inventory/allocate
+      - /schedules/{scheduleId}/availability
+    last_update: "2025-11-21"
+  - slug: schedule-pricing-rules
+    title: Schedule pricing rules engine
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-010
+      - US-010A
+      - US-010B
+    oas_paths:
+      - /admin/schedules/pricing/rules
+      - /admin/schedules/pricing/rules/{ruleId}
+      - /pricing/schedules/calculate
+    last_update: "2025-11-21"
+  - slug: ticket-cancellation
+    title: Ticket cancellation with refund calculation
+    status: Done
+    team: B - Fulfillment
+    related_stories:
+      - US-007
+    oas_paths:
+      - /tickets/{code}/cancel
+    last_update: "2025-10-20"
+  - slug: user-activity-endpoint
+    title: User activity history and audit trail
+    status: Done
+    team: C - Identity & Access
+    related_stories:
+      - US-009
+    oas_paths:
+      - /profile/activity
+    last_update: "2025-10-21"
+  - slug: user-profile-endpoint
+    title: User profile information access and management
+    status: Done
+    team: C - Identity & Access
+    related_stories:
+      - US-009
+    oas_paths:
+      - /profile
+    last_update: "2025-10-21"
+  - slug: user-settings-endpoint
+    title: User settings and preferences management
+    status: Done
+    team: C - Identity & Access
+    related_stories:
+      - US-009
+    oas_paths:
+      - /profile/settings
+    last_update: "2025-10-21"
+  - slug: venue-analytics-reporting
+    title: Real-time venue analytics and reporting
+    status: Done
+    team: C - Gate
+    related_stories:
+      - US-013
+    oas_paths:
+      - /venue/{venue_code}/analytics
+    last_update: "2025-12-11"
+  - slug: venue-enhanced-scanning
+    title: Enhanced venue scanning with cross-terminal fraud detection
+    status: Done
+    team: C - Gate
+    related_stories:
+      - US-001
+      - US-002
+      - US-012
+      - US-013
+    oas_paths:
+      - /venue/scan
+    last_update: "2025-11-25"
+  - slug: venue-management-crud
+    title: Venue Management CRUD API
+    status: Done
+    team: C - Gate
+    related_stories:
+      - US-013
+    oas_paths:
+      - /venue
+      - /venue/{venue_id}
+    last_update: "2025-11-26"
+  - slug: wallyt-payment
+    title: Wallyt WeChat Mini-Program Payment
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-010
+      - US-010A
+    oas_paths:
+      - /payments/wechat/prepay
+      - /payments/wallyt/notify
+      - /payments/status/:orderId
+    last_update: "2025-12-11"
+  - slug: wechat-auth-login
+    title: WeChat Mini-Program Authentication - Core Login
+    status: Done
+    team: C - Identity & Access
+    related_stories:
+      - US-014
+    oas_paths:
+      - /auth/wechat/login
+    last_update: "2025-01-06"
+  - slug: wechat-phone-binding
+    title: WeChat Mini-Program Authentication - Phone Number Binding
+    status: Done
+    team: C - Identity & Access
+    related_stories:
+      - US-014
+    oas_paths:
+      - /auth/wechat/phone
+    last_update: "2025-01-06"

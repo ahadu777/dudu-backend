@@ -1,0 +1,1300 @@
+{
+  "info": {
+    "name": "PRD-009: LMS Sprint 1 - Borrower Onboarding & KYC/AML",
+    "description": "Complete test coverage for Loan Management System Sprint 1:\n- Borrower Registration\n- KYC Verification (mock provider)\n- AML Screening (mock provider)\n- Credit Bureau Pull (mock provider)\n\nMock Behavior Rules:\n- SSN ending 0000 = KYC FAILED\n- SSN ending 1111 = KYC MANUAL_REVIEW\n- SSN ending 9999 = KYC EXPIRED\n- Name containing BLOCKED = AML BLOCKED\n- Name containing PEP = AML WATCHLIST_MATCH\n- SSN last 4 determines credit score tier",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "borrowerId",
+      "value": ""
+    },
+    {
+      "key": "applicationId",
+      "value": ""
+    },
+    {
+      "key": "offerId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Health & Setup",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Service is healthy', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.service).to.eql('lms');",
+                  "  pm.expect(json.status).to.eql('healthy');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "health"]
+            }
+          }
+        },
+        {
+          "name": "Reset LMS Store",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Store reset successfully', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "reset"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Borrower Registration",
+      "item": [
+        {
+          "name": "Register Borrower - Happy Path",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Borrower created with pending status', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.id).to.be.a('string');",
+                  "  pm.expect(json.data.status).to.eql('pending');",
+                  "  pm.expect(json.data.kyc_status).to.eql('pending');",
+                  "  pm.expect(json.data.aml_status).to.eql('pending');",
+                  "  pm.expect(json.data.ssn_last_four).to.eql('5678');",
+                  "  pm.expect(json.data.email).to.eql('john.goodcredit@example.com');",
+                  "  ",
+                  "  // Save borrower ID for subsequent tests",
+                  "  pm.collectionVariables.set('borrowerId', json.data.id);",
+                  "});",
+                  "",
+                  "pm.test('Request ID is returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.request_id).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"GoodCredit\",\n  \"email\": \"john.goodcredit@example.com\",\n  \"phone\": \"555-123-4567\",\n  \"ssn\": \"123455678\",\n  \"date_of_birth\": \"1985-06-15\",\n  \"address\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"San Francisco\",\n    \"state\": \"CA\",\n    \"zip\": \"94102\",\n    \"country\": \"US\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        },
+        {
+          "name": "Register Borrower - Missing Required Fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message indicates missing fields', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.false;",
+                  "  pm.expect(json.error).to.include('Missing required fields');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Jane\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        },
+        {
+          "name": "Register Borrower - Invalid SSN Format",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message indicates invalid SSN', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.false;",
+                  "  pm.expect(json.error).to.include('Invalid SSN format');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Doe\",\n  \"email\": \"jane@example.com\",\n  \"phone\": \"555-000-0000\",\n  \"ssn\": \"12345\",\n  \"date_of_birth\": \"1990-01-01\",\n  \"address\": {\n    \"street\": \"456 Oak Ave\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zip\": \"10001\",\n    \"country\": \"US\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        },
+        {
+          "name": "Register Borrower - Duplicate Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 409 Conflict', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Error indicates duplicate', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.false;",
+                  "  pm.expect(json.error).to.include('already exists');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Duplicate\",\n  \"email\": \"john.goodcredit@example.com\",\n  \"phone\": \"555-999-9999\",\n  \"ssn\": \"999999999\",\n  \"date_of_birth\": \"1985-06-15\",\n  \"address\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"San Francisco\",\n    \"state\": \"CA\",\n    \"zip\": \"94102\",\n    \"country\": \"US\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        },
+        {
+          "name": "Get Borrower by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Borrower data is returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.email).to.eql('john.goodcredit@example.com');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{borrowerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{borrowerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Borrower - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.false;",
+                  "  pm.expect(json.error).to.eql('Borrower not found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/non-existent-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "non-existent-id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - KYC Verification",
+      "item": [
+        {
+          "name": "KYC - Success (Verified)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('KYC status is verified', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('verified');",
+                  "  pm.expect(json.data.identity_match_score).to.be.at.least(90);",
+                  "  pm.expect(json.data.ssn_match).to.be.true;",
+                  "  pm.expect(json.data.dob_match).to.be.true;",
+                  "  pm.expect(json.data.provider).to.eql('mock-kyc-provider');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ssn\": \"123455678\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{borrowerId}}/kyc",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{borrowerId}}", "kyc"]
+            }
+          }
+        },
+        {
+          "name": "Get KYC Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('KYC result is returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('verified');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{borrowerId}}/kyc",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{borrowerId}}", "kyc"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - KYC Edge Cases",
+      "item": [
+        {
+          "name": "Setup - Create Borrower for KYC Failed Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('kycFailedBorrowerId', json.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Jane\",\n  \"last_name\": \"KYCFail\",\n  \"email\": \"jane.kycfail@example.com\",\n  \"phone\": \"555-000-0000\",\n  \"ssn\": \"123450000\",\n  \"date_of_birth\": \"1990-01-01\",\n  \"address\": {\n    \"street\": \"456 Oak Ave\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zip\": \"10001\",\n    \"country\": \"US\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        },
+        {
+          "name": "KYC - Failed (SSN ending 0000)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('KYC status is failed', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('failed');",
+                  "  pm.expect(json.data.identity_match_score).to.be.below(50);",
+                  "  pm.expect(json.data.ssn_match).to.be.false;",
+                  "  pm.expect(json.data.failure_reasons).to.be.an('array');",
+                  "  pm.expect(json.data.failure_reasons.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ssn\": \"123450000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{kycFailedBorrowerId}}/kyc",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{kycFailedBorrowerId}}", "kyc"]
+            }
+          }
+        },
+        {
+          "name": "Setup - Create Borrower for Manual Review Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('kycReviewBorrowerId', json.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Bob\",\n  \"last_name\": \"ManualReview\",\n  \"email\": \"bob.review@example.com\",\n  \"phone\": \"555-111-1111\",\n  \"ssn\": \"123451111\",\n  \"date_of_birth\": \"1988-03-20\",\n  \"address\": {\n    \"street\": \"789 Pine Rd\",\n    \"city\": \"Chicago\",\n    \"state\": \"IL\",\n    \"zip\": \"60601\",\n    \"country\": \"US\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        },
+        {
+          "name": "KYC - Manual Review (SSN ending 1111)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('KYC status is manual_review', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('manual_review');",
+                  "  pm.expect(json.data.identity_match_score).to.be.within(50, 80);",
+                  "  pm.expect(json.data.manual_review_reasons).to.be.an('array');",
+                  "  pm.expect(json.data.manual_review_reasons.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ssn\": \"123451111\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{kycReviewBorrowerId}}/kyc",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{kycReviewBorrowerId}}", "kyc"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - AML Screening",
+      "item": [
+        {
+          "name": "AML - Clear",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('AML status is clear', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('clear');",
+                  "  pm.expect(json.data.risk_score).to.be.below(20);",
+                  "  pm.expect(json.data.watchlist_hits).to.be.an('array');",
+                  "  pm.expect(json.data.watchlist_hits.length).to.eql(0);",
+                  "  pm.expect(json.data.provider).to.eql('mock-aml-provider');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{borrowerId}}/aml",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{borrowerId}}", "aml"]
+            }
+          }
+        },
+        {
+          "name": "Get AML Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('AML result is returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('clear');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{borrowerId}}/aml",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{borrowerId}}", "aml"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - AML Edge Cases",
+      "item": [
+        {
+          "name": "Setup - Create Borrower with BLOCKED name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('blockedBorrowerId', json.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Ivan\",\n  \"last_name\": \"BLOCKED\",\n  \"email\": \"ivan.blocked@example.com\",\n  \"phone\": \"555-222-2222\",\n  \"ssn\": \"987658000\",\n  \"date_of_birth\": \"1975-12-01\",\n  \"address\": {\n    \"street\": \"1 Red Square\",\n    \"city\": \"Moscow\",\n    \"state\": \"NA\",\n    \"zip\": \"00000\",\n    \"country\": \"RU\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        },
+        {
+          "name": "AML - Blocked (Name contains BLOCKED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('AML status is blocked', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('blocked');",
+                  "  pm.expect(json.data.risk_score).to.eql(100);",
+                  "  pm.expect(json.data.watchlist_hits).to.be.an('array');",
+                  "  pm.expect(json.data.watchlist_hits.length).to.be.at.least(1);",
+                  "  pm.expect(json.data.sanctions_check).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{blockedBorrowerId}}/aml",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{blockedBorrowerId}}", "aml"]
+            }
+          }
+        },
+        {
+          "name": "Verify Blocked Borrower is Suspended",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Borrower is suspended after AML block', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('suspended');",
+                  "  pm.expect(json.data.aml_status).to.eql('blocked');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{blockedBorrowerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{blockedBorrowerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Setup - Create PEP Borrower",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('pepBorrowerId', json.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Senator\",\n  \"last_name\": \"PEP\",\n  \"email\": \"senator.pep@example.com\",\n  \"phone\": \"555-333-3333\",\n  \"ssn\": \"111118500\",\n  \"date_of_birth\": \"1960-05-10\",\n  \"address\": {\n    \"street\": \"1600 Pennsylvania Ave\",\n    \"city\": \"Washington\",\n    \"state\": \"DC\",\n    \"zip\": \"20500\",\n    \"country\": \"US\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        },
+        {
+          "name": "AML - Watchlist Match (PEP)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('AML status is watchlist_match', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('watchlist_match');",
+                  "  pm.expect(json.data.risk_score).to.be.at.least(70);",
+                  "  pm.expect(json.data.pep_check).to.be.true;",
+                  "  pm.expect(json.data.watchlist_hits[0].list_name).to.eql('PEP Database');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{pepBorrowerId}}/aml",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{pepBorrowerId}}", "aml"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Credit Bureau",
+      "item": [
+        {
+          "name": "Pull Credit - Super Prime (SSN 8xxx)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Credit report returned with high score', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.credit_score).to.be.at.least(750);",
+                  "  pm.expect(json.data.score_model).to.eql('FICO Score 8');",
+                  "  pm.expect(json.data.score_factors).to.be.an('array');",
+                  "  pm.expect(json.data.tradelines).to.be.an('array');",
+                  "  pm.expect(json.data.summary.derogatory_count).to.eql(0);",
+                  "  pm.expect(json.data.provider).to.eql('mock-credit-bureau');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ssn\": \"111118500\",\n  \"pull_type\": \"soft\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{pepBorrowerId}}/credit",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{pepBorrowerId}}", "credit"]
+            }
+          }
+        },
+        {
+          "name": "Get Credit Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Credit report is returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.not.be.null;",
+                  "  pm.expect(json.data.credit_score).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{pepBorrowerId}}/credit",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{pepBorrowerId}}", "credit"]
+            }
+          }
+        },
+        {
+          "name": "Pull Credit for Good Borrower (for application)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Credit report returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.credit_score).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ssn\": \"123455678\",\n  \"pull_type\": \"hard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers/{{borrowerId}}/credit",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers", "{{borrowerId}}", "credit"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Loan Application & Decision",
+      "item": [
+        {
+          "name": "Create Loan Application",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Application created with submitted status', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.id).to.be.a('string');",
+                  "  pm.expect(json.data.status).to.eql('submitted');",
+                  "  pm.expect(json.data.requested_amount).to.eql(15000);",
+                  "  pm.expect(json.data.requested_term_months).to.eql(36);",
+                  "  ",
+                  "  pm.collectionVariables.set('applicationId', json.data.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"borrower_id\": \"{{borrowerId}}\",\n  \"loan_type\": \"personal\",\n  \"requested_amount\": 15000,\n  \"requested_term_months\": 36,\n  \"purpose\": \"Debt consolidation\",\n  \"employment_status\": \"employed\",\n  \"annual_income\": 75000,\n  \"monthly_housing_payment\": 1500\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lms/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Get Application",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Application data returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.loan_type).to.eql('personal');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/applications/{{applicationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "applications", "{{applicationId}}"]
+            }
+          }
+        },
+        {
+          "name": "Run Credit Decision",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Decision is returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.decision_id).to.be.a('string');",
+                  "  pm.expect(json.data.decision).to.be.oneOf(['approved', 'declined', 'counter_offer', 'manual_review']);",
+                  "  pm.expect(json.data.credit_score).to.be.a('number');",
+                  "  pm.expect(json.data.dti_ratio).to.be.a('number');",
+                  "  pm.expect(json.data.risk_tier).to.be.oneOf(['super_prime', 'prime', 'near_prime', 'subprime', 'deep_subprime']);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/applications/{{applicationId}}/decision",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "applications", "{{applicationId}}", "decision"]
+            }
+          }
+        },
+        {
+          "name": "Get Offers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Offers array returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  ",
+                  "  if (json.data.length > 0) {",
+                  "    pm.collectionVariables.set('offerId', json.data[0].id);",
+                  "    pm.expect(json.data[0].principal_amount).to.be.a('number');",
+                  "    pm.expect(json.data[0].interest_rate).to.be.a('number');",
+                  "    pm.expect(json.data[0].monthly_payment).to.be.a('number');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/applications/{{applicationId}}/offers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "applications", "{{applicationId}}", "offers"]
+            }
+          }
+        },
+        {
+          "name": "Accept Offer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Offer accepted', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('accepted');",
+                  "  pm.expect(json.data.accepted_at).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/offers/{{offerId}}/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "offers", "{{offerId}}", "accept"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Audit Trail",
+      "item": [
+        {
+          "name": "Get Full Audit Log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Audit entries returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  pm.expect(json.data.length).to.be.at.least(1);",
+                  "  ",
+                  "  // Check audit entry structure",
+                  "  const entry = json.data[0];",
+                  "  pm.expect(entry.id).to.be.a('string');",
+                  "  pm.expect(entry.entity_type).to.be.a('string');",
+                  "  pm.expect(entry.action).to.be.a('string');",
+                  "  pm.expect(entry.timestamp).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/audit",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "audit"]
+            }
+          }
+        },
+        {
+          "name": "Get Audit Log Filtered by Entity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Filtered audit entries returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  ",
+                  "  // All entries should be for borrower entity type",
+                  "  json.data.forEach(entry => {",
+                  "    pm.expect(entry.entity_type).to.eql('borrower');",
+                  "  });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/audit?entity_type=borrower",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "audit"],
+              "query": [
+                {
+                  "key": "entity_type",
+                  "value": "borrower"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Stats & Final Verification",
+      "item": [
+        {
+          "name": "Get LMS Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Stats show created entities', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.borrowers).to.be.at.least(4);",
+                  "  pm.expect(json.data.applications).to.be.at.least(1);",
+                  "  pm.expect(json.data.kycResults).to.be.at.least(1);",
+                  "  pm.expect(json.data.amlResults).to.be.at.least(1);",
+                  "  pm.expect(json.data.auditEntries).to.be.at.least(5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "stats"]
+            }
+          }
+        },
+        {
+          "name": "List All Borrowers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('All borrowers listed', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  pm.expect(json.meta.total).to.be.at.least(4);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lms/borrowers",
+              "host": ["{{baseUrl}}"],
+              "path": ["lms", "borrowers"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+
