@@ -1,14 +1,13 @@
 import { MigrationInterface, QueryRunner, TableColumn, TableIndex } from 'typeorm';
 
 /**
- * 合并 pre_generated_tickets 到 tickets 表
+ * Migration 023: 扩展 tickets 表支持 OTA
  *
  * 变更内容：
  * 1. 扩展 tickets 表状态枚举（添加 PRE_GENERATED）
  * 2. 添加 OTA 专用字段（batch_id, partner_id 等）
- * 3. 修改 order_id 类型（INT → VARCHAR）兼容 OTA
- * 4. 迁移 pre_generated_tickets 数据
- * 5. 保留旧表备份
+ * 3. 修改 order_id 类型（INT → BIGINT）
+ * 4. 添加 OTA 查询索引
  */
 export class MergePreGeneratedTickets1733500000000 implements MigrationInterface {
   name = 'MergePreGeneratedTickets1733500000000';
@@ -34,21 +33,13 @@ export class MergePreGeneratedTickets1733500000000 implements MigrationInterface
       MODIFY COLUMN \`ticket_code\` VARCHAR(100) NOT NULL
     `);
 
-    // 1.3 修改 order_id 类型（INT → VARCHAR），允许 NULL
-    // 先创建临时列
+    // 1.3 修改 order_id 类型（INT → BIGINT），允许 NULL
+    // 与 Entity 定义保持一致：order_id 是外键关联 orders.id (BIGINT)
+    // order_no 字段用于存储业务订单号字符串
     await queryRunner.query(`
       ALTER TABLE \`tickets\`
-      ADD COLUMN \`order_id_new\` VARCHAR(50) NULL AFTER \`ticket_code\`
+      MODIFY COLUMN \`order_id\` BIGINT NULL COMMENT '订单ID（外键）'
     `);
-
-    // 迁移现有数据
-    await queryRunner.query(`
-      UPDATE \`tickets\` SET \`order_id_new\` = CAST(\`order_id\` AS CHAR)
-    `);
-
-    // 删除旧列，重命名新列
-    await queryRunner.query(`ALTER TABLE \`tickets\` DROP COLUMN \`order_id\``);
-    await queryRunner.query(`ALTER TABLE \`tickets\` CHANGE \`order_id_new\` \`order_id\` VARCHAR(50) NULL`);
 
     // 1.4 修改 orq 允许 NULL（OTA 票券无此字段）
     await queryRunner.query(`
@@ -138,77 +129,39 @@ export class MergePreGeneratedTickets1733500000000 implements MigrationInterface
       }),
     );
 
-    // ===== Step 4: 迁移 pre_generated_tickets 数据 =====
-    console.log('Step 4: Migrating data from pre_generated_tickets...');
+    // 与 Entity 一致的复合索引
+    await queryRunner.createIndex(
+      'tickets',
+      new TableIndex({
+        name: 'IDX_TICKETS_BATCH_CHANNEL',
+        columnNames: ['batch_id', 'channel'],
+      }),
+    );
 
-    // 检查源表是否存在
-    const tableExists = await queryRunner.query(`
-      SELECT COUNT(*) as count FROM information_schema.tables
-      WHERE table_schema = DATABASE() AND table_name = 'pre_generated_tickets'
-    `);
+    await queryRunner.createIndex(
+      'tickets',
+      new TableIndex({
+        name: 'IDX_TICKETS_PARTNER_CREATED',
+        columnNames: ['partner_id', 'created_at'],
+      }),
+    );
 
-    if (tableExists[0].count > 0) {
-      // 获取迁移前行数
-      const beforeCount = await queryRunner.query(`SELECT COUNT(*) as count FROM pre_generated_tickets`);
-      console.log(`  Found ${beforeCount[0].count} tickets to migrate`);
-
-      // 状态映射：ACTIVE → ACTIVATED, USED → VERIFIED
-      await queryRunner.query(`
-        INSERT INTO tickets (
-          ticket_code, product_id, status, channel,
-          order_id, batch_id, partner_id, payment_reference,
-          distribution_mode, reseller_name,
-          customer_name, customer_email, customer_phone, customer_type,
-          qr_code, entitlements, ticket_price,
-          raw, activated_at, created_at, updated_at
-        )
-        SELECT
-          ticket_code, product_id,
-          CASE status
-            WHEN 'ACTIVE' THEN 'ACTIVATED'
-            WHEN 'USED' THEN 'VERIFIED'
-            ELSE status
-          END as status,
-          'ota' as channel,
-          order_id, batch_id, partner_id, payment_reference,
-          distribution_mode, reseller_name,
-          customer_name, customer_email, customer_phone, customer_type,
-          qr_code, entitlements, ticket_price,
-          raw, activated_at, created_at, updated_at
-        FROM pre_generated_tickets
-      `);
-
-      // 验证迁移
-      const afterCount = await queryRunner.query(`
-        SELECT COUNT(*) as count FROM tickets WHERE channel = 'ota'
-      `);
-      console.log(`  Migrated ${afterCount[0].count} OTA tickets`);
-
-      // NOTE: 暂不删除/重命名旧表，因为部分代码仍在引用 PreGeneratedTicketEntity
-      // TODO: 完成代码迁移后，手动执行：
-      //   DROP TABLE pre_generated_tickets;
-      // 或
-      //   RENAME TABLE pre_generated_tickets TO pre_generated_tickets_backup;
-      console.log('  ⚠️  pre_generated_tickets table kept for backward compatibility');
-    } else {
-      console.log('  No pre_generated_tickets table found, skipping data migration');
-    }
-
-    console.log('✅ Tickets table merge completed successfully');
+    console.log('✅ Tickets table OTA extension completed');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔄 Rolling back tickets table merge...');
+    console.log('🔄 Rolling back tickets table OTA extension...');
 
-    // ===== Step 1: 删除迁移的 OTA 数据 =====
-    // NOTE: pre_generated_tickets 表保持不变，只需删除 tickets 表中的 OTA 数据
+    // 删除 OTA 数据
     await queryRunner.query(`DELETE FROM tickets WHERE channel = 'ota'`);
 
-    // ===== Step 2: 删除索引 =====
+    // 删除索引
     await queryRunner.dropIndex('tickets', 'IDX_TICKETS_BATCH_ID');
     await queryRunner.dropIndex('tickets', 'IDX_TICKETS_PARTNER_ID');
     await queryRunner.dropIndex('tickets', 'IDX_TICKETS_PARTNER_STATUS');
     await queryRunner.dropIndex('tickets', 'IDX_TICKETS_CHANNEL');
+    await queryRunner.dropIndex('tickets', 'IDX_TICKETS_BATCH_CHANNEL');
+    await queryRunner.dropIndex('tickets', 'IDX_TICKETS_PARTNER_CREATED');
 
     // ===== Step 3: 删除 OTA 专用字段 =====
     await queryRunner.dropColumns('tickets', [
@@ -223,14 +176,8 @@ export class MergePreGeneratedTickets1733500000000 implements MigrationInterface
     // ===== Step 4: 恢复 order_id 类型为 INT =====
     await queryRunner.query(`
       ALTER TABLE \`tickets\`
-      ADD COLUMN \`order_id_int\` INT NULL AFTER \`ticket_code\`
+      MODIFY COLUMN \`order_id\` INT NOT NULL COMMENT '订单ID'
     `);
-    await queryRunner.query(`
-      UPDATE \`tickets\` SET \`order_id_int\` = CAST(\`order_id\` AS SIGNED)
-      WHERE \`order_id\` REGEXP '^[0-9]+$'
-    `);
-    await queryRunner.query(`ALTER TABLE \`tickets\` DROP COLUMN \`order_id\``);
-    await queryRunner.query(`ALTER TABLE \`tickets\` CHANGE \`order_id_int\` \`order_id\` INT NOT NULL`);
 
     // ===== Step 5: 恢复 orq 为 NOT NULL =====
     await queryRunner.query(`

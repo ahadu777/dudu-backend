@@ -56,33 +56,8 @@ export class CreateOTATicketBatches1699371000000 implements MigrationInterface {
           {
             name: 'status',
             type: 'enum',
-            enum: ['active', 'expired', 'cancelled'],
+            enum: ['creating', 'active', 'expired', 'cancelled'],
             default: "'active'",
-          },
-          {
-            name: 'tickets_generated',
-            type: 'int',
-            unsigned: true,
-            default: 0,
-          },
-          {
-            name: 'tickets_activated',
-            type: 'int',
-            unsigned: true,
-            default: 0,
-          },
-          {
-            name: 'tickets_redeemed',
-            type: 'int',
-            unsigned: true,
-            default: 0,
-          },
-          {
-            name: 'total_revenue_realized',
-            type: 'decimal',
-            precision: 10,
-            scale: 2,
-            default: 0,
           },
           {
             name: 'created_at',
