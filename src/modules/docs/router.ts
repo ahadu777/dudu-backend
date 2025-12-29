@@ -31,8 +31,7 @@ import {
   handleTests,
   handleProjectDocs,
   handleEvaluation,
-  handleAiSitemap,
-  handleCoverage
+  handleAiSitemap
 } from './handlers';
 const router = Router();
 
@@ -68,7 +67,8 @@ router.get('/architecture', handleArchitecture);
 router.get('/evaluation', handleEvaluation);
 
 
-router.get('/coverage', handleCoverage);
+// /coverage deprecated - redirects to /tests (merged)
+router.get('/coverage', (_req, res) => res.redirect('/tests'));
 
 // Live Test Collection Browser
 router.get('/tests', handleTests);

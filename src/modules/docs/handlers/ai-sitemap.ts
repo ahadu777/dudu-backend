@@ -203,7 +203,7 @@ export function handleAiSitemap(_req: Request, res: Response): void {
               type: 'Coverage Summary',
               description: 'YAML summary of test coverage (may be outdated)',
               location: 'docs/test-coverage/_index.yaml',
-              web_path: '/coverage',
+              web_path: '/tests',
               trust_level: 'MEDIUM - manually maintained',
               stats: coverageStats,
             },
@@ -242,8 +242,7 @@ export function handleAiSitemap(_req: Request, res: Response): void {
           { path: '/memos', title: 'Strategic Memos', pattern: '/memos/:memoId' },
         ],
         testing: [
-          { path: '/tests', title: 'Test Collections (Source of Truth)', trust: 'HIGH' },
-          { path: '/coverage', title: 'Coverage Summary', trust: 'MEDIUM - may be outdated' },
+          { path: '/tests', title: 'Test Collections with Assertion Results (Source of Truth)', trust: 'HIGH' },
         ],
         evaluation: [
           { path: '/compliance', title: 'Compliance Dashboard' },

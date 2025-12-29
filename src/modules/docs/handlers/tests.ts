@@ -9,12 +9,18 @@ import path from 'path';
 import { logger } from '../../../utils/logger';
 import { loadPRDDocuments, loadStoriesIndex } from '../../../utils/prdParser';
 import { discoverCrossPRDHandoffs } from '../../../utils/handoffDiscovery';
+import { parseAllNewmanReports, NewmanReport } from '../../../utils/newmanParser';
 
 // ============ 类型定义 ============
 
 interface TestCase {
   name: string;
   folder: string;
+}
+
+interface Assertion {
+  name: string;
+  passed: boolean;
 }
 
 interface ApiCall {
@@ -31,6 +37,7 @@ interface ApiCall {
     produces: string[];
     consumes: string[];
   };
+  assertions?: Assertion[];
 }
 
 interface TestResult {
@@ -38,6 +45,13 @@ interface TestResult {
   failed: number;
   total: number;
   timestamp: string;
+}
+
+interface CollectionAssertions {
+  total: number;
+  passed: number;
+  failed: number;
+  items: Assertion[];
 }
 
 interface Collection {
@@ -49,6 +63,7 @@ interface Collection {
   totalTests: number;
   apiSequence: ApiCall[];
   testResult: TestResult | null;
+  assertions?: CollectionAssertions;
 }
 
 interface TestCaseWithoutDescription {
@@ -155,6 +170,51 @@ function extractTests(
 }
 
 /**
+ * 从 Newman 报告中提取断言结果
+ * 返回两个 Map：
+ * - byId: 按 PRD/Story ID 索引的汇总结果
+ * - byPath: 按 "folder / name" 路径索引的单个 API 断言
+ */
+function buildAssertionMaps(newmanReports: NewmanReport[]): {
+  byId: Map<string, CollectionAssertions>;
+  byPath: Map<string, Assertion[]>;
+} {
+  const byId = new Map<string, CollectionAssertions>();
+  const byPath = new Map<string, Assertion[]>();
+
+  for (const report of newmanReports) {
+    const id = report.prdId || report.storyId;
+    const allAssertions: Assertion[] = [];
+
+    for (const suite of report.testSuites) {
+      // suite.name 格式: "文件夹 / 请求名" 或 "文件夹 / 请求名 [AC-xxx]"
+      const assertions: Assertion[] = suite.testCases.map(tc => ({
+        name: tc.name,
+        passed: tc.passed
+      }));
+
+      if (assertions.length > 0) {
+        // 按完整路径存储（用于 API 级别匹配）
+        byPath.set(suite.name, assertions);
+        allAssertions.push(...assertions);
+      }
+    }
+
+    // 按 PRD/Story ID 汇总（用于 Collection 级别显示）
+    if (id && allAssertions.length > 0) {
+      byId.set(id, {
+        total: allAssertions.length,
+        passed: allAssertions.filter(a => a.passed).length,
+        failed: allAssertions.filter(a => !a.passed).length,
+        items: allAssertions
+      });
+    }
+  }
+
+  return { byId, byPath };
+}
+
+/**
  * 加载所有 Postman 测试集合
  */
 function loadCollections(): Collection[] {
@@ -163,6 +223,10 @@ function loadCollections(): Collection[] {
   const collections: Collection[] = [];
 
   if (!fs.existsSync(postmanDir)) return collections;
+
+  // 加载所有 Newman 报告并构建断言映射
+  const newmanReports = parseAllNewmanReports(reportsDir);
+  const { byId: assertionById, byPath: assertionByPath } = buildAssertionMaps(newmanReports);
 
   const files = fs.readdirSync(postmanDir).filter(f => f.endsWith('.json'));
 
@@ -173,6 +237,16 @@ function loadCollections(): Collection[] {
       const apiSequence: ApiCall[] = [];
 
       extractTests(content.item, testCases, apiSequence);
+
+      // 为每个 API 调用匹配断言结果
+      for (const api of apiSequence) {
+        // 构建匹配路径: "folder / name"
+        const matchPath = `${api.folder} / ${api.name}`;
+        const assertions = assertionByPath.get(matchPath);
+        if (assertions) {
+          api.assertions = assertions;
+        }
+      }
 
       let type: 'prd' | 'story' | 'other' = 'other';
       let id = '';
@@ -191,6 +265,9 @@ function loadCollections(): Collection[] {
       const reportPath = path.join(reportsDir, `${reportBaseName}-e2e.xml`);
       const testResult = parseNewmanReport(reportPath);
 
+      // 从 Newman 报告获取该 Collection 的断言结果
+      const collectionAssertions = assertionById.get(id);
+
       collections.push({
         filename: file,
         name: content.info?.name || file,
@@ -199,7 +276,8 @@ function loadCollections(): Collection[] {
         testCases,
         totalTests: testCases.length,
         apiSequence,
-        testResult
+        testResult,
+        assertions: collectionAssertions
       });
     } catch (e) {
       logger.warn(`Failed to parse ${file}:`, e);
@@ -323,6 +401,12 @@ function generateFlowCardHtml(c: Collection): string {
             <code style="color: #2c3e50;">${api.path || '/'}</code>
             <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
             ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
+            ${api.assertions && api.assertions.length > 0 ? `
+            <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
+              <div style="font-size: 0.85em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
+              ${api.assertions.map(a => `<div style="font-size: 0.85em; color: ${a.passed ? '#27ae60' : '#e74c3c'};">${a.passed ? '✓' : '✗'} ${a.name}</div>`).join('')}
+            </div>
+            ` : ''}
           </div>
         </div>
         `).join('')}
@@ -402,6 +486,12 @@ function generateFlowCardHtml(c: Collection): string {
                 ${api.flow?.consumes?.map(v => `<span style="background: #cce5ff; color: #004085; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬇️ ${v}</span>`).join('') || ''}
               </div>
               ` : ''}
+              ${api.assertions && api.assertions.length > 0 ? `
+              <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
+                <div style="font-size: 0.75em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
+                ${api.assertions.map(a => `<div style="font-size: 0.75em; color: ${a.passed ? '#27ae60' : '#e74c3c'};">${a.passed ? '✓' : '✗'} ${a.name}</div>`).join('')}
+              </div>
+              ` : ''}
             </div>
           </div>
           `).join('')}
@@ -427,6 +517,11 @@ function generateFlowCardHtml(c: Collection): string {
        <span style="color: #95a5a6; font-size: 0.75em;" title="Last run">${c.testResult.timestamp}</span>`
     : `<span style="color: #95a5a6; font-size: 0.8em;">No results</span>`;
 
+  // 断言统计 badge
+  const assertionsBadge = c.assertions
+    ? `<span style="background: ${c.assertions.failed === 0 ? '#8e44ad' : '#c0392b'}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;" title="Newman assertions">${c.assertions.passed}/${c.assertions.total} assertions</span>`
+    : '';
+
   return `
     <div style="background: white; border: 1px solid ${c.testResult ? (c.testResult.failed === 0 ? '#27ae60' : '#e74c3c') : '#ddd'}; border-radius: 6px; margin-bottom: 12px; overflow: hidden;" class="flow-card">
       <div class="flow-header" data-target="${flowId}"
@@ -438,12 +533,27 @@ function generateFlowCardHtml(c: Collection): string {
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
           ${testResultBadge}
+          ${assertionsBadge}
           <span style="background: ${c.type === 'prd' ? '#2980b9' : c.type === 'story' ? '#27ae60' : '#e67e22'}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${c.apiSequence.length} API calls</span>
           <span style="color: #7f8c8d;">▼</span>
         </div>
       </div>
       <div id="${flowId}" style="display: none; padding: 16px; background: #fafbfc;">
         ${flowContent}
+        ${c.assertions && c.assertions.items.length > 0 ? `
+        <div style="margin-top: 16px; padding: 12px; background: #f8f4fc; border-radius: 6px; border-left: 4px solid ${c.assertions.failed === 0 ? '#8e44ad' : '#c0392b'};">
+          <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
+            Newman 断言结果 (${c.assertions.passed}/${c.assertions.total})
+          </div>
+          <div style="max-height: 200px; overflow-y: auto; font-size: 0.85em;">
+            ${c.assertions.items.map(a => `
+              <div style="padding: 2px 0; color: ${a.passed ? '#27ae60' : '#e74c3c'};">
+                ${a.passed ? '✓' : '✗'} ${a.name}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
       </div>
     </div>
   `;
@@ -617,7 +727,6 @@ export function handleTests(_req: Request, res: Response): void {
       <p class="subtitle">Live source of truth - dynamically parsed from Postman JSON files</p>
       <div class="page-nav">
         <a href="/project-docs">← Documentation Hub</a>
-        <a href="/coverage">Coverage Summary</a>
         <a href="/evaluation">Foundation Score</a>
       </div>
     </div>

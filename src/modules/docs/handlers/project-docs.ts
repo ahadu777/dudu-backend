@@ -98,11 +98,10 @@ function getNavCards(prdTotal: number, storyTotal: number, cardStats: any, memoT
     { href: '/sitemap', icon: '🗺️', title: 'Documentation Sitemap', desc: 'Hierarchical view of PRD → Story → Card relationships', stats: 'Complete project structure' },
     { href: '/graph', icon: '📊', title: 'Relationship Graph', desc: 'Interactive visual graph showing connections', stats: 'Click nodes to explore' },
     { href: '/compliance', icon: '✅', title: 'Compliance Dashboard', desc: 'Real-time documentation compliance audit', stats: 'Automated checking' },
-    { href: '/coverage', icon: '📊', title: 'Test Coverage', desc: 'Test coverage metrics and Newman reports', stats: `${coverageStats.complete}/${coverageStats.total_prds} PRDs covered` },
     { href: '/docs', icon: '🔧', title: 'API Documentation', desc: 'Swagger UI with OpenAPI 3.0 specification', stats: 'Interactive explorer' },
     { href: '/architecture', icon: '🏗️', title: 'Product Architecture', desc: 'Multi-platform product flowcharts', stats: 'System overview' },
     { href: '/evaluation', icon: '🔍', title: 'Foundation Evaluation', desc: 'Ask the right questions to assess system health by role', stats: 'PM / Dev / QA / Tech Lead' },
-    { href: '/tests', icon: '🧪', title: 'Test Collections', desc: 'Live test cases from Postman JSON (source of truth for AI)', stats: 'Searchable test inventory' },
+    { href: '/tests', icon: '🧪', title: 'Test Collections', desc: 'E2E flows with assertion results from Newman reports', stats: `${coverageStats.complete}/${coverageStats.total_prds} PRDs covered` },
     { href: '/ai-sitemap', icon: '🤖', title: 'AI Knowledge Base', desc: 'Machine-readable project knowledge (JSON) - enables AI context recovery', stats: 'Complete project state' },
   ];
 }

@@ -10,12 +10,6 @@ export {
   type ProductionReadiness
 } from './metrics';
 
-// 测试用例渲染服务
-export {
-  generateTestCasesHTML,
-  generateACCoverageHTML
-} from './test-renderer';
-
 // 参考文档服务
 export {
   getReferenceFilePurpose,

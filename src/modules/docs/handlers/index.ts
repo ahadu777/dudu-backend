@@ -17,4 +17,3 @@ export { handleTests } from './tests';
 export { handleProjectDocs } from './project-docs';
 export { handleEvaluation } from './evaluation';
 export { handleAiSitemap } from './ai-sitemap';
-export { handleCoverage } from './coverage';
