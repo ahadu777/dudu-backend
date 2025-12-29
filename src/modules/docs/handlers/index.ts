@@ -13,7 +13,13 @@ export { handleCompliance } from './compliance';
 export { handleArchitecture } from './architecture';
 export { handleMemosList, handleMemoDetail } from './memos';
 export { handlePrdDocsList, handlePrdDocsDetail } from './prd-docs';
-export { handleTests } from './tests';
+export {
+  handleTests,
+  handleSaveAssertionLabel,
+  handleAddManualCheck,
+  handleUpdateManualCheck,
+  handleDeleteManualCheck
+} from './tests';
 export { handleProjectDocs } from './project-docs';
 export { handleEvaluation } from './evaluation';
 export { handleAiSitemap } from './ai-sitemap';

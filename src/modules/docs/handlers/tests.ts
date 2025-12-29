@@ -6,10 +6,140 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 import { logger } from '../../../utils/logger';
 import { loadPRDDocuments, loadStoriesIndex } from '../../../utils/prdParser';
 import { discoverCrossPRDHandoffs } from '../../../utils/handoffDiscovery';
 import { parseAllNewmanReports, NewmanReport } from '../../../utils/newmanParser';
+
+// 断言标签映射文件路径
+const ASSERTION_LABELS_PATH = path.join(process.cwd(), 'docs/test-coverage/assertion-labels.yaml');
+// 手动验证记录文件路径
+const MANUAL_CHECKS_PATH = path.join(process.cwd(), 'docs/test-coverage/manual-checks.yaml');
+
+// 断言标签缓存
+let assertionLabelsCache: Map<string, string> | null = null;
+let assertionLabelsCacheTime = 0;
+const CACHE_TTL = 5000; // 5秒缓存
+
+// 手动验证记录类型
+interface ManualCheck {
+  id: string;
+  description: string;
+  verified_by: string;
+  date: string;
+  status: 'passed' | 'failed' | 'pending';
+}
+
+interface ManualChecksData {
+  checks: Record<string, ManualCheck[]>;
+}
+
+// 手动验证缓存
+let manualChecksCache: ManualChecksData | null = null;
+let manualChecksCacheTime = 0;
+
+/**
+ * 加载手动验证记录
+ */
+function loadManualChecks(): ManualChecksData {
+  const now = Date.now();
+  if (manualChecksCache && (now - manualChecksCacheTime) < CACHE_TTL) {
+    return manualChecksCache;
+  }
+
+  let data: ManualChecksData = { checks: {} };
+  try {
+    if (fs.existsSync(MANUAL_CHECKS_PATH)) {
+      const content = fs.readFileSync(MANUAL_CHECKS_PATH, 'utf-8');
+      const parsed = yaml.load(content) as ManualChecksData;
+      if (parsed?.checks) {
+        data = parsed;
+      }
+    }
+  } catch (e) {
+    logger.warn('Failed to load manual checks:', e);
+  }
+
+  manualChecksCache = data;
+  manualChecksCacheTime = now;
+  return data;
+}
+
+/**
+ * 保存手动验证记录
+ */
+function saveManualChecks(data: ManualChecksData): void {
+  const yamlContent = `# Manual Checks - QA 手动验证记录
+#
+# 此文件由 /tests 页面维护，记录 QA 手动测试的验证点
+#
+# 格式:
+#   checks:
+#     PRD-XXX:
+#       - id: "唯一ID"
+#         description: "验证描述"
+#         verified_by: "验证人"
+#         date: "验证日期"
+#         status: "passed | failed | pending"
+
+checks:
+${Object.entries(data.checks)
+  .filter(([, items]) => items.length > 0)
+  .map(([prd, items]) => `  ${prd}:
+${items.map(item => `    - id: "${item.id}"
+      description: "${item.description.replace(/"/g, '\\"')}"
+      verified_by: "${item.verified_by}"
+      date: "${item.date}"
+      status: "${item.status}"`).join('\n')}`).join('\n') || '  {}'}
+`;
+  fs.writeFileSync(MANUAL_CHECKS_PATH, yamlContent, 'utf-8');
+  manualChecksCache = null; // 清除缓存
+}
+
+/**
+ * 生成唯一ID
+ */
+function generateCheckId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+/**
+ * 加载断言标签映射
+ */
+function loadAssertionLabels(): Map<string, string> {
+  const now = Date.now();
+  if (assertionLabelsCache && (now - assertionLabelsCacheTime) < CACHE_TTL) {
+    return assertionLabelsCache;
+  }
+
+  const labels = new Map<string, string>();
+  try {
+    if (fs.existsSync(ASSERTION_LABELS_PATH)) {
+      const content = fs.readFileSync(ASSERTION_LABELS_PATH, 'utf-8');
+      const data = yaml.load(content) as { labels?: Record<string, string> };
+      if (data?.labels) {
+        for (const [key, value] of Object.entries(data.labels)) {
+          labels.set(key, value);
+        }
+      }
+    }
+  } catch (e) {
+    logger.warn('Failed to load assertion labels:', e);
+  }
+
+  assertionLabelsCache = labels;
+  assertionLabelsCacheTime = now;
+  return labels;
+}
+
+/**
+ * 获取断言的人性化标签
+ */
+function getAssertionLabel(name: string): string {
+  const labels = loadAssertionLabels();
+  return labels.get(name) || name;
+}
 
 // ============ 类型定义 ============
 
@@ -259,6 +389,9 @@ function loadCollections(): Collection[] {
         type = 'story';
         const match = file.match(/us-(\d+)/);
         id = match ? `US-${match[1].padStart(3, '0')}` : file;
+      } else {
+        // 其他类型使用文件名作为 id
+        id = file.replace('.postman_collection.json', '').replace('.json', '');
       }
 
       const reportBaseName = file.replace('.postman_collection.json', '').replace('.json', '');
@@ -366,13 +499,113 @@ function getStyles(): string {
     .search-box input:focus { outline: none; border-color: #3498db; }
     .search-hint { color: #7f8c8d; font-size: 0.85em; margin-top: 8px; }
     .flow-card { transition: opacity 0.2s ease, transform 0.2s ease; }
+
+    /* 弹窗样式 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalSlideIn 0.2s ease;
+    }
+    @keyframes modalSlideIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .modal-header h3 { font-size: 1.1em; color: #2c3e50; margin: 0; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      color: #999;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover { color: #e74c3c; }
+    .modal-body { padding: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 0.9em;
+      color: #555;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 0.95em;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #f39c12;
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .radio-group {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-weight: normal;
+    }
+    .radio-group input[type="radio"] { margin: 0; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px;
+      border-top: 1px solid #eee;
+      background: #fafafa;
+      border-radius: 0 0 12px 12px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-cancel { background: #e0e0e0; color: #555; }
+    .btn-cancel:hover { background: #d0d0d0; }
+    .btn-primary { background: #f39c12; color: white; }
+    .btn-primary:hover { background: #e67e22; }
   `;
 }
 
 /**
  * 生成 E2E 流程卡片 HTML
  */
-function generateFlowCardHtml(c: Collection): string {
+function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): string {
   const PAGE_STYLES: Record<string, { icon: string; color: string }> = {
     'system': { icon: '⚙️', color: '#6b7280' },
     'product-list': { icon: '🏠', color: '#3b82f6' },
@@ -404,7 +637,15 @@ function generateFlowCardHtml(c: Collection): string {
             ${api.assertions && api.assertions.length > 0 ? `
             <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
               <div style="font-size: 0.85em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
-              ${api.assertions.map(a => `<div style="font-size: 0.85em; color: ${a.passed ? '#27ae60' : '#e74c3c'};">${a.passed ? '✓' : '✗'} ${a.name}</div>`).join('')}
+              ${api.assertions.map(a => {
+                const label = getAssertionLabel(a.name);
+                const isCustom = label !== a.name;
+                return `<div class="assertion-item" style="font-size: 0.85em; color: ${a.passed ? '#27ae60' : '#e74c3c'}; display: flex; align-items: center; gap: 4px;">
+                  <span>${a.passed ? '✓' : '✗'} ${label}</span>
+                  <button class="edit-label-btn" data-original="${a.name}" data-current="${label}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
+                  ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${a.name}">*</span>` : ''}
+                </div>`;
+              }).join('')}
             </div>
             ` : ''}
           </div>
@@ -489,7 +730,15 @@ function generateFlowCardHtml(c: Collection): string {
               ${api.assertions && api.assertions.length > 0 ? `
               <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
                 <div style="font-size: 0.75em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
-                ${api.assertions.map(a => `<div style="font-size: 0.75em; color: ${a.passed ? '#27ae60' : '#e74c3c'};">${a.passed ? '✓' : '✗'} ${a.name}</div>`).join('')}
+                ${api.assertions.map(a => {
+                  const label = getAssertionLabel(a.name);
+                  const isCustom = label !== a.name;
+                  return `<div class="assertion-item" style="font-size: 0.75em; color: ${a.passed ? '#27ae60' : '#e74c3c'}; display: flex; align-items: center; gap: 4px;">
+                    <span>${a.passed ? '✓' : '✗'} ${label}</span>
+                    <button class="edit-label-btn" data-original="${a.name}" data-current="${label}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
+                    ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${a.name}">*</span>` : ''}
+                  </div>`;
+                }).join('')}
               </div>
               ` : ''}
             </div>
@@ -554,6 +803,32 @@ function generateFlowCardHtml(c: Collection): string {
           </div>
         </div>
         ` : ''}
+
+        <!-- 手动验证区域 -->
+        <div style="margin-top: 16px; padding: 12px; background: #fff8e6; border-radius: 6px; border-left: 4px solid #f39c12;" class="manual-checks-section" data-prd="${c.id}">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: 600; color: #2c3e50;">📝 QA 手动验证 (${manualChecks.length})</span>
+            <button class="add-check-btn" data-prd="${c.id}" style="background: #f39c12; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">+ 添加</button>
+          </div>
+          ${manualChecks.length > 0 ? `
+          <div class="manual-checks-list" style="font-size: 0.85em;">
+            ${manualChecks.map(check => `
+            <div class="manual-check-item" data-id="${check.id}" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;">
+              <button class="check-status-btn" data-id="${check.id}" data-status="${check.status}" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">
+                ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
+              </button>
+              <span style="flex: 1; color: #2c3e50;">${check.description}</span>
+              <span style="color: #999; font-size: 0.8em;">${check.verified_by} · ${check.date}</span>
+              <button class="delete-check-btn" data-id="${check.id}" data-prd="${c.id}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>
+            </div>
+            `).join('')}
+          </div>
+          ` : `
+          <div style="color: #999; font-size: 0.85em; text-align: center; padding: 12px;">
+            暂无手动验证记录，点击"+ 添加"开始记录
+          </div>
+          `}
+        </div>
       </div>
     </div>
   `;
@@ -611,6 +886,296 @@ function getScripts(): string {
           });
         });
       }
+
+      // 断言标签编辑功能
+      document.querySelectorAll('.edit-label-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var original = this.getAttribute('data-original');
+          var current = this.getAttribute('data-current');
+          var newLabel = prompt('编辑断言标签:\\n\\n原始: ' + original + '\\n\\n输入新标签 (留空恢复原始):', current);
+
+          if (newLabel !== null) {
+            var labelToSave = newLabel.trim() || original;
+            fetch('/api/assertion-labels', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ original: original, label: labelToSave })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (data.success) {
+                alert('已保存! 刷新页面查看更新。');
+                location.reload();
+              } else {
+                alert('保存失败: ' + (data.error || '未知错误'));
+              }
+            })
+            .catch(function(err) {
+              alert('保存失败: ' + err.message);
+            });
+          }
+        });
+      });
+
+      // 弹窗元素
+      var modal = document.getElementById('addCheckModal');
+      var modalClose = document.getElementById('modalClose');
+      var modalCancel = document.getElementById('modalCancel');
+      var modalSave = document.getElementById('modalSave');
+      var checkPrd = document.getElementById('checkPrd');
+      var checkDescription = document.getElementById('checkDescription');
+      var checkVerifiedBy = document.getElementById('checkVerifiedBy');
+
+      console.log('Modal elements:', {
+        modal: !!modal,
+        checkPrd: !!checkPrd,
+        checkDescription: !!checkDescription,
+        checkVerifiedBy: !!checkVerifiedBy
+      });
+
+      function openModal(prd) {
+        console.log('openModal called with prd:', prd);
+        // 直接从 DOM 获取元素
+        var prdInput = document.getElementById('checkPrd');
+        var descInput = document.getElementById('checkDescription');
+        var verifiedByInput = document.getElementById('checkVerifiedBy');
+        var modalEl = document.getElementById('addCheckModal');
+        var pendingRadio = document.querySelector('input[name="checkStatus"][value="pending"]');
+
+        console.log('openModal elements:', { prdInput: !!prdInput, descInput: !!descInput, modalEl: !!modalEl });
+
+        if (prdInput) {
+          prdInput.value = prd || '';
+          console.log('Set prdInput.value to:', prdInput.value);
+        }
+        if (descInput) {
+          descInput.value = '';
+        }
+        if (verifiedByInput) {
+          verifiedByInput.value = 'QA';
+        }
+        if (pendingRadio) {
+          pendingRadio.checked = true;
+        }
+        if (modalEl) {
+          modalEl.classList.add('active');
+        }
+        if (descInput) {
+          descInput.focus();
+        }
+      }
+
+      function closeModal() {
+        modal.classList.remove('active');
+      }
+
+      function saveCheck() {
+        // 直接从 DOM 获取元素，避免变量作用域问题
+        var prdInput = document.getElementById('checkPrd');
+        var descInput = document.getElementById('checkDescription');
+        var verifiedByInput = document.getElementById('checkVerifiedBy');
+        var statusRadio = document.querySelector('input[name="checkStatus"]:checked');
+        var saveBtn = document.getElementById('modalSave');
+
+        var prd = prdInput ? prdInput.value : '';
+        var description = descInput ? descInput.value.trim() : '';
+        var verifiedBy = verifiedByInput ? verifiedByInput.value.trim() || 'QA' : 'QA';
+        var status = statusRadio ? statusRadio.value : 'pending';
+
+        console.log('saveCheck:', { prd: prd, description: description, verifiedBy: verifiedBy, status: status });
+        console.log('Elements found:', { prdInput: !!prdInput, descInput: !!descInput });
+
+        if (!prd) {
+          alert('系统错误：无法获取 PRD ID，请刷新页面重试');
+          return;
+        }
+
+        if (!description) {
+          alert('请输入验证描述');
+          if (descInput) descInput.focus();
+          return;
+        }
+
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = '保存中...';
+        }
+
+        fetch('/api/manual-checks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prd: prd,
+            description: description,
+            verified_by: verifiedBy,
+            status: status
+          })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success) {
+            // 动态添加到列表，不刷新页面
+            var check = data.check;
+            var section = document.querySelector('.manual-checks-section[data-prd="' + prd + '"]');
+            if (section) {
+              var list = section.querySelector('.manual-checks-list');
+              var emptyMsg = section.querySelector('div[style*="text-align: center"]');
+
+              // 如果是空状态，创建列表容器
+              if (!list) {
+                if (emptyMsg) emptyMsg.remove();
+                list = document.createElement('div');
+                list.className = 'manual-checks-list';
+                list.style.fontSize = '0.85em';
+                section.appendChild(list);
+              }
+
+              // 创建新的验证项
+              var statusIcon = check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳';
+              var newItem = document.createElement('div');
+              newItem.className = 'manual-check-item';
+              newItem.setAttribute('data-id', check.id);
+              newItem.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;';
+              newItem.innerHTML = '<button class="check-status-btn" data-id="' + check.id + '" data-status="' + check.status + '" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">' + statusIcon + '</button>' +
+                '<span style="flex: 1; color: #2c3e50;">' + check.description + '</span>' +
+                '<span style="color: #999; font-size: 0.8em;">' + check.verified_by + ' · ' + check.date + '</span>' +
+                '<button class="delete-check-btn" data-id="' + check.id + '" data-prd="' + prd + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>';
+              list.appendChild(newItem);
+
+              // 绑定新按钮的事件
+              bindCheckEvents(newItem);
+
+              // 更新计数
+              var countSpan = section.querySelector('span[style*="font-weight: 600"]');
+              if (countSpan) {
+                var count = section.querySelectorAll('.manual-check-item').length;
+                countSpan.textContent = '📝 QA 手动验证 (' + count + ')';
+              }
+            }
+
+            // 关闭弹窗
+            closeModal();
+            if (saveBtn) {
+              saveBtn.disabled = false;
+              saveBtn.textContent = '保存';
+            }
+          } else {
+            alert('添加失败: ' + (data.error || '未知错误'));
+            if (saveBtn) {
+              saveBtn.disabled = false;
+              saveBtn.textContent = '保存';
+            }
+          }
+        })
+        .catch(function(err) {
+          alert('添加失败: ' + err.message);
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '保存';
+          }
+        });
+      }
+
+      // 绑定验证项的事件
+      function bindCheckEvents(item) {
+        var statusBtn = item.querySelector('.check-status-btn');
+        var deleteBtn = item.querySelector('.delete-check-btn');
+
+        if (statusBtn) {
+          statusBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var id = this.getAttribute('data-id');
+            var currentStatus = this.getAttribute('data-status');
+            var statusMap = { 'pending': 'passed', 'passed': 'failed', 'failed': 'pending' };
+            var newStatus = statusMap[currentStatus] || 'pending';
+            var btn = this;
+
+            fetch('/api/manual-checks/' + id, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: newStatus })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (data.success) {
+                btn.setAttribute('data-status', newStatus);
+                btn.textContent = newStatus === 'passed' ? '✅' : newStatus === 'failed' ? '❌' : '⏳';
+              } else {
+                alert('更新失败: ' + (data.error || '未知错误'));
+              }
+            })
+            .catch(function(err) {
+              alert('更新失败: ' + err.message);
+            });
+          });
+        }
+
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!confirm('确定删除此验证记录？')) return;
+            var id = this.getAttribute('data-id');
+            var prd = this.getAttribute('data-prd');
+            var itemEl = this.closest('.manual-check-item');
+
+            fetch('/api/manual-checks/' + id + '?prd=' + encodeURIComponent(prd), {
+              method: 'DELETE'
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (data.success) {
+                if (itemEl) itemEl.remove();
+                // 更新计数
+                var section = document.querySelector('.manual-checks-section[data-prd="' + prd + '"]');
+                if (section) {
+                  var countSpan = section.querySelector('span[style*="font-weight: 600"]');
+                  if (countSpan) {
+                    var count = section.querySelectorAll('.manual-check-item').length;
+                    countSpan.textContent = '📝 QA 手动验证 (' + count + ')';
+                  }
+                }
+              } else {
+                alert('删除失败: ' + (data.error || '未知错误'));
+              }
+            })
+            .catch(function(err) {
+              alert('删除失败: ' + err.message);
+            });
+          });
+        }
+      }
+
+      // 弹窗事件绑定
+      if (modalClose) modalClose.addEventListener('click', closeModal);
+      if (modalCancel) modalCancel.addEventListener('click', closeModal);
+      if (modalSave) modalSave.addEventListener('click', saveCheck);
+      if (modal) {
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeModal();
+        });
+      }
+
+      // 键盘事件
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+          closeModal();
+        }
+      });
+
+      // 手动验证 - 添加按钮
+      document.querySelectorAll('.add-check-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var prd = this.getAttribute('data-prd');
+          openModal(prd);
+        });
+      });
+
+      // 绑定已有验证项的事件（不刷新页面）
+      document.querySelectorAll('.manual-check-item').forEach(function(item) {
+        bindCheckEvents(item);
+      });
     });
   `;
 }
@@ -623,6 +1188,7 @@ function getScripts(): string {
 export function handleTests(_req: Request, res: Response): void {
   try {
     const collections = loadCollections();
+    const manualChecksData = loadManualChecks();
 
     // 加载文档统计
     const prdDocs = loadPRDDocuments();
@@ -782,7 +1348,7 @@ export function handleTests(_req: Request, res: Response): void {
         <button id="hideAllFlowsBtn" style="padding: 8px 16px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer;">Hide All</button>
       </div>
 
-      ${collections.map(c => generateFlowCardHtml(c)).join('')}
+      ${collections.map(c => generateFlowCardHtml(c, manualChecksData.checks[c.id] || [])).join('')}
     </div>
 
     <!-- Cross-PRD Gap Analysis -->
@@ -840,6 +1406,39 @@ export function handleTests(_req: Request, res: Response): void {
       ` : ''}
     </div>
 
+    <!-- 添加手动验证弹窗 -->
+    <div id="addCheckModal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>📝 添加手动验证</h3>
+          <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="checkPrd" value="">
+          <div class="form-group">
+            <label for="checkDescription">验证描述 *</label>
+            <textarea id="checkDescription" placeholder="例如：周末价格在移动端正确显示"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="checkVerifiedBy">验证人</label>
+            <input type="text" id="checkVerifiedBy" placeholder="QA" value="QA">
+          </div>
+          <div class="form-group">
+            <label>状态</label>
+            <div class="radio-group">
+              <label><input type="radio" name="checkStatus" value="pending" checked> ⏳ 待验证</label>
+              <label><input type="radio" name="checkStatus" value="passed"> ✅ 通过</label>
+              <label><input type="radio" name="checkStatus" value="failed"> ❌ 失败</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" id="modalCancel">取消</button>
+          <button class="btn btn-primary" id="modalSave">保存</button>
+        </div>
+      </div>
+    </div>
+
     <script>${getScripts()}</script>
   </div>
 </body>
@@ -849,5 +1448,192 @@ export function handleTests(_req: Request, res: Response): void {
   } catch (error) {
     logger.error('Error loading tests page:', error);
     res.status(500).json({ error: 'Failed to load tests page' });
+  }
+}
+
+// ============ Assertion Labels API ============
+
+/**
+ * 保存断言标签
+ * POST /api/assertion-labels
+ * Body: { original: string, label: string }
+ */
+export function handleSaveAssertionLabel(req: Request, res: Response): void {
+  try {
+    const { original, label } = req.body;
+
+    if (!original || typeof original !== 'string') {
+      res.status(400).json({ error: 'Missing or invalid "original" field' });
+      return;
+    }
+
+    if (!label || typeof label !== 'string') {
+      res.status(400).json({ error: 'Missing or invalid "label" field' });
+      return;
+    }
+
+    // 读取现有 YAML
+    let labelsData: { labels: Record<string, string> } = { labels: {} };
+    if (fs.existsSync(ASSERTION_LABELS_PATH)) {
+      const content = fs.readFileSync(ASSERTION_LABELS_PATH, 'utf-8');
+      labelsData = yaml.load(content) as { labels: Record<string, string> } || { labels: {} };
+    }
+
+    // 更新标签
+    const trimmedLabel = label.trim();
+    if (trimmedLabel === original) {
+      // 如果标签与原始名称相同，删除自定义标签
+      delete labelsData.labels[original];
+    } else {
+      labelsData.labels[original] = trimmedLabel;
+    }
+
+    // 写回 YAML
+    const yamlContent = `# Assertion Labels - QA 维护的断言人性化描述
+#
+# 格式: "原始断言名称": "人性化描述"
+#
+# 可以在 /tests 页面上直接编辑，保存后自动更新此文件
+#
+# 示例:
+#   "Status code is 200": "接口响应正常"
+#   "Response has products array": "返回产品列表数据"
+
+labels:
+${Object.entries(labelsData.labels)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([k, v]) => `  "${k}": "${v}"`)
+  .join('\n')}
+`;
+    fs.writeFileSync(ASSERTION_LABELS_PATH, yamlContent, 'utf-8');
+
+    // 清除缓存
+    assertionLabelsCache = null;
+
+    logger.info('Assertion label saved', { original, label: trimmedLabel });
+    res.json({ success: true, original, label: trimmedLabel });
+  } catch (error) {
+    logger.error('Error saving assertion label:', error);
+    res.status(500).json({ error: 'Failed to save assertion label' });
+  }
+}
+
+// ============ Manual Checks API ============
+
+/**
+ * 添加手动验证
+ * POST /api/manual-checks
+ * Body: { prd: string, description: string, verified_by: string, status: string }
+ */
+export function handleAddManualCheck(req: Request, res: Response): void {
+  try {
+    const { prd, description, verified_by, status } = req.body;
+
+    if (!prd || !description) {
+      res.status(400).json({ error: 'Missing required fields: prd, description' });
+      return;
+    }
+
+    const data = loadManualChecks();
+    if (!data.checks[prd]) {
+      data.checks[prd] = [];
+    }
+
+    const newCheck: ManualCheck = {
+      id: generateCheckId(),
+      description: description.trim(),
+      verified_by: verified_by || 'QA',
+      date: new Date().toISOString().split('T')[0],
+      status: (status as 'passed' | 'failed' | 'pending') || 'pending'
+    };
+
+    data.checks[prd].push(newCheck);
+    saveManualChecks(data);
+
+    logger.info('Manual check added', { prd, id: newCheck.id });
+    res.json({ success: true, check: newCheck });
+  } catch (error) {
+    logger.error('Error adding manual check:', error);
+    res.status(500).json({ error: 'Failed to add manual check' });
+  }
+}
+
+/**
+ * 更新手动验证状态
+ * PUT /api/manual-checks/:id
+ * Body: { status: string }
+ */
+export function handleUpdateManualCheck(req: Request, res: Response): void {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['passed', 'failed', 'pending'].includes(status)) {
+      res.status(400).json({ error: 'Invalid status. Must be: passed, failed, or pending' });
+      return;
+    }
+
+    const data = loadManualChecks();
+    let found = false;
+
+    for (const prd of Object.keys(data.checks)) {
+      const checks = data.checks[prd];
+      const check = checks.find(c => c.id === id);
+      if (check) {
+        check.status = status;
+        check.date = new Date().toISOString().split('T')[0];
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      res.status(404).json({ error: 'Check not found' });
+      return;
+    }
+
+    saveManualChecks(data);
+    logger.info('Manual check updated', { id, status });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Error updating manual check:', error);
+    res.status(500).json({ error: 'Failed to update manual check' });
+  }
+}
+
+/**
+ * 删除手动验证
+ * DELETE /api/manual-checks/:id?prd=XXX
+ */
+export function handleDeleteManualCheck(req: Request, res: Response): void {
+  try {
+    const { id } = req.params;
+    const prd = req.query.prd as string;
+
+    if (!prd) {
+      res.status(400).json({ error: 'Missing prd query parameter' });
+      return;
+    }
+
+    const data = loadManualChecks();
+    if (!data.checks[prd]) {
+      res.status(404).json({ error: 'PRD not found' });
+      return;
+    }
+
+    const initialLength = data.checks[prd].length;
+    data.checks[prd] = data.checks[prd].filter(c => c.id !== id);
+
+    if (data.checks[prd].length === initialLength) {
+      res.status(404).json({ error: 'Check not found' });
+      return;
+    }
+
+    saveManualChecks(data);
+    logger.info('Manual check deleted', { id, prd });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Error deleting manual check:', error);
+    res.status(500).json({ error: 'Failed to delete manual check' });
   }
 }

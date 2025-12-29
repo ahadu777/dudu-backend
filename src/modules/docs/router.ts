@@ -29,6 +29,10 @@ import {
   handlePrdDocsList,
   handlePrdDocsDetail,
   handleTests,
+  handleSaveAssertionLabel,
+  handleAddManualCheck,
+  handleUpdateManualCheck,
+  handleDeleteManualCheck,
   handleProjectDocs,
   handleEvaluation,
   handleAiSitemap
@@ -72,6 +76,14 @@ router.get('/coverage', (_req, res) => res.redirect('/tests'));
 
 // Live Test Collection Browser
 router.get('/tests', handleTests);
+
+// Assertion Labels API (QA maintenance)
+router.post('/api/assertion-labels', handleSaveAssertionLabel);
+
+// Manual Checks API (QA maintenance)
+router.post('/api/manual-checks', handleAddManualCheck);
+router.put('/api/manual-checks/:id', handleUpdateManualCheck);
+router.delete('/api/manual-checks/:id', handleDeleteManualCheck);
 
 // AI Site Directory / Knowledge Base
 router.get('/ai-sitemap', handleAiSitemap);

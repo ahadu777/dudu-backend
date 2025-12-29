@@ -1,0 +1,40 @@
+# Assertion Labels - QA 维护的断言人性化描述
+#
+# 格式: "原始断言名称": "人性化描述"
+#
+# 可以在 /tests 页面上直接编辑，保存后自动更新此文件
+#
+# 示例:
+#   "Status code is 200": "接口响应正常"
+#   "Response has products array": "返回产品列表数据"
+
+labels:
+  "Deluxe Tea Set has functions": "Deluxe Tea Set 包含功能"
+  "Error response returned": "返回错误响应信息"
+  "Has availability info": "返回库存可用性信息"
+  "Has base price and weekend premium": "包含基础价格和周末溢价"
+  "Has customer discounts": "包含客户类型折扣"
+  "Has error response": "返回错误响应"
+  "Order has correct structure": "订单结构正确"
+  "Premium Plan has functions": "Premium 套餐包含功能"
+  "Product 107 not found - skipped": "产品 107 未找到 (已跳过)"
+  "Product has functions": "产品包含功能列表"
+  "Product has pricing info": "产品包含定价信息"
+  "Products have required fields": "产品包含必填字段"
+  "Products have tier-based pricing": "产品包含等级定价"
+  "QR code data is returned": "返回 QR 码数据"
+  "Requires valid auth_token - skipped": "需要有效登录令牌 (已跳过)"
+  "Requires valid ticket_code - skipped": "需要有效票券码 (已跳过)"
+  "Response has products array": "返回产品列表数据"
+  "Response time is under 2000ms": "响应时间小于 2 秒"
+  "Returns orders array": "返回订单列表"
+  "Server is healthy": "服务器健康检查通过"
+  "Status code is 200": "接口响应正常 (200)"
+  "Status code is 201": "创建成功 (201)"
+  "Status code is 400": "请求参数错误 (400)"
+  "Status code is 400 (invalid QR)": "无效的 QR 码"
+  "Status code is 401": "需要登录认证 (401)"
+  "Status code is 401 (requires auth)": "需要登录认证"
+  "Status code is 404": "资源不存在 (404)"
+  "Test assertion": "测试断言"
+  "Weekend premium is positive": "周末溢价为正数"
