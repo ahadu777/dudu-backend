@@ -220,6 +220,31 @@ grep -r "related-function" src/modules/
 3. Follow existing patterns in `src/modules/`
 4. Ensure TypeScript compiles
 
+#### 2.1 Story 创建（如适用）
+
+创建新 Story 时，必须同时完成：
+
+1. **创建 Story 文件**
+   - 路径：`docs/stories/US-{NNN}-{slug}.md`
+   - 遵循 `docs/reference/DOCUMENT-SPEC.md` 模板
+
+2. **更新 Story 索引**
+   - 文件：`docs/stories/_index.yaml`
+   - 必填字段：
+     ```yaml
+     - id: US-{NNN}
+       title: {Story 标题}
+       status: {Draft|In Progress|Done}
+       cards: [{关联的 Card slugs}]
+       sequence: [{Card 依赖顺序}]
+       enhances: [{增强的其他 Stories}]
+       business_requirement: "PRD-{NNN}"
+     ```
+
+3. **验证索引同步**
+   - 运行 `npm run validate:docs`
+   - 确认无 Story 引用错误
+
 ### Step 2.5: Code Review (代码审查)
 
 **自动触发时机：** 开发完成后、测试前
@@ -389,7 +414,7 @@ cat openapi/openapi.json | jq '.paths | keys | length'
 | 纯后端功能 | ❌ 不需要 |
 | API 变更影响前端 | ✅ 更新现有文档 |
 
-**位置**: `docs/integration/US-{NNN}-frontend.md`
+**位置**: `docs/integration/US-{NNN}-runbook.md`
 
 **最小结构**:
 ```markdown
@@ -441,6 +466,7 @@ npm run validate:docs
 - [ ] API 契约一致（Card = Code = OpenAPI）
 - [ ] Newman collection 创建/更新
 - [ ] 前端对接文档创建/更新（如涉及前端）
+- [ ] Story 索引同步 `docs/stories/_index.yaml`（如创建/修改了 Story）
 - [ ] 覆盖率更新 `docs/test-coverage/_index.yaml`
 - [ ] `npm run validate:docs` 无错误
 - [ ] Card 状态更新为 "Done"

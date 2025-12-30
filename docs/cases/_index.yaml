@@ -20,11 +20,12 @@ cases:
     category: workflow
     type: evolution    # 演进型案例（持续更新）
     description: "AI 工作流发现和演进过程，记录多次迭代的经验"
-    entries: 11        # 记录条目数
+    entries: 12        # 记录条目数
     last_updated: "2025-12-30"
     key_learnings:
       - "Step 0 Intent Analysis 防止上下文干扰"
       - "Step 0.1.5 信息源选择 - 查询顺序比禁止更有效"
+      - "Step 2.1 Story 创建必须同步更新 _index.yaml"
       - "Step 3 检查清单必须显式化"
       - "派生文档可以删除（Runbook → 前端对接文档）"
 
@@ -54,6 +55,11 @@ cases:
 
 # 快速导航：最近的学习
 recent_learnings:
+  - date: "2025-12-30"
+    case: CASE-DISCOVER-AI-WORKFLOW
+    learning: "Story 创建必须同步更新 _index.yaml - 对称设计"
+    applied_to: "SKILL.md Step 2.1 + Step 3 检查清单"
+
   - date: "2025-12-30"
     case: CASE-DISCOVER-AI-WORKFLOW
     learning: "查询顺序比禁止更有效 - Story → Card → 代码 防止找到废弃 API"

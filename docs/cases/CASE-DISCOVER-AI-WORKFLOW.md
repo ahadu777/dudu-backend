@@ -541,4 +541,47 @@ npm run validate:docs
 
 ---
 
+### 2025-12-30: Story 创建时遗漏 _index.yaml 同步 (CASE-007)
+
+**Problem Identified**: 创建 US-019 Story 时，未同时更新 `docs/stories/_index.yaml`。
+
+**Scenario**: 创建 OTA 操作员管理 Story (US-019)
+
+**AI Failure**:
+1. 创建了 `docs/stories/US-019-ota-operator-management.md`
+2. 创建了 `docs/cards/ota-operator-management.md`
+3. **未更新 `docs/stories/_index.yaml`**
+4. 导致 Step 0.1.5 信息源选择无法发现该 Story
+
+**Root Cause Analysis**:
+- SKILL.md Step 2 只说"执行开发"，没有 Story 创建步骤清单
+- Step 3 完成检查清单没有 "_index.yaml 同步检查"
+- Card 创建有完整步骤（Step 3.3.1），但 Story 创建没有
+
+**对比**:
+| 文档类型 | 创建步骤清单 | 索引同步要求 |
+|----------|-------------|-------------|
+| Card | ✅ Step 3.3.1 有完整步骤 | ✅ 有 `_index.yaml` 同步 |
+| Story | ❌ 无明确步骤 | ❌ 无明确要求 |
+
+**Improvements Made**:
+
+1. **添加 Step 2.1 Story 创建步骤**:
+   - 创建 Story 文件
+   - 更新 `docs/stories/_index.yaml`
+   - 验证索引同步
+
+2. **在 Step 3 完成检查清单添加**:
+   - `[ ] Story 索引同步 docs/stories/_index.yaml（如创建/修改了 Story）`
+
+**Files Changed**:
+- `.claude/skills/ai-workflow/SKILL.md` - 添加 Step 2.1 + Step 3 检查项
+
+**Key Learning**:
+1. **文档创建与索引同步必须成对** - 创建文档后立即更新对应索引
+2. **对称设计** - Story 创建步骤应与 Card 创建步骤同等详细
+3. **显式检查清单** - 依赖 AI 记忆不可靠，必须在工作流中显式列出
+
+---
+
 *This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable. Query order matters - Story → Card → Code prevents finding deprecated APIs.***
