@@ -369,6 +369,25 @@ stories:
     business_requirement: "PRD-002"
     # E2E validation assets
     validation_assets:
-      runbook: docs/integration/US-018-runbook.md
       newman:
         - postman/auto-generated/us-018-ota-pdf-export.postman_collection.json
+
+  - id: US-019
+    title: OTA Operator Management for Ticket Redemption
+    status: "In Progress"
+    cards:
+      - ota-operator-management
+    # Sequence dependencies
+    sequence:
+      - ota-operator-management → operators-login
+      - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
+    # Cross-story relationships
+    enhances: [US-012, US-002]
+    enhanced_by: []
+    depends_on: [US-012, US-014]
+    # Business requirements
+    business_requirement: "PRD-002"
+    # E2E validation assets
+    validation_assets:
+      newman:
+        - postman/auto-generated/us-019-ota-operator-management.postman_collection.json
