@@ -374,7 +374,7 @@ stories:
 
   - id: US-019
     title: OTA Operator Management for Ticket Redemption
-    status: "In Progress"
+    status: "Done"
     cards:
       - ota-operator-management
     # Sequence dependencies

@@ -584,4 +584,49 @@ npm run validate:docs
 
 ---
 
-*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable. Query order matters - Story → Card → Code prevents finding deprecated APIs.***
+### 2025-12-30: Story 完成时遗漏 PRD AC 映射同步 (CASE-008)
+
+**Problem Identified**: 完成 US-019 Story 时，未同时更新 PRD-002 的 AC 映射文件。
+
+**Scenario**: 完成 OTA 操作员管理 Story (US-019)
+
+**AI Failure**:
+1. 完成了 US-019 所有实现
+2. 更新了 Story 和 Card 状态为 "Done"
+3. **未更新 `docs/test-coverage/prd-002-ac-mapping.yaml`**
+4. 用户指出后才补充 AC-OPERATOR-1 到 AC-OPERATOR-7
+5. 补充 AC 映射后，**未更新 Postman 测试验证 AC 状态**
+
+**Root Cause Analysis**:
+- Step 3 完成检查清单只有 `覆盖率更新 _index.yaml`，没有 PRD AC 映射
+- Story 与 PRD 的关系（`business_requirement`）未被用于触发 AC 映射检查
+- AC 映射和 Postman 测试不在同一检查项，容易只做一半
+
+**对比**:
+| 文档更新 | 检查清单有吗 | 结果 |
+|----------|-------------|------|
+| Story 索引 | ✅ CASE-007 后添加 | 正常 |
+| PRD AC 映射 | ❌ 没有 | 遗漏 |
+| Postman 测试 | ✅ 有（但与 AC 分离）| 部分遗漏 |
+
+**Improvements Made**:
+
+1. **在 Step 3 完成检查清单添加**:
+   - `[ ] PRD AC 映射同步 docs/test-coverage/prd-{NNN}-ac-mapping.yaml（如 Story 完成，需更新对应 PRD 的 AC 状态）`
+
+**Files Changed**:
+- `.claude/skills/ai-workflow/SKILL.md` - 添加 PRD AC 映射同步检查项
+
+**Key Learning**:
+1. **文档层级联动** - Story 完成时应检查其 `business_requirement` 指向的 PRD 的 AC 映射
+2. **AC 映射与测试联动** - 更新 AC 状态时应同时验证/补充 Postman 测试
+3. **检查清单需要完整覆盖文档关系** - PRD → Story → Card 每个关系都需要对应的同步检查
+
+**Pattern**:
+```
+Story 完成 → 检查 business_requirement → 更新 PRD AC 映射 → 补充/运行 Postman 测试
+```
+
+---
+
+*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable. Query order matters - Story → Card → Code prevents finding deprecated APIs. Document relationships require sync checks - Story completion must trigger PRD AC mapping updates.***

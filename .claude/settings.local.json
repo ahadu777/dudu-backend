@@ -14,7 +14,6 @@
       "Bash(npx newman run:*)",
       "Bash(find:*)",
       "Bash(pkill:*)",
-      "Bash(git add:*)",
       "Bash(git rm:*)",
       "Bash(python3:*)",
       "Bash(node -e:*)",

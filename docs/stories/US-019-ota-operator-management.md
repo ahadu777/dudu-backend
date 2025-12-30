@@ -2,7 +2,7 @@
 id: US-019
 title: OTA Operator Management for Ticket Redemption
 owner: Product
-status: "In Progress"
+status: "Done"
 priority: High
 created_date: "2025-12-29"
 last_updated: "2025-12-29"

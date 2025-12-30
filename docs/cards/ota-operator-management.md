@@ -4,7 +4,7 @@ slug: ota-operator-management
 team: "A - Commerce"
 oas_paths: ["/api/ota/operators", "/api/ota/operators/:id"]
 migrations: ["src/migrations/028-add-ota-operator-fields.ts"]
-status: "Draft"
+status: "Done"
 readiness: "mvp"
 branch: "init-ai"
 pr: ""

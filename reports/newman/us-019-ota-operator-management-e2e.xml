@@ -1,57 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="US-019: OTA Operator Management" tests="13" time="9.873">
-  <testsuite name="A. OTA Creates Operator / A.1 Create Operator - Success" id="d3194803-f767-4846-a113-54d1ec0e2ee9" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="2.895">
-    <testcase name="Status code is 201" time="2.895" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has operator data" time="2.895" classname="Us019OtaOperatorManagement"/>
+<testsuites name="US-019: OTA Operator Management" tests="15" time="8.139">
+  <testsuite name="A. OTA Creates Operator / A.1 Create Operator - Success" id="09f683a6-7398-48ef-8cd9-70e3c770e99c" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="2.907">
+    <testcase name="Status code is 201" time="2.907" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has operator data" time="2.907" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="A. OTA Creates Operator / A.2 Create Operator - Duplicate Account (409)" id="edd0c70d-6331-49e5-a98a-1370ba9b9ecc" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.324">
-    <testcase name="Status code is 409" time="0.324" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has conflict error" time="0.324" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="A. OTA Creates Operator / A.2 Create Operator - Duplicate Account (409)" id="a82c627b-eeff-44f0-9153-65d2100d18e1" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.319">
+    <testcase name="Status code is 409" time="0.319" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has conflict error" time="0.319" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="A. OTA Creates Operator / A.3 Create Operator - No API Key (401)" id="447b3796-0afc-4baa-9edd-666e823fb92a" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="A. OTA Creates Operator / A.3 Create Operator - No API Key (401)" id="5d1685c5-8698-40d3-aa8d-2a9eae05cc7c" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 401" time="0.001" classname="Us019OtaOperatorManagement"/>
     <testcase name="Response has API_KEY_REQUIRED error" time="0.001" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="A. OTA Creates Operator / A.4 Create Operator - Invalid Password (422)" id="c09bccad-6673-4d29-9251-54a2ddadea68" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.001">
-    <testcase name="Status code is 422" time="0.001" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has validation error" time="0.001" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="A. OTA Creates Operator / A.4 Create Operator - Invalid Password (422)" id="75a41520-a407-46eb-9fd7-e28902d5c2a8" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 422" time="0.002" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has validation error" time="0.002" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="B. OTA Lists Operators / B.1 List Operators - Success" id="023ae2ce-b4c1-461a-b199-c131eede2ce9" timestamp="2025-12-30T06:17:55.347Z" tests="3" failures="0" errors="0" time="0.328">
-    <testcase name="Status code is 200" time="0.328" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has paginated list" time="0.328" classname="Us019OtaOperatorManagement"/>
-    <testcase name="All operators are OTA type" time="0.328" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="B. OTA Lists Operators / B.1 List Operators - Success" id="e9e40166-944c-4667-838c-959fa29f9064" timestamp="2025-12-30T08:27:03.678Z" tests="3" failures="0" errors="0" time="0.333">
+    <testcase name="Status code is 200" time="0.333" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has paginated list" time="0.333" classname="Us019OtaOperatorManagement"/>
+    <testcase name="All operators are OTA type" time="0.333" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="B. OTA Lists Operators / B.2 Get Single Operator - Success" id="98fe997b-34b6-49d4-9aa3-b09e3f9c1dea" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.716">
-    <testcase name="Status code is 200" time="0.716" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has operator details" time="0.716" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="B. OTA Lists Operators / B.2 Get Single Operator - Success" id="5ffd07cb-d9ef-498b-ad31-d6b1d62676af" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.327">
+    <testcase name="Status code is 200" time="0.327" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has operator details" time="0.327" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="B. OTA Lists Operators / B.3 Get Operator - Not Found (404)" id="b5d8fd28-1273-4496-a77c-273b78fba352" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.334">
-    <testcase name="Status code is 404" time="0.334" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has not found error" time="0.334" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="B. OTA Lists Operators / B.3 Get Operator - Not Found (404)" id="cdb8d0ee-6964-4647-bdfe-0544ec078b5b" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.317">
+    <testcase name="Status code is 404" time="0.317" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has not found error" time="0.317" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="C. Update Operator / C.1 Update Operator - Success" id="5752c4fc-21da-4003-99a4-51ed526fb0aa" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="2.795">
-    <testcase name="Status code is 200" time="2.795" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has updated data" time="2.795" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="C. Update Operator / C.1 Update Operator - Success" id="57a122e3-ae2a-435a-a5ce-499182ad9071" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="1.899">
+    <testcase name="Status code is 200" time="1.899" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has updated data" time="1.899" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="D. Operator Login / D.1 Operator Login - Success" id="e8b8508b-3972-4aae-b09f-f322f404ca07" timestamp="2025-12-30T06:17:55.347Z" tests="3" failures="0" errors="0" time="0.385">
-    <testcase name="Status code is 200" time="0.385" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has operator_token" time="0.385" classname="Us019OtaOperatorManagement"/>
-    <testcase name="JWT contains partner_id claim" time="0.385" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="D. Operator Login / D.1 Operator Login - Success" id="f9b23acc-51e5-463e-9457-a792bd2e96b1" timestamp="2025-12-30T08:27:03.678Z" tests="3" failures="0" errors="0" time="0.372">
+    <testcase name="Status code is 200" time="0.372" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has operator_token" time="0.372" classname="Us019OtaOperatorManagement"/>
+    <testcase name="JWT contains partner_id claim" time="0.372" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="D. Operator Login / D.2 Operator Login - Invalid Password (401)" id="68c03fec-ddb7-485f-b9b2-b86a034d2b4d" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.785">
-    <testcase name="Status code is 401" time="0.785" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has auth error" time="0.785" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="D. Operator Login / D.2 Operator Login - Invalid Password (401)" id="cfed0e0d-c4c6-4005-8efd-fbff4a736f2c" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.371">
+    <testcase name="Status code is 401" time="0.371" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has auth error" time="0.371" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="E. Venue Filtering / E.1 Venue List with OTA JWT" id="4c8919c0-9f5d-497b-be28-ef1cea62d610" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.331">
-    <testcase name="Status code is 200" time="0.331" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response has venues array" time="0.331" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="E. Venue Filtering / E.1 Venue List with OTA JWT" id="327c2723-73f2-4038-b08c-46050342df76" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.327">
+    <testcase name="Status code is 200" time="0.327" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response has venues array" time="0.327" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="F. Delete Operator / F.1 Delete Operator - Success" id="73ef7ccf-2a0a-4ab0-b1d4-8cffa7eec142" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.652">
-    <testcase name="Status code is 200" time="0.652" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response indicates success" time="0.652" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="G. Cross-Channel Scope Check / G.1 QR Decrypt - Cross-Channel Reject" id="56cb9006-7e21-4fd3-819e-d19ea851d6dd" timestamp="2025-12-30T08:27:03.678Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="No cross-channel test ticket available (400)" time="0.001" classname="Us019OtaOperatorManagement"/>
   </testsuite>
-  <testsuite name="F. Delete Operator / F.2 Deleted Operator Login - Fail (401)" id="cc8e085b-c54d-420a-ae3b-3b2fc88fe7b8" timestamp="2025-12-30T06:17:55.347Z" tests="2" failures="0" errors="0" time="0.326">
-    <testcase name="Status code is 401" time="0.326" classname="Us019OtaOperatorManagement"/>
-    <testcase name="Response indicates login failure" time="0.326" classname="Us019OtaOperatorManagement"/>
+  <testsuite name="G. Cross-Channel Scope Check / G.2 Venue Scan - Cross-Channel Reject" id="d94d3cca-658b-466c-9bd0-a4c2c6568d97" timestamp="2025-12-30T08:27:03.678Z" tests="1" failures="0" errors="0" time="0.007">
+    <testcase name="No cross-channel test ticket available (422)" time="0.007" classname="Us019OtaOperatorManagement"/>
+  </testsuite>
+  <testsuite name="H. Delete Operator / H.1 Delete Operator - Success" id="f2bf7972-8c90-46f8-a5ab-19c15b91fa2a" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.639">
+    <testcase name="Status code is 200" time="0.639" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response indicates success" time="0.639" classname="Us019OtaOperatorManagement"/>
+  </testsuite>
+  <testsuite name="H. Delete Operator / H.2 Deleted Operator Login - Fail (401)" id="3b060247-3851-4cbb-999c-fc2dfebd0f24" timestamp="2025-12-30T08:27:03.678Z" tests="2" failures="0" errors="0" time="0.317">
+    <testcase name="Status code is 401" time="0.317" classname="Us019OtaOperatorManagement"/>
+    <testcase name="Response indicates login failure" time="0.317" classname="Us019OtaOperatorManagement"/>
   </testsuite>
 </testsuites>

@@ -467,6 +467,7 @@ npm run validate:docs
 - [ ] Newman collection 创建/更新
 - [ ] 前端对接文档创建/更新（如涉及前端）
 - [ ] Story 索引同步 `docs/stories/_index.yaml`（如创建/修改了 Story）
+- [ ] PRD AC 映射同步 `docs/test-coverage/prd-{NNN}-ac-mapping.yaml`（如 Story 完成，需更新对应 PRD 的 AC 状态）
 - [ ] 覆盖率更新 `docs/test-coverage/_index.yaml`
 - [ ] `npm run validate:docs` 无错误
 - [ ] Card 状态更新为 "Done"
