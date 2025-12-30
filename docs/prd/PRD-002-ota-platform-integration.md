@@ -124,7 +124,8 @@ OTA platforms can create and manage their own verification operators
 
 ### Pricing Consistency
 - Identical complex pricing across all channels (maintains PRD-001 strategy)
-- Weekend premiums and customer type discounts apply equally
+- ~~Weekend premiums~~ [DEFERRED] - 周末定价功能暂缓实现
+- Customer type discounts apply equally
 - Complete discount matrix exposed via inventory API
 
 ### Ticket Expiry Mechanism

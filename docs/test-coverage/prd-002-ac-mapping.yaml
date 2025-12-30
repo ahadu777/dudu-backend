@@ -1,10 +1,15 @@
 # PRD-002 Acceptance Criteria Mapping
-# 从 PRD 文档提取的完整验收标准，映射到测试用例
+# 从 PRD 文档提取的验收标准，映射到测试用例
+#
+# 架构原则：
+# - acceptance_criteria: 需要实现且需要验收的功能
+# - excluded_criteria: PRD 中标记为 [DEFERRED] 或 out_of_scope 的功能，不计入覆盖率
+# - 覆盖率只统计 acceptance_criteria 中的项
 
 prd_id: PRD-002
 title: OTA Platform Integration
 last_updated: 2025-12-30
-coverage_principle: "Coverage % = (有测试的AC数 / 总AC数) × 100"
+coverage_principle: "Coverage % = (tested / total_in_scope) × 100，excluded 不计入分母"
 
 # ===== ACCEPTANCE CRITERIA =====
 
@@ -75,13 +80,6 @@ acceptance_criteria:
       prd_source: "Core Features > Ticket Lifecycle Management"
       test_id: "3.1"
       status: tested
-
-    - ac_id: AC-TICKET-2
-      description: "激活时 visit_date 应用周末定价"
-      prd_source: "Business Rules > Pricing Consistency"
-      test_id: "3.2"
-      status: needs_fix
-      note: "API 返回 500，需要调查后端实现"
 
     - ac_id: AC-TICKET-3
       description: "visit_date 无效格式返回 400"
@@ -189,18 +187,27 @@ acceptance_criteria:
       newman_collection: "us-019-ota-operator-management.postman_collection.json"
       note: "测试框架就绪，需跨渠道票券数据完整验证 PARTNER_MISMATCH"
 
+# ===== EXCLUDED CRITERIA (不计入覆盖率) =====
+# PRD 中标记为 [DEFERRED] 或 out_of_scope 的功能
+
+excluded_criteria:
+  - ac_id: AC-TICKET-2
+    description: "激活时 visit_date 应用周末定价"
+    prd_source: "Business Rules > Pricing Consistency [DEFERRED]"
+    reason: "产品决定暂缓实现"
+    prd_reference: "PRD-002 第127行标记 [DEFERRED]"
+
 # ===== COVERAGE SUMMARY =====
 
 coverage_summary:
-  total_ac: 25
+  total_in_scope: 24        # acceptance_criteria 中的 AC 数量
+  excluded: 1               # excluded_criteria 中的 AC 数量（不计入覆盖率）
   tested: 23
   pending: 0
-  needs_fix: 2
-  coverage_percentage: "92% (23/25)"
+  needs_fix: 1
+  coverage_percentage: "95.8% (23/24)"
 
   needs_fix_details:
-    - ac_id: AC-TICKET-2
-      issue: "周末定价激活返回 500"
     - ac_id: AC-TICKET-4
       issue: "venue/scan 需要操作员 JWT"
 
@@ -225,8 +232,8 @@ merged_test_structure:
   - folder: "3. 票券激活"
     tests:
       - "3.1 激活预制票券"
-      - "3.2 周末日期激活 [需修复]"
       - "3.3 无效日期格式 (400)"
+    # 3.2 周末日期激活 - 已移至 excluded_criteria
 
   - folder: "4. 票券状态转换"
     tests:

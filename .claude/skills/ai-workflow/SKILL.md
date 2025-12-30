@@ -245,6 +245,30 @@ grep -r "related-function" src/modules/
    - 运行 `npm run validate:docs`
    - 确认无 Story 引用错误
 
+#### 2.2 AC 映射规则
+
+当 PRD 或 Story 有功能标记为暂缓时：
+
+1. **PRD 标记方式**
+   ```markdown
+   - ~~Weekend premiums~~ [DEFERRED] - 周末定价功能暂缓实现
+   ```
+
+2. **AC 映射架构**
+   ```yaml
+   acceptance_criteria:    # 需要实现的功能 → 计入覆盖率
+     ...
+   excluded_criteria:      # [DEFERRED] 功能 → 不计入覆盖率
+     - ac_id: AC-XXX
+       reason: "产品决定暂缓实现"
+       prd_reference: "PRD-XXX 第N行"
+   coverage_summary:
+     total_in_scope: N     # 只计 acceptance_criteria
+     excluded: M           # 仅供参考
+   ```
+
+3. **规范参考**: `docs/reference/AC-EXTRACTION-SPEC.md`
+
 ### Step 2.5: Code Review (代码审查)
 
 **自动触发时机：** 开发完成后、测试前
@@ -468,6 +492,8 @@ npm run validate:docs
 - [ ] 前端对接文档创建/更新（如涉及前端）
 - [ ] Story 索引同步 `docs/stories/_index.yaml`（如创建/修改了 Story）
 - [ ] PRD AC 映射同步 `docs/test-coverage/prd-{NNN}-ac-mapping.yaml`（如 Story 完成，需更新对应 PRD 的 AC 状态）
+  - 注意：PRD 中标记 `[DEFERRED]` 的功能应放入 `excluded_criteria`，不计入覆盖率
+  - 参考规范：`docs/reference/AC-EXTRACTION-SPEC.md`
 - [ ] 覆盖率更新 `docs/test-coverage/_index.yaml`
 - [ ] `npm run validate:docs` 无错误
 - [ ] Card 状态更新为 "Done"

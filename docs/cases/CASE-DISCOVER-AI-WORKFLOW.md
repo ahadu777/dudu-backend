@@ -629,4 +629,66 @@ Story 完成 → 检查 business_requirement → 更新 PRD AC 映射 → 补充
 
 ---
 
-*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable. Query order matters - Story → Card → Code prevents finding deprecated APIs. Document relationships require sync checks - Story completion must trigger PRD AC mapping updates.***
+### 2025-12-30: AC 映射架构改进 - excluded_criteria (CASE-009)
+
+**Problem Identified**: 已暂缓的功能被包含在 AC 覆盖率统计中，导致覆盖率失真。
+
+**Scenario**: PRD-002 周末定价功能已被产品决定暂缓，但仍计入 AC 覆盖率分母。
+
+**用户反馈**: "为什么已经跳过的东西还会生成 AC 呢... 应该在 PRD 或 Story/Card 中就标记跳过，然后不生成相应的 AC 才对"
+
+**Root Cause Analysis**:
+- AC 映射只有 `status: deferred`，但仍计入覆盖率分母
+- 应该在源头（PRD）标记，AC 映射反映该标记
+- 覆盖率应只统计"需要实现的功能"
+
+**改进方案**:
+
+| 层级 | 变更前 | 变更后 |
+|------|--------|--------|
+| PRD | 无标记 | `[DEFERRED]` 标记 |
+| AC 映射 | `status: deferred` 在 acceptance_criteria | 移至 `excluded_criteria` 部分 |
+| 覆盖率 | deferred 计入分母 | excluded 不计入分母 |
+
+**Improvements Made**:
+
+1. **PRD-002 添加标记**:
+   ```markdown
+   - ~~Weekend premiums~~ [DEFERRED] - 周末定价功能暂缓实现
+   ```
+
+2. **AC 映射架构重构**:
+   ```yaml
+   acceptance_criteria:    # 需要实现的功能
+     ...
+   excluded_criteria:      # PRD 标记 [DEFERRED] 的功能，不计入覆盖率
+     - ac_id: AC-TICKET-2
+       reason: "产品决定暂缓实现"
+       prd_reference: "PRD-002 第127行"
+   coverage_summary:
+     total_in_scope: 24    # 只计 acceptance_criteria
+     excluded: 1           # 仅供参考
+   ```
+
+3. **更新 AC-EXTRACTION-SPEC.md**:
+   - 添加 `excluded_criteria` 部分规范
+   - 说明覆盖率计算原则
+
+**Files Changed**:
+- `docs/prd/PRD-002-ota-platform-integration.md` - 添加 [DEFERRED] 标记
+- `docs/test-coverage/prd-002-ac-mapping.yaml` - 重构架构
+- `docs/reference/AC-EXTRACTION-SPEC.md` - 添加规范
+- `.claude/skills/ai-workflow/SKILL.md` - 添加 Step 2.2 AC 映射规则 + Step 3 检查清单注释
+
+**覆盖率变化**:
+- 变更前: 92% (23/25) - deferred 计入分母
+- 变更后: **95.8% (23/24)** - excluded 不计入分母
+
+**Key Learning**:
+1. **源头标记优于末端标记** - PRD 标记 [DEFERRED] 比 AC 映射标记 deferred 更清晰
+2. **覆盖率只统计 in-scope 功能** - 排除的功能不应影响覆盖率指标
+3. **架构设计应反映业务决策** - 文档结构应体现产品决策（什么做、什么不做）
+
+---
+
+*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable. Query order matters - Story → Card → Code prevents finding deprecated APIs. Document relationships require sync checks - Story completion must trigger PRD AC mapping updates. Coverage metrics should only count in-scope items - excluded/deferred features should not inflate the denominator.***

@@ -291,6 +291,15 @@ acceptance_criteria:
       status: pending
       skip_reason: "需要并发测试工具"
 
+# ===== EXCLUDED CRITERIA (不计入覆盖率) =====
+# PRD 中标记为 [DEFERRED] 或 out_of_scope 的功能
+excluded_criteria:
+  - ac_id: AC-006-EXAMPLE-99
+    description: "示例：被暂缓的功能"
+    prd_source: "PRD 中标记 [DEFERRED] 的章节"
+    reason: "产品决定暂缓实现"
+    prd_reference: "PRD-006 第XX行"
+
 # ===== Story → AC 映射表 =====
 story_ac_mapping:
   US-006:
@@ -299,6 +308,7 @@ story_ac_mapping:
     C: [AC-006-ACTIVATE-30, AC-006-ACTIVATE-31]
 
 # ===== 覆盖率摘要 =====
+# 注意：excluded_criteria 中的 AC 不计入覆盖率分母
 coverage_summary:
   total_ac: 26
   by_category:
@@ -329,6 +339,21 @@ coverage_summary:
 | `status` | ✅ | tested / pending / skipped |
 | `skip_reason` | ⚪ | 当 status=skipped 时必填 |
 | `expected_error` | ⚪ | 错误场景的预期错误码 |
+
+### excluded_criteria 字段说明
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `ac_id` | ✅ | AC 编号（保留用于追溯） |
+| `description` | ✅ | 功能描述 |
+| `prd_source` | ✅ | PRD 中的来源章节 |
+| `reason` | ✅ | 被排除的原因 |
+| `prd_reference` | ⚪ | PRD 中 [DEFERRED] 标记位置 |
+
+**重要原则**：
+- `excluded_criteria` 中的 AC **不计入覆盖率分母**
+- 只有 PRD 中明确标记 `[DEFERRED]` 或 `out_of_scope` 的功能才放入此处
+- 功能恢复实现时，需从 `excluded_criteria` 移回 `acceptance_criteria`
 
 ---
 
