@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { unifiedAuth } from '../../middlewares/unified-auth';
+import { optionalAuthenticateOperator } from '../../middlewares/auth';
 import { unifiedQRService } from './service';
 import { logger } from '../../utils/logger';
 import { decryptAndVerifyQR } from '../../utils/qr-crypto';
@@ -23,8 +24,13 @@ const router = Router();
  *
  * @body encrypted_data - Encrypted QR token string
  * @returns Decrypted QR data + complete ticket information
+ *
+ * OTA Scope Check (US-019):
+ * - If operator is authenticated and is OTA type
+ * - Validates that ticket's partner_id matches operator's partner_id
+ * - Returns error if mismatch (unauthorized to view this ticket)
  */
-router.post('/decrypt', async (req: Request, res: Response) => {
+router.post('/decrypt', optionalAuthenticateOperator, async (req: Request, res: Response) => {
   try {
     const { encrypted_data } = req.body;
 
@@ -80,6 +86,29 @@ router.post('/decrypt', async (req: Request, res: Response) => {
         jti: result.data.jti,
         ticket_code: ticketCode
       });
+    }
+
+    // ========================================
+    // OTA 范围检查 (US-019)
+    // - 如果核销员是 OTA 类型，验证票券 partner_id 是否匹配
+    // - 不匹配则返回错误（无权查看此票券）
+    // ========================================
+    if (req.operator?.operator_type === 'OTA' && req.operator.partner_id) {
+      const ticketPartnerId = ticket.partner_id;
+      if (ticketPartnerId && ticketPartnerId !== req.operator.partner_id) {
+        logger.warn('qr.decrypt.ota_scope_mismatch', {
+          ticket_code: ticketCode,
+          ticket_partner_id: ticketPartnerId,
+          operator_partner_id: req.operator.partner_id,
+          operator_id: req.operator.operator_id
+        });
+        return res.status(403).json({
+          error: 'OTA_SCOPE_MISMATCH',
+          message: '无权查看此票券（票券不属于您的 OTA 平台）',
+          jti: result.data.jti,
+          ticket_code: ticketCode
+        });
+      }
     }
 
     // ========================================

@@ -3,11 +3,11 @@ import { logger } from '../utils/logger';
 
 // Simple API key store - in production this would be in database
 const API_KEYS = new Map<string, { partner_id: string, partner_name: string, permissions: string[], rate_limit: number }>([
-  ['ota_test_key_12345', { partner_id: 'test_partner', partner_name: 'Test OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 100 }],
-  ['ota_prod_key_67890', { partner_id: 'prod_partner', partner_name: 'Production OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create'], rate_limit: 1000 }],
-  ['dudu_key_12345', { partner_id: 'dudu_partner', partner_name: 'DuDu Travel', permissions: ['inventory:read', 'tickets:bulk-generate', 'tickets:activate', 'orders:read'], rate_limit: 500 }],
-  ['ota251103_key_67890', { partner_id: 'ota251103_partner', partner_name: 'OTA251103 Travel Group', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'tickets:bulk-generate', 'tickets:activate'], rate_limit: 300 }],
-  ['ota_full_access_key_99999', { partner_id: 'full_access', partner_name: 'OTA Full Access Partner', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'orders:create', 'tickets:bulk-generate', 'tickets:activate', 'admin:read', 'admin:partners:list'], rate_limit: 500 }]
+  ['ota_test_key_12345', { partner_id: 'test_partner', partner_name: 'Test OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create', 'tickets:bulk-generate', 'tickets:activate', 'operators'], rate_limit: 100 }],
+  ['ota_prod_key_67890', { partner_id: 'prod_partner', partner_name: 'Production OTA Partner', permissions: ['inventory:read', 'reserve:create', 'orders:create', 'operators'], rate_limit: 1000 }],
+  ['dudu_key_12345', { partner_id: 'dudu_partner', partner_name: 'DuDu Travel', permissions: ['inventory:read', 'tickets:bulk-generate', 'tickets:activate', 'orders:read', 'operators'], rate_limit: 500 }],
+  ['ota251103_key_67890', { partner_id: 'ota251103_partner', partner_name: 'OTA251103 Travel Group', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'tickets:bulk-generate', 'tickets:activate', 'operators'], rate_limit: 300 }],
+  ['ota_full_access_key_99999', { partner_id: 'full_access', partner_name: 'OTA Full Access Partner', permissions: ['inventory:read', 'reserve:create', 'reserve:activate', 'orders:create', 'tickets:bulk-generate', 'tickets:activate', 'admin:read', 'admin:partners:list', 'operators'], rate_limit: 500 }]
 ]);
 
 // Export API_KEYS for admin services

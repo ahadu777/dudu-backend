@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { venueOperationsService } from './service';
 import { logger } from '../../utils/logger';
-import { authenticateOperator } from '../../middlewares/auth';
+import { authenticateOperator, optionalAuthenticateOperator } from '../../middlewares/auth';
 import { API_KEYS } from '../../middlewares/otaAuth';
 import { AppDataSource } from '../../config/database';
 import { VenueRepository } from './domain/venue.repository';
@@ -48,16 +48,25 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/', async (req, res) => {
+router.get('/', optionalAuthenticateOperator, async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'] as string | undefined;
     const partner = apiKey ? API_KEYS.get(apiKey) : undefined;
     const includeInactive = req.query.include_inactive === 'true';
 
-    // OTA partner → only their venues; miniprogram → all venues
+    // 确定 partnerId: API Key > JWT token
+    // OTA API Key → partner_id from API_KEYS
+    // OTA Operator JWT → partner_id from token
+    // Miniprogram (无 partner) → all venues
+    let partnerId = partner?.partner_id;
+    if (!partnerId && req.operator?.operator_type === 'OTA' && req.operator.partner_id) {
+      partnerId = req.operator.partner_id;
+    }
+
+    // OTA partner/operator → only their venues; miniprogram → all venues
     const result = await venueOperationsService.getAllVenues({
       includeInactive,
-      partnerId: partner?.partner_id
+      partnerId
     });
 
     res.json(result);

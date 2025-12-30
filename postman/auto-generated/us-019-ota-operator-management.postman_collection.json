@@ -1,0 +1,638 @@
+{
+  "info": {
+    "_postman_id": "us-019-ota-operator-management",
+    "name": "US-019: OTA Operator Management",
+    "description": "Tests for US-019 - OTA Operator Management. Tests operator CRUD, login, venue filtering, and scope isolation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "api_key",
+      "value": "ota_full_access_key_99999"
+    },
+    {
+      "key": "operator_id",
+      "value": ""
+    },
+    {
+      "key": "operator_token",
+      "value": ""
+    },
+    {
+      "key": "operator_account",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "A. OTA Creates Operator",
+      "item": [
+        {
+          "name": "A.1 Create Operator - Success",
+          "description": "OTA 平台通过 API 创建核销人员账号",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique account name",
+                  "const timestamp = Date.now();",
+                  "pm.collectionVariables.set('operator_account', 'test_op_' + timestamp);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has operator data', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('account');",
+                  "    pm.expect(jsonData).to.have.property('real_name');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('operator_type');",
+                  "",
+                  "    // Verify OTA operator type",
+                  "    pm.expect(jsonData.operator_type).to.equal('OTA');",
+                  "    pm.expect(jsonData.status).to.equal('ACTIVE');",
+                  "",
+                  "    // Save for subsequent tests",
+                  "    pm.collectionVariables.set('operator_id', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"{{operator_account}}\",\n  \"password\": \"password123\",\n  \"real_name\": \"Test Operator\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators"]
+            }
+          }
+        },
+        {
+          "name": "A.2 Create Operator - Duplicate Account (409)",
+          "description": "尝试创建重复账号，系统返回冲突错误",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Response has conflict error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData.code).to.equal('CONFLICT');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"{{operator_account}}\",\n  \"password\": \"password123\",\n  \"real_name\": \"Duplicate Operator\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators"]
+            }
+          }
+        },
+        {
+          "name": "A.3 Create Operator - No API Key (401)",
+          "description": "未携带 API Key 的请求被拒绝",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response has API_KEY_REQUIRED error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.equal('API_KEY_REQUIRED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"no_auth_operator\",\n  \"password\": \"password123\",\n  \"real_name\": \"No Auth\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators"]
+            }
+          }
+        },
+        {
+          "name": "A.4 Create Operator - Invalid Password (422)",
+          "description": "密码不符合要求时返回验证错误",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('Response has validation error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData.code).to.equal('VALIDATION_ERROR');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"short_pwd_operator\",\n  \"password\": \"123\",\n  \"real_name\": \"Short Password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "B. OTA Lists Operators",
+      "item": [
+        {
+          "name": "B.1 List Operators - Success",
+          "description": "OTA 平台获取本平台核销人员列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has paginated list', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('page');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('All operators are OTA type', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    jsonData.data.forEach(function(op) {",
+                  "        pm.expect(op.operator_type).to.equal('OTA');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators"]
+            }
+          }
+        },
+        {
+          "name": "B.2 Get Single Operator - Success",
+          "description": "OTA 平台获取单个核销人员详情",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has operator details', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('account');",
+                  "    pm.expect(jsonData.operator_type).to.equal('OTA');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators/{{operator_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators", "{{operator_id}}"]
+            }
+          }
+        },
+        {
+          "name": "B.3 Get Operator - Not Found (404)",
+          "description": "尝试获取不存在的核销人员",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Response has not found error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.equal('OPERATOR_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators/999999",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators", "999999"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "C. Update Operator",
+      "item": [
+        {
+          "name": "C.1 Update Operator - Success",
+          "description": "OTA 平台更新核销人员信息",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has updated data', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData.real_name).to.equal('Updated Name');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"real_name\": \"Updated Name\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators/{{operator_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators", "{{operator_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "D. Operator Login",
+      "item": [
+        {
+          "name": "D.1 Operator Login - Success",
+          "description": "OTA 核销人员登录，获取包含 partner_id 的 JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has operator_token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('operator_token');",
+                  "",
+                  "    // Save token for subsequent tests",
+                  "    pm.collectionVariables.set('operator_token', jsonData.operator_token);",
+                  "});",
+                  "",
+                  "pm.test('JWT contains partner_id claim', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const token = jsonData.operator_token;",
+                  "",
+                  "    // Decode JWT payload (base64)",
+                  "    const payload = JSON.parse(atob(token.split('.')[1]));",
+                  "",
+                  "    pm.expect(payload).to.have.property('partner_id');",
+                  "    pm.expect(payload).to.have.property('operator_type');",
+                  "    pm.expect(payload.operator_type).to.equal('OTA');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{operator_account}}\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/operators/login",
+              "host": ["{{base_url}}"],
+              "path": ["operators", "login"]
+            }
+          }
+        },
+        {
+          "name": "D.2 Operator Login - Invalid Password (401)",
+          "description": "使用错误密码登录失败",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response has auth error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{operator_account}}\",\n  \"password\": \"wrong_password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/operators/login",
+              "host": ["{{base_url}}"],
+              "path": ["operators", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "E. Venue Filtering",
+      "item": [
+        {
+          "name": "E.1 Venue List with OTA JWT",
+          "description": "OTA 核销人员使用 JWT 访问场馆列表，只返回本 OTA 场馆",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has venues array', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('venues');",
+                  "    pm.expect(jsonData.venues).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Note: Actual partner_id filtering validation would require",
+                  "// comparing with unfiltered list or checking venue partner_ids"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operator_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/venue",
+              "host": ["{{base_url}}"],
+              "path": ["venue"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "F. Disable Operator",
+      "item": [
+        {
+          "name": "F.1 Disable Operator - Success",
+          "description": "OTA 平台禁用核销人员，禁用后无法登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates success', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success');",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ota/operators/{{operator_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ota", "operators", "{{operator_id}}"]
+            }
+          }
+        },
+        {
+          "name": "F.2 Disabled Operator Login - Fail (401)",
+          "description": "已禁用的核销人员无法登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates login failure', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{operator_account}}\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/operators/login",
+              "host": ["{{base_url}}"],
+              "path": ["operators", "login"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -8,6 +8,9 @@ export class Operator {
   @Column({ type: 'bigint', nullable: true })
   merchant_id!: number | null;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  partner_id!: string | null;
+
   @Column({ type: 'varchar', length: 64, unique: true })
   account!: string;
 
@@ -24,6 +27,13 @@ export class Operator {
   })
   status!: 'ACTIVE' | 'DISABLED';
 
+  @Column({
+    type: 'enum',
+    enum: ['INTERNAL', 'OTA'],
+    default: 'INTERNAL'
+  })
+  operator_type!: 'INTERNAL' | 'OTA';
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;
 
@@ -33,5 +43,10 @@ export class Operator {
   // Helper method to check if operator is active
   isActive(): boolean {
     return this.status === 'ACTIVE';
+  }
+
+  // Helper method to check if operator is OTA type
+  isOtaOperator(): boolean {
+    return this.operator_type === 'OTA';
   }
 }

@@ -19,6 +19,8 @@ interface OperatorInfo {
   operator_id: number;
   username: string;
   roles: string[];
+  partner_id?: string;
+  operator_type?: 'INTERNAL' | 'OTA';
 }
 
 /**
@@ -193,6 +195,37 @@ export class VenueOperationsService {
         });
 
         return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request.operator, true);
+      }
+
+      // ========================================
+      // Step 3.0.5: OTA 范围检查 (US-019)
+      // - 如果核销员是 OTA 类型，验证票券 partner_id 是否匹配
+      // - 不匹配则返回 RED（无权核销此票券）
+      // ========================================
+      if (request.operator.operator_type === 'OTA' && request.operator.partner_id) {
+        const ticketPartnerId = ticket.partner_id;
+        if (ticketPartnerId && ticketPartnerId !== request.operator.partner_id) {
+          logger.warn('venue.scan.ota_scope_mismatch', {
+            ticket_code: ticketCode,
+            ticket_partner_id: ticketPartnerId,
+            operator_partner_id: request.operator.partner_id,
+            operator_id: request.operator.operator_id,
+            reason: 'OTA operator cannot redeem ticket from another OTA'
+          });
+
+          await this.recordRedemption({
+            ticketCode,
+            jti,
+            functionCode: request.functionCode,
+            operator: request.operator,
+            result: 'reject',
+            reason: 'OTA_SCOPE_MISMATCH',
+            venueId,
+            additionalInfo
+          });
+
+          return this.createRejectResponse('OTA_SCOPE_MISMATCH', startTime, request.operator, true);
+        }
       }
 
       // ========================================

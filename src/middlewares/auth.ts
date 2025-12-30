@@ -13,6 +13,8 @@ export interface OperatorTokenPayload {
   sub: number;
   username: string;
   roles: string[];
+  partner_id?: string;
+  operator_type?: 'INTERNAL' | 'OTA';
 }
 
 // 扩展 Express Request 类型以包含 user 和 operator
@@ -27,6 +29,8 @@ declare global {
         operator_id: number;
         username: string;
         roles: string[];
+        partner_id?: string;
+        operator_type?: 'INTERNAL' | 'OTA';
       };
     }
   }
@@ -111,7 +115,9 @@ export const authenticateOperator = (req: Request, res: Response, next: NextFunc
     req.operator = {
       operator_id: decoded.sub,
       username: decoded.username,
-      roles: decoded.roles
+      roles: decoded.roles,
+      partner_id: decoded.partner_id,
+      operator_type: decoded.operator_type
     };
 
     next();
@@ -124,6 +130,39 @@ export const authenticateOperator = (req: Request, res: Response, next: NextFunc
       next(error);
     }
   }
+};
+
+/**
+ * 可选 Operator JWT 认证中间件
+ * 如果提供了 token 则验证，否则继续
+ * 用于需要识别 operator 身份但不强制要求的端点（如 /qr/decrypt）
+ */
+export const optionalAuthenticateOperator = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  try {
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, String(env.JWT_SECRET)) as unknown as OperatorTokenPayload;
+    req.operator = {
+      operator_id: decoded.sub,
+      username: decoded.username,
+      roles: decoded.roles,
+      partner_id: decoded.partner_id,
+      operator_type: decoded.operator_type
+    };
+  } catch (error) {
+    // 忽略错误，继续执行（token 无效时不设置 req.operator）
+  }
+
+  next();
 };
 
 /**

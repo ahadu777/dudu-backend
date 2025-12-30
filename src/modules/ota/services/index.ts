@@ -12,3 +12,4 @@ export * from './reseller.service';
 export * from './analytics.service';
 export * from './dashboard.service';
 export * from './qr-config.service';
+export * from './operator.service';

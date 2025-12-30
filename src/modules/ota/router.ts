@@ -1134,4 +1134,224 @@ router.put('/products/:id/qr-config', async (req: AuthenticatedRequest, res: Res
   }
 });
 
+// ============= OPERATOR MANAGEMENT (US-019) =============
+
+import { operatorService } from './services/operator.service';
+
+/**
+ * POST /api/ota/operators
+ * Create a new operator for OTA platform
+ * Requires 'operators' permission
+ */
+router.post('/operators', otaAuthMiddleware('operators'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const partnerId = getPartnerIdWithFallback(req);
+    const { account, password, real_name } = req.body;
+
+    if (!account || !password || !real_name) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'account, password, and real_name are required'
+      });
+    }
+
+    const operator = await operatorService.createOperator(partnerId, {
+      account,
+      password,
+      real_name
+    });
+
+    res.status(201).json(operator);
+  } catch (error: any) {
+    logger.error('OTA create operator failed', {
+      partner: req.ota_partner?.name,
+      error: error.message
+    });
+
+    if (error.code === 'VALIDATION_ERROR') {
+      return res.status(422).json({
+        code: 'VALIDATION_ERROR',
+        message: error.message
+      });
+    }
+
+    if (error.code === 'CONFLICT') {
+      return res.status(409).json({
+        code: 'CONFLICT',
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to create operator'
+    });
+  }
+});
+
+/**
+ * GET /api/ota/operators
+ * List operators for OTA platform
+ * Requires 'operators' permission
+ */
+router.get('/operators', otaAuthMiddleware('operators'), paginationMiddleware({ defaultLimit: 20, maxLimit: 100 }), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const partnerId = getPartnerIdWithFallback(req);
+    const status = req.query.status as 'ACTIVE' | 'DISABLED' | undefined;
+
+    const result = await operatorService.listOperators(partnerId, {
+      status,
+      page: req.pagination.page,
+      limit: req.pagination.limit
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('OTA list operators failed', {
+      partner: req.ota_partner?.name,
+      error: error.message
+    });
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to list operators'
+    });
+  }
+});
+
+/**
+ * GET /api/ota/operators/:id
+ * Get operator details
+ * Requires 'operators' permission
+ */
+router.get('/operators/:id', otaAuthMiddleware('operators'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const operatorId = parseInt(req.params.id);
+    if (isNaN(operatorId)) {
+      return res.status(400).json({
+        error: 'INVALID_REQUEST',
+        message: 'Invalid operator ID'
+      });
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const operator = await operatorService.getOperator(partnerId, operatorId);
+
+    if (!operator) {
+      return res.status(404).json({
+        error: 'OPERATOR_NOT_FOUND',
+        message: 'Operator not found or not owned by this OTA'
+      });
+    }
+
+    res.json(operator);
+  } catch (error: any) {
+    logger.error('OTA get operator failed', {
+      partner: req.ota_partner?.name,
+      operator_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to get operator'
+    });
+  }
+});
+
+/**
+ * PATCH /api/ota/operators/:id
+ * Update operator
+ * Requires 'operators' permission
+ */
+router.patch('/operators/:id', otaAuthMiddleware('operators'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const operatorId = parseInt(req.params.id);
+    if (isNaN(operatorId)) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: 'Invalid operator ID'
+      });
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const { real_name, password } = req.body;
+
+    const operator = await operatorService.updateOperator(partnerId, operatorId, {
+      real_name,
+      password
+    });
+
+    if (!operator) {
+      return res.status(404).json({
+        error: 'OPERATOR_NOT_FOUND',
+        message: 'Operator not found or not owned by this OTA'
+      });
+    }
+
+    res.json(operator);
+  } catch (error: any) {
+    logger.error('OTA update operator failed', {
+      partner: req.ota_partner?.name,
+      operator_id: req.params.id,
+      error: error.message
+    });
+
+    if (error.code === 'VALIDATION_ERROR') {
+      return res.status(422).json({
+        code: 'VALIDATION_ERROR',
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to update operator'
+    });
+  }
+});
+
+/**
+ * DELETE /api/ota/operators/:id
+ * Disable operator (soft delete)
+ * Requires 'operators' permission
+ */
+router.delete('/operators/:id', otaAuthMiddleware('operators'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const operatorId = parseInt(req.params.id);
+    if (isNaN(operatorId)) {
+      return res.status(400).json({
+        code: 'INVALID_REQUEST',
+        message: 'Invalid operator ID'
+      });
+    }
+
+    const partnerId = getPartnerIdWithFallback(req);
+    const result = await operatorService.disableOperator(partnerId, operatorId);
+
+    if (!result) {
+      return res.status(404).json({
+        error: 'OPERATOR_NOT_FOUND',
+        message: 'Operator not found or not owned by this OTA'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Operator disabled'
+    });
+  } catch (error: any) {
+    logger.error('OTA disable operator failed', {
+      partner: req.ota_partner?.name,
+      operator_id: req.params.id,
+      error: error.message
+    });
+
+    res.status(500).json({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to disable operator'
+    });
+  }
+});
+
 export default router;

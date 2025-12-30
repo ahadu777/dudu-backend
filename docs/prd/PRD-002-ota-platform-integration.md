@@ -7,11 +7,11 @@ category: "channel"
 product_area: "Commerce"
 owner: "Product Manager"
 status: "Done"
-version: "2.0"
+version: "2.1"
 created_date: "2025-11-03"
-last_updated: "2025-12-12"
-related_stories: ["US-012", "US-017", "US-018"]
-implementation_cards: ["ota-order-retrieval", "ota-premade-tickets", "ota-reservation-management"]
+last_updated: "2025-12-29"
+related_stories: ["US-012", "US-017", "US-018", "US-019"]
+implementation_cards: ["ota-order-retrieval", "ota-premade-tickets", "ota-reservation-management", "ota-operator-management"]
 # deprecated_cards: ["ota-channel-management", "ota-reseller-management"] - moved to _deprecated/
 # merged: "PRD-005" - 2025-12-25 合并，原文件见 _deprecated/PRD-005-reseller-billing-analytics.md
 enhances: "PRD-001"
@@ -102,6 +102,14 @@ Usage-based billing for B2B2C reseller distribution
 - **Billing Model**: Charge on redemption (not purchase), commission calculation from batch pricing snapshot
 - **Future Enhancement**: Automated billing engine, 7-year audit retention (when business scales)
 - **Priority**: Medium
+
+### OTA Operator Management (US-019)
+OTA platforms can create and manage their own verification operators
+- **Operator Creation**: OTA creates operators via API with `operators` permission
+- **Scope Isolation**: Operators only see venues and redeem tickets belonging to their OTA
+- **Authentication**: Operators login via existing miniprogram `/operators/login`
+- **Redemption Flow**: `/qr/decrypt` + `/venue/scan` with OTA scope validation
+- **Priority**: High
 
 ---
 

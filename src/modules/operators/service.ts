@@ -20,6 +20,8 @@ export interface OperatorInfo {
   operator_id: number;
   username: string;
   roles: string[];
+  partner_id?: string | null;
+  operator_type?: 'INTERNAL' | 'OTA';
 }
 
 export class OperatorService {
@@ -90,16 +92,20 @@ export class OperatorService {
         return null;
       }
 
-      // Generate JWT token
+      // Generate JWT token with partner_id for OTA operators
       const token = this.generateToken({
         operator_id: Number(operator.id),
         username: operator.account,
-        roles: ['gate_operator'] // Default role, can be extended later
+        roles: ['gate_operator'], // Default role, can be extended later
+        partner_id: operator.partner_id,
+        operator_type: operator.operator_type
       });
 
       logger.info('operators.login.success', {
         operator_id: operator.id,
         username: operator.account,
+        partner_id: operator.partner_id,
+        operator_type: operator.operator_type,
         mode: 'database'
       });
 
@@ -161,18 +167,27 @@ export class OperatorService {
 
   /**
    * Generate JWT token for operator
+   * Includes partner_id and operator_type for OTA operators
    */
   private generateToken(operatorInfo: OperatorInfo): string {
     const now = Math.floor(Date.now() / 1000);
     const exp = now + (24 * 60 * 60); // 24 hours
 
-    const payload = {
+    const payload: Record<string, any> = {
       sub: operatorInfo.operator_id,
       username: operatorInfo.username,
       roles: operatorInfo.roles,
       iat: now,
       exp
     };
+
+    // Include OTA-specific fields if present
+    if (operatorInfo.partner_id) {
+      payload.partner_id = operatorInfo.partner_id;
+    }
+    if (operatorInfo.operator_type) {
+      payload.operator_type = operatorInfo.operator_type;
+    }
 
     return jwt.sign(payload, env.JWT_SECRET, {
       algorithm: 'HS256'
