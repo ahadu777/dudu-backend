@@ -34,6 +34,36 @@ Every development task MUST follow these steps:
 - 如果相关 → 作为 Reality Check 的输入
 ```
 
+#### 0.1.5 信息源选择
+
+**回答代码/业务相关问题前，必须按正确顺序查询信息源。**
+
+| 问题类型 | 查询顺序 | 说明 |
+|----------|----------|------|
+| **业务流程**（如"核销流程是什么"） | Story → Card → 代码 | 先确定 API 列表，再看实现逻辑 |
+| **API 用法**（如"这个API怎么用"） | Card → 代码 | Card 是契约，代码是实现 |
+| **项目状态**（如"XX功能完成了吗"） | `/ai-sitemap` | 动态生成的项目状态 |
+| **代码细节**（如"这个函数做什么"） | 代码 | 直接查 `src/` |
+
+**业务流程查询示例 - "核销流程是什么"**：
+
+```
+Step 1: Story (索引层)
+  docs/stories/_index.yaml → US-002
+  sequence: operators-login → venue-enhanced-scanning
+
+Step 2: Card (契约层)
+  oas_paths: /operators/login, /venue/scan
+  Card 内容: 还需要 /qr/decrypt
+
+Step 3: 代码 (实现层)
+  src/modules/venue/service.ts → validateAndRedeem()
+  了解内部业务逻辑（7步验证流程）
+```
+
+⚠️ **错误模式**：直接搜索代码 → 找到废弃的 `/operators/validate-ticket`
+✅ **正确模式**：Story → Card 确定 API → 代码了解实现
+
 #### 0.2 匹配任务类型
 
 | Request Pattern | Task Type | Load Reference |
@@ -44,7 +74,7 @@ Every development task MUST follow these steps:
 | Modify existing API | API Change | `references/api-change.md` |
 | Error / Stuck / Bug | Troubleshooting | `references/troubleshooting.md` |
 | Run tests / Test failed | Testing | `references/testing.md` |
-| Create/update Runbook | Runbook | `references/runbook.md` |
+| Create/update 前端对接文档 | Frontend Doc | `references/runbook.md` |
 | **"这是什么" / "解释" / "为什么"** | **Explanation** | No ref → 直接回答 |
 | **"能不能" / "可行吗" / "评估"** | **Feasibility** | No ref → 分析后回答 |
 | **"改进工作流" / "优化流程"** | **Meta/Process** | `references/experience-learning.md` |
@@ -54,9 +84,9 @@ Every development task MUST follow these steps:
 #### 0.3 判断是否需要完整流程
 
 ```
-❌ 不需要完整流程：
-- Explanation 类型 → 直接回答
-- Feasibility 类型 → 分析后回答
+❌ 不需要完整流程（但仍需 Step 0.1.5 信息源选择）：
+- Explanation 类型 → 选择正确信息源 → 直接回答
+- Feasibility 类型 → 选择正确信息源 → 分析后回答
 - Code Review 类型 → 阅读代码后给出意见
 
 ✅ 需要完整流程：
@@ -227,7 +257,7 @@ grep -r "related-function" src/modules/
 ```
 PRD Tests (业务规则)     → Newman + PRD Acceptance Criteria
     ↓
-Story Tests (E2E流程)    → Runbook + Newman Collection
+Story Tests (E2E流程)    → 前端对接文档 + Newman Collection
     ↓
 Card Tests (端点级)      → curl + Newman
 ```
@@ -349,37 +379,41 @@ cat openapi/openapi.json | jq '.paths | keys | length'
 | 仅修复 bug（无契约变更） | ❌ 不需要 |
 | 仅修改文档 | ❌ 不需要 |
 
-#### 3.4 Runbook 创建/更新
+#### 3.4 前端对接文档（可选）
 
-**Story 实现完成后，必须有对应 Runbook。**
+**当 Story 涉及前端集成时，创建对接文档帮助前端开发。**
 
-| 场景 | 是否需要 Runbook |
-|------|-----------------|
-| 新 Story 创建 | ✅ 必须创建 |
-| Story 状态变为 Done | ✅ 必须有 Runbook |
-| 纯 Card 级改动 | ❌ 用 curl 验证即可 |
+| 场景 | 是否需要 |
+|------|----------|
+| 新 Story 涉及前端集成 | ✅ 推荐创建 |
+| 纯后端功能 | ❌ 不需要 |
+| API 变更影响前端 | ✅ 更新现有文档 |
 
-**Runbook 位置**: `docs/integration/US-{NNN}-runbook.md`
+**位置**: `docs/integration/US-{NNN}-frontend.md`
 
 **最小结构**:
 ```markdown
-# US-{NNN}: {Title} Runbook
+# US-{NNN}: {功能名称} - 前端对接指南
 
-## 📋 Metadata
-| Story | PRD | Status | Last Updated |
+## 调用流程
+| 步骤 | API | 说明 |
+|------|-----|------|
+| 1 | POST /api/xxx | {目的} |
 
-## 🧪 Test Scenarios
-### Module 1: {模块名称}
-#### TC-{XXX}-001: {测试用例}
-| 状态 | Given | When | Then |
-| pending | ... | ... | ... |
+## API 详情
+### 1. {API名称}
+**路径**: POST /xxx
+**请求**: { field }
+**响应**: { result }
 
-**执行命令**: curl ...
-**验证点**: - [ ] ...
+## 认证说明
+Header: Authorization: Bearer {token}
+
+## 常见错误
+| 错误码 | 含义 | 处理建议 |
 ```
 
-**TC 命名**: `TC-{XXX}-{NNN}` (如 TC-CAT-001, TC-ORD-002)
-**状态值**: `pending` / `passed` / `failed` / `skipped`
+> 详细规范见 `references/runbook.md`（已重新定位为前端对接文档规范）
 
 #### 3.5 更新测试覆盖率
 
@@ -406,7 +440,7 @@ npm run validate:docs
 - [ ] 相关测试全部通过
 - [ ] API 契约一致（Card = Code = OpenAPI）
 - [ ] Newman collection 创建/更新
-- [ ] Runbook 创建/更新（Story 级别）
+- [ ] 前端对接文档创建/更新（如涉及前端）
 - [ ] 覆盖率更新 `docs/test-coverage/_index.yaml`
 - [ ] `npm run validate:docs` 无错误
 - [ ] Card 状态更新为 "Done"
@@ -516,7 +550,7 @@ npm run validate:docs
 
 - 测试失败 → 修复后重测（不能跳过）
 - 测试通过 → 仍需验证 API 契约一致性
-- Story 完成 → 必须有对应 Runbook
+- Story 涉及前端 → 推荐创建前端对接文档
 
 ### Status Updates
 
@@ -538,7 +572,7 @@ npm run validate:docs
 | 跳过代码审查直接测试 | Step 2.5 先审查代码质量 |
 | 开发完不运行测试 | Step 3 测试是强制步骤 |
 | 测试通过就标 Done | 验证业务需求是否满足 |
-| Story 完成无 Runbook | Step 3.4 必须创建 Runbook |
+| 前端集成无对接文档 | Step 3.4 创建前端对接文档 |
 | 遇到问题不记录 | Step 4 记录经验教训 |
 
 ---
@@ -549,7 +583,7 @@ npm run validate:docs
 
 **核心流程已整合到主工作流：**
 - `references/testing.md` - 测试详细指南（核心已整合到 Step 3）
-- `references/runbook.md` - Runbook 完整规范（核心已整合到 Step 3.4）
+- `references/runbook.md` - 前端对接文档规范（原 Runbook，已重新定位）
 - `references/proposal.md` - 提案生成模板（Step 0.5）
 - `references/context-recovery.md` - 上下文恢复协议（Step 1.0）
 

@@ -466,4 +466,79 @@ npm run validate:docs
 
 ---
 
-*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable.***
+### 2025-12-30: 信息源选择与 Runbook 重新定位 (CASE-006)
+
+**Problem Identified**: AI 回答业务流程问题时给出错误的 API，因为直接搜索代码找到了废弃的接口。
+
+**Scenario**: 用户问"扫码核销的流程是什么"
+
+**AI Failure**:
+1. 用户问业务流程
+2. AI 直接搜索代码 `grep "validate\|verify" src/modules/operators/`
+3. 找到废弃的 API `/operators/validate-ticket`、`/operators/verify-ticket`
+4. 返回错误答案
+5. 用户纠正：正确的是 `/operators/login` → `/qr/decrypt` → `/venue/scan`
+
+**Root Cause Analysis**:
+- SKILL.md 的 `Explanation 类型 → 直接回答` 被误解为不需要查任何资料
+- 没有定义"回答业务流程问题应该查什么"
+- 直接搜索代码容易找到废弃/未使用的代码
+
+**Discovery - 信息分层架构**:
+
+| 层级 | 信息源 | 提供内容 |
+|------|--------|----------|
+| 索引层 | Story `_index.yaml` | API 调用顺序（`sequence`）|
+| 契约层 | Card `*.md` | API 路径（`oas_paths`）|
+| 实现层 | 代码 `src/` | 内部业务逻辑 |
+
+**Key Insight**: Story 的 `sequence` 字段 + Card 的 `oas_paths` 已经能确定正确的 API 列表，不需要 Runbook。
+
+**Improvements Made**:
+
+1. **添加 Step 0.1.5 信息源选择**:
+   ```
+   | 问题类型 | 查询顺序 |
+   |----------|----------|
+   | 业务流程 | Story → Card → 代码 |
+   | API 用法 | Card → 代码 |
+   | 项目状态 | /ai-sitemap |
+   | 代码细节 | 代码 |
+   ```
+
+2. **Runbook 分析与重新定位**:
+   - 分析发现 Runbook ~70% 内容与 Story/Card/Newman 重复
+   - QA Checklist 已被 `/tests` 页面替代
+   - 重新定位为"前端对接文档"
+   - 更新 `references/runbook.md` 规范
+
+3. **删除旧 Runbook**:
+   - Runbook 是派生文档（基于 Story + Card 生成）
+   - 信息源在 Story + Card 中，删除不丢失信息
+   - 删除 22 个 `*-runbook.md` 文件
+
+**Files Changed**:
+- `.claude/skills/ai-workflow/SKILL.md` - 添加 Step 0.1.5，更新 Runbook 引用
+- `.claude/skills/ai-workflow/references/runbook.md` - 重写为前端对接文档规范
+- `docs/integration/*-runbook.md` - 删除 22 个文件
+
+**What Worked**:
+- ✅ 分析现有文档结构发现 Story `sequence` 已有价值
+- ✅ 分析 Runbook 与其他文档的重叠找到真正问题
+- ✅ 发现 QA Checklist 已被 `/tests` 替代
+
+**What Didn't Work**:
+- ❌ 只定义了新规范，但没有创建实际的前端对接文档
+- ❌ 删除前未评估是否有功能需要新文档
+
+**Key Learning**:
+1. **查询顺序比禁止更有效** - 不是"禁止搜索代码"，而是"先 Story → Card 确定 API，再看代码"
+2. **派生文档可以删除** - 信息源在上游，派生文档没有独特价值时可废弃
+3. **重新定位比废弃更好** - Runbook 作为前端对接文档有新价值
+
+**Open Question**:
+- 是否需要按新规范创建前端对接文档？何时创建？
+
+---
+
+*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable. Query order matters - Story → Card → Code prevents finding deprecated APIs.***
