@@ -27,13 +27,13 @@
 ### 命名规则
 
 ```
-docs/integration/US-{NNN}-frontend.md
-docs/integration/US-{NNN}{A-Z}-frontend.md  # 子 Story
+docs/integration/US-{NNN}-runbook.md
+docs/integration/US-{NNN}{A-Z}-runbook.md  # 子 Story
 ```
 
 **示例**:
-- `US-002-frontend.md`（扫码核销）
-- `US-014-frontend.md`（微信认证）
+- `US-002-runbook.md`（扫码核销）
+- `US-014-runbook.md`（微信认证）
 
 ### 创建时机
 

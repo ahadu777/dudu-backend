@@ -13,6 +13,39 @@ import { parseAllNewmanReports, NewmanReport } from '../../../utils/newmanParser
 import { AppDataSource } from '../../../config/database';
 import { QaVerificationRepository, ManualCheck } from '../domain/qa-verification.repository';
 
+// ============ XSS 防护 ============
+
+/**
+ * HTML 转义函数，防止 XSS 攻击
+ */
+function escapeHtml(str: string | undefined | null): string {
+  if (!str) return '';
+  const escapeMap: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+    '/': '&#x2F;',
+    '`': '&#x60;',
+    '=': '&#x3D;'
+  };
+  return String(str).replace(/[&<>"'`=/]/g, char => escapeMap[char] || char);
+}
+
+/**
+ * 转义 JavaScript 字符串（用于内联 JS）
+ */
+function escapeJs(str: string | undefined | null): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+}
+
 // 断言标签缓存（从数据库加载）
 let assertionLabelsCache: Map<string, string> | null = null;
 let assertionLabelsCacheTime = 0;
@@ -579,11 +612,11 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
       <div style="font-family: monospace; font-size: 0.85em;">
         ${c.apiSequence.map((api, idx) => `
         <div style="display: flex; align-items: flex-start; margin-bottom: 8px; ${idx < c.apiSequence.length - 1 ? 'border-left: 2px solid #3498db; padding-left: 16px; margin-left: 8px;' : 'padding-left: 16px; margin-left: 8px;'}">
-          <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center; margin-right: 8px;">${api.method}</span>
+          <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center; margin-right: 8px;">${escapeHtml(api.method)}</span>
           <div style="flex: 1;">
-            <code style="color: #2c3e50;">${api.path || '/'}</code>
-            <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
-            ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
+            <code style="color: #2c3e50;">${escapeHtml(api.path) || '/'}</code>
+            <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${escapeHtml(api.name)}</div>
+            ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${escapeHtml(api.userAction)}</div>` : ''}
             ${api.assertions && api.assertions.length > 0 ? `
             <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
               <div style="font-size: 0.85em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
@@ -591,9 +624,9 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
                 const label = getAssertionLabel(a.name, labelsCache);
                 const isCustom = label !== a.name;
                 return `<div class="assertion-item" style="font-size: 0.85em; color: ${a.passed ? '#27ae60' : '#e74c3c'}; display: flex; align-items: center; gap: 4px;">
-                  <span>${a.passed ? '✓' : '✗'} ${label}</span>
-                  <button class="edit-label-btn" data-original="${a.name}" data-current="${label}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
-                  ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${a.name}">*</span>` : ''}
+                  <span>${a.passed ? '✓' : '✗'} ${escapeHtml(label)}</span>
+                  <button class="edit-label-btn" data-original="${escapeHtml(a.name)}" data-current="${escapeHtml(label)}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
+                  ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${escapeHtml(a.name)}">*</span>` : ''}
                 </div>`;
               }).join('')}
             </div>
@@ -604,16 +637,16 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
               <div style="margin-top: 6px; padding: 6px 8px; background: #fff8e6; border-radius: 4px; border-left: 3px solid #f39c12;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                   <span style="font-size: 0.8em; color: #666;">手动验证 (${apiChecks.length})</span>
-                  <button class="add-api-check-btn" data-prd="${c.id}" data-api="${api.name}" style="background: #f39c12; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em;">+</button>
+                  <button class="add-api-check-btn" data-prd="${escapeHtml(c.id)}" data-api="${escapeHtml(api.name)}" style="background: #f39c12; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em;">+</button>
                 </div>
                 ${apiChecks.length > 0 ? apiChecks.map(check => `
-                <div class="manual-check-item api-level" data-id="${check.id}" style="font-size: 0.8em; display: flex; align-items: center; gap: 4px; padding: 2px 0;">
-                  <button class="check-status-btn" data-id="${check.id}" data-status="${check.status}" style="background: none; border: none; cursor: pointer; font-size: 0.9em;">
+                <div class="manual-check-item api-level" data-id="${escapeHtml(check.id)}" style="font-size: 0.8em; display: flex; align-items: center; gap: 4px; padding: 2px 0;">
+                  <button class="check-status-btn" data-id="${escapeHtml(check.id)}" data-status="${escapeHtml(check.status)}" style="background: none; border: none; cursor: pointer; font-size: 0.9em;">
                     ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
                   </button>
-                  <span style="flex: 1; color: #2c3e50;">${check.description}</span>
-                  <span style="color: #999; font-size: 0.85em;">${check.verified_by} · ${check.date}</span>
-                  <button class="delete-check-btn" data-id="${check.id}" data-prd="${c.id}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.8em;">🗑️</button>
+                  <span style="flex: 1; color: #2c3e50;">${escapeHtml(check.description)}</span>
+                  <span style="color: #999; font-size: 0.85em;">${escapeHtml(check.verified_by)} · ${escapeHtml(check.date)}</span>
+                  <button class="delete-check-btn" data-id="${escapeHtml(check.id)}" data-prd="${escapeHtml(c.id)}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.8em;">🗑️</button>
                 </div>
                 `).join('') : '<div style="font-size: 0.75em; color: #999;">点击 + 添加验证</div>'}
               </div>
@@ -661,7 +694,7 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
           ${Array.from(dataFlowMap.entries()).map(([variable, data]) => `
             <div style="background: rgba(255,255,255,0.2); border-radius: 6px; padding: 8px 12px; font-size: 0.85em;">
-              <code style="background: rgba(255,255,255,0.3); padding: 2px 6px; border-radius: 3px; font-weight: 600;">${variable}</code>
+              <code style="background: rgba(255,255,255,0.3); padding: 2px 6px; border-radius: 3px; font-weight: 600;">${escapeHtml(variable)}</code>
               <div style="margin-top: 4px; opacity: 0.9; font-size: 0.85em;">
                 ${data.producedBy.length > 0 ? `<span title="Produced by">⬆️ ${data.producedBy.length}</span>` : ''}
                 ${data.consumedBy.length > 0 ? `<span style="margin-left: 8px;" title="Consumed by">⬇️ ${data.consumedBy.length}</span>` : ''}
@@ -678,24 +711,24 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
         <div style="margin-bottom: 16px;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px 12px; background: ${style.color}15; border-left: 4px solid ${style.color}; border-radius: 0 6px 6px 0;">
             <span style="font-size: 1.2em;">${style.icon}</span>
-            <span style="font-weight: 600; color: ${style.color};">${page}</span>
+            <span style="font-weight: 600; color: ${style.color};">${escapeHtml(page)}</span>
             <span style="color: #95a5a6; font-size: 0.9em;">(${apis.length} requests)</span>
           </div>
           ${apis.map((api, idx) => `
           <div style="display: flex; align-items: flex-start; margin-bottom: 8px; padding-left: 24px; ${idx < apis.length - 1 ? 'border-left: 2px solid ' + style.color + '40; margin-left: 16px;' : 'margin-left: 16px;'}">
             <div style="display: flex; flex-direction: column; align-items: center; margin-right: 12px;">
-              <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center;">${api.method}</span>
+              <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center;">${escapeHtml(api.method)}</span>
               ${api.flow?.sequence !== undefined ? `<span style="color: #95a5a6; font-size: 0.7em; margin-top: 2px;">#${api.flow.sequence}</span>` : ''}
             </div>
             <div style="flex: 1;">
-              <code style="color: #2c3e50;">${api.path || '/'}</code>
-              <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
-              ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
-              ${api.flow?.trigger ? `<div style="color: #2980b9; font-size: 0.8em; margin-top: 4px;"><span style="background: #e8f4fd; padding: 2px 6px; border-radius: 3px;">🖱️ ${api.flow.trigger}</span></div>` : ''}
+              <code style="color: #2c3e50;">${escapeHtml(api.path) || '/'}</code>
+              <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${escapeHtml(api.name)}</div>
+              ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${escapeHtml(api.userAction)}</div>` : ''}
+              ${api.flow?.trigger ? `<div style="color: #2980b9; font-size: 0.8em; margin-top: 4px;"><span style="background: #e8f4fd; padding: 2px 6px; border-radius: 3px;">🖱️ ${escapeHtml(api.flow.trigger)}</span></div>` : ''}
               ${(api.flow?.produces?.length || api.flow?.consumes?.length) ? `
               <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
-                ${api.flow?.produces?.map(v => `<span style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬆️ ${v}</span>`).join('') || ''}
-                ${api.flow?.consumes?.map(v => `<span style="background: #cce5ff; color: #004085; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬇️ ${v}</span>`).join('') || ''}
+                ${api.flow?.produces?.map(v => `<span style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬆️ ${escapeHtml(v)}</span>`).join('') || ''}
+                ${api.flow?.consumes?.map(v => `<span style="background: #cce5ff; color: #004085; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬇️ ${escapeHtml(v)}</span>`).join('') || ''}
               </div>
               ` : ''}
               ${api.assertions && api.assertions.length > 0 ? `
@@ -705,9 +738,9 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
                   const label = getAssertionLabel(a.name, labelsCache);
                   const isCustom = label !== a.name;
                   return `<div class="assertion-item" style="font-size: 0.75em; color: ${a.passed ? '#27ae60' : '#e74c3c'}; display: flex; align-items: center; gap: 4px;">
-                    <span>${a.passed ? '✓' : '✗'} ${label}</span>
-                    <button class="edit-label-btn" data-original="${a.name}" data-current="${label}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
-                    ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${a.name}">*</span>` : ''}
+                    <span>${a.passed ? '✓' : '✗'} ${escapeHtml(label)}</span>
+                    <button class="edit-label-btn" data-original="${escapeHtml(a.name)}" data-current="${escapeHtml(label)}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
+                    ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${escapeHtml(a.name)}">*</span>` : ''}
                   </div>`;
                 }).join('')}
               </div>
@@ -718,16 +751,16 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
                 <div style="margin-top: 6px; padding: 6px 8px; background: #fff8e6; border-radius: 4px; border-left: 3px solid #f39c12;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span style="font-size: 0.75em; color: #666;">手动验证 (${apiChecks.length})</span>
-                    <button class="add-api-check-btn" data-prd="${c.id}" data-api="${api.name}" style="background: #f39c12; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 0.7em;">+</button>
+                    <button class="add-api-check-btn" data-prd="${escapeHtml(c.id)}" data-api="${escapeHtml(api.name)}" style="background: #f39c12; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 0.7em;">+</button>
                   </div>
                   ${apiChecks.length > 0 ? apiChecks.map(check => `
-                  <div class="manual-check-item api-level" data-id="${check.id}" style="font-size: 0.75em; display: flex; align-items: center; gap: 4px; padding: 2px 0;">
-                    <button class="check-status-btn" data-id="${check.id}" data-status="${check.status}" style="background: none; border: none; cursor: pointer; font-size: 0.85em;">
+                  <div class="manual-check-item api-level" data-id="${escapeHtml(check.id)}" style="font-size: 0.75em; display: flex; align-items: center; gap: 4px; padding: 2px 0;">
+                    <button class="check-status-btn" data-id="${escapeHtml(check.id)}" data-status="${escapeHtml(check.status)}" style="background: none; border: none; cursor: pointer; font-size: 0.85em;">
                       ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
                     </button>
-                    <span style="flex: 1; color: #2c3e50;">${check.description}</span>
-                    <span style="color: #999; font-size: 0.9em;">${check.verified_by} · ${check.date}</span>
-                    <button class="delete-check-btn" data-id="${check.id}" data-prd="${c.id}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.75em;">🗑️</button>
+                    <span style="flex: 1; color: #2c3e50;">${escapeHtml(check.description)}</span>
+                    <span style="color: #999; font-size: 0.9em;">${escapeHtml(check.verified_by)} · ${escapeHtml(check.date)}</span>
+                    <button class="delete-check-btn" data-id="${escapeHtml(check.id)}" data-prd="${escapeHtml(c.id)}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.75em;">🗑️</button>
                   </div>
                   `).join('') : '<div style="font-size: 0.7em; color: #999;">点击 + 添加验证</div>'}
                 </div>
@@ -769,8 +802,8 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
            style="padding: 12px 16px; background: ${c.type === 'prd' ? '#e8f4fd' : c.type === 'story' ? '#e8fdf4' : '#fdf4e8'}; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 8px;">
           ${testResultIcon}
-          <span style="font-weight: 600; color: #2c3e50;">${c.id}</span>
-          <span style="color: #7f8c8d; font-size: 0.9em;">${c.name}</span>
+          <span style="font-weight: 600; color: #2c3e50;">${escapeHtml(c.id)}</span>
+          <span style="color: #7f8c8d; font-size: 0.9em;">${escapeHtml(c.name)}</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
           ${testResultBadge}
@@ -789,7 +822,7 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
           <div style="max-height: 200px; overflow-y: auto; font-size: 0.85em;">
             ${c.assertions.items.map(a => `
               <div style="padding: 2px 0; color: ${a.passed ? '#27ae60' : '#e74c3c'};">
-                ${a.passed ? '✓' : '✗'} ${a.name}
+                ${a.passed ? '✓' : '✗'} ${escapeHtml(a.name)}
               </div>
             `).join('')}
           </div>
@@ -800,21 +833,21 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
         ${(() => {
           const prdLevelChecks = manualChecks.filter(check => !check.api);
           return `
-        <div style="margin-top: 16px; padding: 12px; background: #fff8e6; border-radius: 6px; border-left: 4px solid #f39c12;" class="manual-checks-section" data-prd="${c.id}">
+        <div style="margin-top: 16px; padding: 12px; background: #fff8e6; border-radius: 6px; border-left: 4px solid #f39c12;" class="manual-checks-section" data-prd="${escapeHtml(c.id)}">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="font-weight: 600; color: #2c3e50;">📝 QA 手动验证 - PRD 级别 (${prdLevelChecks.length})</span>
-            <button class="add-check-btn" data-prd="${c.id}" style="background: #f39c12; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">+ 添加</button>
+            <button class="add-check-btn" data-prd="${escapeHtml(c.id)}" style="background: #f39c12; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">+ 添加</button>
           </div>
           ${prdLevelChecks.length > 0 ? `
           <div class="manual-checks-list" style="font-size: 0.85em;">
             ${prdLevelChecks.map(check => `
-            <div class="manual-check-item" data-id="${check.id}" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;">
-              <button class="check-status-btn" data-id="${check.id}" data-status="${check.status}" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">
+            <div class="manual-check-item" data-id="${escapeHtml(check.id)}" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;">
+              <button class="check-status-btn" data-id="${escapeHtml(check.id)}" data-status="${escapeHtml(check.status)}" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">
                 ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
               </button>
-              <span style="flex: 1; color: #2c3e50;">${check.description}</span>
-              <span style="color: #999; font-size: 0.8em;">${check.verified_by} · ${check.date}</span>
-              <button class="delete-check-btn" data-id="${check.id}" data-prd="${c.id}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>
+              <span style="flex: 1; color: #2c3e50;">${escapeHtml(check.description)}</span>
+              <span style="color: #999; font-size: 0.8em;">${escapeHtml(check.verified_by)} · ${escapeHtml(check.date)}</span>
+              <button class="delete-check-btn" data-id="${escapeHtml(check.id)}" data-prd="${escapeHtml(c.id)}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>
             </div>
             `).join('')}
           </div>
@@ -836,6 +869,24 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
  */
 function getScripts(): string {
   return `
+    // XSS 防护 - 前端 HTML 转义
+    function escapeHtml(str) {
+      if (!str) return '';
+      var escapeMap = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+        '/': '&#x2F;',
+        '\`': '&#x60;',
+        '=': '&#x3D;'
+      };
+      return String(str).replace(/[&<>"'\`=\\/]/g, function(char) {
+        return escapeMap[char] || char;
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       var showBtn = document.getElementById('showAllFlowsBtn');
       if (showBtn) {
@@ -1047,12 +1098,12 @@ function getScripts(): string {
                   // 创建新的验证项
                   var newItem = document.createElement('div');
                   newItem.className = 'manual-check-item api-level';
-                  newItem.setAttribute('data-id', check.id);
+                  newItem.setAttribute('data-id', escapeHtml(check.id));
                   newItem.style.cssText = 'font-size: 0.8em; display: flex; align-items: center; gap: 4px; padding: 2px 0;';
-                  newItem.innerHTML = '<button class="check-status-btn" data-id="' + check.id + '" data-status="' + check.status + '" style="background: none; border: none; cursor: pointer; font-size: 0.9em;">' + statusIcon + '</button>' +
-                    '<span style="flex: 1; color: #2c3e50;">' + check.description + '</span>' +
-                    '<span style="color: #999; font-size: 0.85em;">' + check.verified_by + ' · ' + check.date + '</span>' +
-                    '<button class="delete-check-btn" data-id="' + check.id + '" data-prd="' + prd + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.8em;">🗑️</button>';
+                  newItem.innerHTML = '<button class="check-status-btn" data-id="' + escapeHtml(check.id) + '" data-status="' + escapeHtml(check.status) + '" style="background: none; border: none; cursor: pointer; font-size: 0.9em;">' + statusIcon + '</button>' +
+                    '<span style="flex: 1; color: #2c3e50;">' + escapeHtml(check.description) + '</span>' +
+                    '<span style="color: #999; font-size: 0.85em;">' + escapeHtml(check.verified_by) + ' · ' + escapeHtml(check.date) + '</span>' +
+                    '<button class="delete-check-btn" data-id="' + escapeHtml(check.id) + '" data-prd="' + escapeHtml(prd) + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.8em;">🗑️</button>';
 
                   // 添加到区域中（在按钮行之后）
                   var headerDiv = apiSection.querySelector('div[style*="justify-content: space-between"]');
@@ -1092,12 +1143,12 @@ function getScripts(): string {
                 // 创建新的验证项
                 var newItem = document.createElement('div');
                 newItem.className = 'manual-check-item';
-                newItem.setAttribute('data-id', check.id);
+                newItem.setAttribute('data-id', escapeHtml(check.id));
                 newItem.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;';
-                newItem.innerHTML = '<button class="check-status-btn" data-id="' + check.id + '" data-status="' + check.status + '" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">' + statusIcon + '</button>' +
-                  '<span style="flex: 1; color: #2c3e50;">' + check.description + '</span>' +
-                  '<span style="color: #999; font-size: 0.8em;">' + check.verified_by + ' · ' + check.date + '</span>' +
-                  '<button class="delete-check-btn" data-id="' + check.id + '" data-prd="' + prd + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>';
+                newItem.innerHTML = '<button class="check-status-btn" data-id="' + escapeHtml(check.id) + '" data-status="' + escapeHtml(check.status) + '" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">' + statusIcon + '</button>' +
+                  '<span style="flex: 1; color: #2c3e50;">' + escapeHtml(check.description) + '</span>' +
+                  '<span style="color: #999; font-size: 0.8em;">' + escapeHtml(check.verified_by) + ' · ' + escapeHtml(check.date) + '</span>' +
+                  '<button class="delete-check-btn" data-id="' + escapeHtml(check.id) + '" data-prd="' + escapeHtml(prd) + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>';
                 list.appendChild(newItem);
 
                 // 绑定新按钮的事件

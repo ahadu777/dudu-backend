@@ -16,8 +16,6 @@
       "Bash(pkill:*)",
       "Bash(git add:*)",
       "Bash(git rm:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
       "Bash(python3:*)",
       "Bash(node -e:*)",
       "Bash(netstat:*)",
