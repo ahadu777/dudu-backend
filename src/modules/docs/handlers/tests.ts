@@ -1034,8 +1034,45 @@ function getScripts(): string {
 
             if (api) {
               // API 级别断言：找到对应 API 下的手动验证区域
-              // 需要刷新页面以正确显示，因为 API 级别的 DOM 结构比较复杂
-              location.reload();
+              var apiBtn = document.querySelector('.add-api-check-btn[data-prd="' + prd + '"][data-api="' + api + '"]');
+              if (apiBtn) {
+                var apiSection = apiBtn.closest('div[style*="background: #fff8e6"]');
+                if (apiSection) {
+                  // 移除空状态提示
+                  var emptyHint = apiSection.querySelector('div[style*="color: #999"]');
+                  if (emptyHint && emptyHint.textContent.includes('点击')) {
+                    emptyHint.remove();
+                  }
+
+                  // 创建新的验证项
+                  var newItem = document.createElement('div');
+                  newItem.className = 'manual-check-item api-level';
+                  newItem.setAttribute('data-id', check.id);
+                  newItem.style.cssText = 'font-size: 0.8em; display: flex; align-items: center; gap: 4px; padding: 2px 0;';
+                  newItem.innerHTML = '<button class="check-status-btn" data-id="' + check.id + '" data-status="' + check.status + '" style="background: none; border: none; cursor: pointer; font-size: 0.9em;">' + statusIcon + '</button>' +
+                    '<span style="flex: 1; color: #2c3e50;">' + check.description + '</span>' +
+                    '<span style="color: #999; font-size: 0.85em;">' + check.verified_by + ' · ' + check.date + '</span>' +
+                    '<button class="delete-check-btn" data-id="' + check.id + '" data-prd="' + prd + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.8em;">🗑️</button>';
+
+                  // 添加到区域中（在按钮行之后）
+                  var headerDiv = apiSection.querySelector('div[style*="justify-content: space-between"]');
+                  if (headerDiv && headerDiv.nextSibling) {
+                    apiSection.insertBefore(newItem, headerDiv.nextSibling);
+                  } else {
+                    apiSection.appendChild(newItem);
+                  }
+
+                  // 绑定事件
+                  bindCheckEvents(newItem);
+
+                  // 更新计数
+                  var countSpan = apiSection.querySelector('span[style*="color: #666"]');
+                  if (countSpan) {
+                    var count = apiSection.querySelectorAll('.manual-check-item').length;
+                    countSpan.textContent = '手动验证 (' + count + ')';
+                  }
+                }
+              }
             } else {
               // PRD 级别断言
               var section = document.querySelector('.manual-checks-section[data-prd="' + prd + '"]');

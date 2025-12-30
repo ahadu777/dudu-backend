@@ -1,93 +1,279 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-006: Ticket Activation &amp; Reservation System Tests" tests="25" time="0.760">
-  <testsuite name="0. 测试准备 (DB Required) / F0.1 创建测试订单" id="1d899411-6544-423c-ab20-1317e21a5ec3" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.012">
-    <testcase name="Auth token expired - skipped" time="0.012" classname="Prd006TicketActivationReservationSystemTests"/>
+<testsuites name="PRD-006: Ticket Activation &amp; Reservation System Tests" tests="70" time="3.714">
+  <testsuite name="0. 测试准备 (DB Required) / F0.1 创建测试订单" id="234ada3b-e793-4619-bbf1-2443efeeb111" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.020">
+    <testcase name="Auth token expired - skipped" time="0.020" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="0. 测试准备 (DB Required) / F0.2 模拟支付获取票券" id="190d603d-570f-4635-9774-56e6e5c7bb4f" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="No order created" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="0. 测试准备 (DB Required) / F0.2 模拟支付获取票券" id="11877211-80f6-4cc3-9d94-6201c95fecff" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="No order created" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="1. 票券激活 / F1.1 无效票券返回错误 [AC-ACT-1]" id="90227ddd-2084-43e9-a07f-bcdf758d9a3d" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.359">
-    <testcase name="Status code is 400" time="0.359" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-1.1: Non-existent ticket returns error" time="0.359" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="1. 票券激活 / F1.1 无效票券返回错误 [AC-006-ACTIVATE-30]" id="aac3793c-0621-4a1c-b1bf-bba4be593414" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.348">
+    <testcase name="Status code is 400" time="0.348" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-1.1: Non-existent ticket returns error" time="0.348" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="1. 票券激活 / F1.2 即时激活模式 [AC-ACT-2]" id="a09d5456-dac3-4dd9-ac2f-f72cbd1d3f41" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.002">
+  <testsuite name="1. 票券激活 / F1.2 即时激活模式 [AC-006-ACT-02]" id="1860c9e0-e985-4a75-aff0-1dde4ce37fe2" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="1. 票券激活 / F1.3 仅激活票可预约 [AC-006-ACT-04]" id="4de8c232-eb6b-4938-9d2a-9673239980f8" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="1. 票券激活 / F1.4 票券状态查询 [AC-006-ACT-03]" id="d94cab87-665b-4607-b50c-cc0f97cd503b" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.002">
     <testcase name="No test ticket - skipped" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="1. 票券激活 / F1.3 仅激活票可预约 [AC-ACT-3]" id="9545377c-2d0e-4267-a4c9-45468f0cc249" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="1. 票券激活 / F1.5 伪造票券拒绝 [AC-006-ACTIVATE-05]" id="264f1c2d-ad6e-4466-8891-b95099d1fab6" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.374">
+    <testcase name="Status code is 400" time="0.374" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-1.5: Non-existent ticket returns error" time="0.374" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="1. 票券激活 / F1.4 票券状态查询 [AC-ACT-4]" id="514f021e-074b-4231-8502-961cf3c2177c" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.001">
-    <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="1. 票券激活 / F1.6 Pre-made模式票券默认inactive [AC-006-ACT-01]" id="2f788ed5-7912-410c-8c62-16e0624202bb" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.335">
+    <testcase name="Status code is 200 or 400" time="0.335" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-ACT-01: Response has valid structure" time="0.335" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="1. 票券激活 / F1.5 伪造票券拒绝 [AC-ACT-5]" id="2b5a76a1-158b-472c-bceb-2700ac8ea046" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.361">
-    <testcase name="Status code is 400" time="0.361" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-1.5: Non-existent ticket returns error" time="0.361" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="1. 票券激活 / F1.7 激活不可逆 [AC-006-ACT-30]" id="07bbd45e-cc0d-4f36-9dc6-a9eea42fd85b" timestamp="2025-12-30T02:36:25.403Z" tests="3" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400 or 405" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Endpoint not implemented" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-ACT-30: Deactivation is rejected" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="2. 时段预约 / F2.1 日历显示可用日期 [AC-RES-1]" id="8cc52706-9180-466a-a7a8-b506c79b06ed" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-2.1: Returns slot data grouped by date" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-  </testsuite>
-  <testsuite name="2. 时段预约 / F2.2 时段信息完整 [AC-RES-2]" id="3fad01a4-2247-4f61-8d22-06b2f555dfed" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.003">
+  <testsuite name="2. 时段预约 / F2.1 日历显示可用日期 [AC-006-RSV-01]" id="88dc426c-cd1a-416b-a0e4-c39a877660c9" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.003">
     <testcase name="Status code is 200" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-2.2: Slots have complete info" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-2.1: Returns slot data grouped by date" time="0.003" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="2. 时段预约 / F2.3 容量状态指示 [AC-RES-3]" id="e4effb58-a906-41b9-bb5e-d6a230d2e4f5" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="2. 时段预约 / F2.2 时段信息完整 [AC-006-RSV-02]" id="15ac1a96-713c-4874-9f7a-811a4ec860c5" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-2.2: Slots have complete info" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="2. 时段预约 / F2.3 容量状态指示 [AC-006-SLOT-01]" id="83e88e2b-4d3f-4a10-8973-f6055743f700" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-2.3: Slots have capacity_status" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="2. 时段预约 / F2.4 预约前验证联系方式 [AC-RES-4]" id="11b72541-b7f9-407a-9348-fdd617472f7b" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="2. 时段预约 / F2.4 预约前验证联系方式 [AC-006-RESERVE-04]" id="6c9018f4-b142-4857-b313-479477a8b081" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200 or 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-2.4: Verify-contact endpoint responds" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="2. 时段预约 / F2.5 创建预约 [AC-RES-5]" id="275eeb4a-0c4c-4a0e-80ba-22cc60591172" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.000">
-    <testcase name="Status code is valid response" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="AC-2.5: Create reservation endpoint responds" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="2. 时段预约 / F2.5 创建预约 [AC-006-RSV-03]" id="90604462-379e-4143-8bc2-bf89136a820c" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid response" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-2.5: Create reservation endpoint responds" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="3. 操作员扫描 / F3.1 操作员登录 [AC-OP-1]" id="aaf4d421-995a-41c5-8354-43e9e64d1b29" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="2. 时段预约 / F2.6 批量预约多票 [AC-006-RSV-04]" id="21f66643-2008-4d08-b54f-bb6bdc58baa6" timestamp="2025-12-30T02:36:25.403Z" tests="3" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Endpoint not implemented" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-04: Batch reservation responds" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="2. 时段预约 / F2.7 修改预约 [AC-006-RSV-05]" id="e7bd3f8b-e131-4e1c-8efd-f7a71d94de3d" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.310">
+    <testcase name="Status code is valid" time="0.310" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-05: Modify reservation responds" time="0.310" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="2. 时段预约 / F2.8 取消预约恢复ACTIVE [AC-006-RSV-06]" id="49c88b33-8352-4573-a1fc-714d1af4c1c4" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.315">
+    <testcase name="Status code is valid" time="0.315" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-06: Cancel reservation responds" time="0.315" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.1 操作员登录 [AC-006-OPR-01]" id="b13dcb5b-529e-4ca1-ba40-b87334be0218" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-3.1: Login returns session token" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="3. 操作员扫描 / F3.2 扫码显示颜色编码 [AC-OP-2]" id="399e12ab-3752-4f08-a5ed-0239402bc2bc" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="3. 操作员扫描 / F3.2 扫码显示颜色编码 [AC-006-VAL-01]" id="01db8517-69c7-4327-bd93-1e84c7662123" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="3. 操作员扫描 / F3.3 无效票显示红色 [AC-OP-3]" id="45c9fb4e-e840-4c45-a0ca-89a52ec8a059" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.002">
+  <testsuite name="3. 操作员扫描 / F3.3 无效票显示红色 [AC-006-OPR-03]" id="386385ed-2792-4872-8007-2d0190f6d5d2" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.002">
     <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-3.3: Non-existent ticket returns RED" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="3. 操作员扫描 / F3.4 未激活票显示红色 [AC-OP-4]" id="8b065930-067c-4e37-8ed6-5af77523b889" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="3. 操作员扫描 / F3.4 未激活票显示红色 [AC-006-VAL-32]" id="1e02b8a4-c80f-4d62-8297-7f02d5491f8f" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-3.4: Inactive ticket returns RED" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="4. 验证逻辑 / F4.1 预约日期允许入场 [AC-VAL-1]" id="27067641-45fd-410c-a8ab-90b294aa68da" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="3. 操作员扫描 / F3.5 Token包含必要字段 [AC-006-OPR-02]" id="35b3136e-a42a-4ee8-87b6-338246e78e91" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-02: Token has required fields" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.6 Session记录操作员上下文 [AC-006-OPR-03]" id="e5a152cc-6344-49dc-8081-5c4cf31e344b" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-03: Operator context recorded" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.7 密码错误401 [AC-006-OPR-30]" id="a6f2292e-46e4-4744-9d06-6246335ca2cb" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 401 or 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-30: Invalid credentials" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.8 用户名不存在401 [AC-006-OPR-31]" id="63e8de8d-1aeb-493c-9d25-9fc000b57760" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 401 or 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-31: User not found" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.9 缺少必填字段400 [AC-006-OPR-32]" id="5b2ba838-af1f-4fee-861d-5e17c5897f6f" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-32: Validation error" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.10 账户禁用403 [AC-006-OPR-33]" id="1892c897-9ff4-4cdf-ba80-8149f2a96f25" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.000">
+    <testcase name="Status code is 401 or 403" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-33: Account disabled" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.11 无效session拒绝 [AC-006-OPR-34]" id="50842b8d-43c0-40fa-9e62-a5193d9bf639" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 401 or 403" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-34: Invalid session rejected" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.12 无效decision值 [AC-006-OPR-35]" id="1602f989-b83a-49c9-8958-f76edf82c640" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-35: Invalid decision rejected" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.13 并发登录允许 [AC-006-OPR-60]" id="15f68c47-c7a3-4849-857a-78ec0e108bff" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-60: Concurrent login allowed" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="3. 操作员扫描 / F3.14 Token24小时过期 [AC-006-OPR-61]" id="02218e4b-0d6e-40f0-8e64-484e1cd08d5d" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-OPR-61: Token expiry check" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="4. 验证逻辑 / F4.1 预约日期允许入场 [AC-006-VALIDATE-01]" id="9490a818-9083-44ef-a020-c5120bba482c" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="4. 验证逻辑 / F4.2 验证返回颜色编码 [AC-VAL-2]" id="f2944aa2-0b1c-44cd-8912-6d7d342e4d95" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="4. 验证逻辑 / F4.2 验证返回颜色编码 [AC-006-VALIDATE-02]" id="a3defa45-1555-49c4-a07e-42099d5698b2" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="4. 验证逻辑 / F4.3 不存在票返回红色 [AC-VAL-3]" id="c8a910fd-dd52-4b9a-8159-f7c2b150ed88" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="4. 验证逻辑 / F4.3 不存在票返回红色 [AC-006-VALIDATE-30]" id="55811207-cb12-4edd-9190-6b0d2e13bae1" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="AC-4.3: Non-existent ticket returns RED" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="4. 验证逻辑 / F4.4 核销允许入场 [AC-VAL-4]" id="cd95e08c-6564-4f8d-ad23-fab96cc8ad58" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="4. 验证逻辑 / F4.4 核销允许入场 [AC-006-VAL-02]" id="30ca3f71-a925-4af1-aded-edc7fa8c7c09" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="5. 错误处理 / F5.1 验证缺少必填字段 (400)" id="5c617ada-9a7a-419f-aed6-70bca3d5f944" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="5. 错误处理 / F5.1 验证缺少必填字段 (400)" id="621834cc-eb16-4e15-adf6-f6ad73dc5883" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="Error response returned" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="5. 错误处理 / F5.2 操作员认证失败 (401)" id="b463062c-1f0b-43ef-88dd-866092559fd6" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 401 or 400" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="Auth error returned" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="5. 错误处理 / F5.2 操作员认证失败 (401)" id="7faa43f7-cdaf-46e1-a717-189c8afe6f9e" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.000">
+    <testcase name="Status code is 401 or 400" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Auth error returned" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="5. 错误处理 / F5.3 缺少票券码 (400)" id="1795e9e8-a6b6-405b-9a5f-80c924d02b2b" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 400" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
-    <testcase name="Error response returned" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  <testsuite name="5. 错误处理 / F5.3 缺少票券码 (400)" id="c287842e-9fbd-498e-ade6-a150bde210d4" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Error response returned" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="6. 性能测试 / F6.1 验证响应 &lt;500ms [AC-PERF-1]" id="6ea720b2-1c53-44c0-b87a-3462bef5309f" timestamp="2025-12-26T07:27:55.828Z" tests="1" failures="0" errors="0" time="0.001">
+  <testsuite name="5. 错误处理 / F5.4 PENDING_PAYMENT票券验证 [AC-006-RSV-30]" id="d289c722-0091-4f89-8789-6c8279eeaab0" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.323">
+    <testcase name="Status code is 400" time="0.323" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-30: Returns TICKET_NOT_ACTIVATED" time="0.323" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.5 已预约票券验证 [AC-006-RSV-31]" id="73b6b3fa-5033-4f53-a689-768e58f61c9d" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.330">
+    <testcase name="Status code is 200 or 400" time="0.330" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-31: Response indicates reservation status" time="0.330" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.6 过期票券验证 [AC-006-RSV-32]" id="a1c8b161-84f9-44bb-8950-70f951a94c64" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.326">
+    <testcase name="Status code is 400" time="0.326" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-32: Returns TICKET_EXPIRED" time="0.326" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.7 时段已满拒绝预约 [AC-006-RSV-33]" id="663e263f-52b6-4078-afa1-442f1f14a1c2" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400 or 409" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-33: Returns slot full error" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.8 OTA票PRE_GENERATED状态 [AC-006-RSV-34]" id="6e7a16b7-aef8-4f2a-b7b7-9c3f6d51c88f" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.314">
+    <testcase name="Status code is 400" time="0.314" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-34: Returns not activated" time="0.314" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.9 OTA票VERIFIED状态 [AC-006-RSV-35]" id="77fb92de-bbde-43f8-b1c3-d0b7bf8554f4" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.317">
+    <testcase name="Status code is 400" time="0.317" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-35: Returns already used" time="0.317" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.10 OTA票CANCELLED状态 [AC-006-RSV-36]" id="d57ee5cc-5993-471e-9788-283bb5fc6811" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.337">
+    <testcase name="Status code is 400" time="0.337" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-36: Returns cancelled" time="0.337" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.11 ticket_code为空 [AC-006-RSV-37]" id="d62e39c7-b8d1-40a3-8cd2-18bffd6781ab" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-37: Returns invalid request" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.12 orq为空或非数字 [AC-006-RSV-38]" id="403931b7-95ad-4109-b948-c7e7affe3d87" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-38: orq validation works" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="5. 错误处理 / F5.13 创建预约缺少必填字段 [AC-006-RSV-39]" id="0ad772ff-0f9b-486c-9d8b-a7904dc24d04" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-39: Returns invalid request" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="6. 性能测试 / F6.1 验证响应 &lt;500ms [AC-006-PERF-90]" id="bf3cb82d-4a8d-4527-8fe6-885529cf335f" timestamp="2025-12-30T02:36:25.403Z" tests="1" failures="0" errors="0" time="0.001">
     <testcase name="No test ticket - skipped" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
-  <testsuite name="6. 性能测试 / F6.2 时段查询 &lt;500ms [AC-PERF-2]" id="6e71928b-22a8-46d6-99c9-6a948027e75b" timestamp="2025-12-26T07:27:55.828Z" tests="2" failures="0" errors="0" time="0.001">
+  <testsuite name="6. 性能测试 / F6.2 时段查询 &lt;500ms [AC-006-PERF-91]" id="76c1be73-9ece-4a8b-95c8-668e5a859fad" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
     <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
     <testcase name="Response time is under 500ms" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.1 并发预约最后名额 [AC-006-RSV-60]" id="2de2f2d3-78a8-43a3-8895-0c74db80e264" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200, 400 or 409" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-60: Concurrent reservation handled" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.2 Row-level locking测试 [AC-006-RSV-61]" id="81f2c6a0-5fce-4e48-8f0f-2e5b6d3ec81e" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-61: Response received" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.3 Email格式验证RFC5322 [AC-006-RSV-62]" id="8678b8fd-2370-4bba-9ea4-790735c48ccf" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 400" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-62: Invalid email rejected" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.4 Phone格式验证E.164 [AC-006-RSV-63]" id="6ebbee21-4e5f-4265-9d0f-584cee37de8f" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.000">
+    <testcase name="Status code is 400" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-RSV-63: Invalid phone rejected" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.5 验证顺序测试 [AC-006-VAL-03]" id="933140ab-cdd3-47ec-bfe2-2dba1344dcb4" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-03: Validation sequence correct" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.6 预约日期不匹配 [AC-006-VAL-30]" id="54fece33-c4a6-4191-8b2c-262919211462" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-30: Date mismatch handled" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.7 ACTIVATED无预约 [AC-006-VAL-31]" id="349e1575-99fa-41b2-bd84-aad23ad76dad" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="Status code is 200" time="0.004" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-31: No reservation handled" time="0.004" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.8 无预约已激活黄色 [AC-006-VAL-33]" id="3c68e74d-4414-428a-ad9e-b3cad98bd79e" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-33: Yellow status for no reservation" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.9 重复扫描黄色 [AC-006-VAL-34]" id="b4554c29-1922-42e5-be88-28ea5629222d" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.000">
+    <testcase name="Status code is 200 or 409" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-34: Duplicate scan handled" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.10 已验证返回409 [AC-006-VAL-35]" id="24ef152e-56af-4715-888f-35516ef03fb5" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-35: Already verified response" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.11 并发验证同一票 [AC-006-VAL-60]" id="ff9456f3-cb82-447f-84a4-a38314c6d9e3" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-60: Concurrent verification handled" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.12 Row-level锁VERIFIED [AC-006-VAL-61]" id="80e8a635-c36b-4ed4-8736-f638dd803e5e" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-61: Lock test response" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.13 JTI匹配验证 [AC-006-VAL-62]" id="6c07e209-5a29-4dad-80b1-639261e56c12" timestamp="2025-12-30T02:36:25.403Z" tests="3" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is valid" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Endpoint not implemented" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-62: JTI validation test" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.14 QR码30分钟过期 [AC-006-VAL-63]" id="2f271e82-d2c6-440b-8082-0b06a8ca81f3" timestamp="2025-12-30T02:36:25.403Z" tests="3" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Endpoint not implemented" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-63: QR expiry test" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.15 防重放攻击 [AC-006-VAL-64]" id="98228a90-415e-422f-a437-db5fa574636e" timestamp="2025-12-30T02:36:25.403Z" tests="3" failures="0" errors="0" time="0.000">
+    <testcase name="Status code is valid" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Endpoint not implemented" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-64: Replay attack prevention" time="0.000" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.16 场馆功能支持检查 [AC-006-VAL-65]" id="1d9c3f7e-f96b-404f-856f-99cbcc0067b4" timestamp="2025-12-30T02:36:25.403Z" tests="3" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is valid" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="Endpoint not implemented" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-VAL-65: Function support check" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.17 100%利用率变FULL [AC-006-SLOT-02]" id="ae2750bc-042d-4baf-a03c-1af62a1167a3" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-SLOT-02: Slot capacity status" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.18 无效month格式400 [AC-006-SLOT-30]" id="7bf196b8-ad51-462a-b32d-b239e8f25f0d" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is error" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-SLOT-30: Invalid month rejected" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.19 Unique时段约束 [AC-006-SLOT-60]" id="a73356b5-1ef1-4fbb-b4a2-6fed7fe033e9" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.001">
+    <testcase name="Status code is 200" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-SLOT-60: Slots returned successfully" time="0.001" classname="Prd006TicketActivationReservationSystemTests"/>
+  </testsuite>
+  <testsuite name="7. 边界测试 / F7.20 booked不超容量 [AC-006-SLOT-61]" id="e6b64ae9-aca6-4407-b098-40b136341312" timestamp="2025-12-30T02:36:25.403Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Status code is 200" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
+    <testcase name="AC-006-SLOT-61: Booked never exceeds capacity" time="0.002" classname="Prd006TicketActivationReservationSystemTests"/>
   </testsuite>
 </testsuites>
