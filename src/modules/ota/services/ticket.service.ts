@@ -120,7 +120,7 @@ export class TicketService extends BaseOTAService {
     // Use entitlements from product or default cruise functions
     const entitlements = product.entitlements?.map((entitlement: any) => ({
       function_code: entitlement.type,
-      remaining_uses: 1
+      remaining_uses: entitlement.metadata?.quantity || entitlement.quantity || 1
     })) || [
       { function_code: 'ferry', remaining_uses: 1 },
       { function_code: 'deck_access', remaining_uses: 1 },
