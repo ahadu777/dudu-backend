@@ -1313,7 +1313,7 @@ router.patch('/operators/:id', otaAuthMiddleware('operators'), async (req: Authe
 
 /**
  * DELETE /api/ota/operators/:id
- * Disable operator (soft delete)
+ * Soft delete operator (sets deleted_at timestamp)
  * Requires 'operators' permission
  */
 router.delete('/operators/:id', otaAuthMiddleware('operators'), async (req: AuthenticatedRequest, res: Response) => {
@@ -1327,7 +1327,7 @@ router.delete('/operators/:id', otaAuthMiddleware('operators'), async (req: Auth
     }
 
     const partnerId = getPartnerIdWithFallback(req);
-    const result = await operatorService.disableOperator(partnerId, operatorId);
+    const result = await operatorService.deleteOperator(partnerId, operatorId);
 
     if (!result) {
       return res.status(404).json({
@@ -1338,10 +1338,10 @@ router.delete('/operators/:id', otaAuthMiddleware('operators'), async (req: Auth
 
     res.json({
       success: true,
-      message: 'Operator disabled'
+      message: 'Operator deleted'
     });
   } catch (error: any) {
-    logger.error('OTA disable operator failed', {
+    logger.error('OTA delete operator failed', {
       partner: req.ota_partner?.name,
       operator_id: req.params.id,
       error: error.message
@@ -1349,7 +1349,7 @@ router.delete('/operators/:id', otaAuthMiddleware('operators'), async (req: Auth
 
     res.status(500).json({
       code: 'INTERNAL_ERROR',
-      message: 'Failed to disable operator'
+      message: 'Failed to delete operator'
     });
   }
 });

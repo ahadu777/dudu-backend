@@ -553,11 +553,11 @@
       ]
     },
     {
-      "name": "F. Disable Operator",
+      "name": "F. Delete Operator",
       "item": [
         {
-          "name": "F.1 Disable Operator - Success",
-          "description": "OTA 平台禁用核销人员，禁用后无法登录",
+          "name": "F.1 Delete Operator - Success",
+          "description": "OTA 平台软删除核销人员，删除后无法登录",
           "event": [
             {
               "listen": "test",
@@ -593,8 +593,8 @@
           }
         },
         {
-          "name": "F.2 Disabled Operator Login - Fail (401)",
-          "description": "已禁用的核销人员无法登录",
+          "name": "F.2 Deleted Operator Login - Fail (401)",
+          "description": "已删除的核销人员无法登录",
           "event": [
             {
               "listen": "test",

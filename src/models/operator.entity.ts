@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { BaseTimestampEntity } from './base.entity';
 
 @Entity('operators')
-export class Operator {
+export class Operator extends BaseTimestampEntity {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
@@ -33,12 +34,6 @@ export class Operator {
     default: 'INTERNAL'
   })
   operator_type!: 'INTERNAL' | 'OTA';
-
-  @CreateDateColumn({ type: 'timestamp' })
-  created_at!: Date;
-
-  @UpdateDateColumn({ type: 'timestamp' })
-  updated_at!: Date;
 
   // Helper method to check if operator is active
   isActive(): boolean {

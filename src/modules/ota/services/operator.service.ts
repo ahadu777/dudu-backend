@@ -223,16 +223,18 @@ export class OperatorService extends BaseOTAService {
   }
 
   /**
-   * Disable operator (soft delete)
+   * Soft delete operator
+   * Uses TypeORM softDelete to set deleted_at timestamp
    */
-  async disableOperator(partnerId: string, operatorId: number): Promise<boolean> {
-    this.log('ota.operators.disable.requested', {
+  async deleteOperator(partnerId: string, operatorId: number): Promise<boolean> {
+    this.log('ota.operators.delete.requested', {
       partner_id: partnerId,
       operator_id: operatorId
     });
 
     const operatorRepo = this.getRepository(Operator);
 
+    // First verify the operator exists and belongs to this OTA
     const operator = await operatorRepo.findOne({
       where: {
         id: operatorId,
@@ -245,10 +247,10 @@ export class OperatorService extends BaseOTAService {
       return false;
     }
 
-    operator.status = 'DISABLED';
-    await operatorRepo.save(operator);
+    // Use TypeORM softDelete to set deleted_at
+    await operatorRepo.softDelete(operatorId);
 
-    this.log('ota.operators.disable.success', {
+    this.log('ota.operators.delete.success', {
       partner_id: partnerId,
       operator_id: operatorId
     });
