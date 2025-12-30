@@ -12,6 +12,9 @@ import { loggingMiddleware } from './middlewares/logging';
 import { reqIdMiddleware } from './middlewares/reqId';
 import { logger } from './utils/logger';
 import { registerModuleRouters } from './modules';
+import { markdownToHtml } from './utils/markdown';
+import { baseLayout } from './modules/docs/templates/base';
+import { componentStyles, pageHeader, backLink } from './modules/docs/templates/components';
 
 class App {
   public app: Application;
@@ -96,10 +99,176 @@ class App {
       }
     });
 
+    // Serve implementation timeline documents from docs root
+    // IMPORTANT: This route must be registered BEFORE Swagger UI to avoid conflicts
+    this.app.get('/docs/timeline/:filename', (req, res) => {
+      const { filename } = req.params;
+      const docPath = path.resolve(process.cwd(), 'docs', filename);
+      
+      // Security: Only allow files with 'timeline' in the name
+      if (fs.existsSync(docPath) && filename.includes('timeline')) {
+        try {
+          const markdownContent = fs.readFileSync(docPath, 'utf-8');
+          
+          // Convert markdown to HTML
+          const htmlContent = markdownToHtml(markdownContent);
+          
+          // Create page content with header and back link
+          const pageContent = `
+            ${backLink('/', '← Back to Homepage')}
+            ${pageHeader(
+              '📅 Implementation Timeline',
+              'PRD-009 Loan Management System - 48-week phased implementation plan',
+              [
+                { href: '/', label: 'Home' },
+                { href: '/prd/PRD-009', label: 'PRD-009 Overview' },
+                { href: '/project-docs', label: 'Project Docs' }
+              ]
+            )}
+            <div class="markdown-content">
+              ${htmlContent}
+            </div>
+          `;
+          
+          // Generate full HTML page with styles
+          const timelineStyles = `
+            <style>
+              .markdown-content {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                line-height: 1.6;
+                color: #f0f0f5;
+              }
+              .markdown-content h1 {
+                font-size: 2.5rem;
+                margin: 2rem 0 1rem;
+                color: #00d4ff;
+                border-bottom: 2px solid #2a2a3a;
+                padding-bottom: 0.5rem;
+              }
+              .markdown-content h2 {
+                font-size: 2rem;
+                margin: 1.5rem 0 1rem;
+                color: #00d4ff;
+                border-bottom: 1px solid #2a2a3a;
+                padding-bottom: 0.5rem;
+              }
+              .markdown-content h3 {
+                font-size: 1.5rem;
+                margin: 1.25rem 0 0.75rem;
+                color: #88ff00;
+              }
+              .markdown-content h4 {
+                font-size: 1.25rem;
+                margin: 1rem 0 0.5rem;
+                color: #ff8800;
+              }
+              .markdown-content table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 1rem 0;
+                background: #12121a;
+                border: 1px solid #2a2a3a;
+              }
+              .markdown-content th,
+              .markdown-content td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #2a2a3a;
+              }
+              .markdown-content th {
+                background: #1a1a24;
+                color: #00d4ff;
+                font-weight: 600;
+              }
+              .markdown-content tr:hover {
+                background: #1a1a24;
+              }
+              .markdown-content code {
+                background: #1a1a24;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'JetBrains Mono', monospace;
+                color: #88ff00;
+              }
+              .markdown-content pre {
+                background: #0a0a0f;
+                border: 1px solid #2a2a3a;
+                border-radius: 8px;
+                padding: 16px;
+                overflow-x: auto;
+                margin: 1rem 0;
+              }
+              .markdown-content pre code {
+                background: transparent;
+                padding: 0;
+                color: #f0f0f5;
+              }
+              .markdown-content ul,
+              .markdown-content ol {
+                margin: 1rem 0;
+                padding-left: 2rem;
+              }
+              .markdown-content li {
+                margin: 0.5rem 0;
+              }
+              .markdown-content blockquote {
+                border-left: 4px solid #00d4ff;
+                padding-left: 1rem;
+                margin: 1rem 0;
+                color: #8888aa;
+                font-style: italic;
+              }
+              .markdown-content a {
+                color: #00d4ff;
+                text-decoration: none;
+              }
+              .markdown-content a:hover {
+                text-decoration: underline;
+              }
+              .markdown-content hr {
+                border: none;
+                border-top: 1px solid #2a2a3a;
+                margin: 2rem 0;
+              }
+            </style>
+          `;
+          
+          const html = baseLayout(
+            { 
+              title: 'Implementation Timeline - PRD-009 LMS',
+              styles: componentStyles + timelineStyles
+            },
+            pageContent
+          );
+          
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          res.send(html);
+        } catch (error) {
+          logger.error('Error rendering timeline:', error);
+          res.status(500).json({ error: 'Failed to render timeline document' });
+        }
+      } else {
+        res.status(404).json({ error: 'Timeline document not found' });
+      }
+    });
+
     // Swagger UI (keep at /docs as originally)
+    // NOTE: Must be registered AFTER specific /docs/* routes to avoid conflicts
     if (fs.existsSync(openapiPath)) {
       const swaggerDoc = JSON.parse(fs.readFileSync(openapiPath, 'utf-8'));
-      this.app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: true }));
+      // Exclude /docs/timeline/* from Swagger UI middleware
+      this.app.use('/docs', (req, res, next) => {
+        // Skip Swagger UI for timeline routes and their assets
+        if (req.path.startsWith('/timeline/')) {
+          // Return 404 for timeline asset requests that don't match our route
+          // This prevents Swagger UI from trying to serve them
+          return res.status(404).json({ error: 'Not found' });
+        }
+        // Continue to Swagger UI middleware for other /docs/* paths
+        next();
+      }, swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: true }));
     }
 
     registerModuleRouters(this.app);
@@ -156,6 +325,157 @@ class App {
         res.send(fs.readFileSync(docPath, 'utf-8'));
       } else {
         res.status(404).json({ error: 'Documentation file not found' });
+      }
+    });
+      const { filename } = req.params;
+      const docPath = path.resolve(process.cwd(), 'docs', filename);
+      
+      // Security: Only allow files with 'timeline' in the name
+      if (fs.existsSync(docPath) && filename.includes('timeline')) {
+        try {
+          const markdownContent = fs.readFileSync(docPath, 'utf-8');
+          
+          // Convert markdown to HTML
+          const htmlContent = markdownToHtml(markdownContent);
+          
+          // Create page content with header and back link
+          const pageContent = `
+            ${backLink('/', '← Back to Homepage')}
+            ${pageHeader(
+              '📅 Implementation Timeline',
+              'PRD-009 Loan Management System - 48-week phased implementation plan',
+              [
+                { href: '/', label: 'Home' },
+                { href: '/prd/PRD-009', label: 'PRD-009 Overview' },
+                { href: '/project-docs', label: 'Project Docs' }
+              ]
+            )}
+            <div class="markdown-content">
+              ${htmlContent}
+            </div>
+          `;
+          
+          // Generate full HTML page with styles
+          const timelineStyles = `
+            <style>
+              .markdown-content {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                line-height: 1.6;
+                color: #f0f0f5;
+              }
+              .markdown-content h1 {
+                font-size: 2.5rem;
+                margin: 2rem 0 1rem;
+                color: #00d4ff;
+                border-bottom: 2px solid #2a2a3a;
+                padding-bottom: 0.5rem;
+              }
+              .markdown-content h2 {
+                font-size: 2rem;
+                margin: 1.5rem 0 1rem;
+                color: #00d4ff;
+                border-bottom: 1px solid #2a2a3a;
+                padding-bottom: 0.5rem;
+              }
+              .markdown-content h3 {
+                font-size: 1.5rem;
+                margin: 1.25rem 0 0.75rem;
+                color: #88ff00;
+              }
+              .markdown-content h4 {
+                font-size: 1.25rem;
+                margin: 1rem 0 0.5rem;
+                color: #ff8800;
+              }
+              .markdown-content table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 1rem 0;
+                background: #12121a;
+                border: 1px solid #2a2a3a;
+              }
+              .markdown-content th,
+              .markdown-content td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #2a2a3a;
+              }
+              .markdown-content th {
+                background: #1a1a24;
+                color: #00d4ff;
+                font-weight: 600;
+              }
+              .markdown-content tr:hover {
+                background: #1a1a24;
+              }
+              .markdown-content code {
+                background: #1a1a24;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'JetBrains Mono', monospace;
+                color: #88ff00;
+              }
+              .markdown-content pre {
+                background: #0a0a0f;
+                border: 1px solid #2a2a3a;
+                border-radius: 8px;
+                padding: 16px;
+                overflow-x: auto;
+                margin: 1rem 0;
+              }
+              .markdown-content pre code {
+                background: transparent;
+                padding: 0;
+                color: #f0f0f5;
+              }
+              .markdown-content ul,
+              .markdown-content ol {
+                margin: 1rem 0;
+                padding-left: 2rem;
+              }
+              .markdown-content li {
+                margin: 0.5rem 0;
+              }
+              .markdown-content blockquote {
+                border-left: 4px solid #00d4ff;
+                padding-left: 1rem;
+                margin: 1rem 0;
+                color: #8888aa;
+                font-style: italic;
+              }
+              .markdown-content a {
+                color: #00d4ff;
+                text-decoration: none;
+              }
+              .markdown-content a:hover {
+                text-decoration: underline;
+              }
+              .markdown-content hr {
+                border: none;
+                border-top: 1px solid #2a2a3a;
+                margin: 2rem 0;
+              }
+            </style>
+          `;
+          
+          const html = baseLayout(
+            { 
+              title: 'Implementation Timeline - PRD-009 LMS',
+              styles: componentStyles + timelineStyles
+            },
+            pageContent
+          );
+          
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          res.send(html);
+        } catch (error) {
+          logger.error('Error rendering timeline:', error);
+          res.status(500).json({ error: 'Failed to render timeline document' });
+        }
+      } else {
+        res.status(404).json({ error: 'Timeline document not found' });
       }
     });
 
@@ -380,6 +700,7 @@ class App {
     .section-icon.research { background: linear-gradient(135deg, rgba(136,255,0,0.2), rgba(0,212,255,0.2)); }
     .section-icon.api { background: linear-gradient(135deg, rgba(136,85,255,0.2), rgba(255,0,170,0.2)); }
     .section-icon.lms { background: linear-gradient(135deg, rgba(255,136,0,0.2), rgba(136,255,0,0.2)); }
+    .section-icon.timeline { background: linear-gradient(135deg, rgba(255,136,0,0.2), rgba(255,0,170,0.2)); }
     .section-icon.demo { background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(136,255,0,0.2)); }
 
     .section h2 {
@@ -694,6 +1015,35 @@ class App {
             <div class="link-content">
               <div class="link-title">Audit Trail</div>
               <div class="link-subtitle">Compliance & activity logs</div>
+            </div>
+            <span class="link-arrow">→</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- Implementation Timeline -->
+      <section class="section">
+        <div class="section-header">
+          <div class="section-icon timeline">📅</div>
+          <div>
+            <h2>Implementation Timeline</h2>
+            <p class="section-desc">PRD-009 LMS development roadmap</p>
+          </div>
+        </div>
+        <div class="section-links">
+          <a href="/docs/timeline/implementation-timeline-PRD-009-lms.md" class="section-link">
+            <span class="link-icon orange">📊</span>
+            <div class="link-content">
+              <div class="link-title">PRD-009: Loan Management System Timeline</div>
+              <div class="link-subtitle">48-week phased implementation plan (Q1-Q4)</div>
+            </div>
+            <span class="status draft"><span class="status-dot"></span>Planning</span>
+          </a>
+          <a href="/prd/PRD-009" class="section-link">
+            <span class="link-icon cyan">📋</span>
+            <div class="link-content">
+              <div class="link-title">PRD-009 Overview</div>
+              <div class="link-subtitle">Parent PRD with 9 sub-modules</div>
             </div>
             <span class="link-arrow">→</span>
           </a>

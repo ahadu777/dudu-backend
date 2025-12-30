@@ -449,3 +449,56 @@ stories:
     sequence: []
     enhances: [US-LMS-001, US-LMS-002, US-LMS-003]
     business_requirement: "PRD-009"
+
+  - id: US-LMS-007
+    title: Guarantor Registration & Verification
+    status: Draft
+    cards:
+      - lms-guarantor-registration
+      - lms-guarantor-kyc
+      - lms-guarantor-aml
+    sequence:
+      - lms-guarantor-registration → lms-guarantor-kyc
+      - lms-guarantor-kyc → lms-guarantor-aml
+    enhances: [US-LMS-001, US-LMS-002]
+    business_requirement: "PRD-009-10"
+
+  - id: US-LMS-008
+    title: Guarantor Portal & Guarantee Activation
+    status: Draft
+    cards:
+      - lms-guarantor-portal
+      - lms-guarantee-activation
+      - lms-guarantor-notifications
+    sequence:
+      - lms-guarantor-portal → lms-guarantee-activation
+    enhances: [US-LMS-007, US-LMS-004, US-LMS-005]
+    business_requirement: "PRD-009-10"
+
+  - id: US-LMS-009
+    title: Investor Registration & Accreditation
+    status: Draft
+    cards:
+      - lms-investor-registration
+      - lms-investor-accreditation
+      - lms-investor-kyc
+    sequence:
+      - lms-investor-registration → lms-investor-accreditation
+      - lms-investor-accreditation → lms-investor-kyc
+    enhances: [US-LMS-001]
+    business_requirement: "PRD-009-11"
+
+  - id: US-LMS-010
+    title: Investor Portfolio & Loan Funding
+    status: Draft
+    cards:
+      - lms-investor-portal
+      - lms-loan-funding
+      - lms-return-distribution
+      - lms-portfolio-management
+    sequence:
+      - lms-investor-portal → lms-loan-funding
+      - lms-loan-funding → lms-return-distribution
+      - lms-return-distribution → lms-portfolio-management
+    enhances: [US-LMS-009, US-LMS-003, US-LMS-004]
+    business_requirement: "PRD-009-11"
