@@ -106,7 +106,7 @@ export class MiniprogramProductService {
         const functions = p.entitlements ? p.entitlements.map((e: any) => ({
           function_code: e.type,
           function_name: e.description,
-          max_uses: e.quantity || 1
+          max_uses: e.metadata?.quantity || e.quantity || 1
         })) : [];
 
         return {
@@ -184,7 +184,7 @@ export class MiniprogramProductService {
       const functions = dbProduct.entitlements ? dbProduct.entitlements.map((e: any) => ({
         function_code: e.type,
         label: e.description,
-        quantity: e.quantity || 1
+        quantity: e.metadata?.quantity || e.quantity || 1
       })) : [];
 
       return {
