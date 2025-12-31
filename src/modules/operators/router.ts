@@ -49,6 +49,36 @@ router.post('/login', async (req, res) => {
   }
 });
 
+/**
+ * POST /operators/test-token
+ * Generate test operator token for automated testing
+ * Only available in development/test environment
+ */
+router.post('/test-token', async (req, res) => {
+  // 仅在非生产环境可用
+  if (env.NODE_ENV === 'production') {
+    return res.status(404).json({
+      code: 'NOT_FOUND',
+      message: 'Endpoint not available in production'
+    });
+  }
+
+  const { operator_id, username } = req.body;
+  const operatorId = operator_id || username || 'test-operator';
+
+  // 生成测试用 operator token
+  const token = `test-operator-token-${operatorId}-${Date.now()}`;
+
+  res.status(200).json({
+    token,
+    operator_id: operatorId,
+    username: operatorId,
+    venue_id: 'VENUE-001',
+    permissions: ['scan', 'validate', 'redeem'],
+    expires_in: '24h'
+  });
+});
+
 // ========================================
 // Week 3: Ticket Validation & Verification (PRD-006)
 // ========================================

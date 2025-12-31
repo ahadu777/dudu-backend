@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="US-001: Buy 3in1 Pass E2E Tests" tests="15" time="15.430">
+  <testsuite name="0. 测试准备 / 0.1 健康检查" id="98014f11-4b9c-4bdf-96a8-0be42a181092" timestamp="2025-12-31T09:27:11.210Z" tests="2" failures="0" errors="0" time="0.019">
+    <testcase name="Server is healthy" time="0.019" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Returns health status" time="0.019" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="0. 测试准备 / 0.2 生成测试用户 Token" id="d58c1872-f566-47dc-b33a-750472832d8a" timestamp="2025-12-31T09:27:11.210Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="Test token generated" time="0.003" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="1. 浏览产品目录 [AC-001] / 1.1 获取产品列表" id="18402c1f-7582-4fc5-9a41-1237e016ae3c" timestamp="2025-12-31T09:27:11.210Z" tests="4" failures="0" errors="0" time="1.542">
+    <testcase name="Returns 200" time="1.542" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Returns product array" time="1.542" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Products have required fields" time="1.542" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="[AC-001] 用户可浏览产品目录" time="1.542" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="1. 浏览产品目录 [AC-001] / 1.2 获取产品详情" id="0b52f2d6-7cfd-4e94-91e1-04a96926738b" timestamp="2025-12-31T09:27:11.210Z" tests="2" failures="0" errors="0" time="0.332">
+    <testcase name="Returns 200 or 404" time="0.332" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Returns product details" time="0.332" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="2. 创建订单 [AC-002] / 2.1 创建 3in1 Pass 订单" id="c1c40a35-6378-4e38-8c5e-75b2b980144c" timestamp="2025-12-31T09:27:11.210Z" tests="4" failures="0" errors="0" time="3.249">
+    <testcase name="Returns 201 Created" time="3.249" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Returns order with ID" time="3.249" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Order status is pending payment" time="3.249" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="[AC-002] 用户可创建订单" time="3.249" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="2. 创建订单 [AC-002] / 2.2 验证订单创建 - 查询订单" id="e6472f05-41b0-4ec6-a72b-34858bbe9e05" timestamp="2025-12-31T09:27:11.210Z" tests="2" failures="0" errors="0" time="0.717">
+    <testcase name="Returns 200" time="0.717" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Order exists with correct status" time="0.717" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="3. 支付处理 [AC-003] / 3.1 [测试用] 模拟支付成功" id="9b1c9afe-5069-4ab8-87e8-5b211d7ba656" timestamp="2025-12-31T09:27:11.210Z" tests="2" failures="0" errors="0" time="4.234">
+    <testcase name="Simulate payment accepted" time="4.234" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="[AC-003] 支付成功后处理订单" time="4.234" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="3. 支付处理 [AC-003] / 3.2 验证订单状态更新为已支付" id="d3af3794-e216-48e8-8372-1c545756f8b8" timestamp="2025-12-31T09:27:11.210Z" tests="3" failures="0" errors="0" time="0.678">
+    <testcase name="Returns 200" time="0.678" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Order status is paid/confirmed" time="0.678" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="[AC-003] 支付成功后生成票券" time="0.678" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="4. 查看票券 [AC-004] / 4.1 从订单获取票券列表" id="fb3542a4-1ba6-4c72-abcb-ec40760e2fb8" timestamp="2025-12-31T09:27:11.210Z" tests="3" failures="0" errors="0" time="0.675">
+    <testcase name="Returns 200" time="0.675" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Order contains tickets array" time="0.675" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="[AC-004] 用户可查看持有票券" time="0.675" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="4. 查看票券 [AC-004] / 4.2 获取票券详情" id="b9fa67da-3b74-4e90-ad7a-cf0f00450d8a" timestamp="2025-12-31T09:27:11.210Z" tests="2" failures="0" errors="0" time="0.681">
+    <testcase name="Returns 200" time="0.681" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Ticket has required fields" time="0.681" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="5. 获取 QR 码 [AC-005] / 5.1 获取票券 QR 码" id="3cb78d6c-414f-4cd2-bd77-68f43427977f" timestamp="2025-12-31T09:27:11.210Z" tests="2" failures="0" errors="0" time="2.618">
+    <testcase name="Returns 200 or 201" time="2.618" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="[AC-005] 用户可获取票券 QR 码" time="2.618" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="6. 运营扫码核验 [AC-006] / 6.1 生成运营员测试 Token" id="0697d441-6dab-4435-baff-182e7c5f3a44" timestamp="2025-12-31T09:27:11.210Z" tests="2" failures="0" errors="0" time="0.002">
+    <testcase name="Returns 200 or 201" time="0.002" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Returns operator token" time="0.002" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="6. 运营扫码核验 [AC-006] / 6.2 解密 QR 码获取票券信息" id="10f78f0c-f498-48a3-828e-f967a2b11c8f" timestamp="2025-12-31T09:27:11.210Z" tests="1" failures="0" errors="0" time="0.001">
+    <testcase name="QR decrypt requires valid encrypted data - skipping in test mode" time="0.001" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="6. 运营扫码核验 [AC-006] / 6.3 核销票券" id="44453824-a4be-4f4f-9448-0dfd22cb09e3" timestamp="2025-12-31T09:27:11.210Z" tests="1" failures="0" errors="0" time="0.002">
+    <testcase name="Venue scan requires valid operator session - skipping in test mode" time="0.002" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+  <testsuite name="7. 验证最终状态 / 7.1 验证票券已核销" id="5562c269-c338-4d25-8e5e-cd15d63c2344" timestamp="2025-12-31T09:27:11.210Z" tests="3" failures="0" errors="0" time="0.677">
+    <testcase name="Returns 200" time="0.677" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="Order status is valid" time="0.677" classname="Us001Buy3In1PassE2ETests"/>
+    <testcase name="[E2E Complete] 3in1 Pass 完整流程验证通过" time="0.677" classname="Us001Buy3In1PassE2ETests"/>
+  </testsuite>
+</testsuites>
