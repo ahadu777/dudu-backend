@@ -406,6 +406,20 @@ export class VenueRepository {
     return count > 0;
   }
 
+  /**
+   * 获取 JTI + function_code 组合的成功核销次数
+   * 用于 OTA 票券的多次核销场景（OTA 票券不能刷新 QR 码）
+   */
+  async getJtiRedemptionCount(jti: string, functionCode: string): Promise<number> {
+    return this.redemptionRepo.count({
+      where: {
+        jti,
+        function_code: functionCode,
+        result: 'success'
+      }
+    });
+  }
+
   // Record redemption attempt (success or failure)
   async recordRedemption(redemptionData: {
     ticketCode: string;

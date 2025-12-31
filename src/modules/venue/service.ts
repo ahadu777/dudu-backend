@@ -10,6 +10,7 @@ import { validateTicketQR, mapErrorCodeToRejectReason } from '../../utils/qr-val
 interface Entitlement {
   function_code: string;
   remaining_uses: number;
+  total_uses?: number;  // OTA 票券需要此字段来支持多次核销
 }
 
 /**
@@ -185,19 +186,38 @@ export class VenueOperationsService {
       // ========================================
       // Step 6: 防重放攻击 - 检查 JTI + function_code 组合
       // (scan 特有，不在共享验证中)
+      //
+      // 策略区分：
+      // - 小程序票券：JTI 只能使用一次（可以刷新 QR 码获取新 JTI）
+      // - OTA 票券：JTI 可以使用 total_uses 次（不能刷新 QR 码）
       // ========================================
-      const alreadyUsed = await this.repository.hasJtiBeenUsedForFunction(
+      const jtiRedemptionCount = await this.repository.getJtiRedemptionCount(
         jti,
         request.functionCode
       );
 
-      if (alreadyUsed) {
+      // 获取该权益的 total_uses（用于 OTA 多次核销判断）
+      const targetEntitlement = ticket!.entitlements.find(
+        (e: Entitlement) => e.function_code === request.functionCode
+      ) as Entitlement | undefined;
+      const totalUses = targetEntitlement?.total_uses || 1;
+
+      // 判断是否超过允许的核销次数
+      // 统一策略：同一 JTI 可以核销 total_uses 次
+      // - OTA 票券：QR 码长期有效，依赖 total_uses 限制
+      // - 小程序票券：QR 码 30 分钟过期 + total_uses 双重保护
+      const isReplayAttack = jtiRedemptionCount >= totalUses;
+
+      if (isReplayAttack) {
         logger.warn('venue.scan.fraud_detected', {
           jti,
           ticket_code: ticketCode,
           function_code: request.functionCode,
+          ticket_type: ticket!.ticket_type,
+          jti_redemption_count: jtiRedemptionCount,
+          total_uses: totalUses,
           operator_id: request.operator.operator_id,
-          reason: 'JTI + function_code already used (replay attack)'
+          reason: `JTI reached max uses (${jtiRedemptionCount}/${totalUses})`
         });
 
         await this.recordRedemption({
