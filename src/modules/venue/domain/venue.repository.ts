@@ -436,9 +436,15 @@ export class VenueRepository {
   }): Promise<RedemptionEvent> {
     // Only set success_unique_key for success records to enforce uniqueness
     // NULL for reject records allows multiple reject attempts with same jti
-    const successUniqueKey = redemptionData.result === 'success'
-      ? `${redemptionData.jti}_${redemptionData.functionCode}`
-      : null;
+    // Format: ${jti}_${functionCode}_${序号} - 支持同一 JTI 多次核销（OTA 和小程序统一）
+    let successUniqueKey: string | null = null;
+    if (redemptionData.result === 'success') {
+      const existingCount = await this.getJtiRedemptionCount(
+        redemptionData.jti,
+        redemptionData.functionCode
+      );
+      successUniqueKey = `${redemptionData.jti}_${redemptionData.functionCode}_${existingCount + 1}`;
+    }
 
     const event = this.redemptionRepo.create({
       ticket_code: redemptionData.ticketCode,
