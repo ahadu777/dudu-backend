@@ -16,14 +16,16 @@ depends_on:
   - US-004
 cards:
   - admin-package-config
-  - notification-orchestrator
-  - merchant-redemption-console
+  - venue-enhanced-scanning      # 替代 merchant-redemption-console
   - route-schedule-management    # 线路班次管理（PRD-008 Phase 2）
-# deprecated: [ticket-lifecycle-daemon] - moved to _deprecated/
+# deprecated:
+#   - notification-orchestrator  # 未实现
+#   - merchant-redemption-console # 合并到 venue-enhanced-scanning
+#   - ticket-lifecycle-daemon    # 已移除
 related_features:
   - ticket-cancellation
   - refund-processing
-  - tickets-scan
+  - venue-enhanced-scanning      # 替代 tickets-scan
 ---
 
 ## Business goal
@@ -51,15 +53,13 @@ related_features:
 - When `ticket-lifecycle-daemon` 定时任务或事件触发
 - Then 更新票券状态并视情况调用 `ticket-cancellation` → `refund-processing`，同时写入审计日志
 
-**C. 通知编排**
-- Given 出现支付成功、取消、退改完成、核销成功或到期提醒场景
-- When `notification-orchestrator` 接到事件
-- Then 生成微信通知并具备重试策略；失败时记录指标并回退下一处理队列
+**C. 通知编排** ⏸️ (DEFERRED)
+> 注：`notification-orchestrator` 未实现，通知功能暂缓
 
 **D. 核销与报表联动**
 - Given 商家核销员登录控制台
 - When 扫描订单码或单券码核销
-- Then 按权限逐项核销、写入核销日志，并将事件同步 `reports-redemptions`/`tickets-scan`
+- Then 按权限逐项核销、写入核销日志（使用 `venue-enhanced-scanning`）
 
 ## Business rules
 1. 后台配置改动需写入审计，并触发缓存刷新或配置下发。
@@ -69,11 +69,12 @@ related_features:
 
 ## Integration impact
 - **admin-package-config**：扩展现有配置 API，与 `promotion-detail-endpoint`、`catalog-endpoint` 保持一致命名。
--, **ticket-lifecycle-daemon**：对接 `ticket-cancellation`、`refund-processing`、`notification-orchestrator`。
-- **notification-orchestrator**：需与支付、票券、退款事件总线集成，复用 `payment-webhook` 回调结果。
-- **merchant-redemption-console**：基于 `operators-login`、`validators-sessions`、`tickets-scan` 提供商家核销闭环。
+- **venue-enhanced-scanning**：提供核销 API (`/venue/scan`) 和核销记录 (`/venue/redemptions`)。
+> 注：以下模块已废弃或未实现
+> - ~~ticket-lifecycle-daemon~~ - 已废弃
+> - ~~notification-orchestrator~~ - 未实现
+> - ~~merchant-redemption-console~~ - 合并到 venue-enhanced-scanning
 
 ## Telemetry & validation
-- 更新 `docs/integration/` Runbook 覆盖后台配置、核销、通知链路。
-- 为新控制台与守护流程补充 Newman 场景：`reports/newman/merchant-redemption-console.json`、`.../ticket-lifecycle-daemon.json`。
+- 更新 `docs/integration/` Runbook 覆盖后台配置、核销链路。
 - Story 完成后执行 `npm run validate:integration`、`npm run test:e2e` 并关注通知重试指标。

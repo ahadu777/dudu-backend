@@ -491,6 +491,7 @@ npm run validate:docs
 - [ ] Newman collection 创建/更新
 - [ ] 前端对接文档创建/更新（如涉及前端）
 - [ ] Story 索引同步 `docs/stories/_index.yaml`（如创建/修改了 Story）
+- [ ] Card 索引同步 `npm run sync:card-index`（如废弃/移动 Card 到 `_deprecated/`）
 - [ ] PRD AC 映射同步 `docs/test-coverage/prd-{NNN}-ac-mapping.yaml`（如 Story 完成，需更新对应 PRD 的 AC 状态）
   - 注意：PRD 中标记 `[DEFERRED]` 的功能应放入 `excluded_criteria`，不计入覆盖率
   - 参考规范：`docs/reference/AC-EXTRACTION-SPEC.md`

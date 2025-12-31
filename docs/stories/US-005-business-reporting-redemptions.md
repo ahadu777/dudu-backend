@@ -7,7 +7,7 @@ priority: Medium
 last_update: 2025-10-19T23:44:00+0800
 business_requirement: "PRD-003"
 cards:
-  - reports-redemptions
+  - venue-enhanced-scanning  # /venue/redemptions - 替代已废弃的 reports-redemptions
 ---
 
 ## Business goal
@@ -35,4 +35,4 @@ Provide basic reporting of redemption events filtered by time window, function, 
 - Stable pagination or capped result size (MVP can return all within window)
 
 ## Links
-- Cards: reports-redemptions
+- Cards: venue-enhanced-scanning (提供 /venue/redemptions)

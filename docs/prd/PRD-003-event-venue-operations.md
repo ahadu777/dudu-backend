@@ -11,7 +11,7 @@ created_date: "2025-11-04"
 last_updated: "2025-11-19"
 related_stories: ["US-002", "US-005", "US-006", "US-013"]
 enhances_stories: ["US-001", "US-004"]  # Stories from PRD-001 that are enhanced by this PRD
-implementation_cards: ["venue-enhanced-scanning", "operators-login", "operator-validation-scanner", "reports-redemptions"]
+implementation_cards: ["venue-enhanced-scanning", "operators-login", "operator-validation-scanner", "venue-analytics-reporting"]
 ```
 
 ## Executive Summary

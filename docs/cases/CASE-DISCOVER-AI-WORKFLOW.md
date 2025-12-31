@@ -691,4 +691,115 @@ Story 完成 → 检查 business_requirement → 更新 PRD AC 映射 → 补充
 
 ---
 
-*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable. Query order matters - Story → Card → Code prevents finding deprecated APIs. Document relationships require sync checks - Story completion must trigger PRD AC mapping updates. Coverage metrics should only count in-scope items - excluded/deferred features should not inflate the denominator.***
+### 2025-12-31: Postman 测试创建时跳过代码验证 (CASE-010)
+
+**Problem Identified**: 创建 US-001 Postman 测试集合时，直接基于 Card 文档创建，未先验证实际路由实现。
+
+**Scenario**: 创建 US-001 购买 3in1 Pass E2E 测试
+
+**AI Failure**:
+1. 读取了 `docs/stories/US-001-buy-3in1-pass.md`
+2. 读取了相关 Cards 文档: `payment-webhook.md`, `my-tickets.md`, `qr-generation-api.md`
+3. **直接基于 Cards 创建了测试**
+4. **未验证 `src/modules/*/router.ts` 中的实际路由**
+5. 导致多个 API 路径错误:
+   - `/miniprogram/catalog` → 实际是 `/miniprogram/products`
+   - `/payments/webhook` → 实际是 `/miniprogram/orders/:id/simulate-payment`
+   - `/miniprogram/my-tickets` → 实际是 `/tickets/tickets`
+   - `/scan/validate` → 实际是 `/operators/validate-ticket`
+   - `/scan/redeem` → 实际是 `/venue/scan`
+
+**Root Cause Analysis**:
+- Cards 文档中定义的 API 路径与实际代码实现不一致
+- 工作流 Step 0.1.5 的信息源选择原则是 `Story → Card → 代码`，但 AI 只做了前两步
+- 测试创建应该基于**实际运行的代码**，而非仅基于文档
+
+**Evidence**:
+```bash
+# 运行测试后发现多个 404 错误
+npm run test:story 001
+
+# 实际应该先验证路由
+grep -E "router\.(get|post)" src/modules/miniprogram/router.ts
+# 结果: /products, /orders, /tickets/:code/qr 等
+```
+
+**正确工作流应该是**:
+```
+1. 读取 Story → 了解业务流程
+2. 读取 Cards → 了解预期契约
+3. 验证 router.ts → 确认实际实现  ← AI 跳过了这步
+4. 创建测试 → 基于实际端点
+```
+
+**Improvements Made**:
+
+1. **在 SKILL.md Step 2 添加测试创建指南**:
+   - 创建 API 测试前必须先验证 `router.ts` 中的实际路由
+   - 命令: `grep -E "router\.(get|post)" src/modules/{module}/router.ts`
+
+2. **在 Step 3 完成检查清单添加**:
+   - `[ ] Postman 测试端点与实际路由一致（需 grep router.ts 验证）`
+
+**Key Learning**:
+1. **文档可能过时** - Cards/Runbook 中的 API 路径可能与实际实现不同步
+2. **测试应基于代码** - API 测试的端点路径必须从代码中提取，而非仅信任文档
+3. **验证优先于创建** - 创建任何依赖于 API 路径的内容前，先运行 grep 验证
+
+**Anti-Pattern Added**:
+- ❌ 直接基于文档创建 API 测试而不验证实际路由
+
+**Pattern Added**:
+- ✅ API 测试创建前先 `grep router` 验证端点存在性
+
+---
+
+### 2025-12-31: Card 废弃时遗漏索引同步 (CASE-011)
+
+**Problem Identified**: 将 `payment-webhook.md` 移动到 `_deprecated/` 文件夹后，未同步更新 `docs/cards/_index.yaml`。
+
+**Scenario**: 标记 `payment-webhook.md` 为 deprecated 并移动到 `_deprecated/` 文件夹
+
+**AI Failure**:
+1. 正确识别了 `payment-webhook.md` 应该废弃
+2. 正确修改了文件的 `status: "deprecated"`
+3. 正确将文件移动到 `docs/cards/_deprecated/`
+4. **遗漏了运行 `npm run sync:card-index` 更新索引**
+5. 用户发现后指出："index文件是不是也没有更新"
+
+**Root Cause Analysis**:
+- Step 3 检查清单中有 Story 索引同步规则
+- **但缺少 Card 索引同步规则**
+- AI 不知道移动 Card 后需要更新索引
+
+**Evidence**:
+```bash
+# 移动文件后索引中仍有旧条目
+grep "payment-webhook" docs/cards/_index.yaml
+# 输出: slug: payment-webhook, status: Done
+
+# 正确做法：运行同步命令
+npm run sync:card-index
+```
+
+**Improvements Made**:
+
+1. **在 SKILL.md Step 3 检查清单添加**:
+   ```
+   - [ ] Card 索引同步 `npm run sync:card-index`（如废弃/移动 Card 到 `_deprecated/`）
+   ```
+
+**Key Learning**:
+1. **索引同步规则需要完整** - 有 Story 索引规则，就应该有 Card 索引规则
+2. **文件移动 ≠ 索引更新** - 移动文件只是物理位置变化，索引需要显式同步
+3. **工作流遗漏发现模式** - 用户提问"工作流有定义吗"是发现遗漏的信号
+
+**Anti-Pattern Added**:
+- ❌ 移动 Card 到 `_deprecated/` 后不更新索引
+
+**Pattern Added**:
+- ✅ Card 废弃/移动后运行 `npm run sync:card-index`
+
+---
+
+*This case study documents our journey to discover effective AI-guided development workflows. Key insight: Balance simple verification with systematic analysis - use the right tool for the right complexity level, but always verify reality first. **Core learning: Test every pattern immediately - even patterns about testing patterns. Checklists must be explicit - relying on AI memory is unreliable. Query order matters - Story → Card → Code prevents finding deprecated APIs. Document relationships require sync checks - Story completion must trigger PRD AC mapping updates. Coverage metrics should only count in-scope items - excluded/deferred features should not inflate the denominator. API test creation must verify actual routes - never trust documentation alone for endpoint paths.***

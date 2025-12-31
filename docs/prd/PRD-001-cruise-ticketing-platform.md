@@ -10,7 +10,7 @@ status: "Done"
 created_date: "2025-10-27"
 last_updated: "2025-11-19"
 related_stories: ["US-001", "US-003", "US-004", "US-007", "US-008", "US-009", "US-011"]
-implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engine", "payment-webhook", "my-tickets", "qr-generation-api"]
+implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engine", "wallyt-payment", "my-tickets", "qr-generation-api"]
 ```
 
 ## Executive Summary
@@ -260,7 +260,7 @@ value_proposition: Premium end-to-end experience
 
 ### Completed Development
 - **Stories**: US-001 (basic platform), US-011 (complex pricing)
-- **Cards**: catalog-endpoint, order-create, complex-pricing-engine, payment-webhook
+- **Cards**: catalog-endpoint, order-create, complex-pricing-engine, wallyt-payment
 - **Code**: Working implementation with all 3 package types
 - **Testing**: End-to-end validation from catalog to ticket redemption
 

@@ -217,7 +217,7 @@ team: "[A - Commerce | B - Fulfillment | C - Gate]"
 
 **Examples**:
 - `BUG-001-inventory-filter-null-check.md`
-- `BUG-042-payment-webhook-timeout.md`
+- `BUG-042-wallyt-payment-timeout.md`
 - `BUG-103-typescript-build-error.md`
 
 **Location**:

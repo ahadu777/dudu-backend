@@ -217,7 +217,7 @@ team: "[A - Commerce | B - Fulfillment | C - Gate]"
 
 **示例**:
 - `BUG-001-inventory-filter-null-check.md`
-- `BUG-042-payment-webhook-timeout.md`
+- `BUG-042-wallyt-payment-timeout.md`
 - `BUG-103-typescript-build-error.md`
 
 **位置**:
@@ -245,26 +245,26 @@ team: "[A - Commerce | B - Fulfillment | C - Gate]"
 ```yaml
 ---
 id: BUG-042
-title: 大订单处理时支付 webhook 超时
+title: 大订单处理时支付回调超时
 severity: High
 status: Open
-affected_cards: [payment-webhook]
+affected_cards: [wallyt-payment]
 affected_stories: [US-001]
 team: A - Commerce
 ---
 
-# 支付 Webhook 超时
+# 支付回调超时
 
 ## 问题
-处理包含 10+ 商品的大订单时，webhook 5秒后超时
+处理包含 10+ 商品的大订单时，回调 5秒后超时
 
 ## 复现
-POST /payments/notify，订单包含 10+ 商品
+POST /payments/wallyt/notify，订单包含 10+ 商品
 期望: 5秒内返回 200 OK
 实际: 504 Gateway Timeout
 
 ## 原因
-同步发放票据阻塞了 webhook 响应
+同步发放票据阻塞了回调响应
 文件: src/modules/payments/router.ts:175
 
 ## 修复
@@ -311,8 +311,8 @@ return product.available > 0 ? {available} : null; // 应该返回 {available: 0
 git commit -m "fix: 解决 BUG-001 库存检查 null 问题"
 
 # PR 描述中链接
-修复 BUG-042: 将 webhook 响应改为异步处理
-详见: docs/bugs/ACTIVE/BUG-042-payment-webhook-timeout.md
+修复 BUG-042: 将支付回调响应改为异步处理
+详见: docs/bugs/ACTIVE/BUG-042-wallyt-payment-timeout.md
 ```
 
 ### 与 Card 集成

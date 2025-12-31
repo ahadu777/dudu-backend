@@ -14,12 +14,12 @@ related_stories: ["US-001", "US-011"]
 relationships:
   enhanced_by: ["complex-pricing-engine"]
   depends_on: ["catalog-endpoint"] # product data validation
-  triggers: ["payment-webhook"] # order creation triggers payment flow
+  triggers: ["wallyt-payment"] # order creation triggers payment flow
   data_dependencies: ["Product", "Order", "OrderItem", "PricingContext"]
   shared_services: ["mockDataStore", "inventory-service"]
   sequence_constraints:
     - must_follow: ["catalog-endpoint"] # products must exist
-    - must_precede: ["payment-webhook"] # order before payment
+    - must_precede: ["wallyt-payment"] # order before payment
   integration_points:
     - data_stores: ["data.ts", "store.ts"] # dual store synchronization required
     - external_apis: [] # no external dependencies

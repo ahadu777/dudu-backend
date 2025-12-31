@@ -76,23 +76,23 @@ sequenceDiagram
 
 ### Team A - Commerce
 **Owns:** Orders, payments, catalog, pricing, inventory
-**Examples:** order-create, payment-webhook, catalog-endpoint
+**Examples:** order-create, wallyt-payment, catalog-endpoint
 **Pattern:** Financial transactions, business logic
 
 ### Team B - Fulfillment
-**Owns:** Tickets, entitlements, user experience, QR tokens
-**Examples:** my-tickets, qr-token, tickets-issuance
+**Owns:** Tickets, entitlements, user experience, QR codes
+**Examples:** my-tickets, qr-generation-api, miniprogram-order
 **Pattern:** User-facing functionality, ticket lifecycle
 
 ### Team C - Gate
 **Owns:** Redemption, operators, validation, scanning
-**Examples:** tickets-scan, operators-login, validators-sessions
+**Examples:** venue-enhanced-scanning, operators-login, venue-analytics-reporting
 **Pattern:** Physical redemption, operator tools
 
 ## Naming Conventions
 
 ### Card Slugs
-- Use kebab-case: `my-tickets`, `payment-webhook`
+- Use kebab-case: `my-tickets`, `wallyt-payment`
 - Be descriptive but concise: `tickets-scan` not `scan`
 - Include the main resource: `operators-login` not `login`
 

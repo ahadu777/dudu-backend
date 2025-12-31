@@ -107,7 +107,7 @@ A card is "Done" when:
 ## Working Conventions
 - One card = one PR (preferably), branch `feature/<slug>`.
 - No duplicate slugs. Canonical set (MVP):
-  `catalog-endpoint`, `order-create`, `payment-webhook`, `tickets-issuance`, `my-tickets`, `qr-token`, `tickets-scan`, `operators-login`, `validators-sessions`, `reports-redemptions`
+  `catalog-endpoint`, `order-create`, `wallyt-payment`, `my-tickets`, `qr-generation-api`, `venue-enhanced-scanning`, `operators-login`, `venue-analytics-reporting`
 - Uniform error codes (catalog doc).
 - JWTs: user and operator tokens standard; QR token HS256 with jti & exp≤60s.
 

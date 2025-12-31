@@ -12,8 +12,8 @@ newman_report: "reports/newman/customer-reservation-portal.xml"
 last_update: "2025-11-26T10:00:00+08:00"
 related_stories: ["US-015", "US-016"]
 relationships:
-  depends_on: ["reservation-slot-management", "payment-webhook"]
-  enhances: ["payment-webhook", "my-tickets"]
+  depends_on: ["reservation-slot-management", "wallyt-payment"]
+  enhances: ["wallyt-payment", "my-tickets"]
   data_dependencies: ["Ticket", "ReservationSlot", "TicketReservation"]
   integration_points:
     data_stores: ["tickets.repository.ts", "reservations.repository.ts", "slots.repository.ts"]

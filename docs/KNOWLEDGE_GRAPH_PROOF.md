@@ -1,5 +1,13 @@
 # Knowledge Graph Effectiveness Proof
 
+> **Note (2025-12-31)**: 本文档为历史案例研究。部分卡片名称已更新：
+> - `payment-webhook` → `wallyt-payment`
+> - `tickets-issuance` → 已合并到 `wallyt-payment`
+> - `qr-token` → `qr-generation-api`
+> - `tickets-scan` → `venue-enhanced-scanning`
+> - `validators-sessions` → 已合并到 `operators-login`
+> - `reports-redemptions` → `venue-enhanced-scanning`
+
 ## Executive Summary
 
 This document demonstrates how the Synque Express workspace structure enables **knowledge graph capabilities** and **deep contextual understanding** for complex software engineering tasks. Through systematic analysis of our recent complex pricing implementation (US-011), we prove that the workspace's interconnected documentation and type system supports advanced AI reasoning.

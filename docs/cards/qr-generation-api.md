@@ -13,7 +13,7 @@ integration_runbook: "docs/OTA_QR_CODE_GUIDE.md"
 last_update: "2025-11-14T20:00:00+08:00"
 related_stories: ["US-012", "US-001", "US-003"]
 relationships:
-  depends_on: ["ota-premade-tickets", "payment-webhook"]
+  depends_on: ["ota-premade-tickets", "wallyt-payment"]
   enhances: ["qr-token"]
   data_dependencies: ["Ticket"]
   integration_points:

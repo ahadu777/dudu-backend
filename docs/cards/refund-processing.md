@@ -2,27 +2,27 @@
 card: "Refund processing and payment reversal"
 slug: refund-processing
 team: "A - Commerce"
-oas_paths: ["/payments/refund", "/my/refunds"]
+oas_paths: ["/payments/refund"]  # /my/refunds 已移除（未实现）
 migrations: ["db/migrations/0009_refunds_table.sql"]
 status: "Done"
 readiness: "mvp"
 branch: ""
 pr: ""
 newman_report: "reports/newman/refund-processing.json"
-last_update: "2025-10-20T16:30:00+0800"
+last_update: "2025-12-31T10:00:00+08:00"
 related_stories: ["US-007"]
 ---
 
 ## Status & Telemetry
 - Status: Ready
 - Readiness: mvp
-- Spec Paths: /payments/refund, /my/refunds
+- Spec Paths: /payments/refund ~~, /my/refunds~~
 - Migrations: db/migrations/0009_refunds_table.sql
 - Newman: 0/0 • reports/newman/refund-processing.json
 - Last Update: 2025-10-20T16:30:00+0800
 
 ## 0) Prerequisites
-- payment-webhook card implemented (order and payment data)
+- wallyt-payment card implemented (order and payment data)
 - Payment gateway refund API integration
 - ticket-cancellation card for triggering refunds
 - Order status management (PAID → REFUNDED/PARTIALLY_REFUNDED)

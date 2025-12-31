@@ -24,7 +24,7 @@ last_update: "2025-12-05T10:00:00+08:00"
 related_stories: ["US-010A"]
 relationships:
   depends_on: ["miniprogram-product-catalog", "wechat-auth-login"]
-  triggers: ["payment-webhook"]
+  triggers: ["wallyt-payment"]
   data_dependencies: ["OrderEntity", "ProductEntity", "ProductInventoryEntity", "TicketEntity"]
 ---
 
@@ -655,7 +655,7 @@ src/migrations/
 ## 9) Integration Points
 - **miniprogram-product-catalog** - 获取产品信息和库存
 - **wechat-auth-login** - 用户身份认证
-- **payment-webhook** - 支付回调更新订单状态
+- **wallyt-payment** - 支付回调更新订单状态
 - **ticket-service** - 支付成功后生成票券
 
 ## Notes

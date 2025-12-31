@@ -82,7 +82,7 @@ cards:
 - 子故事：
   - [US-010A — DeepTravel 旅客闭环体验](US-010A-traveler-loop.md)
   - [US-010B — DeepTravel 运营支撑体系](US-010B-operations-backbone.md)
-- 复用能力：catalog-endpoint、order-create、payment-webhook、tickets-issuance、tickets-scan、ticket-cancellation、refund-processing
+- 复用能力：catalog-endpoint、order-create、wallyt-payment、ticket-cancellation、refund-processing
 - 运行验证（见子故事 Runbook 与 Newman 场景）
 
 ## Decomposition & Cards
@@ -93,10 +93,10 @@ cards:
   - bundle-ticket-engine
 - **US-010B** 聚焦运营支撑，囊括：
   - admin-package-config
-  - notification-orchestrator
-  - merchant-redemption-console
+  - venue-enhanced-scanning  # 替代 merchant-redemption-console
   - route-schedule-management
   - schedule-pricing-rules
+  # notification-orchestrator 已废弃（未实现）
 
 ## Validation evidence
 - 2025-10-28：旅客闭环集合 `reports/collections/us-010a-traveler-loop.json` pass，报告 `reports/newman/e2e.xml`

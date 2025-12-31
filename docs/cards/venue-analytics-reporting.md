@@ -12,7 +12,7 @@ newman_report: "reports/newman/venue-analytics-reporting-result.json"
 last_update: "2025-12-11T17:00:00+08:00"
 related_stories: ["US-013"]
 relationships:
-  enhances: ["reports-redemptions"]
+  enhances: ["venue-enhanced-scanning"]
   depends_on: ["venue-enhanced-scanning"]
   triggers: []
   data_dependencies: ["RedemptionEvent", "Venue"]

@@ -6,18 +6,17 @@ stories:
     cards:
       - catalog-endpoint
       - order-create
-      - payment-webhook
+      - wallyt-payment          # 替代 payment-webhook
       - my-tickets
       - qr-generation-api
-      - venue-enhanced-scanning
+      - venue-enhanced-scanning  # 包含核销和 redemptions
       - operators-login
-      - reports-redemptions
     # Sequence dependencies for temporal relationships
     sequence:
       - catalog-endpoint → order-create
-      - order-create → payment-webhook
-      - payment-webhook → my-tickets
-      - payment-webhook → qr-generation-api
+      - order-create → wallyt-payment
+      - wallyt-payment → my-tickets
+      - wallyt-payment → qr-generation-api
       - "[operators-login, qr-generation-api] → venue-enhanced-scanning"
     # Cross-story relationships
     enhances: []
@@ -44,7 +43,7 @@ stories:
       - my-tickets
       - qr-generation-api
     sequence:
-      - payment-webhook → my-tickets
+      - wallyt-payment → my-tickets      # 替代 payment-webhook
       - my-tickets → qr-generation-api
     enhances: [US-001]
     # Business requirements
@@ -54,9 +53,9 @@ stories:
     title: Payment notify → issue tickets (sync)
     status: Done
     cards:
-      - payment-webhook
+      - wallyt-payment                   # 替代 payment-webhook
     sequence:
-      - order-create → payment-webhook
+      - order-create → wallyt-payment    # 替代 payment-webhook
     enhances: [US-001]
     # Business requirements
     business_requirement: "PRD-001"
@@ -65,10 +64,9 @@ stories:
     title: Reporting — redemptions list
     status: Done
     cards:
-      - reports-redemptions
+      - venue-enhanced-scanning          # 提供 /venue/redemptions，替代 reports-redemptions
     sequence:
-      - venue-enhanced-scanning → reports-redemptions
-      - refund-processing → reports-redemptions
+      - venue-enhanced-scanning → venue-analytics-reporting
     enhances: [US-001, US-002, US-007]
     # Business requirements
     business_requirement: "PRD-003"
@@ -94,7 +92,7 @@ stories:
     sequence:
       - cancellation-policies → ticket-cancellation
       - ticket-cancellation → refund-processing
-      - refund-processing → payment-webhook
+      - refund-processing → wallyt-payment    # 替代 payment-webhook
     enhances: [US-001, US-004]
     # Business requirements
     business_requirement: "PRD-001"
@@ -129,14 +127,10 @@ stories:
     title: DeepTravel 小程序全链路购票与核销体验
     status: Draft
     cards:
-      - payment-webhook
-      - merchant-redemption-console
-      - admin-package-config
-      - notification-orchestrator
-      - route-schedule-management
-      - schedule-pricing-rules
+      - miniprogram-order
+      - miniprogram-product-catalog
       - wallyt-payment
-    # deprecated: [travel-search-hub, seat-lock-service, wechat-payment-session, ticket-lifecycle-daemon]
+    # deprecated: [travel-search-hub, seat-lock-service, wechat-payment-session, ticket-lifecycle-daemon, payment-webhook, notification-orchestrator, merchant-redemption-console]
     decomposed_into:
       - US-010A
       - US-010B
@@ -153,18 +147,14 @@ stories:
     title: DeepTravel 旅客闭环体验
     status: Done
     cards:
-      # deprecated: [travel-search-hub, seat-lock-service, wechat-payment-session]
-      - payment-webhook
-      - route-schedule-management
-      - schedule-pricing-rules
+      # deprecated: [travel-search-hub, seat-lock-service, wechat-payment-session, payment-webhook]
       - miniprogram-product-catalog
       - miniprogram-order
-      - wallyt-payment
+      - wallyt-payment                   # 整合了支付回调逻辑
     sequence:
       - catalog-endpoint → miniprogram-product-catalog
       - miniprogram-product-catalog → miniprogram-order
       - miniprogram-order → wallyt-payment
-      - wallyt-payment → payment-webhook
     enhances: [US-001, US-003, US-004]
     # Business requirements
     business_requirement: "PRD-008"
@@ -178,15 +168,12 @@ stories:
     status: Draft
     cards:
       - admin-package-config
-      - notification-orchestrator
-      - merchant-redemption-console
+      - venue-enhanced-scanning          # 替代 merchant-redemption-console
       - route-schedule-management
-      - schedule-pricing-rules
-    # deprecated: [ticket-lifecycle-daemon]
+    # deprecated: [ticket-lifecycle-daemon, notification-orchestrator, merchant-redemption-console, schedule-pricing-rules]
     sequence:
-      - admin-package-config → merchant-redemption-console
-      - refund-processing → notification-orchestrator
-      - "[operators-login] → merchant-redemption-console"
+      - admin-package-config → venue-enhanced-scanning
+      - "[operators-login] → venue-enhanced-scanning"
     enhances: [US-002, US-005, US-006, US-007]
     # Business requirements
     business_requirement: "PRD-008"
@@ -230,7 +217,7 @@ stories:
     business_requirement: "PRD-002"
     deadline: "2025-11-15"
     implementation_date: "2025-11-03"
-    implicit_dependencies: [catalog-endpoint, order-create, payment-webhook]
+    implicit_dependencies: [catalog-endpoint, order-create, wallyt-payment]  # payment-webhook 已废弃
     # E2E validation assets
     validation_assets:
       newman:
@@ -257,7 +244,7 @@ stories:
     business_requirement: "PRD-003"
     deadline: "2025-11-04"
     implementation_date: "2025-11-03"
-    implicit_dependencies: [qr-generation-api, payment-webhook]
+    implicit_dependencies: [qr-generation-api, wallyt-payment]  # payment-webhook 已废弃
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-013-runbook.md
@@ -274,7 +261,7 @@ stories:
       - wechat-auth-login → wechat-phone-binding
       - wechat-auth-login → user-profile-endpoint
       - wechat-auth-login → order-create
-      - wechat-auth-login → wechat-payment-session
+      - wechat-auth-login → wallyt-payment       # wechat-payment-session 已废弃
     # Cross-story relationships
     enhances: [US-001, US-009, US-010A]
     enhanced_by: []
@@ -296,7 +283,7 @@ stories:
       - operator-validation-scanner
     # Sequence dependencies
     sequence:
-      - payment-webhook → reservation-slot-management
+      - wallyt-payment → reservation-slot-management   # payment-webhook 已废弃
       - reservation-slot-management → customer-reservation-portal
       - "[operators-login, customer-reservation-portal] → operator-validation-scanner"
     # Cross-story relationships
@@ -305,7 +292,7 @@ stories:
     # Business requirements
     business_requirement: "PRD-006"  # 原 PRD-007 已合并到 PRD-006
     deadline: "2025-12-31"
-    implicit_dependencies: [payment-webhook, order-create, operators-login]
+    implicit_dependencies: [wallyt-payment, order-create, operators-login]  # payment-webhook 已废弃
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-015-runbook.md
@@ -318,10 +305,10 @@ stories:
       - reservation-slot-management
       - customer-reservation-portal
       - operator-validation-scanner
-    # deprecated: [ticket-lifecycle-daemon]
+    # deprecated: [ticket-lifecycle-daemon, payment-webhook]
     # Sequence dependencies
     sequence:
-      - payment-webhook → ticket-activation
+      - wallyt-payment → ticket-activation           # payment-webhook 已废弃
       - ticket-activation → time-slot-reservation
       - "[operators-login, time-slot-reservation] → reservation-validation-scanning"
     # Cross-story relationships
@@ -330,7 +317,7 @@ stories:
     # Business requirements
     business_requirement: "PRD-006"
     deadline: "2025-12-31"
-    implicit_dependencies: [payment-webhook, order-create, operators-login]
+    implicit_dependencies: [wallyt-payment, order-create, operators-login]  # payment-webhook 已废弃
     # E2E validation assets
     validation_assets:
       runbook: docs/integration/US-016-runbook.md

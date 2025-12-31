@@ -17,16 +17,16 @@ cards:
   - miniprogram-product-catalog    # Done - 商品列表/详情/库存
   - miniprogram-order              # Done - 订单创建/列表/详情
   # 支付 - 已完成
-  - wallyt-payment                 # Done - 微信支付（替代 wechat-payment-session）
-  - payment-webhook                # Done - 票券生成（出票逻辑已合并到此 Card）
+  - wallyt-payment                 # Done - 微信支付 + 票券生成
   # DEPRECATED
-  # - travel-search-hub            # DEPRECATED - 线路/套票搜索 (模块已删除，功能整合到 miniprogram-product-catalog)
-  # - seat-lock-service            # DEPRECATED - 锁座服务 (模块已删除，功能整合到 miniprogram-order)
+  # - payment-webhook              # DEPRECATED - 已合并到 wallyt-payment
+  # - travel-search-hub            # DEPRECATED - 模块已删除
+  # - seat-lock-service            # DEPRECATED - 模块已删除
   # - wechat-payment-session       # DEPRECATED - 被 wallyt-payment 替代
 related_features:
-  - payment-webhook
+  - wallyt-payment
   - my-tickets
-  - qr-token
+  - qr-generation-api
 ---
 
 ## Business goal
@@ -67,13 +67,13 @@ related_features:
 ## Business rules
 1. 锁座默认保留 10 分钟，可按线路配置；过期必须释放库存。
 2. 阶梯定价根据乘客类型/数量实时计算，需与现有 `order-create` DRY。
-3. 支付状态在 `wechat-payment-session` 与 `payment-webhook` 之间保持一致，避免双写。
+3. 支付状态在 `wallyt-payment` 中统一管理，避免双写。
 4. 票券生成必须是幂等操作，同一订单重复调用不得创建重复券。
 
 ## Integration impact
 - **travel-search-hub**：扩展现有 catalog 数据以支持线路/套票展示。
 - **seat-lock-service**：与 `order-create` 协作，补齐锁座释放任务。
-- **wechat-payment-session**：复用 `payment-webhook` 链路，按 DeepTravel 需求补充参数。
+- **wallyt-payment**：已整合支付与出票链路（替代 wechat-payment-session 和 payment-webhook）。
 - **bundle-ticket-engine**：在 `tickets-issuance` 基础上生成多乘客与共享权益。
 
 ## Telemetry & validation
@@ -105,5 +105,5 @@ related_features:
 ### Phase 3: 支付与票券 ✅
 | Card | Status | Description |
 |------|--------|-------------|
-| wallyt-payment | Done | 微信支付集成 (替代 wechat-payment-session) |
-| payment-webhook | Done | 多乘客票券批量生成（出票逻辑已合并到 payment-webhook） |
+| wallyt-payment | Done | 微信支付 + 票券批量生成（整合了出票逻辑） |
+| ~~payment-webhook~~ | DEPRECATED | 已合并到 wallyt-payment |

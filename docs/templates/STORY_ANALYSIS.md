@@ -198,7 +198,7 @@ This template guides fresh AI through analyzing user stories and breaking them d
 ## Integration Impact
 ### Existing Cards Affected:
 - my-tickets: Show cancellation option and status
-- payment-webhook: Handle refund confirmations
+- wallyt-payment: Handle refund confirmations
 
 ### New Integration Points:
 - Payment gateway refund API
@@ -217,7 +217,7 @@ This template guides fresh AI through analyzing user stories and breaking them d
 2. **refund-processing**: Payment refund handling
    - **Team**: A - Commerce
    - **Endpoints**: Internal refund service calls
-   - **Dependencies**: payment-webhook, ticket-cancellation
+   - **Dependencies**: wallyt-payment, ticket-cancellation
 
 3. **cancellation-policies**: Business rules and validation
    - **Team**: B - Fulfillment
