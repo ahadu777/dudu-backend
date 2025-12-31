@@ -1,76 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="PRD-003 Event Venue Operations Tests" tests="18" time="30.891">
-  <testsuite name="0. Setup - Prepare Test Data / F0.1 Generate Ticket (OTA)" id="55b3c7e2-a3a9-4286-b830-17508508d6d7" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="5.951">
-    <testcase name="Status code is 201" time="5.951" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Ticket generated" time="5.951" classname="Prd003EventVenueOperationsTests"/>
+<testsuites name="PRD-003 Event Venue Operations Tests" tests="18" time="31.011">
+  <testsuite name="0. Setup - Prepare Test Data / F0.1 Generate Ticket (OTA)" id="ec64f144-1dc7-4b42-a6eb-2a82282eca73" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="5.641">
+    <testcase name="Status code is 201" time="5.641" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Ticket generated" time="5.641" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="0. Setup - Prepare Test Data / F0.2 Activate Ticket" id="f6e65dfc-181c-4b2d-aa00-3e41e7709ba6" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="5.470">
-    <testcase name="Status code is 200" time="5.470" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Ticket activated" time="5.470" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="0. Setup - Prepare Test Data / F0.2 Activate Ticket" id="da649fe9-906a-43c3-934c-7dfc2159286f" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="4.916">
+    <testcase name="Status code is 200" time="4.916" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Ticket activated" time="4.916" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="1. 操作员认证 / F1.1 操作员登录 [AC-AUTH-1]" id="e185d668-e7da-487f-b7ef-c4b289f23faa" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="0.402">
-    <testcase name="Status code is 200" time="0.402" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Returns operator token" time="0.402" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="1. 操作员认证 / F1.1 操作员登录 [AC-AUTH-1]" id="0d410e4b-f371-498e-9be4-c1d882834359" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.386">
+    <testcase name="Status code is 200" time="0.386" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Returns operator token" time="0.386" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="1. 操作员认证 / F1.2 会话终端绑定 [AC-AUTH-2]" id="707cd391-564a-454d-bd9a-aac97d5d5f44" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="0.442">
-    <testcase name="Status code is 200" time="0.442" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Session bound to terminal" time="0.442" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="1. 操作员认证 / F1.2 会话终端绑定 [AC-AUTH-2]" id="35f6553a-ac76-485a-b75c-c12cf030a3aa" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.384">
+    <testcase name="Status code is 200" time="0.384" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Session bound to terminal" time="0.384" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="1. 操作员认证 / F1.3 无效凭据 (401) [AC-AUTH-3]" id="df7af4ad-22c4-4cbd-94b8-9c6d32857dbf" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="0.392">
-    <testcase name="Status code is 401" time="0.392" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Returns auth error" time="0.392" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="1. 操作员认证 / F1.3 无效凭据 (401) [AC-AUTH-3]" id="3dc08d2d-928d-4f30-970d-d33746505344" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.376">
+    <testcase name="Status code is 401" time="0.376" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Returns auth error" time="0.376" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="2. 套餐验证 / F2.1 Premium Plan 验证 [AC-VALIDATE-1]" id="e763db95-dc06-436d-be80-9e885fba570b" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="0.356">
-    <testcase name="Status code is 200" time="0.356" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Premium Plan has ferry + gift + tokens" time="0.356" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="2. 套餐验证 / F2.1 Premium Plan 验证 [AC-VALIDATE-1]" id="349666f7-19a2-4902-89a2-635bb64b4da4" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.327">
+    <testcase name="Status code is 200" time="0.327" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Premium Plan has ferry + gift + tokens" time="0.327" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="2. 套餐验证 / F2.2 Pet Plan 验证 [AC-VALIDATE-2]" id="460ad1fd-61cb-4713-95f9-89df95c0001a" timestamp="2025-12-26T07:27:23.977Z" tests="1" failures="0" errors="0" time="0.337">
-    <testcase name="Product 107 not found - skipped" time="0.337" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="2. 套餐验证 / F2.2 Pet Plan 验证 [AC-VALIDATE-2]" id="9d79c211-d482-4b3f-837e-ae478bd24890" timestamp="2025-12-31T05:30:18.119Z" tests="1" failures="0" errors="0" time="0.321">
+    <testcase name="Product 107 not found - skipped" time="0.321" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="2. 套餐验证 / F2.3 Deluxe Tea Set 验证 [AC-VALIDATE-3]" id="003a79cb-e8a3-4732-ab8e-ba6fb9666ab8" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="0.342">
-    <testcase name="Status code is 200" time="0.342" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Deluxe has tea set functions" time="0.342" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="2. 套餐验证 / F2.3 Deluxe Tea Set 验证 [AC-VALIDATE-3]" id="796206ba-72bc-4bd5-86b4-b0df454bbc40" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.322">
+    <testcase name="Status code is 200" time="0.322" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Deluxe has tea set functions" time="0.322" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="2. 套餐验证 / F2.4 权益用尽处理 [AC-VALIDATE-4]" id="1461968f-b642-46a8-92ee-8da586e07c9b" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="0.003">
-    <testcase name="Status code is 422 or 400" time="0.003" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Returns exhausted error" time="0.003" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="2. 套餐验证 / F2.4 权益用尽处理 [AC-VALIDATE-4]" id="dde70427-f7bc-4212-a2ee-5902f56ad954" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="Status code is 422 or 400" time="0.004" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Returns exhausted error" time="0.004" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3. QR扫描 / F3.1 生成加密QR码 [AC-SCAN-1]" id="572b35e2-584b-46e6-96e8-e31fee1ed3ca" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="3.993">
-    <testcase name="Status code is 200" time="3.993" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="QR code generated" time="3.993" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3. QR扫描 / F3.1 生成加密QR码 [AC-SCAN-1]" id="a6106d21-4ef4-446a-8f95-a9d50f89ed77" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="5.524">
+    <testcase name="Status code is 200" time="5.524" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="QR code generated" time="5.524" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3. QR扫描 / F3.2 扫描验证权益 [AC-SCAN-2]" id="da98ec70-9659-4678-9831-335c789f8c58" timestamp="2025-12-26T07:27:23.977Z" tests="3" failures="0" errors="0" time="1.785">
-    <testcase name="Status code is 200" time="1.785" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="QR decrypted with ticket info" time="1.785" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Has entitlements" time="1.785" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3. QR扫描 / F3.2 扫描验证权益 [AC-SCAN-2]" id="c0966001-1ad3-4cb0-8429-a1fe5a8b30b3" timestamp="2025-12-31T05:30:18.119Z" tests="3" failures="0" errors="0" time="1.657">
+    <testcase name="Status code is 200" time="1.657" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="QR decrypted with ticket info" time="1.657" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Has entitlements" time="1.657" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3. QR扫描 / F3.3 扫描响应时间 &lt;2s [AC-SCAN-3]" id="283a2e23-4806-47cc-b6bd-fd569794ab0f" timestamp="2025-12-26T07:27:23.977Z" tests="3" failures="0" errors="0" time="4.273">
-    <testcase name="Status code is 200" time="4.273" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Response time under 5000ms" time="4.273" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Redemption successful" time="4.273" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3. QR扫描 / F3.3 扫描响应时间 &lt;2s [AC-SCAN-3]" id="803ce997-90b3-4e0b-9084-07a8d0687143" timestamp="2025-12-31T05:30:18.119Z" tests="3" failures="0" errors="0" time="3.965">
+    <testcase name="Status code is 200" time="3.965" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Response time under 5000ms" time="3.965" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Redemption successful" time="3.965" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="3. QR扫描 / F3.4 无效QR码处理 [AC-SCAN-4]" id="8c6db5ca-a211-4f28-bf47-65f39ae61803" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="0.002">
-    <testcase name="Status code is 400 or 401" time="0.002" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Returns error" time="0.002" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="3. QR扫描 / F3.4 无效QR码处理 [AC-SCAN-4]" id="726c438e-b30e-43f2-9e11-8184be4fe4a6" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="Status code is 400 or 401" time="0.003" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Returns error" time="0.003" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="4. 欺诈防护 / F4.1 JTI重复检测 [AC-FRAUD-1]" id="9bc0bc01-a537-405f-8f06-e8c7c54ced93" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="1.661">
-    <testcase name="Status code is 422 (Rejected)" time="1.661" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Fraud detection triggered" time="1.661" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="4. 欺诈防护 / F4.1 JTI重复检测 [AC-FRAUD-1]" id="021b883a-7339-483f-ac82-6a9c14179059" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="2.277">
+    <testcase name="Status code is 422 (Rejected)" time="2.277" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Fraud detection triggered" time="2.277" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="4. 欺诈防护 / F4.2 已兑换提示 [AC-FRAUD-2]" id="872f03ef-1cde-452d-97ae-ec089f5f00d9" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="2.848">
-    <testcase name="Status code is 422 or 200" time="2.848" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Response indicates status" time="2.848" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="4. 欺诈防护 / F4.2 已兑换提示 [AC-FRAUD-2]" id="6d704de0-0d8b-4ca9-833d-b8e7f2f6ad41" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="2.593">
+    <testcase name="Status code is 422 or 200" time="2.593" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Response indicates status" time="2.593" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="4. 欺诈防护 / F4.3 审计追踪 [AC-FRAUD-3]" id="5ad8bc6e-b624-4b54-8bf4-ffdcfd3fd8de" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="1.187">
-    <testcase name="Status code is 200" time="1.187" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Has redemption history" time="1.187" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="4. 欺诈防护 / F4.3 审计追踪 [AC-FRAUD-3]" id="e5bafebd-53b8-453a-8be8-70e995721681" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.983">
+    <testcase name="Status code is 200" time="0.983" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Has redemption history" time="0.983" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="5. 分析报告 / F5.1 兑换历史查询 [AC-ANALYTICS-1]" id="aa1c4488-d07c-433d-8e02-8bbdd457ecb6" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="1.083">
-    <testcase name="Status code is 200" time="1.083" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Has ticket info with entitlements" time="1.083" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="5. 分析报告 / F5.1 兑换历史查询 [AC-ANALYTICS-1]" id="2b0ecdec-3838-41c0-b3d7-623bec7ce37d" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.993">
+    <testcase name="Status code is 200" time="0.993" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Has ticket info with entitlements" time="0.993" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
-  <testsuite name="5. 分析报告 / F5.2 场馆列表 [AC-ANALYTICS-2]" id="45e42883-a69c-4c5f-97b8-981d71faee08" timestamp="2025-12-26T07:27:23.977Z" tests="2" failures="0" errors="0" time="0.364">
-    <testcase name="Status code is 200" time="0.364" classname="Prd003EventVenueOperationsTests"/>
-    <testcase name="Returns venues list" time="0.364" classname="Prd003EventVenueOperationsTests"/>
+  <testsuite name="5. 分析报告 / F5.2 场馆列表 [AC-ANALYTICS-2]" id="01033dcd-af9a-44ba-aa97-bc9117fba1c4" timestamp="2025-12-31T05:30:18.119Z" tests="2" failures="0" errors="0" time="0.339">
+    <testcase name="Status code is 200" time="0.339" classname="Prd003EventVenueOperationsTests"/>
+    <testcase name="Returns venues list" time="0.339" classname="Prd003EventVenueOperationsTests"/>
   </testsuite>
 </testsuites>
