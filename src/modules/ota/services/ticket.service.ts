@@ -118,14 +118,14 @@ export class TicketService extends BaseOTAService {
     isLogoPreprocessed: boolean = false
   ): Promise<any> {
     // Use entitlements from product or default cruise functions
-    const entitlements = product.entitlements?.map((entitlement: any) => ({
-      function_code: entitlement.type,
-      remaining_uses: entitlement.metadata?.quantity || entitlement.quantity || 1
-    })) || [
-      { function_code: 'ferry', remaining_uses: 1 },
-      { function_code: 'deck_access', remaining_uses: 1 },
-      { function_code: 'dining', remaining_uses: 1 }
-    ];
+    const entitlements = product.entitlements?.map((entitlement: any) => {
+      const uses = entitlement.metadata?.quantity || entitlement.quantity || 1;
+      return {
+        function_code: entitlement.type,
+        remaining_uses: uses,
+        total_uses: uses
+      };
+    });
 
     // Generate QR code for bulk pre-generated tickets
     // OTA tickets: permanent QR codes (100 years = 52,560,000 minutes)

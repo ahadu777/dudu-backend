@@ -297,12 +297,16 @@ export class MiniprogramOrderService {
             ticket.customer_name = order.contact_name;
             ticket.customer_email = order.contact_email;
             ticket.customer_phone = order.contact_phone;
-            // 复制产品权益到票券（与 OTA 保持一致，使用 remaining_uses）
+            // 复制产品权益到票券（与 OTA 保持一致，使用 remaining_uses 和 total_uses）
             // 支持两种数据格式：{ type, metadata: { quantity } } 或 { type, quantity }
-            ticket.entitlements = productEntitlements.map(e => ({
-              function_code: e.type,
-              remaining_uses: e.metadata?.quantity || (e as any).quantity || 1
-            }));
+            ticket.entitlements = productEntitlements.map(e => {
+              const uses = e.metadata?.quantity || (e as any).quantity || 1;
+              return {
+                function_code: e.type,
+                remaining_uses: uses,
+                total_uses: uses
+              };
+            });
 
             logger.debug('miniprogram.ticket.entitlements_generated', {
               ticket_code: ticket.ticket_code,

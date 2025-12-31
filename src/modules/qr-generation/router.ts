@@ -209,7 +209,7 @@ router.post('/decrypt', optionalAuthenticateOperator, async (req: Request, res: 
         function_name: label,
         description,
         remaining_uses: e.remaining_uses,
-        total_uses: e.total_uses || e.remaining_uses
+        total_uses: e.total_uses
       };
     });
 
@@ -781,7 +781,7 @@ router.get('/:code/info', unifiedAuth(), async (req: Request, res: Response, nex
           function_name: label,
           description,
           remaining_uses: e.remaining_uses,
-          total_uses: e.total_uses || e.remaining_uses
+          total_uses: e.total_uses
         };
       });
 

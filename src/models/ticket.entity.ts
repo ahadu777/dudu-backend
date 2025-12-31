@@ -27,6 +27,7 @@ export type DistributionMode = 'direct_sale' | 'reseller_batch';
 export interface TicketEntitlement {
   function_code: string;  // ferry, playground_tokens, monchhichi_gift, etc.
   remaining_uses: number; // 剩余使用次数
+  total_uses?: number;    // 总使用次数（创建时记录，用于展示）
 }
 
 /**
