@@ -437,10 +437,14 @@ export class WallytPaymentService {
           ticket.customer_name = order.contact_name;
           ticket.customer_email = order.contact_email;
           ticket.customer_phone = order.contact_phone;
-          ticket.entitlements = productEntitlements.map(e => ({
-            function_code: e.type,
-            remaining_uses: e.metadata?.quantity || (e as any).quantity || 1
-          }));
+          ticket.entitlements = productEntitlements.map(e => {
+            const uses = e.metadata?.quantity || (e as any).quantity || 1;
+            return {
+              function_code: e.type,
+              remaining_uses: uses,
+              total_uses: uses
+            };
+          });
 
           const savedTicket = await manager.save(ticket);
           tickets.push(savedTicket);
