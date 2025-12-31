@@ -1,7 +1,7 @@
 import { AppDataSource } from '../../config/database';
 import { VenueRepository } from './domain/venue.repository';
 import { logger } from '../../utils/logger';
-import { decryptAndVerifyQR } from '../../utils/qr-crypto';
+import { validateTicketQR, mapErrorCodeToRejectReason } from '../../utils/qr-validation';
 
 // ============================================================================
 // Type Definitions
@@ -128,21 +128,63 @@ export class VenueOperationsService {
 
     try {
       // ========================================
-      // Step 1: 解密并验证QR码
+      // Step 1-5: 使用共享验证函数
+      // - 解密并验证 QR 签名
+      // - 查询票据
+      // - OTA 范围检查
+      // - 小程序 QR 过期检查
+      // - JTI 一码失效验证
       // ========================================
-      const decryptResult = await decryptAndVerifyQR(request.qrToken);
+      const operatorContext = {
+        operator_id: request.operator.operator_id,
+        operator_type: request.operator.operator_type,
+        partner_id: request.operator.partner_id
+      };
 
-      const { ticket_code: ticketCode, jti } = decryptResult.data;
+      const validationResult = await validateTicketQR(
+        request.qrToken,
+        (ticketCode) => this.repository.getTicketByCode(ticketCode),
+        operatorContext
+      );
 
-      logger.info('venue.scan.qr_decrypted', {
+      // 处理验证失败
+      if (!validationResult.success) {
+        const error = validationResult.error!;
+        const reason = mapErrorCodeToRejectReason(error.code);
+        const ticketCode = error.details?.ticket_code || 'unknown';
+        const jti = error.details?.jti || 'unknown';
+
+        await this.recordRedemption({
+          ticketCode,
+          jti,
+          functionCode: request.functionCode,
+          operator: request.operator,
+          result: 'reject',
+          reason,
+          venueId,
+          additionalInfo
+        });
+
+        // fraud_checks_passed: 非 QR 篡改/解密失败的错误视为通过
+        const fraudChecksPassed = !['QR_TAMPERED', 'QR_INVALID', 'QR_FORMAT_INVALID'].includes(reason);
+        return this.createRejectResponse(reason, startTime, request.operator, fraudChecksPassed);
+      }
+
+      // 验证通过，提取结果
+      const { qr, ticket } = validationResult;
+      const ticketCode = qr!.ticket_code;
+      const jti = qr!.jti;
+
+      logger.info('venue.scan.validation_passed', {
         ticket_code: ticketCode,
         jti,
-        qr_expired: decryptResult.is_expired,
+        ticket_type: ticket!.ticket_type,
         operator_id: request.operator.operator_id
       });
 
       // ========================================
-      // Step 2: 防重放攻击 - 检查 JTI + function_code 组合
+      // Step 6: 防重放攻击 - 检查 JTI + function_code 组合
+      // (scan 特有，不在共享验证中)
       // ========================================
       const alreadyUsed = await this.repository.hasJtiBeenUsedForFunction(
         jti,
@@ -172,147 +214,23 @@ export class VenueOperationsService {
         return this.createRejectResponse('ALREADY_REDEEMED', startTime, request.operator, false);
       }
 
-      // ========================================
-      // Step 3: 获取并验证票据
-      // ========================================
-      const ticket = await this.repository.getTicketByCode(ticketCode);
-
-      if (!ticket) {
-        logger.warn('venue.scan.ticket_not_found', {
-          ticket_code: ticketCode,
-          operator_id: request.operator.operator_id
-        });
-
-        await this.recordRedemption({
-          ticketCode,
-          jti,
-          functionCode: request.functionCode,
-          operator: request.operator,
-          result: 'reject',
-          reason: 'TICKET_NOT_FOUND',
-          venueId,
-          additionalInfo
-        });
-
-        return this.createRejectResponse('TICKET_NOT_FOUND', startTime, request.operator, true);
-      }
-
-      // ========================================
-      // Step 3.0.5: OTA 范围检查 (US-019)
-      // - 如果核销员是 OTA 类型，验证票券 partner_id 是否匹配
-      // - 不匹配则返回 RED（无权核销此票券）
-      // ========================================
-      if (request.operator.operator_type === 'OTA' && request.operator.partner_id) {
-        const ticketPartnerId = ticket.partner_id;
-        if (ticketPartnerId && ticketPartnerId !== request.operator.partner_id) {
-          logger.warn('venue.scan.ota_scope_mismatch', {
-            ticket_code: ticketCode,
-            ticket_partner_id: ticketPartnerId,
-            operator_partner_id: request.operator.partner_id,
-            operator_id: request.operator.operator_id,
-            reason: 'OTA operator cannot redeem ticket from another OTA'
-          });
-
-          await this.recordRedemption({
-            ticketCode,
-            jti,
-            functionCode: request.functionCode,
-            operator: request.operator,
-            result: 'reject',
-            reason: 'OTA_SCOPE_MISMATCH',
-            venueId,
-            additionalInfo
-          });
-
-          return this.createRejectResponse('OTA_SCOPE_MISMATCH', startTime, request.operator, true);
-        }
-      }
-
-      // ========================================
-      // Step 3.1: 小程序票券 QR 过期检查
-      // - OTA 票券：QR 码长期有效，不检查过期
-      // - 小程序票券：QR 码有 30 分钟有效期，过期后需重新生成
-      // ========================================
-      if (ticket.ticket_type === 'MINIPROGRAM' && decryptResult.is_expired) {
-        logger.warn('venue.scan.qr_expired', {
-          ticket_code: ticketCode,
-          ticket_type: ticket.ticket_type,
-          qr_expires_at: decryptResult.data.expires_at,
-          operator_id: request.operator.operator_id,
-          reason: 'Miniprogram QR code has expired'
-        });
-
-        await this.recordRedemption({
-          ticketCode,
-          jti,
-          functionCode: request.functionCode,
-          operator: request.operator,
-          result: 'reject',
-          reason: 'QR_EXPIRED',
-          venueId,
-          additionalInfo
-        });
-
-        return this.createRejectResponse('QR_EXPIRED', startTime, request.operator, true);
-      }
-
       // 收集票券相关的额外信息
-      additionalInfo.ticketType = ticket.ticket_type;
-      additionalInfo.productId = ticket.product_id;
-      additionalInfo.customerName = ticket.customer_name;
-      additionalInfo.customerPhone = ticket.customer_phone;
-      additionalInfo.customerEmail = ticket.customer_email;
-      additionalInfo.customerType = ticket.customer_type;
+      additionalInfo.ticketType = ticket!.ticket_type;
+      additionalInfo.productId = ticket!.product_id || undefined;
+      additionalInfo.customerName = ticket!.customer_name || undefined;
+      additionalInfo.customerPhone = ticket!.customer_phone || undefined;
+      additionalInfo.customerEmail = ticket!.customer_email || undefined;
+      additionalInfo.customerType = ticket!.customer_type || undefined;
 
       // 获取产品名称
-      if (ticket.product_id) {
-        additionalInfo.productName = await this.repository.getProductNameById(ticket.product_id) || undefined;
-      }
-
-      // ========================================
-      // Step 3.1: JTI 匹配验证（一码失效机制）
-      // - OTA 票券：current_jti 存储在 raw.jti.current_jti
-      // - 小程序票券：current_jti 存储在 extra.current_jti
-      // ========================================
-      let currentJti: string | undefined;
-
-      // OTA 票券：检查 raw.jti.current_jti
-      if (ticket.raw?.jti?.current_jti) {
-        currentJti = ticket.raw.jti.current_jti;
-      }
-      // 小程序票券：检查 extra.current_jti
-      else if (ticket.extra?.current_jti) {
-        currentJti = ticket.extra.current_jti;
-      }
-
-      if (currentJti && currentJti !== jti) {
-        logger.warn('venue.scan.jti_mismatch', {
-          ticket_code: ticketCode,
-          qr_jti: jti,
-          current_jti: currentJti,
-          ticket_type: ticket.ticket_type,
-          operator_id: request.operator.operator_id,
-          reason: 'QR code superseded by newer one'
-        });
-
-        await this.recordRedemption({
-          ticketCode,
-          jti,
-          functionCode: request.functionCode,
-          operator: request.operator,
-          result: 'reject',
-          reason: 'QR_SUPERSEDED',
-          venueId,
-          additionalInfo
-        });
-
-        return this.createRejectResponse('QR_SUPERSEDED', startTime, request.operator, false);
+      if (ticket!.product_id) {
+        additionalInfo.productName = await this.repository.getProductNameById(ticket!.product_id) || undefined;
       }
 
       logger.info('venue.scan.ticket_found', {
         ticket_code: ticketCode,
-        status: ticket.status,
-        ticket_type: ticket.ticket_type,
+        status: ticket!.status,
+        ticket_type: ticket!.ticket_type,
         operator_id: request.operator.operator_id
       });
 
@@ -320,13 +238,13 @@ export class VenueOperationsService {
       // 统一状态：OTA 和小程序票券均使用 'ACTIVATED'
       // RESERVED 状态也允许核销（预订票券可直接使用）
       const validStatuses = ['ACTIVATED', 'RESERVED'];
-      if (!validStatuses.includes(ticket.status)) {
+      if (!validStatuses.includes(ticket!.status)) {
         logger.warn('venue.scan.invalid_status', {
           ticket_code: ticketCode,
-          status: ticket.status,
+          status: ticket!.status,
           valid_statuses: validStatuses,
           operator_id: request.operator.operator_id,
-          reason: ticket.status === 'PRE_GENERATED' ? 'Ticket not activated yet' : 'Invalid ticket status'
+          reason: ticket!.status === 'PRE_GENERATED' ? 'Ticket not activated yet' : 'Invalid ticket status'
         });
 
         await this.recordRedemption({
@@ -417,7 +335,7 @@ export class VenueOperationsService {
       // ========================================
       // Step 4: 验证权益
       // ========================================
-      const entitlement = ticket.entitlements.find(
+      const entitlement = ticket!.entitlements.find(
         (e: Entitlement) => e.function_code === request.functionCode
       );
 
@@ -425,7 +343,7 @@ export class VenueOperationsService {
         logger.warn('venue.scan.wrong_function', {
           ticket_code: ticketCode,
           requested_function: request.functionCode,
-          available_functions: ticket.entitlements.map((e: Entitlement) => e.function_code),
+          available_functions: ticket!.entitlements.map((e: Entitlement) => e.function_code),
           operator_id: request.operator.operator_id
         });
 
@@ -515,8 +433,8 @@ export class VenueOperationsService {
 
       return {
         result: 'success',
-        ticket_status: ticket.status,
-        entitlements: ticket.entitlements,
+        ticket_status: ticket!.status,
+        entitlements: ticket!.entitlements,
         remaining_uses: remainingUsesAfter,
         operator_info: {
           operator_id: request.operator.operator_id,
@@ -546,19 +464,8 @@ export class VenueOperationsService {
         stack: error instanceof Error ? error.stack : undefined
       });
 
-      // 根据错误类型返回不同的拒绝原因
-      const errorMsg = error instanceof Error ? error.message : '';
-      let reason = 'INTERNAL_ERROR';
-
-      if (errorMsg.includes('QR_SIGNATURE_INVALID')) {
-        reason = 'QR_TAMPERED';
-      } else if (errorMsg.includes('QR_DECRYPTION_FAILED')) {
-        reason = 'QR_INVALID';
-      } else if (errorMsg.includes('QR_INVALID_FORMAT')) {
-        reason = 'QR_FORMAT_INVALID';
-      }
-
-      return this.createRejectResponse(reason, startTime, request.operator, false);
+      // QR 相关错误已被共享验证函数处理，这里只处理其他意外错误
+      return this.createRejectResponse('INTERNAL_ERROR', startTime, request.operator, false);
     }
   }
 

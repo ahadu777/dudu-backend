@@ -4,6 +4,7 @@ import { optionalAuthenticateOperator } from '../../middlewares/auth';
 import { unifiedQRService } from './service';
 import { logger } from '../../utils/logger';
 import { decryptAndVerifyQR } from '../../utils/qr-crypto';
+import { validateTicketQR, mapErrorCodeToHttpStatus } from '../../utils/qr-validation';
 import { mockDataStore } from '../../core/mock/data';
 import { AppDataSource } from '../../config/database';
 import { VenueRepository } from '../venue/domain/venue.repository';
@@ -47,125 +48,75 @@ router.post('/decrypt', optionalAuthenticateOperator, async (req: Request, res: 
       });
     }
 
-    // Step 1: Decrypt and verify QR code
-    const result = await decryptAndVerifyQR(encrypted_data);
-    const ticketCode = result.data.ticket_code;
-
-    logger.info('qr.decrypt.success', {
-      jti: result.data.jti,
-      ticket_code: ticketCode,
-      is_expired: result.is_expired
-    });
-
-    // Step 2: Fetch complete ticket information
-    // Note: No ownership validation here since encrypted_data itself is the security credential
-    // Query tickets from local database (tickets table for miniprogram, pre_generated_tickets for OTA)
-
-    let ticket;
-    let ticketType = 'NORMAL';
+    // ========================================
+    // 使用共享验证函数（Step 1-5）
+    // ========================================
     let venueRepo: VenueRepository | null = null;
 
-    // Query local database first (OTA pre_generated_tickets + miniprogram tickets)
+    // 初始化 VenueRepository
     if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
       venueRepo = new VenueRepository(AppDataSource);
-      ticket = await venueRepo.getTicketByCode(ticketCode);
-      if (ticket) {
-        ticketType = ticket.ticket_type || (ticketCode.startsWith('MP-') ? 'MINIPROGRAM' : 'OTA');
-        logger.info('qr.decrypt.ticket_source', {
-          ticket_code: ticketCode,
-          source: 'database',
-          ticket_type: ticketType
-        });
-      }
     }
 
-    if (!ticket) {
-      return res.status(404).json({
-        error: 'TICKET_NOT_FOUND',
-        message: 'Ticket not found',
-        jti: result.data.jti,
-        ticket_code: ticketCode
+    // 创建票据查询函数（依赖注入）
+    const getTicketByCode = async (ticketCode: string) => {
+      if (!venueRepo) return null;
+      return venueRepo.getTicketByCode(ticketCode);
+    };
+
+    // 构建操作员上下文
+    const operatorContext = req.operator ? {
+      operator_id: req.operator.operator_id,
+      operator_type: req.operator.operator_type,
+      partner_id: req.operator.partner_id
+    } : undefined;
+
+    // 执行共享验证
+    const validationResult = await validateTicketQR(
+      encrypted_data,
+      getTicketByCode,
+      operatorContext
+    );
+
+    // 处理验证失败
+    if (!validationResult.success) {
+      const error = validationResult.error!;
+      const httpStatus = mapErrorCodeToHttpStatus(error.code);
+
+      // 构建错误响应（保持向后兼容的消息格式）
+      const errorMessages: Record<string, string> = {
+        'OTA_SCOPE_MISMATCH': '无权查看此票券（票券不属于您的 OTA 平台）',
+        'QR_EXPIRED': '二维码已过期，请重新生成',
+        'QR_SUPERSEDED': '此二维码已失效，请重新生成',
+        'TICKET_NOT_FOUND': 'Ticket not found',
+        'QR_SIGNATURE_INVALID': 'QR code has been tampered with',
+        'QR_DECRYPTION_FAILED': 'Unable to decrypt QR code',
+        'QR_INVALID_FORMAT': 'Invalid QR code format'
+      };
+
+      return res.status(httpStatus).json({
+        error: error.code,
+        message: errorMessages[error.code] || error.message,
+        ...error.details
       });
     }
 
-    // ========================================
-    // OTA 范围检查 (US-019)
-    // - 如果核销员是 OTA 类型，验证票券 partner_id 是否匹配
-    // - 不匹配则返回错误（无权查看此票券）
-    // ========================================
-    if (req.operator?.operator_type === 'OTA' && req.operator.partner_id) {
-      const ticketPartnerId = ticket.partner_id;
-      if (ticketPartnerId && ticketPartnerId !== req.operator.partner_id) {
-        logger.warn('qr.decrypt.ota_scope_mismatch', {
-          ticket_code: ticketCode,
-          ticket_partner_id: ticketPartnerId,
-          operator_partner_id: req.operator.partner_id,
-          operator_id: req.operator.operator_id
-        });
-        return res.status(403).json({
-          error: 'OTA_SCOPE_MISMATCH',
-          message: '无权查看此票券（票券不属于您的 OTA 平台）',
-          jti: result.data.jti,
-          ticket_code: ticketCode
-        });
-      }
-    }
+    // 验证通过，提取结果
+    const { qr: result, ticket } = validationResult;
+    const ticketCode = result!.ticket_code;
+    const ticketType = ticket!.ticket_type;
 
-    // ========================================
-    // 小程序票券 QR 过期检查
-    // - OTA 票券：QR 码长期有效，不检查过期
-    // - 小程序票券：QR 码有 30 分钟有效期，过期后需重新生成
-    // ========================================
-    if (ticketType === 'MINIPROGRAM' && result.is_expired) {
-      logger.warn('qr.decrypt.qr_expired', {
-        ticket_code: ticketCode,
-        ticket_type: ticketType,
-        qr_expires_at: result.data.expires_at,
-        reason: 'Miniprogram QR code has expired'
-      });
-      return res.status(401).json({
-        error: 'QR_EXPIRED',
-        message: '二维码已过期，请重新生成',
-        jti: result.data.jti,
-        ticket_code: ticketCode,
-        expires_at: result.data.expires_at
-      });
-    }
-
-    // JTI 验证：检查二维码是否已被新码替代（一码失效机制）
-    // - OTA 票券：current_jti 存储在 raw.jti.current_jti
-    // - 小程序票券：current_jti 存储在 extra.current_jti
-    let currentJti: string | undefined;
-
-    // OTA 票券
-    if (ticket.raw?.jti?.current_jti) {
-      currentJti = ticket.raw.jti.current_jti;
-    }
-    // 小程序票券
-    else if (ticket.extra?.current_jti) {
-      currentJti = ticket.extra.current_jti;
-    }
-
-    if (currentJti && currentJti !== result.data.jti) {
-      logger.warn('qr.decrypt.jti_mismatch', {
-        ticket_code: ticketCode,
-        qr_jti: result.data.jti,
-        current_jti: currentJti,
-        ticket_type: ticketType
-      });
-      return res.status(401).json({
-        error: 'QR_SUPERSEDED',
-        message: '此二维码已失效，请重新生成',
-        jti: result.data.jti,
-        ticket_code: ticketCode
-      });
-    }
+    logger.info('qr.decrypt.validation_passed', {
+      ticket_code: ticketCode,
+      jti: result!.jti,
+      ticket_type: ticketType
+    });
 
     // Get product information (database first, then fallback to mock)
     let product: any = null;
     if (dataSourceConfig.useDatabase && AppDataSource.isInitialized) {
       const productRepo = AppDataSource.getRepository(ProductEntity);
-      const dbProduct = await productRepo.findOne({ where: { id: ticket.product_id } });
+      const dbProduct = await productRepo.findOne({ where: { id: ticket!.product_id! } });
       if (dbProduct) {
         product = {
           id: dbProduct.id,
@@ -176,19 +127,19 @@ router.post('/decrypt', optionalAuthenticateOperator, async (req: Request, res: 
       }
     }
     if (!product) {
-      product = mockDataStore.getProduct(ticket.product_id);
+      product = mockDataStore.getProduct(ticket!.product_id!);
     }
     const productInfo = product ? {
       id: product.id,
       name: product.name
     } : {
-      id: ticket.product_id,
+      id: ticket!.product_id,
       name: 'Unknown Product'
     };
 
     // Format entitlements with complete information (with fallback to product entitlements)
     const productEntitlements = product?.entitlements || product?.functions || [];
-    const formattedEntitlements = (ticket.entitlements || []).map((e: any) => {
+    const formattedEntitlements = (ticket!.entitlements || []).map((e: any) => {
       // Fallback: find description from product entitlements if ticket doesn't have it
       let description = e.description || null;
       let label = e.label || e.function_code;
@@ -242,23 +193,23 @@ router.post('/decrypt', optionalAuthenticateOperator, async (req: Request, res: 
     // Return complete information: QR metadata + ticket details
     return res.status(200).json({
       // QR code metadata (解密信息)
-      jti: result.data.jti,
+      jti: result!.jti,
       ticket_code: ticketCode,
-      expires_at: result.data.expires_at,
-      version: result.data.version,
-      is_expired: result.is_expired,
-      remaining_seconds: result.remaining_seconds,
+      expires_at: result!.expires_at,
+      version: result!.version,
+      is_expired: result!.is_expired,
+      remaining_seconds: result!.remaining_seconds,
 
       // Complete ticket information (完整票券信息)
       ticket_info: {
         ticket_type: ticketType,
-        status: ticket.status,
+        status: ticket!.status,
         // Customer information (顾客信息)
         customer_info: {
-          type: ticket.customer_type || null,        // 'adult' | 'child' | 'elderly' (成人/小孩/老人)
-          name: ticket.customer_name || null,        // 顾客姓名
-          email: ticket.customer_email || null,      // 顾客邮箱
-          phone: ticket.customer_phone || null       // 顾客电话
+          type: ticket!.customer_type || null,        // 'adult' | 'child' | 'elderly' (成人/小孩/老人)
+          name: ticket!.customer_name || null,        // 顾客姓名
+          email: ticket!.customer_email || null,      // 顾客邮箱
+          phone: ticket!.customer_phone || null       // 顾客电话
         },
         // Reservation information (预订信息)
         slot_date: reservationInfo.slot_date,        // 预订日期 (e.g., "2025-01-15")
@@ -266,10 +217,10 @@ router.post('/decrypt', optionalAuthenticateOperator, async (req: Request, res: 
         entitlements: formattedEntitlements,
         product_info: productInfo,
         // Additional fields for debugging
-        product_id: ticket.product_id,
-        order_id: ticket.order_id,
-        batch_id: ticket.batch_id,
-        partner_id: ticket.partner_id
+        product_id: ticket!.product_id,
+        order_id: (ticket as any).order_id,
+        batch_id: (ticket as any).batch_id,
+        partner_id: ticket!.partner_id
       }
     });
 
@@ -278,33 +229,7 @@ router.post('/decrypt', optionalAuthenticateOperator, async (req: Request, res: 
       error: error instanceof Error ? error.message : 'Unknown error'
     });
 
-    // Handle specific QR errors
-    if (error instanceof Error) {
-      const message = error.message;
-
-      if (message.includes('QR_SIGNATURE_INVALID')) {
-        return res.status(401).json({
-          error: 'QR_SIGNATURE_INVALID',
-          message: 'QR code has been tampered with'
-        });
-      }
-
-      if (message.includes('QR_DECRYPTION_FAILED')) {
-        return res.status(401).json({
-          error: 'QR_DECRYPTION_FAILED',
-          message: 'Unable to decrypt QR code'
-        });
-      }
-
-      if (message.includes('QR_INVALID_FORMAT')) {
-        return res.status(400).json({
-          error: 'QR_INVALID_FORMAT',
-          message: 'Invalid QR code format'
-        });
-      }
-    }
-
-    // Generic error
+    // Generic error (共享验证函数已处理具体的 QR 错误)
     return res.status(500).json({
       error: 'DECRYPT_ERROR',
       message: 'Failed to decrypt QR code'
