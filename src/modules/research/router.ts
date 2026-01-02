@@ -86,6 +86,90 @@ let mockTopics: MockTopic[] = [
     created_at: '2024-10-01T08:00:00Z',
     updated_at: '2024-11-15T12:00:00Z',
     reference_count: 8
+  },
+  {
+    id: 5,
+    topic: 'Enterprise Loan Management System (LMS)',
+    status: 'active',
+    synthesis_notes: `## Key Findings
+
+**Market Opportunity**: $15B+ global loan management software market with 12% CAGR
+
+**Target Customers**:
+- Regional banks and credit unions
+- Consumer finance companies
+- Fintech lenders
+
+**Core Modules Identified**:
+1. Customer Origination (KYC/AML)
+2. Decision Engine (Credit Scoring)
+3. Credit Management (Disbursement)
+4. Loan Servicing (Borrower Portal)
+5. Collections & Recovery
+6. Compliance & Audit
+
+## Mock API Strategy
+
+Using testable mock behavior rules:
+- **KYC**: SSN patterns trigger different results (0000=FAILED, 1111=MANUAL_REVIEW)
+- **AML**: Name patterns trigger watchlist matches (contains "PEP" or "BLOCKED")
+- **Credit Bureau**: SSN last-4 determines credit score tier
+- **Decision Engine**: Score/DTI/derogatories → auto-approve/decline/refer
+
+## Compliance Requirements
+
+- FCRA: Adverse action notices with reason codes
+- ECOA: Fair lending monitoring
+- TILA: Truth in lending disclosures
+- SOC2/ISO27001: Security controls
+- 7-year audit log retention`,
+    questions: [
+      { text: 'What credit bureaus to integrate? (Experian, Equifax, TransUnion)', answered: false },
+      { text: 'Which e-signature provider? (DocuSign vs HelloSign)', answered: false },
+      { text: 'Multi-tenant architecture or single-tenant?', answered: true },
+      { text: 'Support for secured loans (auto, mortgage) in v1?', answered: false },
+      { text: 'AI/ML credit scoring model requirements?', answered: false }
+    ],
+    leads_to_memo: null,
+    leads_to_prd: 'PRD-009',
+    memo_content: `# Enterprise Loan Management System
+
+## Executive Summary
+
+This PRD defines an enterprise-grade Loan Management System (LMS) for regulated financial institutions, supporting the complete loan lifecycle from application to servicing.
+
+## Key Decisions
+
+### 1. Mock-First Development
+All external integrations (KYC, AML, Credit Bureau) will use deterministic mock providers for testing:
+- Enables Newman/Postman automated testing
+- Follows existing platform patterns (Definition of Done)
+- Easy to swap with real providers later
+
+### 2. Modular Architecture
+Six core stories covering the loan lifecycle:
+- US-LMS-001: Borrower Onboarding (KYC/AML)
+- US-LMS-002: Loan Application
+- US-LMS-003: Credit Decision
+- US-LMS-004: Offers & Funding
+- US-LMS-005: Loan Servicing
+- US-LMS-006: Compliance & Audit
+
+### 3. Compliance-First Design
+Every feature designed with regulatory requirements in mind:
+- Immutable audit logs (7-year retention)
+- FCRA-compliant adverse action notices
+- Role-based access control
+
+## Next Steps
+
+1. Implement Sprint 1: Borrower Registration + KYC + AML endpoints
+2. Create Newman test collection for automated testing
+3. Review with compliance team`,
+    started_at: '2025-12-29',
+    created_at: '2025-12-29T10:00:00Z',
+    updated_at: '2025-12-29T12:00:00Z',
+    reference_count: 6
   }
 ];
 
@@ -109,10 +193,18 @@ let mockReferences: Record<number, any[]> = {
   4: [
     { id: 401, research_topic_id: 4, type: 'url', title: '微信小程序开发文档', url: 'https://developers.weixin.qq.com/miniprogram/dev/', notes: null, reference_date: '2024-10-01', created_at: '2024-10-01T08:30:00Z' },
     { id: 402, research_topic_id: 4, type: 'notion', title: 'Claude对话 - 小程序架构', url: 'https://notion.so/miniprogram-arch', notes: null, reference_date: '2024-10-05', created_at: '2024-10-05T10:00:00Z' }
+  ],
+  5: [
+    { id: 501, research_topic_id: 5, type: 'url', title: 'PRD-009: Loan Management System', url: '/prd/PRD-009', notes: 'Complete PRD with 10 modules, architecture, data models', reference_date: '2025-12-29', created_at: '2025-12-29T10:00:00Z' },
+    { id: 502, research_topic_id: 5, type: 'url', title: 'US-LMS-001: Borrower Onboarding', url: '/story/US-LMS-001', notes: 'KYC/AML verification with mock providers', reference_date: '2025-12-29', created_at: '2025-12-29T10:30:00Z' },
+    { id: 503, research_topic_id: 5, type: 'url', title: 'US-LMS-002: Loan Application', url: '/story/US-LMS-002', notes: 'Application submission with credit bureau pull', reference_date: '2025-12-29', created_at: '2025-12-29T10:35:00Z' },
+    { id: 504, research_topic_id: 5, type: 'url', title: 'US-LMS-003: Credit Decision', url: '/story/US-LMS-003', notes: 'Automated decisioning with adverse action', reference_date: '2025-12-29', created_at: '2025-12-29T10:40:00Z' },
+    { id: 505, research_topic_id: 5, type: 'url', title: 'LendFusion Platform Reference', url: 'https://lendfusion.com', notes: 'Competitor analysis - enterprise LMS platform', reference_date: '2025-12-29', created_at: '2025-12-29T09:00:00Z' },
+    { id: 506, research_topic_id: 5, type: 'notion', title: 'Claude对话 - LMS Architecture', url: 'https://notion.so/lms-architecture', notes: 'AI-assisted design session for loan lifecycle', reference_date: '2025-12-29', created_at: '2025-12-29T09:30:00Z' }
   ]
 };
 
-let nextTopicId = 5;
+let nextTopicId = 6;
 let nextRefId = 500;
 
 // ========== MOCK API Routes ==========

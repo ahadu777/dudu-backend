@@ -51,6 +51,8 @@ router.get('/cards/:cardSlug', handleCardDetail);
 // ============ Stories Routes ============
 router.get('/stories', handleStoriesList);
 router.get('/stories/:storyId', handleStoryDetail);
+// Alias route for stories (singular form)
+router.get('/story/:storyId', handleStoryDetail);
 
 // ============ Memos Routes ============
 router.get('/memos', handleMemosList);

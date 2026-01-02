@@ -12,11 +12,12 @@ business_requirement: "PRD-001"
 cards:
   - catalog-endpoint
   - order-create
-  - wallyt-payment          # 替代已废弃的 payment-webhook
+  - payment-webhook
   - my-tickets
   - qr-generation-api
   - operators-login
-  - venue-enhanced-scanning  # 包含核销和 /venue/redemptions
+  - venue-enhanced-scanning
+  - reports-redemptions
 ---
 
 ## Business goal
@@ -64,5 +65,5 @@ Enable a user to purchase a package with multiple functions (bus, ferry, museum)
 - Redemption events include operator, location, ts
 
 ## Links
-- OAS: `/openapi/openapi.json`
-- Related cards: `order-create`, `wallyt-payment`, `my-tickets`, `qr-generation-api`, `venue-enhanced-scanning`
+- OAS: `/openapi/openapi.json`  
+- Related cards: `order-create`, `payment-webhook`, `my-tickets`, `qr-generation-api`, `venue-enhanced-scanning`

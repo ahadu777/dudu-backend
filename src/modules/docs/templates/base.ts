@@ -195,6 +195,7 @@ export function baseLayout(props: BaseLayoutProps, content: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/">
   <title>${props.title}</title>
   <style>
     ${sharedStyles}

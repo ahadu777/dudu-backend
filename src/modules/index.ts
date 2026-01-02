@@ -23,6 +23,7 @@ import pricingRouter from './pricing/router';
 import miniprogramRouter from './miniprogram/router';
 import docsRouter from './docs/router';
 import researchRouter from './research/router';
+import lmsRouter from './lms/router';
 
 export const registerModuleRouters = (app: Application): void => {
   app.use('/users', usersRouter);
@@ -49,6 +50,7 @@ export const registerModuleRouters = (app: Application): void => {
   app.use('/api', reservationSlotsRouter); // Operator slot management + customer availability
   app.use('/api', customerReservationRouter); // Enhanced customer reservation with activation checks + Directus
   app.use('/research', researchRouter); // Research Hub for organizing external research
+  app.use('/lms', lmsRouter); // Loan Management System (PRD-009)
 
   // Documentation portal (PRDs, Stories, Cards, Visualizations)
   app.use('/', docsRouter);

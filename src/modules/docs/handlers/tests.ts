@@ -6,122 +6,139 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 import { logger } from '../../../utils/logger';
 import { loadPRDDocuments, loadStoriesIndex } from '../../../utils/prdParser';
 import { discoverCrossPRDHandoffs } from '../../../utils/handoffDiscovery';
 import { parseAllNewmanReports, NewmanReport } from '../../../utils/newmanParser';
-import { AppDataSource } from '../../../config/database';
-import { QaVerificationRepository, ManualCheck } from '../domain/qa-verification.repository';
 
-// ============ XSS 防护 ============
+// 断言标签映射文件路径
+const ASSERTION_LABELS_PATH = path.join(process.cwd(), 'docs/test-coverage/assertion-labels.yaml');
+// 手动验证记录文件路径
+const MANUAL_CHECKS_PATH = path.join(process.cwd(), 'docs/test-coverage/manual-checks.yaml');
 
-/**
- * HTML 转义函数，防止 XSS 攻击
- */
-function escapeHtml(str: string | undefined | null): string {
-  if (!str) return '';
-  const escapeMap: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-    '/': '&#x2F;',
-    '`': '&#x60;',
-    '=': '&#x3D;'
-  };
-  return String(str).replace(/[&<>"'`=/]/g, char => escapeMap[char] || char);
-}
-
-/**
- * 转义 JavaScript 字符串（用于内联 JS）
- */
-function escapeJs(str: string | undefined | null): string {
-  if (!str) return '';
-  return String(str)
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r');
-}
-
-// 断言标签缓存（从数据库加载）
+// 断言标签缓存
 let assertionLabelsCache: Map<string, string> | null = null;
 let assertionLabelsCacheTime = 0;
 const CACHE_TTL = 5000; // 5秒缓存
 
+// 手动验证记录类型
+interface ManualCheck {
+  id: string;
+  description: string;
+  verified_by: string;
+  date: string;
+  status: 'passed' | 'failed' | 'pending';
+}
+
+interface ManualChecksData {
+  checks: Record<string, ManualCheck[]>;
+}
+
 // 手动验证缓存
-let manualChecksCache: Record<string, ManualCheck[]> | null = null;
+let manualChecksCache: ManualChecksData | null = null;
 let manualChecksCacheTime = 0;
 
 /**
- * 获取 QA Repository 实例
+ * 加载手动验证记录
  */
-function getQaRepository(): QaVerificationRepository | null {
-  if (!AppDataSource.isInitialized) {
-    return null;
-  }
-  return new QaVerificationRepository(AppDataSource);
-}
-
-/**
- * 加载手动验证记录（从数据库）
- */
-async function loadManualChecks(): Promise<Record<string, ManualCheck[]>> {
+function loadManualChecks(): ManualChecksData {
   const now = Date.now();
   if (manualChecksCache && (now - manualChecksCacheTime) < CACHE_TTL) {
     return manualChecksCache;
   }
 
-  const repo = getQaRepository();
-  if (!repo) {
-    logger.warn('Database not initialized, returning empty manual checks');
-    return {};
+  let data: ManualChecksData = { checks: {} };
+  try {
+    if (fs.existsSync(MANUAL_CHECKS_PATH)) {
+      const content = fs.readFileSync(MANUAL_CHECKS_PATH, 'utf-8');
+      const parsed = yaml.load(content) as ManualChecksData;
+      if (parsed?.checks) {
+        data = parsed;
+      }
+    }
+  } catch (e) {
+    logger.warn('Failed to load manual checks:', e);
   }
 
-  try {
-    const data = await repo.findAllManualChecksGroupedByPrd();
-    manualChecksCache = data;
-    manualChecksCacheTime = now;
-    return data;
-  } catch (e) {
-    logger.warn('Failed to load manual checks from database:', e);
-    return {};
-  }
+  manualChecksCache = data;
+  manualChecksCacheTime = now;
+  return data;
 }
 
 /**
- * 加载断言标签映射（从数据库）
+ * 保存手动验证记录
  */
-async function loadAssertionLabels(): Promise<Map<string, string>> {
+function saveManualChecks(data: ManualChecksData): void {
+  const yamlContent = `# Manual Checks - QA 手动验证记录
+#
+# 此文件由 /tests 页面维护，记录 QA 手动测试的验证点
+#
+# 格式:
+#   checks:
+#     PRD-XXX:
+#       - id: "唯一ID"
+#         description: "验证描述"
+#         verified_by: "验证人"
+#         date: "验证日期"
+#         status: "passed | failed | pending"
+
+checks:
+${Object.entries(data.checks)
+  .filter(([, items]) => items.length > 0)
+  .map(([prd, items]) => `  ${prd}:
+${items.map(item => `    - id: "${item.id}"
+      description: "${item.description.replace(/"/g, '\\"')}"
+      verified_by: "${item.verified_by}"
+      date: "${item.date}"
+      status: "${item.status}"`).join('\n')}`).join('\n') || '  {}'}
+`;
+  fs.writeFileSync(MANUAL_CHECKS_PATH, yamlContent, 'utf-8');
+  manualChecksCache = null; // 清除缓存
+}
+
+/**
+ * 生成唯一ID
+ */
+function generateCheckId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+/**
+ * 加载断言标签映射
+ */
+function loadAssertionLabels(): Map<string, string> {
   const now = Date.now();
   if (assertionLabelsCache && (now - assertionLabelsCacheTime) < CACHE_TTL) {
     return assertionLabelsCache;
   }
 
-  const repo = getQaRepository();
-  if (!repo) {
-    logger.warn('Database not initialized, returning empty assertion labels');
-    return new Map();
+  const labels = new Map<string, string>();
+  try {
+    if (fs.existsSync(ASSERTION_LABELS_PATH)) {
+      const content = fs.readFileSync(ASSERTION_LABELS_PATH, 'utf-8');
+      const data = yaml.load(content) as { labels?: Record<string, string> };
+      if (data?.labels) {
+        for (const [key, value] of Object.entries(data.labels)) {
+          labels.set(key, value);
+        }
+      }
+    }
+  } catch (e) {
+    logger.warn('Failed to load assertion labels:', e);
   }
 
-  try {
-    const labels = await repo.findAllAssertionLabels();
-    assertionLabelsCache = labels;
-    assertionLabelsCacheTime = now;
-    return labels;
-  } catch (e) {
-    logger.warn('Failed to load assertion labels from database:', e);
-    return new Map();
-  }
+  assertionLabelsCache = labels;
+  assertionLabelsCacheTime = now;
+  return labels;
 }
 
 /**
- * 获取断言的人性化标签（同步版本，使用缓存）
+ * 获取断言的人性化标签
  */
-function getAssertionLabel(name: string, labelsCache: Map<string, string>): string {
-  return labelsCache.get(name) || name;
+function getAssertionLabel(name: string): string {
+  const labels = loadAssertionLabels();
+  return labels.get(name) || name;
 }
 
 // ============ 类型定义 ============
@@ -588,7 +605,7 @@ function getStyles(): string {
 /**
  * 生成 E2E 流程卡片 HTML
  */
-function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labelsCache: Map<string, string>): string {
+function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[]): string {
   const PAGE_STYLES: Record<string, { icon: string; color: string }> = {
     'system': { icon: '⚙️', color: '#6b7280' },
     'product-list': { icon: '🏠', color: '#3b82f6' },
@@ -612,46 +629,25 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
       <div style="font-family: monospace; font-size: 0.85em;">
         ${c.apiSequence.map((api, idx) => `
         <div style="display: flex; align-items: flex-start; margin-bottom: 8px; ${idx < c.apiSequence.length - 1 ? 'border-left: 2px solid #3498db; padding-left: 16px; margin-left: 8px;' : 'padding-left: 16px; margin-left: 8px;'}">
-          <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center; margin-right: 8px;">${escapeHtml(api.method)}</span>
+          <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center; margin-right: 8px;">${api.method}</span>
           <div style="flex: 1;">
-            <code style="color: #2c3e50;">${escapeHtml(api.path) || '/'}</code>
-            <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${escapeHtml(api.name)}</div>
-            ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${escapeHtml(api.userAction)}</div>` : ''}
+            <code style="color: #2c3e50;">${api.path || '/'}</code>
+            <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
+            ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
             ${api.assertions && api.assertions.length > 0 ? `
             <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
               <div style="font-size: 0.85em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
               ${api.assertions.map(a => {
-                const label = getAssertionLabel(a.name, labelsCache);
+                const label = getAssertionLabel(a.name);
                 const isCustom = label !== a.name;
                 return `<div class="assertion-item" style="font-size: 0.85em; color: ${a.passed ? '#27ae60' : '#e74c3c'}; display: flex; align-items: center; gap: 4px;">
-                  <span>${a.passed ? '✓' : '✗'} ${escapeHtml(label)}</span>
-                  <button class="edit-label-btn" data-original="${escapeHtml(a.name)}" data-current="${escapeHtml(label)}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
-                  ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${escapeHtml(a.name)}">*</span>` : ''}
+                  <span>${a.passed ? '✓' : '✗'} ${label}</span>
+                  <button class="edit-label-btn" data-original="${a.name}" data-current="${label}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
+                  ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${a.name}">*</span>` : ''}
                 </div>`;
               }).join('')}
             </div>
             ` : ''}
-            ${(() => {
-              const apiChecks = manualChecks.filter(check => check.api === api.name);
-              return `
-              <div style="margin-top: 6px; padding: 6px 8px; background: #fff8e6; border-radius: 4px; border-left: 3px solid #f39c12;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <span style="font-size: 0.8em; color: #666;">手动验证 (${apiChecks.length})</span>
-                  <button class="add-api-check-btn" data-prd="${escapeHtml(c.id)}" data-api="${escapeHtml(api.name)}" style="background: #f39c12; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 0.75em;">+</button>
-                </div>
-                ${apiChecks.length > 0 ? apiChecks.map(check => `
-                <div class="manual-check-item api-level" data-id="${escapeHtml(check.id)}" style="font-size: 0.8em; display: flex; align-items: center; gap: 4px; padding: 2px 0;">
-                  <button class="check-status-btn" data-id="${escapeHtml(check.id)}" data-status="${escapeHtml(check.status)}" style="background: none; border: none; cursor: pointer; font-size: 0.9em;">
-                    ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
-                  </button>
-                  <span style="flex: 1; color: #2c3e50;">${escapeHtml(check.description)}</span>
-                  <span style="color: #999; font-size: 0.85em;">${escapeHtml(check.verified_by)} · ${escapeHtml(check.date)}</span>
-                  <button class="delete-check-btn" data-id="${escapeHtml(check.id)}" data-prd="${escapeHtml(c.id)}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.8em;">🗑️</button>
-                </div>
-                `).join('') : '<div style="font-size: 0.75em; color: #999;">点击 + 添加验证</div>'}
-              </div>
-              `;
-            })()}
           </div>
         </div>
         `).join('')}
@@ -694,7 +690,7 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
           ${Array.from(dataFlowMap.entries()).map(([variable, data]) => `
             <div style="background: rgba(255,255,255,0.2); border-radius: 6px; padding: 8px 12px; font-size: 0.85em;">
-              <code style="background: rgba(255,255,255,0.3); padding: 2px 6px; border-radius: 3px; font-weight: 600;">${escapeHtml(variable)}</code>
+              <code style="background: rgba(255,255,255,0.3); padding: 2px 6px; border-radius: 3px; font-weight: 600;">${variable}</code>
               <div style="margin-top: 4px; opacity: 0.9; font-size: 0.85em;">
                 ${data.producedBy.length > 0 ? `<span title="Produced by">⬆️ ${data.producedBy.length}</span>` : ''}
                 ${data.consumedBy.length > 0 ? `<span style="margin-left: 8px;" title="Consumed by">⬇️ ${data.consumedBy.length}</span>` : ''}
@@ -711,61 +707,40 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
         <div style="margin-bottom: 16px;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px 12px; background: ${style.color}15; border-left: 4px solid ${style.color}; border-radius: 0 6px 6px 0;">
             <span style="font-size: 1.2em;">${style.icon}</span>
-            <span style="font-weight: 600; color: ${style.color};">${escapeHtml(page)}</span>
+            <span style="font-weight: 600; color: ${style.color};">${page}</span>
             <span style="color: #95a5a6; font-size: 0.9em;">(${apis.length} requests)</span>
           </div>
           ${apis.map((api, idx) => `
           <div style="display: flex; align-items: flex-start; margin-bottom: 8px; padding-left: 24px; ${idx < apis.length - 1 ? 'border-left: 2px solid ' + style.color + '40; margin-left: 16px;' : 'margin-left: 16px;'}">
             <div style="display: flex; flex-direction: column; align-items: center; margin-right: 12px;">
-              <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center;">${escapeHtml(api.method)}</span>
+              <span style="background: ${api.method === 'GET' ? '#27ae60' : api.method === 'POST' ? '#3498db' : api.method === 'PUT' ? '#f39c12' : api.method === 'DELETE' ? '#e74c3c' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; min-width: 50px; text-align: center;">${api.method}</span>
               ${api.flow?.sequence !== undefined ? `<span style="color: #95a5a6; font-size: 0.7em; margin-top: 2px;">#${api.flow.sequence}</span>` : ''}
             </div>
             <div style="flex: 1;">
-              <code style="color: #2c3e50;">${escapeHtml(api.path) || '/'}</code>
-              <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${escapeHtml(api.name)}</div>
-              ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${escapeHtml(api.userAction)}</div>` : ''}
-              ${api.flow?.trigger ? `<div style="color: #2980b9; font-size: 0.8em; margin-top: 4px;"><span style="background: #e8f4fd; padding: 2px 6px; border-radius: 3px;">🖱️ ${escapeHtml(api.flow.trigger)}</span></div>` : ''}
+              <code style="color: #2c3e50;">${api.path || '/'}</code>
+              <div style="color: #7f8c8d; font-size: 0.85em; margin-top: 2px;">${api.name}</div>
+              ${api.userAction ? `<div style="color: #8e44ad; font-size: 0.85em; margin-top: 4px; padding: 4px 8px; background: #f5eef8; border-radius: 3px; display: inline-block;">👤 ${api.userAction}</div>` : ''}
+              ${api.flow?.trigger ? `<div style="color: #2980b9; font-size: 0.8em; margin-top: 4px;"><span style="background: #e8f4fd; padding: 2px 6px; border-radius: 3px;">🖱️ ${api.flow.trigger}</span></div>` : ''}
               ${(api.flow?.produces?.length || api.flow?.consumes?.length) ? `
               <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
-                ${api.flow?.produces?.map(v => `<span style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬆️ ${escapeHtml(v)}</span>`).join('') || ''}
-                ${api.flow?.consumes?.map(v => `<span style="background: #cce5ff; color: #004085; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬇️ ${escapeHtml(v)}</span>`).join('') || ''}
+                ${api.flow?.produces?.map(v => `<span style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬆️ ${v}</span>`).join('') || ''}
+                ${api.flow?.consumes?.map(v => `<span style="background: #cce5ff; color: #004085; padding: 2px 6px; border-radius: 3px; font-size: 0.75em;">⬇️ ${v}</span>`).join('') || ''}
               </div>
               ` : ''}
               ${api.assertions && api.assertions.length > 0 ? `
               <div style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid ${api.assertions.every(a => a.passed) ? '#27ae60' : '#e74c3c'};">
                 <div style="font-size: 0.75em; color: #666; margin-bottom: 4px;">断言 (${api.assertions.filter(a => a.passed).length}/${api.assertions.length})</div>
                 ${api.assertions.map(a => {
-                  const label = getAssertionLabel(a.name, labelsCache);
+                  const label = getAssertionLabel(a.name);
                   const isCustom = label !== a.name;
                   return `<div class="assertion-item" style="font-size: 0.75em; color: ${a.passed ? '#27ae60' : '#e74c3c'}; display: flex; align-items: center; gap: 4px;">
-                    <span>${a.passed ? '✓' : '✗'} ${escapeHtml(label)}</span>
-                    <button class="edit-label-btn" data-original="${escapeHtml(a.name)}" data-current="${escapeHtml(label)}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
-                    ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${escapeHtml(a.name)}">*</span>` : ''}
+                    <span>${a.passed ? '✓' : '✗'} ${label}</span>
+                    <button class="edit-label-btn" data-original="${a.name}" data-current="${label}" style="background: none; border: none; cursor: pointer; font-size: 0.8em; color: #999; padding: 0 4px;" title="编辑标签">✏️</button>
+                    ${isCustom ? `<span style="font-size: 0.7em; color: #999;" title="原始: ${a.name}">*</span>` : ''}
                   </div>`;
                 }).join('')}
               </div>
               ` : ''}
-              ${(() => {
-                const apiChecks = manualChecks.filter(check => check.api === api.name);
-                return `
-                <div style="margin-top: 6px; padding: 6px 8px; background: #fff8e6; border-radius: 4px; border-left: 3px solid #f39c12;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <span style="font-size: 0.75em; color: #666;">手动验证 (${apiChecks.length})</span>
-                    <button class="add-api-check-btn" data-prd="${escapeHtml(c.id)}" data-api="${escapeHtml(api.name)}" style="background: #f39c12; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 0.7em;">+</button>
-                  </div>
-                  ${apiChecks.length > 0 ? apiChecks.map(check => `
-                  <div class="manual-check-item api-level" data-id="${escapeHtml(check.id)}" style="font-size: 0.75em; display: flex; align-items: center; gap: 4px; padding: 2px 0;">
-                    <button class="check-status-btn" data-id="${escapeHtml(check.id)}" data-status="${escapeHtml(check.status)}" style="background: none; border: none; cursor: pointer; font-size: 0.85em;">
-                      ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
-                    </button>
-                    <span style="flex: 1; color: #2c3e50;">${escapeHtml(check.description)}</span>
-                    <span style="color: #999; font-size: 0.9em;">${escapeHtml(check.verified_by)} · ${escapeHtml(check.date)}</span>
-                    <button class="delete-check-btn" data-id="${escapeHtml(check.id)}" data-prd="${escapeHtml(c.id)}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.75em;">🗑️</button>
-                  </div>
-                  `).join('') : '<div style="font-size: 0.7em; color: #999;">点击 + 添加验证</div>'}
-                </div>
-                `;
-              })()}
             </div>
           </div>
           `).join('')}
@@ -802,8 +777,8 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
            style="padding: 12px 16px; background: ${c.type === 'prd' ? '#e8f4fd' : c.type === 'story' ? '#e8fdf4' : '#fdf4e8'}; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 8px;">
           ${testResultIcon}
-          <span style="font-weight: 600; color: #2c3e50;">${escapeHtml(c.id)}</span>
-          <span style="color: #7f8c8d; font-size: 0.9em;">${escapeHtml(c.name)}</span>
+          <span style="font-weight: 600; color: #2c3e50;">${c.id}</span>
+          <span style="color: #7f8c8d; font-size: 0.9em;">${c.name}</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
           ${testResultBadge}
@@ -822,43 +797,38 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
           <div style="max-height: 200px; overflow-y: auto; font-size: 0.85em;">
             ${c.assertions.items.map(a => `
               <div style="padding: 2px 0; color: ${a.passed ? '#27ae60' : '#e74c3c'};">
-                ${a.passed ? '✓' : '✗'} ${escapeHtml(a.name)}
+                ${a.passed ? '✓' : '✗'} ${a.name}
               </div>
             `).join('')}
           </div>
         </div>
         ` : ''}
 
-        <!-- PRD 级别手动验证区域 -->
-        ${(() => {
-          const prdLevelChecks = manualChecks.filter(check => !check.api);
-          return `
-        <div style="margin-top: 16px; padding: 12px; background: #fff8e6; border-radius: 6px; border-left: 4px solid #f39c12;" class="manual-checks-section" data-prd="${escapeHtml(c.id)}">
+        <!-- 手动验证区域 -->
+        <div style="margin-top: 16px; padding: 12px; background: #fff8e6; border-radius: 6px; border-left: 4px solid #f39c12;" class="manual-checks-section" data-prd="${c.id}">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-weight: 600; color: #2c3e50;">📝 QA 手动验证 - PRD 级别 (${prdLevelChecks.length})</span>
-            <button class="add-check-btn" data-prd="${escapeHtml(c.id)}" style="background: #f39c12; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">+ 添加</button>
+            <span style="font-weight: 600; color: #2c3e50;">📝 QA 手动验证 (${manualChecks.length})</span>
+            <button class="add-check-btn" data-prd="${c.id}" style="background: #f39c12; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">+ 添加</button>
           </div>
-          ${prdLevelChecks.length > 0 ? `
+          ${manualChecks.length > 0 ? `
           <div class="manual-checks-list" style="font-size: 0.85em;">
-            ${prdLevelChecks.map(check => `
-            <div class="manual-check-item" data-id="${escapeHtml(check.id)}" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;">
-              <button class="check-status-btn" data-id="${escapeHtml(check.id)}" data-status="${escapeHtml(check.status)}" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">
+            ${manualChecks.map(check => `
+            <div class="manual-check-item" data-id="${check.id}" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;">
+              <button class="check-status-btn" data-id="${check.id}" data-status="${check.status}" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">
                 ${check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳'}
               </button>
-              <span style="flex: 1; color: #2c3e50;">${escapeHtml(check.description)}</span>
-              <span style="color: #999; font-size: 0.8em;">${escapeHtml(check.verified_by)} · ${escapeHtml(check.date)}</span>
-              <button class="delete-check-btn" data-id="${escapeHtml(check.id)}" data-prd="${escapeHtml(c.id)}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>
+              <span style="flex: 1; color: #2c3e50;">${check.description}</span>
+              <span style="color: #999; font-size: 0.8em;">${check.verified_by} · ${check.date}</span>
+              <button class="delete-check-btn" data-id="${check.id}" data-prd="${c.id}" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>
             </div>
             `).join('')}
           </div>
           ` : `
           <div style="color: #999; font-size: 0.85em; text-align: center; padding: 12px;">
-            暂无 PRD 级别验证记录，点击"+ 添加"开始记录
+            暂无手动验证记录，点击"+ 添加"开始记录
           </div>
           `}
         </div>
-          `;
-        })()}
       </div>
     </div>
   `;
@@ -869,24 +839,6 @@ function generateFlowCardHtml(c: Collection, manualChecks: ManualCheck[], labels
  */
 function getScripts(): string {
   return `
-    // XSS 防护 - 前端 HTML 转义
-    function escapeHtml(str) {
-      if (!str) return '';
-      var escapeMap = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;',
-        '/': '&#x2F;',
-        '\`': '&#x60;',
-        '=': '&#x3D;'
-      };
-      return String(str).replace(/[&<>"'\`=\\/]/g, function(char) {
-        return escapeMap[char] || char;
-      });
-    }
-
     document.addEventListener('DOMContentLoaded', function() {
       var showBtn = document.getElementById('showAllFlowsBtn');
       if (showBtn) {
@@ -982,30 +934,20 @@ function getScripts(): string {
         checkVerifiedBy: !!checkVerifiedBy
       });
 
-      function openModal(prd, api) {
-        console.log('openModal called with prd:', prd, 'api:', api);
+      function openModal(prd) {
+        console.log('openModal called with prd:', prd);
         // 直接从 DOM 获取元素
         var prdInput = document.getElementById('checkPrd');
-        var apiInput = document.getElementById('checkApi');
-        var apiContext = document.getElementById('apiContext');
-        var apiContextName = document.getElementById('apiContextName');
         var descInput = document.getElementById('checkDescription');
         var verifiedByInput = document.getElementById('checkVerifiedBy');
         var modalEl = document.getElementById('addCheckModal');
         var pendingRadio = document.querySelector('input[name="checkStatus"][value="pending"]');
 
+        console.log('openModal elements:', { prdInput: !!prdInput, descInput: !!descInput, modalEl: !!modalEl });
+
         if (prdInput) {
           prdInput.value = prd || '';
-        }
-        if (apiInput) {
-          apiInput.value = api || '';
-        }
-        // 显示 API 上下文
-        if (api && apiContext && apiContextName) {
-          apiContext.style.display = 'block';
-          apiContextName.textContent = api;
-        } else if (apiContext) {
-          apiContext.style.display = 'none';
+          console.log('Set prdInput.value to:', prdInput.value);
         }
         if (descInput) {
           descInput.value = '';
@@ -1031,19 +973,18 @@ function getScripts(): string {
       function saveCheck() {
         // 直接从 DOM 获取元素，避免变量作用域问题
         var prdInput = document.getElementById('checkPrd');
-        var apiInput = document.getElementById('checkApi');
         var descInput = document.getElementById('checkDescription');
         var verifiedByInput = document.getElementById('checkVerifiedBy');
         var statusRadio = document.querySelector('input[name="checkStatus"]:checked');
         var saveBtn = document.getElementById('modalSave');
 
         var prd = prdInput ? prdInput.value : '';
-        var api = apiInput ? apiInput.value : '';
         var description = descInput ? descInput.value.trim() : '';
         var verifiedBy = verifiedByInput ? verifiedByInput.value.trim() || 'QA' : 'QA';
         var status = statusRadio ? statusRadio.value : 'pending';
 
-        console.log('saveCheck:', { prd: prd, api: api, description: description, verifiedBy: verifiedBy, status: status });
+        console.log('saveCheck:', { prd: prd, description: description, verifiedBy: verifiedBy, status: status });
+        console.log('Elements found:', { prdInput: !!prdInput, descInput: !!descInput });
 
         if (!prd) {
           alert('系统错误：无法获取 PRD ID，请刷新页面重试');
@@ -1061,105 +1002,55 @@ function getScripts(): string {
           saveBtn.textContent = '保存中...';
         }
 
-        var requestBody = {
-          prd: prd,
-          description: description,
-          verified_by: verifiedBy,
-          status: status
-        };
-        if (api) {
-          requestBody.api = api;
-        }
-
         fetch('/api/manual-checks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify({
+            prd: prd,
+            description: description,
+            verified_by: verifiedBy,
+            status: status
+          })
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
           if (data.success) {
             // 动态添加到列表，不刷新页面
             var check = data.check;
-            var statusIcon = check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳';
+            var section = document.querySelector('.manual-checks-section[data-prd="' + prd + '"]');
+            if (section) {
+              var list = section.querySelector('.manual-checks-list');
+              var emptyMsg = section.querySelector('div[style*="text-align: center"]');
 
-            if (api) {
-              // API 级别断言：找到对应 API 下的手动验证区域
-              var apiBtn = document.querySelector('.add-api-check-btn[data-prd="' + prd + '"][data-api="' + api + '"]');
-              if (apiBtn) {
-                var apiSection = apiBtn.closest('div[style*="background: #fff8e6"]');
-                if (apiSection) {
-                  // 移除空状态提示
-                  var emptyHint = apiSection.querySelector('div[style*="color: #999"]');
-                  if (emptyHint && emptyHint.textContent.includes('点击')) {
-                    emptyHint.remove();
-                  }
-
-                  // 创建新的验证项
-                  var newItem = document.createElement('div');
-                  newItem.className = 'manual-check-item api-level';
-                  newItem.setAttribute('data-id', escapeHtml(check.id));
-                  newItem.style.cssText = 'font-size: 0.8em; display: flex; align-items: center; gap: 4px; padding: 2px 0;';
-                  newItem.innerHTML = '<button class="check-status-btn" data-id="' + escapeHtml(check.id) + '" data-status="' + escapeHtml(check.status) + '" style="background: none; border: none; cursor: pointer; font-size: 0.9em;">' + statusIcon + '</button>' +
-                    '<span style="flex: 1; color: #2c3e50;">' + escapeHtml(check.description) + '</span>' +
-                    '<span style="color: #999; font-size: 0.85em;">' + escapeHtml(check.verified_by) + ' · ' + escapeHtml(check.date) + '</span>' +
-                    '<button class="delete-check-btn" data-id="' + escapeHtml(check.id) + '" data-prd="' + escapeHtml(prd) + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.8em;">🗑️</button>';
-
-                  // 添加到区域中（在按钮行之后）
-                  var headerDiv = apiSection.querySelector('div[style*="justify-content: space-between"]');
-                  if (headerDiv && headerDiv.nextSibling) {
-                    apiSection.insertBefore(newItem, headerDiv.nextSibling);
-                  } else {
-                    apiSection.appendChild(newItem);
-                  }
-
-                  // 绑定事件
-                  bindCheckEvents(newItem);
-
-                  // 更新计数
-                  var countSpan = apiSection.querySelector('span[style*="color: #666"]');
-                  if (countSpan) {
-                    var count = apiSection.querySelectorAll('.manual-check-item').length;
-                    countSpan.textContent = '手动验证 (' + count + ')';
-                  }
-                }
+              // 如果是空状态，创建列表容器
+              if (!list) {
+                if (emptyMsg) emptyMsg.remove();
+                list = document.createElement('div');
+                list.className = 'manual-checks-list';
+                list.style.fontSize = '0.85em';
+                section.appendChild(list);
               }
-            } else {
-              // PRD 级别断言
-              var section = document.querySelector('.manual-checks-section[data-prd="' + prd + '"]');
-              if (section) {
-                var list = section.querySelector('.manual-checks-list');
-                var emptyMsg = section.querySelector('div[style*="text-align: center"]');
 
-                // 如果是空状态，创建列表容器
-                if (!list) {
-                  if (emptyMsg) emptyMsg.remove();
-                  list = document.createElement('div');
-                  list.className = 'manual-checks-list';
-                  list.style.fontSize = '0.85em';
-                  section.appendChild(list);
-                }
+              // 创建新的验证项
+              var statusIcon = check.status === 'passed' ? '✅' : check.status === 'failed' ? '❌' : '⏳';
+              var newItem = document.createElement('div');
+              newItem.className = 'manual-check-item';
+              newItem.setAttribute('data-id', check.id);
+              newItem.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;';
+              newItem.innerHTML = '<button class="check-status-btn" data-id="' + check.id + '" data-status="' + check.status + '" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">' + statusIcon + '</button>' +
+                '<span style="flex: 1; color: #2c3e50;">' + check.description + '</span>' +
+                '<span style="color: #999; font-size: 0.8em;">' + check.verified_by + ' · ' + check.date + '</span>' +
+                '<button class="delete-check-btn" data-id="' + check.id + '" data-prd="' + prd + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>';
+              list.appendChild(newItem);
 
-                // 创建新的验证项
-                var newItem = document.createElement('div');
-                newItem.className = 'manual-check-item';
-                newItem.setAttribute('data-id', escapeHtml(check.id));
-                newItem.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e6d3;';
-                newItem.innerHTML = '<button class="check-status-btn" data-id="' + escapeHtml(check.id) + '" data-status="' + escapeHtml(check.status) + '" style="background: none; border: none; cursor: pointer; font-size: 1.1em;" title="点击切换状态">' + statusIcon + '</button>' +
-                  '<span style="flex: 1; color: #2c3e50;">' + escapeHtml(check.description) + '</span>' +
-                  '<span style="color: #999; font-size: 0.8em;">' + escapeHtml(check.verified_by) + ' · ' + escapeHtml(check.date) + '</span>' +
-                  '<button class="delete-check-btn" data-id="' + escapeHtml(check.id) + '" data-prd="' + escapeHtml(prd) + '" style="background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9em;" title="删除">🗑️</button>';
-                list.appendChild(newItem);
+              // 绑定新按钮的事件
+              bindCheckEvents(newItem);
 
-                // 绑定新按钮的事件
-                bindCheckEvents(newItem);
-
-                // 更新计数
-                var countSpan = section.querySelector('span[style*="font-weight: 600"]');
-                if (countSpan) {
-                  var count = section.querySelectorAll('.manual-check-item').length;
-                  countSpan.textContent = '📝 QA 手动验证 (' + count + ')';
-                }
+              // 更新计数
+              var countSpan = section.querySelector('span[style*="font-weight: 600"]');
+              if (countSpan) {
+                var count = section.querySelectorAll('.manual-check-item').length;
+                countSpan.textContent = '📝 QA 手动验证 (' + count + ')';
               }
             }
 
@@ -1272,22 +1163,12 @@ function getScripts(): string {
         }
       });
 
-      // 手动验证 - PRD 级别添加按钮
+      // 手动验证 - 添加按钮
       document.querySelectorAll('.add-check-btn').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
           e.stopPropagation();
           var prd = this.getAttribute('data-prd');
-          openModal(prd, null);
-        });
-      });
-
-      // 手动验证 - API 级别添加按钮
-      document.querySelectorAll('.add-api-check-btn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          var prd = this.getAttribute('data-prd');
-          var api = this.getAttribute('data-api');
-          openModal(prd, api);
+          openModal(prd);
         });
       });
 
@@ -1304,11 +1185,10 @@ function getScripts(): string {
 /**
  * 处理 /tests 路由
  */
-export async function handleTests(_req: Request, res: Response): Promise<void> {
+export function handleTests(_req: Request, res: Response): void {
   try {
     const collections = loadCollections();
-    const manualChecksData = await loadManualChecks();
-    const labelsCache = await loadAssertionLabels();
+    const manualChecksData = loadManualChecks();
 
     // 加载文档统计
     const prdDocs = loadPRDDocuments();
@@ -1468,7 +1348,7 @@ export async function handleTests(_req: Request, res: Response): Promise<void> {
         <button id="hideAllFlowsBtn" style="padding: 8px 16px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer;">Hide All</button>
       </div>
 
-      ${collections.map(c => generateFlowCardHtml(c, manualChecksData[c.id] || [], labelsCache)).join('')}
+      ${collections.map(c => generateFlowCardHtml(c, manualChecksData.checks[c.id] || [])).join('')}
     </div>
 
     <!-- Cross-PRD Gap Analysis -->
@@ -1535,11 +1415,6 @@ export async function handleTests(_req: Request, res: Response): Promise<void> {
         </div>
         <div class="modal-body">
           <input type="hidden" id="checkPrd" value="">
-          <input type="hidden" id="checkApi" value="">
-          <div id="apiContext" style="display: none; margin-bottom: 12px; padding: 8px 12px; background: #e8f4fd; border-radius: 6px; font-size: 0.9em;">
-            <span style="color: #666;">API: </span>
-            <span id="apiContextName" style="font-weight: 500; color: #2980b9;"></span>
-          </div>
           <div class="form-group">
             <label for="checkDescription">验证描述 *</label>
             <textarea id="checkDescription" placeholder="例如：周末价格在移动端正确显示"></textarea>
@@ -1583,7 +1458,7 @@ export async function handleTests(_req: Request, res: Response): Promise<void> {
  * POST /api/assertion-labels
  * Body: { original: string, label: string }
  */
-export async function handleSaveAssertionLabel(req: Request, res: Response): Promise<void> {
+export function handleSaveAssertionLabel(req: Request, res: Response): void {
   try {
     const { original, label } = req.body;
 
@@ -1597,19 +1472,40 @@ export async function handleSaveAssertionLabel(req: Request, res: Response): Pro
       return;
     }
 
-    const repo = getQaRepository();
-    if (!repo) {
-      res.status(503).json({ error: 'Database not initialized' });
-      return;
+    // 读取现有 YAML
+    let labelsData: { labels: Record<string, string> } = { labels: {} };
+    if (fs.existsSync(ASSERTION_LABELS_PATH)) {
+      const content = fs.readFileSync(ASSERTION_LABELS_PATH, 'utf-8');
+      labelsData = yaml.load(content) as { labels: Record<string, string> } || { labels: {} };
     }
 
+    // 更新标签
     const trimmedLabel = label.trim();
     if (trimmedLabel === original) {
       // 如果标签与原始名称相同，删除自定义标签
-      await repo.deleteAssertionLabel(original);
+      delete labelsData.labels[original];
     } else {
-      await repo.saveAssertionLabel(original, trimmedLabel);
+      labelsData.labels[original] = trimmedLabel;
     }
+
+    // 写回 YAML
+    const yamlContent = `# Assertion Labels - QA 维护的断言人性化描述
+#
+# 格式: "原始断言名称": "人性化描述"
+#
+# 可以在 /tests 页面上直接编辑，保存后自动更新此文件
+#
+# 示例:
+#   "Status code is 200": "接口响应正常"
+#   "Response has products array": "返回产品列表数据"
+
+labels:
+${Object.entries(labelsData.labels)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([k, v]) => `  "${k}": "${v}"`)
+  .join('\n')}
+`;
+    fs.writeFileSync(ASSERTION_LABELS_PATH, yamlContent, 'utf-8');
 
     // 清除缓存
     assertionLabelsCache = null;
@@ -1627,35 +1523,34 @@ export async function handleSaveAssertionLabel(req: Request, res: Response): Pro
 /**
  * 添加手动验证
  * POST /api/manual-checks
- * Body: { prd: string, description: string, verified_by: string, status: string, api?: string }
+ * Body: { prd: string, description: string, verified_by: string, status: string }
  */
-export async function handleAddManualCheck(req: Request, res: Response): Promise<void> {
+export function handleAddManualCheck(req: Request, res: Response): void {
   try {
-    const { prd, description, verified_by, status, api } = req.body;
+    const { prd, description, verified_by, status } = req.body;
 
     if (!prd || !description) {
       res.status(400).json({ error: 'Missing required fields: prd, description' });
       return;
     }
 
-    const repo = getQaRepository();
-    if (!repo) {
-      res.status(503).json({ error: 'Database not initialized' });
-      return;
+    const data = loadManualChecks();
+    if (!data.checks[prd]) {
+      data.checks[prd] = [];
     }
 
-    const newCheck = await repo.createManualCheck({
-      prd_id: prd,
-      api_name: api,
+    const newCheck: ManualCheck = {
+      id: generateCheckId(),
       description: description.trim(),
       verified_by: verified_by || 'QA',
-      status: status || 'pending'
-    });
+      date: new Date().toISOString().split('T')[0],
+      status: (status as 'passed' | 'failed' | 'pending') || 'pending'
+    };
 
-    // 清除缓存
-    manualChecksCache = null;
+    data.checks[prd].push(newCheck);
+    saveManualChecks(data);
 
-    logger.info('Manual check added', { prd, api, id: newCheck.id });
+    logger.info('Manual check added', { prd, id: newCheck.id });
     res.json({ success: true, check: newCheck });
   } catch (error) {
     logger.error('Error adding manual check:', error);
@@ -1668,7 +1563,7 @@ export async function handleAddManualCheck(req: Request, res: Response): Promise
  * PUT /api/manual-checks/:id
  * Body: { status: string }
  */
-export async function handleUpdateManualCheck(req: Request, res: Response): Promise<void> {
+export function handleUpdateManualCheck(req: Request, res: Response): void {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -1678,21 +1573,26 @@ export async function handleUpdateManualCheck(req: Request, res: Response): Prom
       return;
     }
 
-    const repo = getQaRepository();
-    if (!repo) {
-      res.status(503).json({ error: 'Database not initialized' });
-      return;
+    const data = loadManualChecks();
+    let found = false;
+
+    for (const prd of Object.keys(data.checks)) {
+      const checks = data.checks[prd];
+      const check = checks.find(c => c.id === id);
+      if (check) {
+        check.status = status;
+        check.date = new Date().toISOString().split('T')[0];
+        found = true;
+        break;
+      }
     }
 
-    const updated = await repo.updateManualCheckStatus(id, status);
-    if (!updated) {
+    if (!found) {
       res.status(404).json({ error: 'Check not found' });
       return;
     }
 
-    // 清除缓存
-    manualChecksCache = null;
-
+    saveManualChecks(data);
     logger.info('Manual check updated', { id, status });
     res.json({ success: true });
   } catch (error) {
@@ -1702,10 +1602,10 @@ export async function handleUpdateManualCheck(req: Request, res: Response): Prom
 }
 
 /**
- * 删除手动验证（软删除）
+ * 删除手动验证
  * DELETE /api/manual-checks/:id?prd=XXX
  */
-export async function handleDeleteManualCheck(req: Request, res: Response): Promise<void> {
+export function handleDeleteManualCheck(req: Request, res: Response): void {
   try {
     const { id } = req.params;
     const prd = req.query.prd as string;
@@ -1715,21 +1615,21 @@ export async function handleDeleteManualCheck(req: Request, res: Response): Prom
       return;
     }
 
-    const repo = getQaRepository();
-    if (!repo) {
-      res.status(503).json({ error: 'Database not initialized' });
+    const data = loadManualChecks();
+    if (!data.checks[prd]) {
+      res.status(404).json({ error: 'PRD not found' });
       return;
     }
 
-    const deleted = await repo.softDeleteManualCheck(id);
-    if (!deleted) {
+    const initialLength = data.checks[prd].length;
+    data.checks[prd] = data.checks[prd].filter(c => c.id !== id);
+
+    if (data.checks[prd].length === initialLength) {
       res.status(404).json({ error: 'Check not found' });
       return;
     }
 
-    // 清除缓存
-    manualChecksCache = null;
-
+    saveManualChecks(data);
     logger.info('Manual check deleted', { id, prd });
     res.json({ success: true });
   } catch (error) {

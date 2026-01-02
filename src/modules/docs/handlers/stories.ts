@@ -82,7 +82,12 @@ export function handleStoryDetail(req: Request, res: Response): void {
   try {
     const { storyId } = req.params;
     const stories = loadStoriesIndex();
-    const story = stories.find(s => s.id === storyId || s.id.toLowerCase() === storyId.toLowerCase());
+    // Support both story ID (US-LMS-001) and full filename slug (US-LMS-001-borrower-onboarding)
+    const story = stories.find(s => 
+      s.id === storyId || 
+      s.id.toLowerCase() === storyId.toLowerCase() ||
+      storyId.toLowerCase().startsWith(s.id.toLowerCase())
+    );
 
     if (!story) {
       res.status(404).json({ error: 'Story not found' });
