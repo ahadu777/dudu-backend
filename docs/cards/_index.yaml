@@ -2,20 +2,20 @@
 # 用于快速查询 Card 状态、支持上下文恢复
 #
 # 同步命令: npm run sync:card-index
-# 最后同步: 2025-12-31
+# 最后同步: 2025-12-24
 # 生成器: scripts/sync-card-index.js
 
 summary:
-  total: 33
+  total: 36
   by_status:
-    Done: 33
+    Done: 36
   by_team:
     A - Commerce: 17
-    B - Fulfillment: 4
+    B - Fulfillment: 5
+    C - Gate: 5
     C - Identity & Access: 6
-    B - Tickets: 1
+    B - Tickets: 2
     C - Operations: 1
-    C - Gate: 4
 in_progress: []
 drafts: []
 cards:
@@ -73,6 +73,18 @@ cards:
       - /api/tickets/validate
       - /api/reservations/create
     last_update: "2025-11-26"
+  - slug: merchant-redemption-console
+    title: Merchant redemption console
+    status: Done
+    team: C - Gate
+    related_stories:
+      - US-010
+      - US-010B
+    oas_paths:
+      - /merchant/tickets/scan
+      - /merchant/orders/{orderId}
+      - /merchant/redemptions
+    last_update: "2025-10-24"
   - slug: miniprogram-order
     title: Mini-program order management
     status: Done
@@ -116,6 +128,17 @@ cards:
     oas_paths:
       - /my/tickets
     last_update: "2025-10-20"
+  - slug: notification-orchestrator
+    title: Notification orchestrator
+    status: Done
+    team: B - Fulfillment
+    related_stories:
+      - US-010
+      - US-010B
+    oas_paths:
+      - /notifications/preview
+      - /notifications/templates
+    last_update: "2025-10-24"
   - slug: operator-validation-scanner
     title: Operator Validation Scanner - QR Code Entry Validation
     status: Done
@@ -149,16 +172,6 @@ cards:
     oas_paths:
       - /orders
     last_update: "2025-10-26"
-  - slug: ota-operator-management
-    title: OTA Operator Management - Create and Manage Verification Operators
-    status: Done
-    team: A - Commerce
-    related_stories:
-      - US-019
-    oas_paths:
-      - /api/ota/operators
-      - /api/ota/operators/:id
-    last_update: "2025-12-29"
   - slug: ota-order-retrieval
     title: OTA Order and Ticket Retrieval - Customer Access Management
     status: Done
@@ -204,6 +217,18 @@ cards:
       - /api/ota/reservations/:id/activate
       - /api/ota/reservations/cleanup
     last_update: "2025-11-04"
+  - slug: payment-webhook
+    title: Payment webhook
+    status: Done
+    team: A - Commerce
+    related_stories:
+      - US-001
+      - US-004
+      - US-010
+      - US-010A
+    oas_paths:
+      - /payments/notify
+    last_update: "2025-12-22"
   - slug: promotion-detail-endpoint
     title: Promotion detail endpoint for enhanced product information
     status: Done
@@ -234,7 +259,18 @@ cards:
       - US-007
     oas_paths:
       - /payments/refund
-    last_update: "2025-12-31"
+      - /my/refunds
+    last_update: "2025-10-20"
+  - slug: reports-redemptions
+    title: Reporting — list redemption events
+    status: Done
+    team: B - Tickets
+    related_stories:
+      - US-001
+      - US-005
+    oas_paths:
+      - /reports/redemptions
+    last_update: "2025-10-19"
   - slug: reservation-slot-management
     title: Reservation Slot Management - Capacity & Availability
     status: Done

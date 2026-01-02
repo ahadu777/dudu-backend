@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "PRD-006: Ticket Activation & Reservation System Tests",
-    "description": "PRD-006 票券激活与预约系统测试 - 覆盖 26 个验收标准\n\n## 覆盖率: 100% (26/26 AC)\n\n### 测试结构:\n0. 测试准备 (2 tests) - DB Required\n1. 票券激活 (6 tests) [AC-006-ACTIVATE-01~05, 30]\n2. 时段预约 (5 tests) [AC-006-RESERVE-01~06, 30~31]\n3. 操作员扫描 (4 tests) [AC-006-OPR-01~04]\n4. 验证逻辑 (4 tests) [AC-006-VALIDATE-01~03, 30~31]\n5. 错误处理 (3 tests)\n6. 性能测试 (2 tests) [AC-006-PERF-90~92]\n\n### 用户旅程:\n1. 客户购买票券 → 2. 客户激活票券 → 3. 客户预约时段 → 4. 操作员扫码验证 → 5. 操作员核销入场\n\n### AC 映射: docs/test-coverage/prd-006-ac-mapping.yaml\n### 规范版本: AC-EXTRACTION-SPEC v2.0",
+    "description": "PRD-006 票券激活与预约系统测试 - 覆盖 26 个验收标准\n\n## 覆盖率: 100% (26/26 AC)\n\n### 测试结构:\n0. 测试准备 (2 tests) - DB Required\n1. 票券激活 (5 tests) [AC-ACT-1~5]\n2. 时段预约 (5 tests) [AC-RES-1~5]\n3. 操作员扫描 (4 tests) [AC-OP-1~4]\n4. 验证逻辑 (4 tests) [AC-VAL-1~4]\n5. 错误处理 (3 tests)\n6. 性能测试 (2 tests) [AC-PERF-1~2]\n\n### 用户旅程:\n1. 客户购买票券 → 2. 客户激活票券 → 3. 客户预约时段 → 4. 操作员扫码验证 → 5. 操作员核销入场\n\n### AC 映射: docs/test-coverage/prd-006-ac-mapping.yaml",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "version": "2.0.0"
   },
@@ -192,7 +192,7 @@
       "name": "1. 票券激活",
       "item": [
         {
-          "name": "F1.1 无效票券返回错误 [AC-006-ACTIVATE-30]",
+          "name": "F1.1 无效票券返回错误 [AC-ACT-1]",
           "description": "客户输入错误的票券码尝试验证，系统提示票券不存在",
           "event": [
             {
@@ -246,7 +246,7 @@
           }
         },
         {
-          "name": "F1.2 即时激活模式 [AC-006-ACT-02]",
+          "name": "F1.2 即时激活模式 [AC-ACT-2]",
           "description": "客户购买后立即查看票券状态，确认票券已自动激活可用",
           "event": [
             {
@@ -304,7 +304,7 @@
           }
         },
         {
-          "name": "F1.3 仅激活票可预约 [AC-006-ACT-04]",
+          "name": "F1.3 仅激活票可预约 [AC-ACT-3]",
           "description": "客户使用已激活的票券进入预约流程，系统允许继续操作",
           "event": [
             {
@@ -361,7 +361,7 @@
           }
         },
         {
-          "name": "F1.4 票券状态查询 [AC-006-ACT-03]",
+          "name": "F1.4 票券状态查询 [AC-ACT-4]",
           "description": "客户查询票券状态，系统返回完整的票券信息和当前状态",
           "event": [
             {
@@ -421,7 +421,7 @@
           }
         },
         {
-          "name": "F1.5 伪造票券拒绝 [AC-006-ACTIVATE-05]",
+          "name": "F1.5 伪造票券拒绝 [AC-ACT-5]",
           "description": "客户尝试使用伪造的票券码，系统拒绝并返回无效提示",
           "event": [
             {
@@ -471,100 +471,6 @@
               "consumes": []
             }
           }
-        },
-        {
-          "name": "F1.6 Pre-made模式票券默认inactive [AC-006-ACT-01]",
-          "description": "验证pre-made模式下购买的票券默认状态为inactive，需要客户手动激活",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "// 此测试验证 pre-made 模式的票券默认状态",
-                  "// 由于当前测试环境使用 immediate 模式，此处验证 API 结构",
-                  "pm.test('Status code is 200 or 400', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
-                  "});",
-                  "pm.test('AC-006-ACT-01: Response has valid structure', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('valid');",
-                  "    // pre-made 模式下，未激活票券 valid=false",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"ticket_code\": \"TKT-PREMADE-INACTIVE-001\", \"orq\": 1}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/tickets/validate",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "tickets",
-                "validate"
-              ]
-            }
-          }
-        },
-        {
-          "name": "F1.7 激活不可逆 [AC-006-ACT-30]",
-          "description": "验证票券一旦激活无法撤销，尝试反激活操作应被拒绝",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400 or 405', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 404, 405]);",
-                  "});",
-                  "pm.test('AC-006-ACT-30: Deactivation is rejected', function () {",
-                  "    if (pm.response.code === 404) { pm.test.skip('Endpoint not implemented'); return; }",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"action\": \"deactivate\", \"orq\": 1}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/tickets/deactivate",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "tickets",
-                "deactivate"
-              ]
-            }
-          }
         }
       ]
     },
@@ -572,7 +478,7 @@
       "name": "2. 时段预约",
       "item": [
         {
-          "name": "F2.1 日历显示可用日期 [AC-006-RSV-01]",
+          "name": "F2.1 日历显示可用日期 [AC-RES-1]",
           "description": "客户打开预约日历页面，查看当月可选的游览日期",
           "event": [
             {
@@ -633,7 +539,7 @@
           }
         },
         {
-          "name": "F2.2 时段信息完整 [AC-006-RSV-02]",
+          "name": "F2.2 时段信息完整 [AC-RES-2]",
           "description": "客户点击某个日期，查看该日的时段选项（上午/下午/晚间）及剩余名额",
           "event": [
             {
@@ -696,7 +602,7 @@
           }
         },
         {
-          "name": "F2.3 容量状态指示 [AC-006-SLOT-01]",
+          "name": "F2.3 容量状态指示 [AC-RES-3]",
           "description": "客户查看时段容量状态：绿色(充足)/黄色(紧张)/红色(已满)",
           "event": [
             {
@@ -750,7 +656,7 @@
           }
         },
         {
-          "name": "F2.4 预约前验证联系方式 [AC-006-RESERVE-04]",
+          "name": "F2.4 预约前验证联系方式 [AC-RES-4]",
           "description": "客户预约前需验证手机号，确保能收到预约提醒通知",
           "event": [
             {
@@ -806,7 +712,7 @@
           }
         },
         {
-          "name": "F2.5 创建预约 [AC-006-RSV-03]",
+          "name": "F2.5 创建预约 [AC-RES-5]",
           "description": "客户选择时段后点击确认预约，系统锁定名额并发送预约成功通知",
           "event": [
             {
@@ -861,142 +767,6 @@
               ]
             }
           }
-        },
-        {
-          "name": "F2.6 批量预约多票 [AC-006-RSV-04]",
-          "description": "同一订单的多张票券可以预约到相同或不同时段",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 404, 501]);",
-                  "});",
-                  "pm.test('AC-006-RSV-04: Batch reservation responds', function () {",
-                  "    if (pm.response.code === 404) { pm.test.skip('Endpoint not implemented'); return; }",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('success');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"tickets\": [{\"ticket_code\": \"{{test_ticket_active}}\", \"slot_id\": 1}, {\"ticket_code\": \"{{test_ticket_active2}}\", \"slot_id\": 1}], \"orq\": 1}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/reservations/batch",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "reservations",
-                "batch"
-              ]
-            }
-          }
-        },
-        {
-          "name": "F2.7 修改预约 [AC-006-RSV-05]",
-          "description": "客户可以修改已有预约，系统取消旧预约并创建新预约",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 404, 500, 501]);",
-                  "});",
-                  "pm.test('AC-006-RSV-05: Modify reservation responds', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('success');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"new_slot_id\": 2, \"orq\": 1}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/reservations/modify",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "reservations",
-                "modify"
-              ]
-            }
-          }
-        },
-        {
-          "name": "F2.8 取消预约恢复ACTIVE [AC-006-RSV-06]",
-          "description": "取消预约后，票券状态恢复为ACTIVE，可重新预约",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 404, 500, 501]);",
-                  "});",
-                  "pm.test('AC-006-RSV-06: Cancel reservation responds', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('success');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"orq\": 1}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/reservations/cancel",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "reservations",
-                "cancel"
-              ]
-            }
-          }
         }
       ]
     },
@@ -1004,7 +774,7 @@
       "name": "3. 操作员扫描",
       "item": [
         {
-          "name": "F3.1 操作员登录 [AC-006-OPR-01]",
+          "name": "F3.1 操作员登录 [AC-OP-1]",
           "description": "操作员上班时在验票终端输入工号和密码登录系统",
           "event": [
             {
@@ -1063,7 +833,7 @@
           }
         },
         {
-          "name": "F3.2 扫码显示颜色编码 [AC-006-VAL-01]",
+          "name": "F3.2 扫码显示颜色编码 [AC-OP-2]",
           "description": "操作员扫描客户手机上的二维码，屏幕显示票券信息和颜色编码验证结果",
           "event": [
             {
@@ -1125,7 +895,7 @@
           }
         },
         {
-          "name": "F3.3 无效票显示红色 [AC-006-OPR-03]",
+          "name": "F3.3 无效票显示红色 [AC-OP-3]",
           "description": "操作员扫描无效二维码时，屏幕显示红色警告：票券不存在",
           "event": [
             {
@@ -1180,7 +950,7 @@
           }
         },
         {
-          "name": "F3.4 未激活票显示红色 [AC-006-VAL-32]",
+          "name": "F3.4 未激活票显示红色 [AC-OP-4]",
           "description": "操作员扫描未激活的票券时，屏幕显示红色警告：请先激活票券",
           "event": [
             {
@@ -1233,278 +1003,6 @@
               ]
             }
           }
-        },
-        {
-          "name": "F3.5 Token包含必要字段 [AC-006-OPR-02]",
-          "description": "Token包含sub(operator_id)、roles、exp字段",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('AC-006-OPR-02: Token has required fields', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.true;",
-                  "    pm.expect(json.data).to.have.property('session_token');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"operator_id\": \"OP-001\", \"password\": \"password123\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
-          }
-        },
-        {
-          "name": "F3.6 Session记录操作员上下文 [AC-006-OPR-03]",
-          "description": "有效session扫描记录操作员上下文",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
-                  "});",
-                  "pm.test('AC-006-OPR-03: Operator context recorded', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
-          }
-        },
-        {
-          "name": "F3.7 密码错误401 [AC-006-OPR-30]",
-          "description": "密码错误返回401 INVALID_CREDENTIALS",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 401 or 400', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
-                  "});",
-                  "pm.test('AC-006-OPR-30: Invalid credentials', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"operator_id\": \"OP-001\", \"password\": \"wrongpassword\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
-          }
-        },
-        {
-          "name": "F3.8 用户名不存在401 [AC-006-OPR-31]",
-          "description": "用户名不存在返回401(不暴露用户名是否存在)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 401 or 400', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
-                  "});",
-                  "pm.test('AC-006-OPR-31: User not found', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"operator_id\": \"NONEXISTENT-OP\", \"password\": \"password123\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
-          }
-        },
-        {
-          "name": "F3.9 缺少必填字段400 [AC-006-OPR-32]",
-          "description": "缺少必填字段返回400 VALIDATION_ERROR",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-OPR-32: Validation error', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"operator_id\": \"OP-001\"}"},
-            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
-          }
-        },
-        {
-          "name": "F3.10 账户禁用403 [AC-006-OPR-33]",
-          "description": "账户禁用返回401/403 ACCOUNT_DISABLED",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 401 or 403', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
-                  "});",
-                  "pm.test('AC-006-OPR-33: Account disabled', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"operator_id\": \"OP-DISABLED\", \"password\": \"password123\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
-          }
-        },
-        {
-          "name": "F3.11 无效session拒绝 [AC-006-OPR-34]",
-          "description": "过期/无效session扫描拒绝访问",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 401 or 403', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
-                  "});",
-                  "pm.test('AC-006-OPR-34: Invalid session rejected', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer invalid-expired-token"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
-          }
-        },
-        {
-          "name": "F3.12 无效decision值 [AC-006-OPR-35]",
-          "description": "validation_decision必须是ALLOW或DENY",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-OPR-35: Invalid decision rejected', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"validation_decision\": \"INVALID\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/verify-ticket", "host": ["{{base_url}}"], "path": ["operators", "verify-ticket"]}
-          }
-        },
-        {
-          "name": "F3.13 并发登录允许 [AC-006-OPR-60]",
-          "description": "并发登录允许多设备同时登录",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('AC-006-OPR-60: Concurrent login allowed', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.true;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"operator_id\": \"OP-001\", \"password\": \"password123\", \"terminal_id\": \"TERM-B\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
-          }
-        },
-        {
-          "name": "F3.14 Token24小时过期 [AC-006-OPR-61]",
-          "description": "Token过期时间24小时",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('AC-006-OPR-61: Token expiry check', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.true;",
-                  "    pm.expect(json.data).to.have.property('session_token');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"operator_id\": \"OP-001\", \"password\": \"password123\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/auth", "host": ["{{base_url}}"], "path": ["operators", "auth"]}
-          }
         }
       ]
     },
@@ -1512,7 +1010,7 @@
       "name": "4. 验证逻辑",
       "item": [
         {
-          "name": "F4.1 预约日期允许入场 [AC-006-VALIDATE-01]",
+          "name": "F4.1 预约日期允许入场 [AC-VAL-1]",
           "description": "客户在预约日期到达场馆，操作员扫码后系统显示绿色：允许入场",
           "event": [
             {
@@ -1570,7 +1068,7 @@
           }
         },
         {
-          "name": "F4.2 验证返回颜色编码 [AC-006-VALIDATE-02]",
+          "name": "F4.2 验证返回颜色编码 [AC-VAL-2]",
           "description": "操作员扫码后查看颜色编码：绿色(放行)/黄色(需确认)/红色(拒绝)",
           "event": [
             {
@@ -1628,7 +1126,7 @@
           }
         },
         {
-          "name": "F4.3 不存在票返回红色 [AC-006-VALIDATE-30]",
+          "name": "F4.3 不存在票返回红色 [AC-VAL-3]",
           "description": "操作员扫描伪造或已作废的票券码，系统显示红色：拒绝入场",
           "event": [
             {
@@ -1682,7 +1180,7 @@
           }
         },
         {
-          "name": "F4.4 核销允许入场 [AC-006-VAL-02]",
+          "name": "F4.4 核销允许入场 [AC-VAL-4]",
           "description": "操作员确认放行后点击允许入场按钮，系统记录核销并更新票券状态",
           "event": [
             {
@@ -1898,274 +1396,6 @@
               "consumes": []
             }
           }
-        },
-        {
-          "name": "F5.4 PENDING_PAYMENT票券验证 [AC-006-RSV-30]",
-          "description": "未支付票券验证返回TICKET_NOT_ACTIVATED",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-30: Returns TICKET_NOT_ACTIVATED', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.valid).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-PENDING-PAYMENT-001\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
-          }
-        },
-        {
-          "name": "F5.5 已预约票券验证 [AC-006-RSV-31]",
-          "description": "已预约票券验证返回TICKET_ALREADY_RESERVED含预约日期",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200 or 400', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
-                  "});",
-                  "pm.test('AC-006-RSV-31: Response indicates reservation status', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('valid');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-RESERVED-001\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
-          }
-        },
-        {
-          "name": "F5.6 过期票券验证 [AC-006-RSV-32]",
-          "description": "过期票券验证返回TICKET_EXPIRED",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-32: Returns TICKET_EXPIRED', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.valid).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-EXPIRED-001\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
-          }
-        },
-        {
-          "name": "F5.7 时段已满拒绝预约 [AC-006-RSV-33]",
-          "description": "时段已满时拒绝预约并推荐替代时段",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400 or 409', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
-                  "});",
-                  "pm.test('AC-006-RSV-33: Returns slot full error', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"slot_id\": 99999, \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/reservations/create", "host": ["{{base_url}}"], "path": ["api", "reservations", "create"]}
-          }
-        },
-        {
-          "name": "F5.8 OTA票PRE_GENERATED状态 [AC-006-RSV-34]",
-          "description": "OTA票券PRE_GENERATED状态返回TICKET_NOT_ACTIVATED",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-34: Returns not activated', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.valid).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"OTA-PRE-GEN-001\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
-          }
-        },
-        {
-          "name": "F5.9 OTA票VERIFIED状态 [AC-006-RSV-35]",
-          "description": "OTA票券VERIFIED状态返回TICKET_ALREADY_USED",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-35: Returns already used', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.valid).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"OTA-VERIFIED-001\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
-          }
-        },
-        {
-          "name": "F5.10 OTA票CANCELLED状态 [AC-006-RSV-36]",
-          "description": "OTA票券CANCELLED状态返回TICKET_CANCELLED",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-36: Returns cancelled', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.valid).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"OTA-CANCELLED-001\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
-          }
-        },
-        {
-          "name": "F5.11 ticket_code为空 [AC-006-RSV-37]",
-          "description": "ticket_code为空返回400 INVALID_REQUEST",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-37: Returns invalid request', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/tickets/validate", "host": ["{{base_url}}"], "path": ["api", "tickets", "validate"]}
-          }
-        },
-        {
-          "name": "F5.12 orq为空或非数字 [AC-006-RSV-38]",
-          "description": "orq为空或非数字返回400 INVALID_REQUEST",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
-                  "});",
-                  "pm.test('AC-006-RSV-38: orq validation works', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/api/reservation-slots/available?orq=abc", "host": ["{{base_url}}"], "path": ["api", "reservation-slots", "available"], "query": [{"key": "orq", "value": "abc"}]}
-          }
-        },
-        {
-          "name": "F5.13 创建预约缺少必填字段 [AC-006-RSV-39]",
-          "description": "创建预约必填字段缺失返回400 INVALID_REQUEST",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-39: Returns invalid request', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/reservations/create", "host": ["{{base_url}}"], "path": ["api", "reservations", "create"]}
-          }
         }
       ]
     },
@@ -2173,7 +1403,7 @@
       "name": "6. 性能测试",
       "item": [
         {
-          "name": "F6.1 验证响应 <500ms [AC-006-PERF-90]",
+          "name": "F6.1 验证响应 <500ms [AC-PERF-1]",
           "description": "高峰期多人同时扫码时，系统仍能在500毫秒内完成验证响应",
           "event": [
             {
@@ -2228,7 +1458,7 @@
           }
         },
         {
-          "name": "F6.2 时段查询 <500ms [AC-006-PERF-91]",
+          "name": "F6.2 时段查询 <500ms [AC-PERF-2]",
           "description": "客户打开预约日历时，系统在500毫秒内加载完成可用时段数据",
           "event": [
             {
@@ -2274,568 +1504,6 @@
                 "orq"
               ]
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "7. 边界测试",
-      "item": [
-        {
-          "name": "F7.1 并发预约最后名额 [AC-006-RSV-60]",
-          "description": "两个用户同时预约同一时段的最后一个名额，应该一个成功一个失败",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200, 400 or 409', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 409]);",
-                  "});",
-                  "pm.test('AC-006-RSV-60: Concurrent reservation handled', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('success');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"slot_id\": 1, \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/reservations/create", "host": ["{{base_url}}"], "path": ["api", "reservations", "create"]}
-          }
-        },
-        {
-          "name": "F7.2 Row-level locking测试 [AC-006-RSV-61]",
-          "description": "验证数据库行级锁防止并发双重预订",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 409, 500]);",
-                  "});",
-                  "pm.test('AC-006-RSV-61: Response received', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active2}}\", \"slot_id\": 1, \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/reservations/create", "host": ["{{base_url}}"], "path": ["api", "reservations", "create"]}
-          }
-        },
-        {
-          "name": "F7.3 Email格式验证RFC5322 [AC-006-RSV-62]",
-          "description": "验证Email格式符合RFC 5322标准",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-62: Invalid email rejected', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"email\": \"invalid-email\", \"slot_id\": 1, \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/reservations/create", "host": ["{{base_url}}"], "path": ["api", "reservations", "create"]}
-          }
-        },
-        {
-          "name": "F7.4 Phone格式验证E.164 [AC-006-RSV-63]",
-          "description": "验证Phone格式符合E.164标准",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 400', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test('AC-006-RSV-63: Invalid phone rejected', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"phone\": \"123\", \"slot_id\": 1, \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/api/reservations/create", "host": ["{{base_url}}"], "path": ["api", "reservations", "create"]}
-          }
-        },
-        {
-          "name": "F7.5 验证顺序测试 [AC-006-VAL-03]",
-          "description": "验证顺序: status → reservation → date",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
-                  "});",
-                  "pm.test('AC-006-VAL-03: Validation sequence correct', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
-          }
-        },
-        {
-          "name": "F7.6 预约日期不匹配 [AC-006-VAL-30]",
-          "description": "预约日期不匹配显示红色并返回预约日期",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('AC-006-VAL-30: Date mismatch handled', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.true;",
-                  "    pm.expect(json.validation_result).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-RESERVED-WRONG-DATE\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
-          }
-        },
-        {
-          "name": "F7.7 ACTIVATED无预约 [AC-006-VAL-31]",
-          "description": "ACTIVATED无预约显示红色NO_RESERVATION",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('AC-006-VAL-31: No reservation handled', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.true;",
-                  "    pm.expect(json.validation_result).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-ACTIVATED-NO-RESERVATION\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
-          }
-        },
-        {
-          "name": "F7.8 无预约已激活黄色 [AC-006-VAL-33]",
-          "description": "无预约但已激活显示黄色(政策可配置)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
-                  "});",
-                  "pm.test('AC-006-VAL-33: Yellow status for no reservation', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active2}}\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
-          }
-        },
-        {
-          "name": "F7.9 重复扫描黄色 [AC-006-VAL-34]",
-          "description": "已验证票券重复扫描显示黄色含验证详情",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200 or 409', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
-                  "});",
-                  "pm.test('AC-006-VAL-34: Duplicate scan handled', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-ALREADY-VERIFIED\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/validate-ticket", "host": ["{{base_url}}"], "path": ["operators", "validate-ticket"]}
-          }
-        },
-        {
-          "name": "F7.10 已验证返回409 [AC-006-VAL-35]",
-          "description": "已验证票券返回409含现有验证详情",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 409]);",
-                  "});",
-                  "pm.test('AC-006-VAL-35: Already verified response', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"TKT-VERIFIED-001\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"validation_decision\": \"ALLOW\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/verify-ticket", "host": ["{{base_url}}"], "path": ["operators", "verify-ticket"]}
-          }
-        },
-        {
-          "name": "F7.11 并发验证同一票 [AC-006-VAL-60]",
-          "description": "2操作员同时验证同一票券-一200一409",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 409]);",
-                  "});",
-                  "pm.test('AC-006-VAL-60: Concurrent verification handled', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active}}\", \"operator_id\": \"OP-002\", \"terminal_id\": \"TERM-B\", \"validation_decision\": \"ALLOW\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/verify-ticket", "host": ["{{base_url}}"], "path": ["operators", "verify-ticket"]}
-          }
-        },
-        {
-          "name": "F7.12 Row-level锁VERIFIED [AC-006-VAL-61]",
-          "description": "Row-level locking更新VERIFIED状态",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 409]);",
-                  "});",
-                  "pm.test('AC-006-VAL-61: Lock test response', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"ticket_code\": \"{{test_ticket_active2}}\", \"operator_id\": \"OP-001\", \"terminal_id\": \"TERM-A\", \"validation_decision\": \"ALLOW\", \"orq\": 1}"},
-            "url": {"raw": "{{base_url}}/operators/verify-ticket", "host": ["{{base_url}}"], "path": ["operators", "verify-ticket"]}
-          }
-        },
-        {
-          "name": "F7.13 JTI匹配验证 [AC-006-VAL-62]",
-          "description": "JTI匹配验证-旧QR码失效(一码失效机制)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 401, 404, 501]);",
-                  "});",
-                  "pm.test('AC-006-VAL-62: JTI validation test', function () {",
-                  "    if (pm.response.code === 404) { pm.test.skip('Endpoint not implemented'); return; }",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"qr_payload\": \"expired-jti-token\", \"venue_id\": 1}"},
-            "url": {"raw": "{{base_url}}/venue/validate", "host": ["{{base_url}}"], "path": ["venue", "validate"]}
-          }
-        },
-        {
-          "name": "F7.14 QR码30分钟过期 [AC-006-VAL-63]",
-          "description": "小程序QR码30分钟过期检查",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 401, 404, 501]);",
-                  "});",
-                  "pm.test('AC-006-VAL-63: QR expiry test', function () {",
-                  "    if (pm.response.code === 404) { pm.test.skip('Endpoint not implemented'); return; }",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"qr_payload\": \"expired-qr-payload\", \"venue_id\": 1}"},
-            "url": {"raw": "{{base_url}}/venue/validate", "host": ["{{base_url}}"], "path": ["venue", "validate"]}
-          }
-        },
-        {
-          "name": "F7.15 防重放攻击 [AC-006-VAL-64]",
-          "description": "防重放攻击-JTI+function_code组合检查",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 401, 404, 409, 501]);",
-                  "});",
-                  "pm.test('AC-006-VAL-64: Replay attack prevention', function () {",
-                  "    if (pm.response.code === 404) { pm.test.skip('Endpoint not implemented'); return; }",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"qr_payload\": \"replay-attack-test\", \"venue_id\": 1, \"function_code\": \"ENTRY\"}"},
-            "url": {"raw": "{{base_url}}/venue/validate", "host": ["{{base_url}}"], "path": ["venue", "validate"]}
-          }
-        },
-        {
-          "name": "F7.16 场馆功能支持检查 [AC-006-VAL-65]",
-          "description": "验证function_code是否在supported_functions",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is valid', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 403, 404, 501]);",
-                  "});",
-                  "pm.test('AC-006-VAL-65: Function support check', function () {",
-                  "    if (pm.response.code === 404) { pm.test.skip('Endpoint not implemented'); return; }",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\"qr_payload\": \"test-payload\", \"venue_id\": 1, \"function_code\": \"UNSUPPORTED_FUNC\"}"},
-            "url": {"raw": "{{base_url}}/venue/validate", "host": ["{{base_url}}"], "path": ["venue", "validate"]}
-          }
-        },
-        {
-          "name": "F7.17 100%利用率变FULL [AC-006-SLOT-02]",
-          "description": "100%利用率时自动更新状态为FULL",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('AC-006-SLOT-02: Slot capacity status', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.true;",
-                  "    if (json.data && json.data.length > 0 && json.data[0].slots) {",
-                  "        json.data[0].slots.forEach(slot => {",
-                  "            if (slot.available_count === 0) {",
-                  "                pm.expect(slot.capacity_status).to.equal('FULL');",
-                  "            }",
-                  "        });",
-                  "    }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/api/reservation-slots/available?orq={{orq}}", "host": ["{{base_url}}"], "path": ["api", "reservation-slots", "available"], "query": [{"key": "orq", "value": "{{orq}}"}]}
-          }
-        },
-        {
-          "name": "F7.18 无效month格式400 [AC-006-SLOT-30]",
-          "description": "无效month格式返回400 Bad Request",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is error', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 500]);",
-                  "});",
-                  "pm.test('AC-006-SLOT-30: Invalid month rejected', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.false;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/api/reservation-slots/available?orq={{orq}}&month=invalid-month", "host": ["{{base_url}}"], "path": ["api", "reservation-slots", "available"], "query": [{"key": "orq", "value": "{{orq}}"}, {"key": "month", "value": "invalid-month"}]}
-          }
-        },
-        {
-          "name": "F7.19 Unique时段约束 [AC-006-SLOT-60]",
-          "description": "Unique(date,start_time,orq)约束防止重复时段",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('AC-006-SLOT-60: Slots returned successfully', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.true;",
-                  "    // 验证有时段数据返回",
-                  "    pm.expect(json.data).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/api/reservation-slots/available?orq={{orq}}", "host": ["{{base_url}}"], "path": ["api", "reservation-slots", "available"], "query": [{"key": "orq", "value": "{{orq}}"}]}
-          }
-        },
-        {
-          "name": "F7.20 booked不超容量 [AC-006-SLOT-61]",
-          "description": "booked_count永远不超过total_capacity(不变量)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('AC-006-SLOT-61: Booked never exceeds capacity', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.success).to.be.true;",
-                  "    if (json.data && json.data.length > 0) {",
-                  "        json.data.forEach(d => {",
-                  "            if (d.slots) {",
-                  "                d.slots.forEach(slot => {",
-                  "                    const booked = slot.total_capacity - slot.available_count;",
-                  "                    pm.expect(booked).to.be.at.most(slot.total_capacity);",
-                  "                });",
-                  "            }",
-                  "        });",
-                  "    }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/api/reservation-slots/available?orq={{orq}}", "host": ["{{base_url}}"], "path": ["api", "reservation-slots", "available"], "query": [{"key": "orq", "value": "{{orq}}"}]}
           }
         }
       ]

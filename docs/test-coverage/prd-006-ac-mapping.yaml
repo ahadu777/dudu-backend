@@ -1,805 +1,229 @@
-# PRD-006 AC Mapping - 按四层来源系统提取
-# 规范版本: AC-EXTRACTION-SPEC.md v2.0
-# 生成日期: 2025-12-30
-#
-# AC 来源层级:
-#   - PRD: 业务成功指标 (产品/商业视角)
-#   - Story: 用户场景 Given/When/Then (用户黑盒视角)
-#   - Card: API 契约、状态码、数据库变化 (技术白盒视角)
-#   - Code: 边界条件、错误处理 (实现细节)
-#
-# AC 编号规范: AC-{PRD_ID}-{DOMAIN}-{SEQUENCE}
-#   - 01-29: 正常流程 (happy_path)
-#   - 30-59: 异常流程 (error_path)
-#   - 60-99: 边界情况 (edge_case)
+# PRD-006 Acceptance Criteria Mapping
+# Ticket Activation and Time-Slot Reservation System
 
-prd_id: "PRD-006"
-prd_title: "Ticket Activation & Reservation System"
-spec_version: "2.0"
-extraction_date: "2025-12-30"
+prd_id: PRD-006
+title: Ticket Activation and Time-Slot Reservation System
+last_updated: 2025-12-25
+coverage_principle: "Coverage % = (有测试的AC数 / 总AC数) × 100"
 
-# ============================================================================
-# 来源文档追溯
-# ============================================================================
-source_documents:
-  prd:
-    - path: "docs/prd/PRD-006-ticket-activation-reservation.md"
-      sections_extracted:
-        - "Core Features > Ticket Activation System"
-        - "Core Features > Time-Slot Reservation Calendar"
-        - "Core Features > Enhanced Operator Scanning"
-        - "Core Features > Reservation Validation Logic"
+# ===== ACCEPTANCE CRITERIA =====
 
-  stories:
-    - id: "US-006"
-      path: "docs/stories/US-006-operator-auth-session.md"
-      scenarios: ["A - Login", "B - Scan with auth", "C - Invalid auth"]
-    - id: "US-015"
-      path: "docs/stories/US-015-ticket-reservation-validation.md"
-      scenarios: ["A1-A4 Customer Flow", "B1-B4 Operator Validation", "C1 Capacity"]
-    - id: "US-016"
-      path: "docs/stories/US-016-ticket-activation-reservation.md"
-      scenarios: ["A1-A3 Activation", "B1-B4 Reservation", "C1-C4 Validation"]
-
-  cards:
-    - slug: "operators-login"
-      path: "docs/cards/operators-login.md"
-      ac_count: 8
-    - slug: "reservation-slot-management"
-      path: "docs/cards/reservation-slot-management.md"
-      ac_count: 5
-    - slug: "customer-reservation-portal"
-      path: "docs/cards/customer-reservation-portal.md"
-      ac_count: 4
-    - slug: "operator-validation-scanner"
-      path: "docs/cards/operator-validation-scanner.md"
-      ac_count: 4
-
-  code:
-    - path: "src/modules/ticket-reservation/service.ts"
-      implicit_ac_count: 4
-    - path: "src/modules/operators/service.ts"
-      implicit_ac_count: 1
-    - path: "src/modules/venue/service.ts"
-      implicit_ac_count: 4
-    - path: "src/modules/ticket-reservation/router.ts"
-      implicit_ac_count: 3
-    - path: "src/modules/operators/router.ts"
-      implicit_ac_count: 1
-
-# ============================================================================
-# 功能域定义
-# ============================================================================
-domains:
-  ACT:
-    name: "Ticket Activation"
-    description: "票券激活流程"
-  RSV:
-    name: "Reservation"
-    description: "预约创建和管理"
-  VAL:
-    name: "Validation"
-    description: "操作员验证入场"
-  OPR:
-    name: "Operator"
-    description: "操作员认证"
-  SLOT:
-    name: "Slot Management"
-    description: "时段容量管理"
-
-# ============================================================================
-# AC 详细定义 - 按功能域分组
-# ============================================================================
 acceptance_criteria:
 
-  # --------------------------------------------------------------------------
-  # 票券激活 (ACT)
-  # --------------------------------------------------------------------------
-  activation:
-    # Happy Path (01-29)
-    - ac_id: AC-006-ACT-01
+  # === 1. Ticket Activation System ===
+  ticket_activation:
+    - ac_id: AC-ACTIVATION-1
       description: "票券购买后默认 inactive 状态 (pre-made mode)"
-      category: happy_path
-      source:
-        type: prd
-        document: "docs/prd/PRD-006-ticket-activation-reservation.md"
-        section: "Core Features > Ticket Activation System"
-      story_mapping: "US-016.A1"
+      prd_source: "Core Features > Ticket Activation System"
+      test_id: "1.1"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-ACT-02
-      description: "immediate 模式购买时自动激活票券"
-      category: happy_path
-      source:
-        type: prd
-        document: "docs/prd/PRD-006-ticket-activation-reservation.md"
-        section: "Core Features > Ticket Activation System"
-      story_mapping: "US-016.A2"
+    - ac_id: AC-ACTIVATION-2
+      description: "immediate 模式自动激活"
+      prd_source: "Core Features > Ticket Activation System"
+      test_id: "1.2"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-ACT-03
-      description: "激活端点成功转换票券状态 inactive → active"
-      category: happy_path
-      source:
-        type: prd
-        document: "docs/prd/PRD-006-ticket-activation-reservation.md"
-        section: "Core Features > Ticket Activation System"
-      story_mapping: "US-016.A1"
+    - ac_id: AC-ACTIVATION-3
+      description: "激活端点转换 inactive → active"
+      prd_source: "Core Features > Ticket Activation System"
+      test_id: "1.3"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-ACT-04
-      description: "只有 active 状态的票券可以进行预约"
-      category: happy_path
-      source:
-        type: prd
-        document: "docs/prd/PRD-006-ticket-activation-reservation.md"
-        section: "Core Features > Ticket Activation System"
-      story_mapping: "US-015.A1"
+    - ac_id: AC-ACTIVATION-4
+      description: "只有 active 票券可以预约"
+      prd_source: "Core Features > Ticket Activation System"
+      test_id: "1.4"
       status: tested
-      test_id: ""
 
-    # Error Path (30-59)
-    - ac_id: AC-006-ACT-30
-      description: "激活不可逆 - 尝试撤销激活被拒绝"
-      category: error_path
-      source:
-        type: story
-        document: "docs/stories/US-016-ticket-activation-reservation.md"
-        section: "A3. 激活不可逆"
-      story_mapping: "US-016.A3"
+    - ac_id: AC-ACTIVATION-5
+      description: "激活不可逆 (无法恢复 inactive)"
+      prd_source: "Core Features > Ticket Activation System"
+      test_id: "1.5"
       status: tested
-      test_id: ""
 
-  # --------------------------------------------------------------------------
-  # 预约 (RSV)
-  # --------------------------------------------------------------------------
-  reservation:
-    # Happy Path (01-29)
-    - ac_id: AC-006-RSV-01
-      description: "客户输入票券编码验证 ACTIVATED 状态后显示预约日历"
-      category: happy_path
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "A1. 票券验证"
-      story_mapping: "US-015.A1"
-      card_mapping: "customer-reservation-portal"
+    - ac_id: AC-ACTIVATION-6
+      description: "激活已激活票券返回错误"
+      prd_source: "Error Handling"
+      test_id: "1.6"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-02
-      description: "点击日期显示该日所有时段及剩余容量"
-      category: happy_path
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "A2. 查看可用时段"
-      story_mapping: "US-015.A2"
+  # === 2. Time-Slot Reservation ===
+  reservation_calendar:
+    - ac_id: AC-RESERVE-1
+      description: "查询可用日期列表"
+      prd_source: "Core Features > Time-Slot Reservation Calendar"
+      test_id: "2.1"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-03
-      description: "确认预约后状态变为 RESERVED 并发送确认邮件含 QR 码"
-      category: happy_path
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "A3. 创建预约"
-      story_mapping: "US-015.A3"
-      card_mapping: "customer-reservation-portal"
+    - ac_id: AC-RESERVE-2
+      description: "创建预约 (日期 + 时间段)"
+      prd_source: "Core Features > Time-Slot Reservation Calendar"
+      test_id: "2.2"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-04
-      description: "支持批量预约 - 同订单多票可预约相同或不同时段"
-      category: happy_path
-      source:
-        type: prd
-        document: "docs/prd/PRD-006-ticket-activation-reservation.md"
-        section: "Core Features > Time-Slot Reservation Calendar"
-      story_mapping: "US-016.B2"
+    - ac_id: AC-RESERVE-3
+      description: "支持多票券批量预约"
+      prd_source: "Core Features > Time-Slot Reservation Calendar"
+      test_id: "2.3"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-05
-      description: "预约可修改 - 取消旧预约创建新预约"
-      category: happy_path
-      source:
-        type: story
-        document: "docs/stories/US-016-ticket-activation-reservation.md"
-        section: "B3. 修改预约"
-      story_mapping: "US-016.B3"
+    - ac_id: AC-RESERVE-4
+      description: "预约确认返回详情"
+      prd_source: "Core Features > Time-Slot Reservation Calendar"
+      test_id: "2.4"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-06
-      description: "取消预约后票券恢复 ACTIVE 状态"
-      category: happy_path
-      source:
-        type: story
-        document: "docs/stories/US-016-ticket-activation-reservation.md"
-        section: "B4. 取消预约"
-      story_mapping: "US-016.B4"
+    - ac_id: AC-RESERVE-5
+      description: "inactive 票券预约返回错误"
+      prd_source: "Core Features > Time-Slot Reservation Calendar"
+      test_id: "2.5"
       status: tested
-      test_id: ""
 
-    # Error Path (30-59)
-    - ac_id: AC-006-RSV-30
-      description: "PENDING_PAYMENT 票券验证返回 TICKET_NOT_ACTIVATED"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/service.ts"
-        section: "validateDirectTicket:81-89"
-      card_mapping: "customer-reservation-portal"
+    - ac_id: AC-RESERVE-6
+      description: "预约可修改 (兑换前)"
+      prd_source: "Business Rules > Reservation Modification"
+      test_id: "2.6"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-31
-      description: "已预约票券验证返回 TICKET_ALREADY_RESERVED 含预约日期"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/service.ts"
-        section: "validateDirectTicket:91-102"
-      card_mapping: "customer-reservation-portal"
+    - ac_id: AC-RESERVE-7
+      description: "取消预约恢复 active 无预约状态"
+      prd_source: "Business Rules > Reservation Modification"
+      test_id: "2.7"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-32
-      description: "过期票券验证返回 TICKET_EXPIRED"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/service.ts"
-        section: "validateDirectTicket:104-112"
+    - ac_id: AC-RESERVE-8
+      description: "过去日期预约返回错误"
+      prd_source: "Business Rules > Reservation Business Rules"
+      test_id: "2.8"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-33
-      description: "时段已满拒绝预约并推荐替代时段"
-      category: error_path
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "A4. 时段已满处理"
-      story_mapping: "US-015.A4"
-      card_mapping: "customer-reservation-portal"
+  # === 3. Operator Validation ===
+  operator_validation:
+    - ac_id: AC-OPSCAN-1
+      description: "操作员登录验证"
+      prd_source: "Core Features > Enhanced Operator Scanning"
+      test_id: "3.1"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-34
-      description: "OTA 票券 PRE_GENERATED 状态返回 TICKET_NOT_ACTIVATED"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/service.ts"
-        section: "validateOtaTicket:128-135"
+    - ac_id: AC-OPSCAN-2
+      description: "扫描显示激活状态"
+      prd_source: "Core Features > Enhanced Operator Scanning"
+      test_id: "3.2"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-35
-      description: "OTA 票券 VERIFIED 状态返回 TICKET_ALREADY_USED"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/service.ts"
-        section: "validateOtaTicket:138-145"
+    - ac_id: AC-OPSCAN-3
+      description: "扫描显示预约状态和日期"
+      prd_source: "Core Features > Enhanced Operator Scanning"
+      test_id: "3.3"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-36
-      description: "OTA 票券 CANCELLED 状态返回 TICKET_CANCELLED"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/service.ts"
-        section: "validateOtaTicket:158-166"
+    - ac_id: AC-OPSCAN-4
+      description: "当日有效性检查"
+      prd_source: "Core Features > Enhanced Operator Scanning"
+      test_id: "3.4"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-37
-      description: "ticket_code 为空返回 400 INVALID_REQUEST"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/router.ts"
-        section: "router.post /api/tickets/validate:25-33"
+  # === 4. Reservation Validation Logic ===
+  validation_logic:
+    - ac_id: AC-VALID-1
+      description: "有预约 - 只允许预约日期入场"
+      prd_source: "Core Features > Reservation Validation Logic"
+      test_id: "4.1"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-38
-      description: "orq 为空或非数字返回 400 INVALID_REQUEST"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/router.ts"
-        section: "router.get /api/reservation-slots/available:64-72"
+    - ac_id: AC-VALID-2
+      description: "无预约 - 可配置策略 (allow | require)"
+      prd_source: "Core Features > Reservation Validation Logic"
+      test_id: "4.2"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-39
-      description: "创建预约必填字段缺失返回 400 INVALID_REQUEST"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/router.ts"
-        section: "router.post /api/reservations/create:99-107"
+    - ac_id: AC-VALID-3
+      description: "错误日期 - 明确拒绝信息"
+      prd_source: "Core Features > Reservation Validation Logic"
+      test_id: "4.3"
       status: tested
-      test_id: ""
 
-    # Edge Case (60-99)
-    - ac_id: AC-006-RSV-60
-      description: "并发预约同一时段最后名额 - 一成功一失败"
-      category: edge_case
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "C1. 容量强制执行"
-      story_mapping: "US-015.C1"
-      card_mapping: "customer-reservation-portal"
+    - ac_id: AC-VALID-4
+      description: "未激活票券 - 拒绝并提示激活"
+      prd_source: "Core Features > Reservation Validation Logic"
+      test_id: "4.4"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-61
-      description: "Row-level locking 防止并发双重预订"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/customer-reservation-portal.md"
-        section: "4) Validations, Idempotency & Concurrency"
-      card_mapping: "customer-reservation-portal"
+    - ac_id: AC-VALID-5
+      description: "宽限期配置 (±1天)"
+      prd_source: "Business Rules > Reservation Validation"
+      test_id: "4.5"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-62
-      description: "Email 格式验证 RFC 5322"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/customer-reservation-portal.md"
-        section: "3) Invariants"
-      card_mapping: "customer-reservation-portal"
+  # === 5. Performance ===
+  performance:
+    - ac_id: AC-PERF-1
+      description: "激活响应 <1s"
+      prd_source: "Product Metrics > API Performance"
+      test_id: "5.1"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-RSV-63
-      description: "Phone 格式验证 E.164"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/customer-reservation-portal.md"
-        section: "3) Invariants"
-      card_mapping: "customer-reservation-portal"
+    - ac_id: AC-PERF-2
+      description: "预约创建响应 <2s"
+      prd_source: "Product Metrics > API Performance"
+      test_id: "5.2"
       status: tested
-      test_id: ""
 
-  # --------------------------------------------------------------------------
-  # 操作员验证 (VAL)
-  # --------------------------------------------------------------------------
-  validation:
-    # Happy Path (01-29)
-    - ac_id: AC-006-VAL-01
-      description: "今日有效预约扫描显示绿色允许入场"
-      category: happy_path
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "B1. 有效预约验证"
-      story_mapping: "US-015.B1"
-      card_mapping: "operator-validation-scanner"
+    - ac_id: AC-PERF-3
+      description: "扫描验证响应 <1s"
+      prd_source: "Product Metrics > API Performance"
+      test_id: "5.3"
       status: tested
-      test_id: ""
 
-    - ac_id: AC-006-VAL-02
-      description: "验证成功后票券状态更新为 VERIFIED"
-      category: happy_path
-      source:
-        type: code
-        document: "src/modules/ticket-reservation/service.ts"
-        section: "operatorVerifyTicket:714-717"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
+# ===== COVERAGE SUMMARY =====
 
-    - ac_id: AC-006-VAL-03
-      description: "验证顺序: status → reservation → date"
-      category: happy_path
-      source:
-        type: card
-        document: "docs/cards/operator-validation-scanner.md"
-        section: "5) Validation Logic"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
-
-    # Error Path (30-59)
-    - ac_id: AC-006-VAL-30
-      description: "预约日期不匹配显示红色并返回预约日期"
-      category: error_path
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "B2. 日期不匹配"
-      story_mapping: "US-015.B2"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-31
-      description: "ACTIVATED 无预约显示红色 NO_RESERVATION"
-      category: error_path
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "B3. 未预约票券"
-      story_mapping: "US-015.B3"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-32
-      description: "未激活票券显示红色 TICKET_NOT_ACTIVATED"
-      category: error_path
-      source:
-        type: story
-        document: "docs/stories/US-016-ticket-activation-reservation.md"
-        section: "C4. 未激活票券"
-      story_mapping: "US-016.C4"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-33
-      description: "无预约但已激活显示黄色 (政策可配置)"
-      category: error_path
-      source:
-        type: story
-        document: "docs/stories/US-016-ticket-activation-reservation.md"
-        section: "C3. 无预约但已激活"
-      story_mapping: "US-016.C3"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-34
-      description: "已验证票券重复扫描显示黄色含验证详情"
-      category: error_path
-      source:
-        type: story
-        document: "docs/stories/US-015-ticket-reservation-validation.md"
-        section: "B4. 重复扫描"
-      story_mapping: "US-015.B4"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-35
-      description: "已验证票券返回 409 含现有验证详情"
-      category: error_path
-      source:
-        type: card
-        document: "docs/cards/operator-validation-scanner.md"
-        section: "9) Postman Coverage"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
-
-    # Edge Case (60-99)
-    - ac_id: AC-006-VAL-60
-      description: "2 操作员同时验证同一票券 - 一 200 一 409"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/operator-validation-scanner.md"
-        section: "9) Postman Coverage"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-61
-      description: "Row-level locking 更新 VERIFIED 状态"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/operator-validation-scanner.md"
-        section: "5) Validation Logic"
-      card_mapping: "operator-validation-scanner"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-62
-      description: "JTI 匹配验证 - 旧 QR 码失效 (一码失效机制)"
-      category: edge_case
-      source:
-        type: code
-        document: "src/modules/venue/service.ts"
-        section: "validateAndRedeem:244-277"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-63
-      description: "小程序 QR 码 30 分钟过期检查"
-      category: edge_case
-      source:
-        type: code
-        document: "src/modules/venue/service.ts"
-        section: "validateAndRedeem:203-224"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-64
-      description: "防重放攻击 - JTI + function_code 组合检查"
-      category: edge_case
-      source:
-        type: code
-        document: "src/modules/venue/service.ts"
-        section: "validateAndRedeem:145-171"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-VAL-65
-      description: "场馆功能支持检查 - 验证 function_code 是否在 supported_functions"
-      category: edge_case
-      source:
-        type: code
-        document: "src/modules/venue/service.ts"
-        section: "validateAndRedeem:346-368"
-      status: tested
-      test_id: ""
-
-  # --------------------------------------------------------------------------
-  # 操作员认证 (OPR)
-  # --------------------------------------------------------------------------
-  operator:
-    # Happy Path (01-29)
-    - ac_id: AC-006-OPR-01
-      description: "操作员登录成功返回 JWT token"
-      category: happy_path
-      source:
-        type: card
-        document: "docs/cards/operators-login.md"
-        section: "8) Acceptance — AC-1"
-      story_mapping: "US-006.A"
-      card_mapping: "operators-login"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-OPR-02
-      description: "Token 包含 sub (operator_id)、roles、exp 字段"
-      category: happy_path
-      source:
-        type: card
-        document: "docs/cards/operators-login.md"
-        section: "8) Acceptance — AC-2"
-      card_mapping: "operators-login"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-OPR-03
-      description: "有效 session 扫描记录操作员上下文"
-      category: happy_path
-      source:
-        type: story
-        document: "docs/stories/US-006-operator-auth-session.md"
-        section: "Story B — Scan with operator auth"
-      story_mapping: "US-006.B"
-      status: tested
-      test_id: ""
-
-    # Error Path (30-59)
-    - ac_id: AC-006-OPR-30
-      description: "密码错误返回 401 INVALID_CREDENTIALS"
-      category: error_path
-      source:
-        type: card
-        document: "docs/cards/operators-login.md"
-        section: "8) Acceptance — AC-3"
-      card_mapping: "operators-login"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-OPR-31
-      description: "用户名不存在返回 401 (不暴露用户名是否存在)"
-      category: error_path
-      source:
-        type: card
-        document: "docs/cards/operators-login.md"
-        section: "8) Acceptance — AC-4"
-      card_mapping: "operators-login"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-OPR-32
-      description: "缺少必填字段返回 400 VALIDATION_ERROR"
-      category: error_path
-      source:
-        type: card
-        document: "docs/cards/operators-login.md"
-        section: "8) Acceptance — AC-5"
-      card_mapping: "operators-login"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-OPR-33
-      description: "账户禁用返回 401/403 ACCOUNT_DISABLED"
-      category: error_path
-      source:
-        type: card
-        document: "docs/cards/operators-login.md"
-        section: "8) Acceptance — AC-6"
-      card_mapping: "operators-login"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-OPR-34
-      description: "过期/无效 session 扫描拒绝访问"
-      category: error_path
-      source:
-        type: story
-        document: "docs/stories/US-006-operator-auth-session.md"
-        section: "Story C — Invalid auth handling"
-      story_mapping: "US-006.C"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-OPR-35
-      description: "validation_decision 必须是 ALLOW 或 DENY"
-      category: error_path
-      source:
-        type: code
-        document: "src/modules/operators/router.ts"
-        section: "router.post /operators/verify-ticket:147-152"
-      status: tested
-      test_id: ""
-
-    # Edge Case (60-99)
-    - ac_id: AC-006-OPR-60
-      description: "并发登录允许多设备同时登录"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/operators-login.md"
-        section: "8) Acceptance — AC-7"
-      card_mapping: "operators-login"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-OPR-61
-      description: "Token 过期时间 24 小时"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/operators-login.md"
-        section: "8) Acceptance — AC-8"
-      card_mapping: "operators-login"
-      status: tested
-      test_id: ""
-
-  # --------------------------------------------------------------------------
-  # 时段管理 (SLOT)
-  # --------------------------------------------------------------------------
-  slot_management:
-    # Happy Path (01-29)
-    - ac_id: AC-006-SLOT-01
-      description: "capacity_status 正确计算 (AVAILABLE/LIMITED/FULL)"
-      category: happy_path
-      source:
-        type: card
-        document: "docs/cards/reservation-slot-management.md"
-        section: "8) Acceptance"
-      card_mapping: "reservation-slot-management"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-SLOT-02
-      description: "100% 利用率时自动更新状态为 FULL"
-      category: happy_path
-      source:
-        type: card
-        document: "docs/cards/reservation-slot-management.md"
-        section: "8) Acceptance"
-      card_mapping: "reservation-slot-management"
-      status: tested
-      test_id: ""
-
-    # Error Path (30-59)
-    - ac_id: AC-006-SLOT-30
-      description: "无效 month 格式返回 400 Bad Request"
-      category: error_path
-      source:
-        type: card
-        document: "docs/cards/reservation-slot-management.md"
-        section: "9) Postman Coverage"
-      card_mapping: "reservation-slot-management"
-      status: tested
-      test_id: ""
-
-    # Edge Case (60-99)
-    - ac_id: AC-006-SLOT-60
-      description: "Unique (date, start_time, orq) 约束防止重复时段"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/reservation-slot-management.md"
-        section: "3) Invariants"
-      card_mapping: "reservation-slot-management"
-      status: tested
-      test_id: ""
-
-    - ac_id: AC-006-SLOT-61
-      description: "booked_count 永远不超过 total_capacity (不变量)"
-      category: edge_case
-      source:
-        type: card
-        document: "docs/cards/reservation-slot-management.md"
-        section: "3) Invariants"
-      card_mapping: "reservation-slot-management"
-      status: tested
-      test_id: ""
-
-# ============================================================================
-# Story → AC 映射
-# ============================================================================
-story_ac_mapping:
-  US-006:
-    A: [AC-006-OPR-01]
-    B: [AC-006-OPR-03]
-    C: [AC-006-OPR-34]
-
-  US-015:
-    A1: [AC-006-RSV-01]
-    A2: [AC-006-RSV-02]
-    A3: [AC-006-RSV-03]
-    A4: [AC-006-RSV-33]
-    B1: [AC-006-VAL-01]
-    B2: [AC-006-VAL-30]
-    B3: [AC-006-VAL-31]
-    B4: [AC-006-VAL-34]
-    C1: [AC-006-RSV-60]
-
-  US-016:
-    A1: [AC-006-ACT-01, AC-006-ACT-03]
-    A2: [AC-006-ACT-02]
-    A3: [AC-006-ACT-30]
-    B2: [AC-006-RSV-04]
-    B3: [AC-006-RSV-05]
-    B4: [AC-006-RSV-06]
-    C3: [AC-006-VAL-33]
-    C4: [AC-006-VAL-32]
-
-# ============================================================================
-# 覆盖率统计
-# ============================================================================
 coverage_summary:
-  total_ac_count: 53
-  by_source:
-    prd: 5
-    story: 19
-    card: 21
-    code: 8
-  by_category:
-    happy_path: 16
-    error_path: 22
-    edge_case: 15
-  by_domain:
-    activation: 5
-    reservation: 18
-    validation: 13
-    operator: 11
-    slot_management: 5
-  by_status:
-    tested: 0
-    pending: 53
-    skipped: 0
+  total_ac: 26
+  tested: 26
+  needs_fix: 0
+  coverage_percentage: "100% (26/26)"
 
-# ============================================================================
-# 与 Postman 测试的映射
-# ============================================================================
-postman_collection: "postman/auto-generated/prd-006-ticket-activation.postman_collection.json"
-postman_test_mapping:
-  # 需要根据实际测试更新
-  pending_tests:
-    - "所有 53 条 AC 待测试覆盖"
+# ===== TEST STRUCTURE =====
+
+test_structure:
+  - folder: "1. 票券激活"
+    tests:
+      - "1.1 默认inactive状态"
+      - "1.2 immediate模式自动激活"
+      - "1.3 激活端点"
+      - "1.4 active票券可预约"
+      - "1.5 激活不可逆"
+      - "1.6 重复激活错误"
+
+  - folder: "2. 时间预约"
+    tests:
+      - "2.1 查询可用日期"
+      - "2.2 创建预约"
+      - "2.3 批量预约"
+      - "2.4 预约确认"
+      - "2.5 inactive预约错误"
+      - "2.6 修改预约"
+      - "2.7 取消预约"
+      - "2.8 过去日期错误"
+
+  - folder: "3. 操作员验证"
+    tests:
+      - "3.1 操作员登录"
+      - "3.2 激活状态显示"
+      - "3.3 预约状态显示"
+      - "3.4 当日有效性"
+
+  - folder: "4. 验证逻辑"
+    tests:
+      - "4.1 预约日期验证"
+      - "4.2 无预约策略"
+      - "4.3 错误日期拒绝"
+      - "4.4 未激活拒绝"
+      - "4.5 宽限期配置"
+
+  - folder: "5. 性能"
+    tests:
+      - "5.1 激活响应时间"
+      - "5.2 预约响应时间"
+      - "5.3 扫描响应时间"

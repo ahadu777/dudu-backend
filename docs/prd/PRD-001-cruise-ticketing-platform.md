@@ -10,7 +10,7 @@ status: "Done"
 created_date: "2025-10-27"
 last_updated: "2025-11-19"
 related_stories: ["US-001", "US-003", "US-004", "US-007", "US-008", "US-009", "US-011"]
-implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engine", "wallyt-payment", "my-tickets", "qr-generation-api"]
+implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engine", "payment-webhook", "my-tickets", "qr-generation-api"]
 ```
 
 ## Executive Summary
@@ -71,9 +71,9 @@ implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engi
 - **Business Value**: Revenue optimization through demand-based pricing
 - **User Value**: Transparent pricing that reflects value and timing preferences
 - **Acceptance Criteria**:
-  - ~~Pricing varies by weekday/weekend (+$30 premium for adults on weekends)~~ **[SKIP - 暂未启用，见 order.service.ts:571]**
-  - Customer type discounts (child/elderly pricing via `product.customer_discounts`)
-  - Package tier pricing (via `product.base_price`)
+  - Pricing varies by weekday/weekend (+$30 premium for adults on weekends)
+  - Customer type discounts (child/elderly: fixed $188 regardless of package/timing)
+  - Package tier pricing (Entry: $188, Standard: $288/$318, Luxury: $788/$888)
 - **Priority**: High
 
 **Package Component System**
@@ -99,14 +99,14 @@ implementation_cards: ["catalog-endpoint", "order-create", "complex-pricing-engi
 ## Business Rules & Logic
 
 ### Pricing Strategy
-- **Pricing Model**: Base price + customer type discounts (周末加价暂未启用)
-- **Price Points** (当前实现):
-  - **Premium Plan**: `base_price` - `customer_discounts[type]`
-  - **Pet Plan**: `base_price` - `customer_discounts[type]`
-  - **Deluxe Tea Set**: `base_price` - `customer_discounts[type]`
+- **Pricing Model**: Dynamic pricing with multiple variables
+- **Price Points**:
+  - **Premium Plan**: $288 weekday / $318 weekend (adults), $188 child/elderly
+  - **Pet Plan**: $188 flat rate (all customer types, all times)
+  - **Deluxe Tea Set**: $788 weekday / $888 weekend (adults), $188 child/elderly
 - **Discounts**:
-  - Child/elderly: Via `product.customer_discounts` 配置
-  - ~~Weekend premium~~ **[SKIP - 暂未启用]**
+  - Child/elderly: Standardized $188 pricing across all packages and times
+  - Advance booking: Future enhancement opportunity
 - **Currency**: HKD (Hong Kong Dollars)
 
 ### Business Logic
@@ -260,7 +260,7 @@ value_proposition: Premium end-to-end experience
 
 ### Completed Development
 - **Stories**: US-001 (basic platform), US-011 (complex pricing)
-- **Cards**: catalog-endpoint, order-create, complex-pricing-engine, wallyt-payment
+- **Cards**: catalog-endpoint, order-create, complex-pricing-engine, payment-webhook
 - **Code**: Working implementation with all 3 package types
 - **Testing**: End-to-end validation from catalog to ticket redemption
 

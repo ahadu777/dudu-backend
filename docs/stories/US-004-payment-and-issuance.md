@@ -7,7 +7,7 @@ priority: High
 last_update: 2025-10-19T23:44:00+0800
 business_requirement: "PRD-001"
 cards:
-  - wallyt-payment  # 替代已废弃的 payment-webhook
+  - payment-webhook
 ---
 
 ## Business goal
@@ -42,4 +42,4 @@ On successful payment, mark the order as PAID, commit inventory exactly once, an
 - Transactional update for order + inventory; issuance is idempotent per order
 
 ## Links
-- Cards: wallyt-payment
+- Cards: payment-webhook

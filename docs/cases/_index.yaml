@@ -3,12 +3,12 @@
 # 记录 AI 工作流中的经验教训、成功模式和失败分析
 # 用于知识积累和工作流改进
 #
-# 最后更新: 2025-12-31
+# 最后更新: 2025-12-24
 
 summary:
   total: 3
   categories:
-    workflow: 1      # AI 工作流相关 (含 14 个记录条目)
+    workflow: 1      # AI 工作流相关
     implementation: 1 # 功能实现案例
     testing: 1       # 测试相关
 
@@ -20,16 +20,12 @@ cases:
     category: workflow
     type: evolution    # 演进型案例（持续更新）
     description: "AI 工作流发现和演进过程，记录多次迭代的经验"
-    entries: 14        # 记录条目数
-    last_updated: "2025-12-31"
+    entries: 10        # 记录条目数
+    last_updated: "2025-12-19"
     key_learnings:
       - "Step 0 Intent Analysis 防止上下文干扰"
-      - "Step 0.1.5 信息源选择 - 查询顺序比禁止更有效"
-      - "Step 2.1 Story 创建必须同步更新 _index.yaml"
       - "Step 3 检查清单必须显式化"
-      - "派生文档可以删除（Runbook → 前端对接文档）"
-      - "API 测试创建前必须 grep router.ts 验证端点"
-      - "Card 废弃/移动后必须 npm run sync:card-index"
+      - "简单规则比复杂系统更有效"
 
   - id: CASE-US013
     title: Event Venue Operations Platform
@@ -57,31 +53,6 @@ cases:
 
 # 快速导航：最近的学习
 recent_learnings:
-  - date: "2025-12-31"
-    case: CASE-DISCOVER-AI-WORKFLOW
-    learning: "Card 废弃/移动后必须运行 npm run sync:card-index"
-    applied_to: "SKILL.md Step 3 检查清单"
-
-  - date: "2025-12-31"
-    case: CASE-DISCOVER-AI-WORKFLOW
-    learning: "API 测试创建前必须 grep router.ts 验证端点存在性"
-    applied_to: "SKILL.md Step 2 + Step 3 检查清单"
-
-  - date: "2025-12-30"
-    case: CASE-DISCOVER-AI-WORKFLOW
-    learning: "Story 创建必须同步更新 _index.yaml - 对称设计"
-    applied_to: "SKILL.md Step 2.1 + Step 3 检查清单"
-
-  - date: "2025-12-30"
-    case: CASE-DISCOVER-AI-WORKFLOW
-    learning: "查询顺序比禁止更有效 - Story → Card → 代码 防止找到废弃 API"
-    applied_to: "SKILL.md Step 0.1.5 信息源选择"
-
-  - date: "2025-12-30"
-    case: CASE-DISCOVER-AI-WORKFLOW
-    learning: "派生文档可以删除 - Runbook 信息源在 Story + Card"
-    applied_to: "删除 22 个 Runbook，重写规范为前端对接文档"
-
   - date: "2025-12-19"
     case: CASE-DISCOVER-AI-WORKFLOW
     learning: "Step 3 检查清单必须显式化，不能依赖 AI 记忆"
@@ -91,6 +62,11 @@ recent_learnings:
     case: CASE-DISCOVER-AI-WORKFLOW
     learning: "Intent Analysis 需要检查上下文干扰"
     applied_to: "SKILL.md Step 0 添加 0.1 章节"
+
+  - date: "2025-12-20"
+    case: CASE-006-TEST-COVERAGE
+    learning: "测试通过率和覆盖率是不同指标"
+    applied_to: "测试工作流文档更新"
 
 # 分类索引
 by_category:
