@@ -144,8 +144,53 @@ router.post('/reservations/create', async (req, res) => {
 });
 
 /**
+ * PUT /api/reservations/modify
+ * Modify existing reservation (change slot) - body-based route
+ */
+router.put('/reservations/modify', async (req, res) => {
+  try {
+    const { reservation_id, new_slot_id } = req.body as ModifyReservationRequest & { reservation_id: string };
+
+    if (!reservation_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: reservation_id',
+      });
+    }
+
+    if (!new_slot_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: new_slot_id',
+      });
+    }
+
+    const result = await service.modifyReservation({
+      reservation_id,
+      new_slot_id,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    logger.info('reservations.modify.success', {
+      reservation_id,
+      new_slot_id,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error('reservations.modify.error', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to modify reservation',
+    });
+  }
+});
+
+/**
  * PUT /api/reservations/:reservation_id
- * Modify existing reservation (change slot)
+ * Modify existing reservation (change slot) - RESTful route
  */
 router.put('/reservations/:reservation_id', async (req, res) => {
   try {
@@ -183,8 +228,44 @@ router.put('/reservations/:reservation_id', async (req, res) => {
 });
 
 /**
+ * DELETE /api/reservations/cancel
+ * Cancel reservation - body-based route
+ */
+router.delete('/reservations/cancel', async (req, res) => {
+  try {
+    const { reservation_id } = req.body as { reservation_id: string };
+
+    if (!reservation_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: reservation_id',
+      });
+    }
+
+    const result = await service.cancelReservation({
+      reservation_id,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    logger.info('reservations.cancel.success', {
+      reservation_id,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error('reservations.cancel.error', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to cancel reservation',
+    });
+  }
+});
+
+/**
  * DELETE /api/reservations/:reservation_id
- * Cancel reservation
+ * Cancel reservation - RESTful route
  */
 router.delete('/reservations/:reservation_id', async (req, res) => {
   try {

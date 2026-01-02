@@ -231,6 +231,16 @@ router.get('/reservation-slots/available', async (req, res) => {
     const orq = parseInt((req.query.orq as string) || '1');
     const venueId = req.query.venue_id ? parseInt(req.query.venue_id as string) : undefined;
 
+    // Validate month format (YYYY-MM)
+    const monthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+    if (req.query.month && !monthRegex.test(month)) {
+      const response: SlotAvailabilityResponse = {
+        success: false,
+        error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-12)'
+      };
+      return res.status(400).json(response);
+    }
+
     logger.info('reservation-slot.available.request', {
       month,
       orq,
