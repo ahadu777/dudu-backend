@@ -55,6 +55,6 @@ export const env = cleanEnv(process.env, {
   // Directus CMS Configuration (for QR Code logo images + Ticket Reservations)
   USE_DIRECTUS: bool({ default: false }), // Enable Directus CMS integration for ticket reservations
   DIRECTUS_URL: str({ default: 'https://dudu-derp-cxk5g.ondigitalocean.app' }), // Directus instance URL (e.g., https://your-directus.com)
-  DIRECTUS_ACCESS_TOKEN: str({ default: 'HE9EiIEgdf-UD7quY4Ajoas19vgmkFvF' }), // Directus access token with reservation permissions
+  DIRECTUS_ACCESS_TOKEN: str({ default: '' }), // Directus access token - MUST be set via environment variable
   LOGO_CACHE_TTL: num({ default: 3600 }), // Logo cache TTL in seconds (default 1 hour)
 });
