@@ -88,8 +88,12 @@ export function handlePrdList(_req: Request, res: Response): void {
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
   } catch (error) {
-    logger.error('Error loading PRD documents:', error);
-    res.status(500).json({ error: 'Failed to load PRD documents' });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Error loading PRD documents:', errorMessage, error);
+    res.status(500).json({ 
+      error: 'Failed to load PRD documents',
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    });
   }
 }
 
@@ -171,8 +175,12 @@ export function handlePrdDetail(req: Request, res: Response): void {
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
   } catch (error) {
-    logger.error('Error loading PRD:', error);
-    res.status(500).json({ error: 'Failed to load PRD' });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Error loading PRD:', errorMessage, error);
+    res.status(500).json({ 
+      error: 'Failed to load PRD',
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    });
   }
 }
 

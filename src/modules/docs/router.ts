@@ -2883,10 +2883,35 @@ router.get('/coverage', (_req: Request, res: Response) => {
 // Documentation Hub - Main landing page
 router.get('/project-docs', (_req, res) => {
   try {
-    const prdStats = { total: loadPRDDocuments().length };
-    const storyStats = { total: loadStoriesIndex().length };
-    const cardStats = getCardStats();
-    const coverageStats = getCoverageStats();
+    let prdStats, storyStats, cardStats, coverageStats;
+    
+    try {
+      prdStats = { total: loadPRDDocuments().length };
+    } catch (error) {
+      logger.error('Error loading PRD documents:', error);
+      prdStats = { total: 0 };
+    }
+    
+    try {
+      storyStats = { total: loadStoriesIndex().length };
+    } catch (error) {
+      logger.error('Error loading stories index:', error);
+      storyStats = { total: 0 };
+    }
+    
+    try {
+      cardStats = getCardStats();
+    } catch (error) {
+      logger.error('Error loading card stats:', error);
+      cardStats = { total: 0, byStatus: {} };
+    }
+    
+    try {
+      coverageStats = getCoverageStats();
+    } catch (error) {
+      logger.error('Error loading coverage stats:', error);
+      coverageStats = { complete: 0, total_prds: 0 };
+    }
 
     // 读取规则内容（从 markdown 文件）
     const rulesHtml = renderMarkdownFile('docs/reference/developer-rules.md');
@@ -3004,8 +3029,12 @@ router.get('/project-docs', (_req, res) => {
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
   } catch (error) {
-    logger.error('Error loading documentation hub:', error);
-    res.status(500).json({ error: 'Failed to load documentation hub' });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Error loading documentation hub:', errorMessage, error);
+    res.status(500).json({ 
+      error: 'Failed to load documentation hub',
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    });
   }
 });
 
