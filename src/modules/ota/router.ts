@@ -578,14 +578,15 @@ router.get('/admin/partners/:partnerId/statistics', adminAuthMiddleware(), async
 // GET /api/ota/dashboard - Get partner dashboard summary (returns data for current API key's partner)
 router.get('/dashboard', otaAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { start_date, end_date } = req.query;
+    const { start_date, end_date, organizationName, reseller_name } = req.query;
     const partnerId = req.ota_partner!.id;
 
     const summary = await otaService.getDashboardSummary({
       partner_id: partnerId,
       start_date: start_date as string,
-      end_date: end_date as string
-    });
+      end_date: end_date as string,
+      reseller_name: (reseller_name || organizationName) as string | undefined
+    } as any);
 
     res.json(summary);
 

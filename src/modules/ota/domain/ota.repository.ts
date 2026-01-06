@@ -936,10 +936,10 @@ export class OTARepository {
   /**
    * Get partner summary
    * 返回三组数据：全局总览 + 今日数据 + 时间筛选区间数据
-   * 按 partner_id 筛选
+   * 按 partner_id 筛选，支持按 reseller/organization 筛选
    */
-  async getPartnerSummary(options: { partner_id: string; start_date?: string; end_date?: string }) {
-    const { partner_id, start_date, end_date } = options;
+  async getPartnerSummary(options: { partner_id: string; start_date?: string; end_date?: string; reseller_name?: string }) {
+    const { partner_id, start_date, end_date, reseller_name } = options;
 
     // 今天的日期范围
     const todayStart = new Date();
@@ -1001,11 +1001,24 @@ export class OTARepository {
         .andWhere('t.partner_id = :partnerId', { partnerId: partner_id })
         .setParameters({ preGen: 'PRE_GENERATED', activated: 'ACTIVATED', verified: 'VERIFIED' });
 
-      const filteredOrderQuery = this.orderRepo.createQueryBuilder('o')
-        .select('COUNT(*)', 'orders')
-        .addSelect('COALESCE(SUM(o.total), 0)', 'revenue')
+      // Build order query with optional reseller filter
+      let filteredOrderQuery = this.orderRepo.createQueryBuilder('o')
+        .select('COUNT(DISTINCT o.id)', 'orders')
+        .addSelect('COALESCE(SUM(DISTINCT o.total), 0)', 'revenue')
         .where('o.channel = :channel', { channel: OrderChannel.OTA })
         .andWhere('o.partner_id = :partnerId', { partnerId: partner_id });
+
+      // If filtering by reseller, join with tickets and batches
+      if (reseller_name) {
+        filteredTicketQuery
+          .innerJoin('ota_ticket_batches', 'batch', 'batch.batch_id = t.batch_id')
+          .andWhere("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller')) = :resellerName", { resellerName: reseller_name });
+        
+        filteredOrderQuery
+          .innerJoin('tickets', 'ticket', 'ticket.order_no = o.order_no AND ticket.channel = :ticketChannel', { ticketChannel: 'ota' })
+          .innerJoin('ota_ticket_batches', 'batch', 'batch.batch_id = ticket.batch_id')
+          .andWhere("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller')) = :resellerName", { resellerName: reseller_name });
+      }
 
       if (start_date) {
         filteredTicketQuery.andWhere('t.created_at >= :startDate', { startDate: start_date });
@@ -1016,20 +1029,51 @@ export class OTARepository {
         filteredOrderQuery.andWhere('o.created_at <= :endDate', { endDate: end_date });
       }
 
-      const [ft, fo] = await Promise.all([
+      // Also get order status breakdown for filtered period
+      let filteredOrderStatusQuery = this.orderRepo.createQueryBuilder('o')
+        .select('o.status', 'status')
+        .addSelect('COUNT(DISTINCT o.id)', 'count')
+        .where('o.channel = :channel', { channel: OrderChannel.OTA })
+        .andWhere('o.partner_id = :partnerId', { partnerId: partner_id })
+        .groupBy('o.status');
+
+      if (reseller_name) {
+        filteredOrderStatusQuery
+          .innerJoin('tickets', 'ticket', 'ticket.order_no = o.order_no AND ticket.channel = :ticketChannel', { ticketChannel: 'ota' })
+          .innerJoin('ota_ticket_batches', 'batch', 'batch.batch_id = ticket.batch_id')
+          .andWhere("JSON_UNQUOTE(JSON_EXTRACT(batch.reseller_metadata, '$.intended_reseller')) = :resellerName", { resellerName: reseller_name });
+      }
+
+      if (start_date) {
+        filteredOrderStatusQuery.andWhere('o.created_at >= :startDate', { startDate: start_date });
+      }
+      if (end_date) {
+        filteredOrderStatusQuery.andWhere('o.created_at <= :endDate', { endDate: end_date });
+      }
+
+      const [ft, fo, orderStatusBreakdown] = await Promise.all([
         filteredTicketQuery.getRawOne(),
-        filteredOrderQuery.getRawOne()
+        filteredOrderQuery.getRawOne(),
+        filteredOrderStatusQuery.getRawMany()
       ]);
+
+      // Build status breakdown object
+      const byStatus: any = {};
+      orderStatusBreakdown.forEach((row: any) => {
+        byStatus[row.status] = parseInt(row.count) || 0;
+      });
 
       filtered = {
         start_date: start_date || null,
         end_date: end_date || null,
+        reseller_name: reseller_name || null,
         orders: parseInt(fo?.orders) || 0,
         revenue: parseFloat(fo?.revenue) || 0,
         total_tickets: parseInt(ft?.total) || 0,
         pre_generated_tickets: parseInt(ft?.pre_generated) || 0,
         activated_tickets: parseInt(ft?.activated) || 0,
-        verified_tickets: parseInt(ft?.verified) || 0
+        verified_tickets: parseInt(ft?.verified) || 0,
+        by_status: byStatus
       };
     }
 
