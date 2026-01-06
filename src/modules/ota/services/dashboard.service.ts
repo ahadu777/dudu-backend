@@ -26,11 +26,12 @@ export class DashboardService extends BaseOTAService {
   private async getDashboardFromDatabase(options: OTADashboardOptions): Promise<any> {
     const repo = await this.getOTARepository();
 
-    // 获取当前 partner 的汇总统计
+    // 获取当前 partner 的汇总统计（支持按 reseller/organization 筛选）
     const partnerSummary = await repo.getPartnerSummary({
       partner_id: options.partner_id!,
       start_date: options.start_date,
-      end_date: options.end_date
+      end_date: options.end_date,
+      reseller_name: (options as any).reseller_name || (options as any).organizationName
     });
 
     return {

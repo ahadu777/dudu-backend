@@ -91,6 +91,11 @@ function parseFrontmatter(content: string): { metadata: ParsedFrontmatter; body:
  */
 export function loadPRDDocuments(): PRDDocument[] {
   const prdDir = path.resolve(process.cwd(), 'docs', 'prd');
+  
+  if (!fs.existsSync(prdDir)) {
+    throw new Error(`PRD directory not found: ${prdDir}. Current working directory: ${process.cwd()}`);
+  }
+  
   const files = fs.readdirSync(prdDir).filter(f => f.endsWith('.md'));
   
   return files.map(filename => {

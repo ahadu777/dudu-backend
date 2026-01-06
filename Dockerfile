@@ -13,6 +13,7 @@ RUN npm ci
 # Copy source code
 COPY src ./src
 COPY openapi ./openapi
+COPY docs ./docs
 
 # Build the application
 RUN npm run build
@@ -36,6 +37,7 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application from builder
 COPY --from=builder --chown=express:nodejs /app/dist ./dist
 COPY --from=builder --chown=express:nodejs /app/openapi ./openapi
+COPY --from=builder --chown=express:nodejs /app/docs ./docs
 
 # Create logs directory with proper permissions for non-root user
 RUN mkdir -p /app/logs && chown express:nodejs /app/logs
