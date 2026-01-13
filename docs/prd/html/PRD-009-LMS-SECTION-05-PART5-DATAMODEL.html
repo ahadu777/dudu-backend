@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PART 5: DATA MODEL & SYSTEM ARCHITECTURE - LMS PRD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .part-header {
+            background: linear-gradient(135deg, #1a5490 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .part-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        h2 {
+            color: #1a5490;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #1a5490;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        table th {
+            background: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        .mermaid-container {
+            background: white;
+            padding: 20px;
+            margin: 30px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .enum-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .enum-box code {
+            background: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #d63384;
+        }
+        
+        .confidential {
+            margin-top: 40px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #1a5490, transparent);
+            margin: 40px 0;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="part-header">
+        <h1>PART 5: DATA MODEL & SYSTEM ARCHITECTURE</h1>
+        <div style="font-size: 14px; opacity: 0.9;">Page 56 of 120 | CONFIDENTIAL</div>
+    </div>
+    
+    <h2>23. Core Data Model</h2>
+    
+    <h3>23.1 Core Entities</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Entity</th>
+                <th>Description</th>
+                <th>Key Attributes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Borrower</strong></td>
+                <td>Individual or business applicant</td>
+                <td>borrower_id, ssn_hash, name, dob, address, contact, kyc_status, aml_status, status</td>
+            </tr>
+            <tr>
+                <td><strong>Application</strong></td>
+                <td>Loan application record</td>
+                <td>application_id, borrower_id, product_id, status, submitted_at, decision_at, amount_requested, term_requested</td>
+            </tr>
+            <tr>
+                <td><strong>Loan</strong></td>
+                <td>Active loan account</td>
+                <td>loan_id, application_id, principal, rate, term, status, disbursed_at, maturity_date</td>
+            </tr>
+            <tr>
+                <td><strong>Payment</strong></td>
+                <td>Payment transaction</td>
+                <td>payment_id, loan_id, amount, type, status, effective_date, principal_applied, interest_applied</td>
+            </tr>
+            <tr>
+                <td><strong>Document</strong></td>
+                <td>Uploaded/generated document</td>
+                <td>document_id, entity_type, entity_id, doc_type, storage_ref, uploaded_at, verified</td>
+            </tr>
+            <tr>
+                <td><strong>Decision</strong></td>
+                <td>Credit decision record</td>
+                <td>decision_id, application_id, outcome, reason_codes, model_version, decision_at, decision_type</td>
+            </tr>
+            <tr>
+                <td><strong>CreditReport</strong></td>
+                <td>Credit bureau data</td>
+                <td>report_id, application_id, bureau, scores, tradelines, utilization, derogatories, pull_date</td>
+            </tr>
+            <tr>
+                <td><strong>AuditLog</strong></td>
+                <td>Immutable audit entry</td>
+                <td>log_id, entity_type, entity_id, action, actor_id, timestamp, delta, ip_address</td>
+            </tr>
+            <tr>
+                <td><strong>Guarantor</strong></td>
+                <td>Guarantor record</td>
+                <td>guarantor_id, borrower_id, loan_id, relationship_type, status, kyc_status, aml_status</td>
+            </tr>
+            <tr>
+                <td><strong>Guarantee</strong></td>
+                <td>Guarantee agreement</td>
+                <td>guarantee_id, loan_id, guarantor_id, guarantee_amount, guarantee_type, status, executed_at</td>
+            </tr>
+            <tr>
+                <td><strong>Investor</strong></td>
+                <td>Investor record</td>
+                <td>investor_id, investor_type, accreditation_status, total_capital, available_capital, status</td>
+            </tr>
+            <tr>
+                <td><strong>Investment</strong></td>
+                <td>Investment in a loan</td>
+                <td>investment_id, investor_id, loan_id, investment_amount, allocation_date, status</td>
+            </tr>
+            <tr>
+                <td><strong>ReturnDistribution</strong></td>
+                <td>Payment to investor</td>
+                <td>distribution_id, investment_id, principal_amount, interest_amount, distribution_date</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>23.2 Entity Relationships</h3>
+    <div class="mermaid-container">
+        <div class="mermaid">
+erDiagram
+    BORROWER ||--o{ APPLICATION : "has"
+    APPLICATION ||--|| LOAN : "becomes"
+    LOAN ||--o{ PAYMENT : "receives"
+    LOAN ||--o{ DOCUMENT : "has"
+    APPLICATION ||--o{ DECISION : "has"
+    APPLICATION ||--|| CREDITREPORT : "has"
+    BORROWER ||--o{ GUARANTOR : "has"
+    LOAN ||--o{ GUARANTEE : "has"
+    GUARANTEE ||--|| GUARANTEEACTIVATION : "triggers"
+    INVESTOR ||--o{ INVESTMENT : "makes"
+    LOAN ||--o{ INVESTMENT : "funded_by"
+    INVESTMENT ||--o{ RETURNDISTRIBUTION : "generates"
+    INVESTOR ||--|| INVESTORPREFERENCE : "has"
+    
+    BORROWER {
+        uuid borrower_id PK
+        string ssn_hash
+        string name
+        date dob
+        string address
+        string contact
+        enum kyc_status
+        enum aml_status
+        enum status
+    }
+    
+    APPLICATION {
+        uuid application_id PK
+        uuid borrower_id FK
+        uuid product_id FK
+        enum status
+        timestamp submitted_at
+        timestamp decision_at
+        decimal amount_requested
+        int term_requested
+    }
+    
+    LOAN {
+        uuid loan_id PK
+        uuid application_id FK
+        decimal principal
+        decimal rate
+        int term
+        enum status
+        timestamp disbursed_at
+        date maturity_date
+    }
+    
+    PAYMENT {
+        uuid payment_id PK
+        uuid loan_id FK
+        decimal amount
+        enum type
+        enum status
+        date effective_date
+        decimal principal_applied
+        decimal interest_applied
+    }
+    
+    DECISION {
+        uuid decision_id PK
+        uuid application_id FK
+        enum outcome
+        enum decision_type
+        json reason_codes
+        string model_version
+        timestamp decision_at
+    }
+    
+    GUARANTOR {
+        uuid guarantor_id PK
+        uuid borrower_id FK
+        uuid loan_id FK
+        enum relationship_type
+        enum status
+        enum kyc_status
+        enum aml_status
+    }
+    
+    GUARANTEE {
+        uuid guarantee_id PK
+        uuid loan_id FK
+        uuid guarantor_id FK
+        decimal guarantee_amount
+        enum guarantee_type
+        enum status
+        timestamp executed_at
+    }
+    
+    INVESTOR {
+        uuid investor_id PK
+        enum investor_type
+        enum accreditation_status
+        decimal total_capital
+        decimal available_capital
+        enum status
+    }
+    
+    INVESTMENT {
+        uuid investment_id PK
+        uuid investor_id FK
+        uuid loan_id FK
+        decimal investment_amount
+        date allocation_date
+        enum status
+    }
+        </div>
+    </div>
+    
+    <h3>23.3 Key Enumerations</h3>
+    
+    <div class="enum-box">
+        <h4>Borrower Status:</h4>
+        <ul>
+            <li><code>PENDING_KYC</code> - Awaiting identity verification</li>
+            <li><code>KYC_FAILED</code> - Identity verification failed</li>
+            <li><code>PENDING_REVIEW</code> - Requires manual review</li>
+            <li><code>VERIFIED</code> - Verified and eligible to apply</li>
+        </ul>
+    </div>
+    
+    <div class="enum-box">
+        <h4>Application Status:</h4>
+        <ul>
+            <li><code>DRAFT</code> - Application in progress</li>
+            <li><code>SUBMITTED</code> - Application submitted</li>
+            <li><code>CREDIT_PULLED</code> - Credit report retrieved</li>
+            <li><code>CREDIT_PULL_FAILED</code> - Credit pull failed</li>
+            <li><code>PENDING_REVIEW</code> - Referred for manual review</li>
+            <li><code>APPROVED</code> - Application approved</li>
+            <li><code>DECLINED</code> - Application declined</li>
+            <li><code>CANCELLED</code> - Application cancelled</li>
+        </ul>
+    </div>
+    
+    <div class="enum-box">
+        <h4>Loan Status:</h4>
+        <ul>
+            <li><code>APPROVED</code> - Loan approved, awaiting signing</li>
+            <li><code>OFFER_SELECTED</code> - Borrower selected offer</li>
+            <li><code>DOCUMENTS_SIGNED</code> - Contracts signed</li>
+            <li><code>DISBURSED</code> - Funds disbursed</li>
+            <li><code>ACTIVE</code> - Loan active and performing</li>
+            <li><code>DELINQUENT</code> - Past due</li>
+            <li><code>DEFAULTED</code> - In default</li>
+            <li><code>PAID_OFF</code> - Loan fully repaid</li>
+            <li><code>CHARGED_OFF</code> - Written off</li>
+        </ul>
+    </div>
+    
+    <div class="enum-box">
+        <h4>Decision Outcome:</h4>
+        <ul>
+            <li><code>APPROVED</code> - Application approved</li>
+            <li><code>DECLINED</code> - Application declined</li>
+            <li><code>REFERRED</code> - Referred for manual review</li>
+        </ul>
+    </div>
+    
+    <div class="enum-box">
+        <h4>Decision Type:</h4>
+        <ul>
+            <li><code>AUTO</code> - Automated decision</li>
+            <li><code>MANUAL</code> - Manual decision by credit officer</li>
+        </ul>
+    </div>
+    
+    <div class="enum-box">
+        <h4>Payment Status:</h4>
+        <ul>
+            <li><code>PENDING</code> - Payment initiated, pending processing</li>
+            <li><code>POSTED</code> - Payment successfully posted</li>
+            <li><code>FAILED</code> - Payment failed</li>
+            <li><code>CANCELLED</code> - Payment cancelled</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>24. Loan State Machine</h2>
+    
+    <div class="mermaid-container">
+        <div class="mermaid">
+stateDiagram-v2
+    [*] --> SUBMITTED
+    
+    SUBMITTED --> APPROVED: Auto-approve
+    SUBMITTED --> DECLINED: Auto-decline
+    SUBMITTED --> PENDING_REVIEW: Refer
+    
+    PENDING_REVIEW --> APPROVED: Manual approve
+    PENDING_REVIEW --> DECLINED: Manual decline
+    PENDING_REVIEW --> DOCS_REQUIRED: Request docs
+    
+    APPROVED --> DOCS_SENT: Documents sent
+    DOCS_SENT --> SIGNED: Borrower signs
+    SIGNED --> DISBURSED: Funds disbursed
+    DISBURSED --> ACTIVE: Loan activated
+    
+    ACTIVE --> PAID_OFF: Fully repaid
+    ACTIVE --> DELINQUENT: Payment overdue
+    ACTIVE --> DEFAULTED: Default condition
+    
+    DELINQUENT --> ACTIVE: Cured
+    DELINQUENT --> DEFAULTED: 90+ DPD
+    
+    DEFAULTED --> CHARGED_OFF: Write-off
+    DEFAULTED --> ACTIVE: Cured (rare)
+    
+    PAID_OFF --> [*]
+    CHARGED_OFF --> [*]
+    DECLINED --> [*]
+    
+    note right of ACTIVE
+        Active loans can transition
+        to multiple states based on
+        payment behavior
+    end note
+        </div>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>25. Virtual Account Architecture</h2>
+    
+    <h3>25.1 Overview</h3>
+    <p>To enable scale and accuracy, the LMS adopts a <strong>Virtual Account (VA) model</strong> for automated repayment reconciliation.</p>
+    
+    <h3>25.2 Architecture Components</h3>
+    
+    <div class="highlight-box">
+        <h4>Master Account:</h4>
+        <ul>
+            <li>One physical bank account owned by the lender</li>
+            <li>Receives all repayments from borrowers</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Borrower Virtual Accounts:</h4>
+        <ul>
+            <li>Each borrower is assigned a unique VA number</li>
+            <li>All repayments flow through this identifier</li>
+            <li>Format: <code>[BANK_CODE][BORROWER_ID][CHECK_DIGIT]</code></li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Automated Reconciliation:</h4>
+        <ul>
+            <li>Payments are matched automatically using:
+                <ul>
+                    <li>Real-time banking APIs (e.g., ZA Bank)</li>
+                    <li>Daily CSV imports from banking partners</li>
+                    <li>Payment reference matching (VA number, borrower ID)</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    
+    <p><strong>Strategic Benefit:</strong> Eliminates manual bank statement matching and reduces reconciliation errors to near zero.</p>
+    
+    <h3>25.3 Reconciliation Flow</h3>
+    <div class="mermaid-container">
+        <div class="mermaid">
+flowchart LR
+    BORROWER_PAY[Borrower makes payment<br/>to their Virtual Account]
+    MASTER_ACCT[Payment appears in<br/>Master Account<br/>with VA reference]
+    MATCH[System matches payment<br/>to borrower using VA number]
+    APPLY[Payment is automatically<br/>applied to loan]
+    CONFIRM[Borrower receives<br/>confirmation]
+    UPDATE[Loan balance updated<br/>in real-time]
+    
+    BORROWER_PAY --> MASTER_ACCT
+    MASTER_ACCT --> MATCH
+    MATCH --> APPLY
+    APPLY --> CONFIRM
+    CONFIRM --> UPDATE
+    
+    style BORROWER_PAY fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style UPDATE fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
+        </div>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>26. Data Retention & Archival</h2>
+    
+    <h3>26.1 Retention Policies</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Data Type</th>
+                <th>Retention Period</th>
+                <th>Legal Hold Support</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Loan Records</td>
+                <td>7 years after loan closure</td>
+                <td>Yes</td>
+            </tr>
+            <tr>
+                <td>Application Records</td>
+                <td>7 years after application</td>
+                <td>Yes</td>
+            </tr>
+            <tr>
+                <td>Payment Records</td>
+                <td>7 years after payment</td>
+                <td>Yes</td>
+            </tr>
+            <tr>
+                <td>Credit Reports</td>
+                <td>7 years</td>
+                <td>Yes</td>
+            </tr>
+            <tr>
+                <td>Audit Logs</td>
+                <td>7 years minimum</td>
+                <td>Yes</td>
+            </tr>
+            <tr>
+                <td>Documents</td>
+                <td>7 years</td>
+                <td>Yes</td>
+            </tr>
+            <tr>
+                <td>Communication Records</td>
+                <td>3 years</td>
+                <td>Yes</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>26.2 Archival Strategy</h3>
+    
+    <div class="highlight-box">
+        <h4>Storage Tiers:</h4>
+        <ul>
+            <li><strong>Hot Storage:</strong> Active loans and recent data (PostgreSQL)</li>
+            <li><strong>Warm Storage:</strong> Closed loans &lt; 2 years (PostgreSQL archive tables)</li>
+            <li><strong>Cold Storage:</strong> Closed loans > 2 years (S3/Blob with Glacier)</li>
+            <li><strong>Search Index:</strong> Maintained for 7 years (Elasticsearch)</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>27. Data Privacy & Protection</h2>
+    
+    <h3>27.1 PII Handling</h3>
+    
+    <div class="highlight-box">
+        <h4>Encryption:</h4>
+        <ul>
+            <li>SSN: AES-256 encryption at rest, tokenized in logs</li>
+            <li>Bank Account Numbers: Encrypted at rest, masked in UI</li>
+            <li>Credit Reports: Encrypted at rest, access logged</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Access Controls:</h4>
+        <ul>
+            <li>Role-based access to PII</li>
+            <li>Audit log for all PII access</li>
+            <li>Data masking in non-production environments</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Data Minimization:</h4>
+        <ul>
+            <li>Collect only required fields</li>
+            <li>Purge unnecessary data after retention period</li>
+            <li>Anonymize data for analytics</li>
+        </ul>
+    </div>
+    
+    <h3>27.2 GDPR Compliance</h3>
+    
+    <div class="highlight-box">
+        <h4>Rights Support:</h4>
+        <ul>
+            <li><strong>Right to access:</strong> Export borrower data</li>
+            <li><strong>Right to rectification:</strong> Update borrower information</li>
+            <li><strong>Right to erasure:</strong> Delete borrower data (with restrictions)</li>
+            <li><strong>Right to portability:</strong> Export data in machine-readable format</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Consent Management:</h4>
+        <ul>
+            <li>Track consent for data processing</li>
+            <li>Allow withdrawal of consent</li>
+            <li>Document consent history</li>
+        </ul>
+    </div>
+    
+    <div class="confidential">
+        Page 70 of 120 | CONFIDENTIAL
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            stateDiagram: {
+                useMaxWidth: true,
+                htmlLabels: true
+            },
+            erDiagram: {
+                useMaxWidth: true
+            }
+        });
+    </script>
+</body>
+</html>
+

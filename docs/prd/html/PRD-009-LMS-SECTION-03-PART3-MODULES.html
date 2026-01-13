@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PART 3: PRODUCT FEATURES & CORE MODULES - LMS PRD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .part-header {
+            background: linear-gradient(135deg, #1a5490 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .part-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        h2 {
+            color: #1a5490;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #1a5490;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        table th {
+            background: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        .module-card {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        
+        .module-card h3 {
+            color: #1a5490;
+            margin-top: 0;
+            border-bottom: 2px solid #1a5490;
+            padding-bottom: 10px;
+        }
+        
+        .mermaid-container {
+            background: white;
+            padding: 20px;
+            margin: 30px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .confidential {
+            margin-top: 40px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #1a5490, transparent);
+            margin: 40px 0;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="part-header">
+        <h1>PART 3: PRODUCT FEATURES & CORE MODULES</h1>
+        <div style="font-size: 14px; opacity: 0.9;">Page 16 of 120 | CONFIDENTIAL</div>
+    </div>
+    
+    <div class="module-card">
+        <h3>8. Module 1: Customer Origination & KYC/AML</h3>
+        
+        <h4>8.1 Overview</h4>
+        <p>Digital loan application capture system with integrated identity verification, document verification, biometric checks, and automated watchlist screening. Supports multi-channel application intake (web, mobile, API) with progressive disclosure to minimize abandonment.</p>
+        
+        <h4>8.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Application Intake</strong></td>
+                    <td>Multi-step form with validation</td>
+                    <td>Capture: name, DOB, SSN, address, employment, income, loan purpose</td>
+                </tr>
+                <tr>
+                    <td><strong>Document Upload</strong></td>
+                    <td>Secure document collection</td>
+                    <td>Accept: PDF, JPG, PNG; max 10MB; virus scanning</td>
+                </tr>
+                <tr>
+                    <td><strong>Application Resume</strong></td>
+                    <td>Save and continue functionality</td>
+                    <td>Resume within 30 days; no re-entry of completed fields</td>
+                </tr>
+                <tr>
+                    <td><strong>Co-Applicant Support</strong></td>
+                    <td>Joint application handling</td>
+                    <td>Link applicants; aggregate income; separate credit pulls</td>
+                </tr>
+                <tr>
+                    <td><strong>Pre-Qualification</strong></td>
+                    <td>Soft-pull estimation</td>
+                    <td>No credit impact; indicative rate/amount</td>
+                </tr>
+                <tr>
+                    <td><strong>Identity Verification</strong></td>
+                    <td>SSN validation, address verification</td>
+                    <td>Match rate >95%; fallback to manual review</td>
+                </tr>
+                <tr>
+                    <td><strong>Document Verification</strong></td>
+                    <td>ID document authenticity check</td>
+                    <td>Support: driver's license, passport, state ID</td>
+                </tr>
+                <tr>
+                    <td><strong>Biometric Verification</strong></td>
+                    <td>Facial recognition with liveness detection</td>
+                    <td>Match face to ID photo; detect spoofing attempts</td>
+                </tr>
+                <tr>
+                    <td><strong>Watchlist Screening</strong></td>
+                    <td>OFAC, PEP, sanctions list checks</td>
+                    <td>Real-time screening; daily batch re-screening</td>
+                </tr>
+                <tr>
+                    <td><strong>AML Risk Scoring</strong></td>
+                    <td>Transaction pattern analysis</td>
+                    <td>Risk score 1-100; configurable thresholds</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>8.3 User Flow</h4>
+        <div class="mermaid-container">
+            <div class="mermaid">
+flowchart TD
+    START([Borrower visits<br/>application portal])
+    ENTER_PERSONAL[Enter personal information<br/>Name, DOB, SSN, Address]
+    ENTER_EMPLOYMENT[Enter employment<br/>& income details]
+    SELECT_LOAN[Select loan purpose<br/>and desired amount]
+    UPLOAD_DOCS[Upload supporting<br/>documents optional]
+    SUBMIT[Submit application]
+    KYC_AML{System: KYC/AML<br/>verification}
+    
+    FAIL[FAIL]
+    MANUAL_REVIEW[Manual Review Queue]
+    COMPLIANCE_REVIEW[Compliance Officer Review]
+    CLEAR_KYC[Clear KYC]
+    REQUEST_DOCS[Request Docs]
+    REJECT[Reject]
+    ADVERSE[Adverse Action]
+    END1([END])
+    
+    PASS[PASS]
+    VERIFIED[Application Status:<br/>VERIFIED]
+    ROUTE[Route to Decision Engine<br/>Module 2]
+    
+    START --> ENTER_PERSONAL
+    ENTER_PERSONAL --> ENTER_EMPLOYMENT
+    ENTER_EMPLOYMENT --> SELECT_LOAN
+    SELECT_LOAN --> UPLOAD_DOCS
+    UPLOAD_DOCS --> SUBMIT
+    SUBMIT --> KYC_AML
+    
+    KYC_AML -->|FAIL| FAIL
+    KYC_AML -->|PASS| PASS
+    
+    FAIL --> MANUAL_REVIEW
+    MANUAL_REVIEW --> COMPLIANCE_REVIEW
+    COMPLIANCE_REVIEW --> CLEAR_KYC
+    COMPLIANCE_REVIEW --> REQUEST_DOCS
+    COMPLIANCE_REVIEW --> REJECT
+    REJECT --> ADVERSE
+    ADVERSE --> END1
+    CLEAR_KYC --> ROUTE
+    REQUEST_DOCS --> ROUTE
+    
+    PASS --> VERIFIED
+    VERIFIED --> ROUTE
+    
+    style START fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
+    style END1 fill:#ffebee,stroke:#f44336,stroke-width:3px
+    style KYC_AML fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style VERIFIED fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+            </div>
+        </div>
+        
+        <h4>8.4 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Application Completion Rate</td>
+                    <td>>75%</td>
+                    <td>Completed / Started applications</td>
+                </tr>
+                <tr>
+                    <td>Identity Verification Match Rate</td>
+                    <td>>95%</td>
+                    <td>Automated pass rate</td>
+                </tr>
+                <tr>
+                    <td>KYC Processing Time</td>
+                    <td>&lt;2 minutes</td>
+                    <td>P95 end-to-end</td>
+                </tr>
+                <tr>
+                    <td>Application Abandonment Rate</td>
+                    <td>&lt;25%</td>
+                    <td>Abandoned / Started applications</td>
+                </tr>
+                <tr>
+                    <td>Fraud Detection Rate</td>
+                    <td>>99%</td>
+                    <td>True positive rate</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module-card">
+        <h3>9. Module 2: Credit Decision Engine</h3>
+        
+        <h4>9.1 Overview</h4>
+        <p>Automated credit decisioning engine with configurable rules, credit bureau integration, scoring model support, and manual review workflows. Provides FCRA-compliant adverse action notices and maintains comprehensive audit trails.</p>
+        
+        <h4>9.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Credit Bureau Integration</strong></td>
+                    <td>Pull credit reports and scores</td>
+                    <td>Support: Experian, Equifax, TransUnion; soft/hard pulls</td>
+                </tr>
+                <tr>
+                    <td><strong>Automated Decision Rules</strong></td>
+                    <td>No-code rule configuration</td>
+                    <td>Rules engine with AND/OR logic; version control</td>
+                </tr>
+                <tr>
+                    <td><strong>Credit Scoring Models</strong></td>
+                    <td>Internal/external score integration</td>
+                    <td>Support FICO, VantageScore, custom ML models</td>
+                </tr>
+                <tr>
+                    <td><strong>Decision Outcomes</strong></td>
+                    <td>Approve, Decline, Refer for Review</td>
+                    <td>Each outcome with reason codes (FCRA-compliant)</td>
+                </tr>
+                <tr>
+                    <td><strong>Manual Review Queue</strong></td>
+                    <td>Workflow for referred applications</td>
+                    <td>Assignment, escalation, SLA tracking</td>
+                </tr>
+                <tr>
+                    <td><strong>Adverse Action Notices</strong></td>
+                    <td>Automated denial notifications</td>
+                    <td>FCRA-compliant; reason codes; credit score disclosure</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>9.3 Decision Flow</h4>
+        <div class="mermaid-container">
+            <div class="mermaid">
+flowchart TD
+    APP_SUBMIT[Application Submit<br/>from Module 1]
+    CREDIT_PULL[Credit Bureau Pull<br/>configurable: soft/hard]
+    FRAUD_CHECK[Fraud/Identity<br/>Score Check]
+    RULES_EVAL{Automated Rules<br/>Evaluation}
+    
+    PASS_ALL[Pass All Rules]
+    AUTO_APPROVE[AUTO-APPROVE]
+    GENERATE_OFFER[Generate offer<br/>Module 3]
+    
+    FAIL_HARD[Fail Hard Cutoffs]
+    AUTO_DECLINE[AUTO-DECLINE]
+    ADVERSE_ACTION[Adverse Action Notice]
+    
+    PARTIAL[Partial Match]
+    REFER[REFER TO MANUAL REVIEW]
+    OFFICER_REVIEW[Credit Officer Review]
+    
+    APPROVE_COND[Approve with Conditions]
+    REQUEST_DOCS2[Request Additional<br/>Documentation]
+    DECLINE[Decline]
+    ADVERSE_ACTION2[Adverse Action Notice]
+    
+    CONTINUE[Continue to offer]
+    PAUSE[Pause; await docs]
+    
+    APP_SUBMIT --> CREDIT_PULL
+    CREDIT_PULL --> FRAUD_CHECK
+    FRAUD_CHECK --> RULES_EVAL
+    
+    RULES_EVAL -->|Pass All| PASS_ALL
+    RULES_EVAL -->|Fail Hard| FAIL_HARD
+    RULES_EVAL -->|Partial| PARTIAL
+    
+    PASS_ALL --> AUTO_APPROVE
+    AUTO_APPROVE --> GENERATE_OFFER
+    
+    FAIL_HARD --> AUTO_DECLINE
+    AUTO_DECLINE --> ADVERSE_ACTION
+    
+    PARTIAL --> REFER
+    REFER --> OFFICER_REVIEW
+    OFFICER_REVIEW --> APPROVE_COND
+    OFFICER_REVIEW --> REQUEST_DOCS2
+    OFFICER_REVIEW --> DECLINE
+    
+    APPROVE_COND --> CONTINUE
+    REQUEST_DOCS2 --> PAUSE
+    DECLINE --> ADVERSE_ACTION2
+    
+    style AUTO_APPROVE fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
+    style AUTO_DECLINE fill:#ffebee,stroke:#f44336,stroke-width:3px
+    style REFER fill:#fff3e0,stroke:#ff9800,stroke-width:3px
+    style RULES_EVAL fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+            </div>
+        </div>
+        
+        <h4>9.4 Decision Rules (Example)</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Credit Score</th>
+                    <th>DTI</th>
+                    <th>Derogatories</th>
+                    <th>Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>≥ 700</td>
+                    <td>≤ 36%</td>
+                    <td>0</td>
+                    <td><strong>AUTO_APPROVE</strong></td>
+                </tr>
+                <tr>
+                    <td>&lt; 550</td>
+                    <td>any</td>
+                    <td>any</td>
+                    <td><strong>AUTO_DECLINE</strong></td>
+                </tr>
+                <tr>
+                    <td>any</td>
+                    <td>> 50%</td>
+                    <td>any</td>
+                    <td><strong>AUTO_DECLINE</strong></td>
+                </tr>
+                <tr>
+                    <td>any</td>
+                    <td>any</td>
+                    <td>≥ 3</td>
+                    <td><strong>AUTO_DECLINE</strong></td>
+                </tr>
+                <tr>
+                    <td>550-699</td>
+                    <td>≤ 50%</td>
+                    <td>&lt; 3</td>
+                    <td><strong>REFER_TO_REVIEW</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>9.5 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Decision Engine Latency</td>
+                    <td>&lt;2 seconds</td>
+                    <td>P95 end-to-end</td>
+                </tr>
+                <tr>
+                    <td>Straight-Through Processing Rate</td>
+                    <td>>70%</td>
+                    <td>Auto-approved / Total applications</td>
+                </tr>
+                <tr>
+                    <td>Manual Review SLA</td>
+                    <td>&lt;15 minutes</td>
+                    <td>Average review time</td>
+                </tr>
+                <tr>
+                    <td>Adverse Action Accuracy</td>
+                    <td>100%</td>
+                    <td>FCRA-compliant reason codes</td>
+                </tr>
+                <tr>
+                    <td>Fair Lending Compliance</td>
+                    <td>Zero findings</td>
+                    <td>Disparate impact monitoring</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module-card">
+        <h3>10. Module 3: Loan Fulfillment & Disbursement</h3>
+        
+        <h4>10.1 Overview</h4>
+        <p>Loan fulfillment system that generates dynamic offers, assembles regulatory-compliant contracts, manages e-signature workflows, and executes fund disbursement. Ensures TILA/RESPA compliance and maintains complete audit trails.</p>
+        
+        <h4>10.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Offer Generation</strong></td>
+                    <td>Dynamic offer calculation</td>
+                    <td>APR, term, payment schedule; multiple offer options</td>
+                </tr>
+                <tr>
+                    <td><strong>Contract Generation</strong></td>
+                    <td>Template-based document assembly</td>
+                    <td>Merge borrower data; include required disclosures</td>
+                </tr>
+                <tr>
+                    <td><strong>Digital Signature</strong></td>
+                    <td>E-signature integration</td>
+                    <td>ESIGN Act compliant; DocuSign/HelloSign integration</td>
+                </tr>
+                <tr>
+                    <td><strong>Disclosure Delivery</strong></td>
+                    <td>TILA/RESPA disclosures</td>
+                    <td>Timing compliance; acknowledgment tracking</td>
+                </tr>
+                <tr>
+                    <td><strong>Funding Authorization</strong></td>
+                    <td>Disbursement approval workflow</td>
+                    <td>4-eyes principle; fraud checks pre-funding</td>
+                </tr>
+                <tr>
+                    <td><strong>Disbursement Execution</strong></td>
+                    <td>ACH/wire transfer initiation</td>
+                    <td>Same-day ACH support; real-time status</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>10.3 Contract Lifecycle</h4>
+        <div class="mermaid-container">
+            <div class="mermaid">
+flowchart LR
+    APPROVAL[Approval<br/>from Module 2]
+    OFFER_SELECT[Offer Selection<br/>borrower chooses terms]
+    CONTRACT_GEN[Contract Generation]
+    DISCLOSURE[Disclosure Delivery<br/>+ Acknowledgment]
+    SIGNATURE[Digital Signature<br/>Collection]
+    FUNDING_AUTH[Funding Authorization<br/>internal approval]
+    DISBURSE[Disbursement<br/>Initiation]
+    ACTIVE[Loan Activation<br/>status: ACTIVE]
+    
+    APPROVAL --> OFFER_SELECT
+    OFFER_SELECT --> CONTRACT_GEN
+    CONTRACT_GEN --> DISCLOSURE
+    DISCLOSURE --> SIGNATURE
+    SIGNATURE --> FUNDING_AUTH
+    FUNDING_AUTH --> DISBURSE
+    DISBURSE --> ACTIVE
+    
+    style APPROVAL fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style ACTIVE fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
+            </div>
+        </div>
+        
+        <h4>10.4 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Loan Disbursement SLA</td>
+                    <td>&lt;24 hours post-approval</td>
+                    <td>Time-to-fund</td>
+                </tr>
+                <tr>
+                    <td>Contract Generation Time</td>
+                    <td>&lt;30 seconds</td>
+                    <td>P95 processing</td>
+                </tr>
+                <tr>
+                    <td>E-Signature Completion Rate</td>
+                    <td>>90%</td>
+                    <td>Signed / Sent contracts</td>
+                </tr>
+                <tr>
+                    <td>Disclosure Acknowledgment Rate</td>
+                    <td>100%</td>
+                    <td>Required acknowledgments</td>
+                </tr>
+                <tr>
+                    <td>Funding Error Rate</td>
+                    <td>&lt;0.1%</td>
+                    <td>Failed disbursements</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <div class="module-card">
+        <h3>11. Module 4: Loan Servicing & Borrower Portal</h3>
+        
+        <h4>11.1 Overview</h4>
+        <p>Self-service borrower portal providing loan dashboard, payment processing, document access, profile management, and account servicing capabilities. Supports multiple payment methods and provides real-time account information.</p>
+        
+        <h4>11.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Account Dashboard</strong></td>
+                    <td>Loan summary, balance, next payment</td>
+                    <td>Real-time balance; payment history</td>
+                </tr>
+                <tr>
+                    <td><strong>Payment Processing</strong></td>
+                    <td>One-time and recurring payments</td>
+                    <td>ACH, debit card, credit card; instant confirmation</td>
+                </tr>
+                <tr>
+                    <td><strong>Payment Schedule</strong></td>
+                    <td>Amortization schedule display</td>
+                    <td>Principal/interest breakdown; remaining balance</td>
+                </tr>
+                <tr>
+                    <td><strong>Document Access</strong></td>
+                    <td>Statements, tax forms, contracts</td>
+                    <td>Download as PDF; 7-year retention</td>
+                </tr>
+                <tr>
+                    <td><strong>Profile Management</strong></td>
+                    <td>Update contact information</td>
+                    <td>Address, phone, email; verification required</td>
+                </tr>
+                <tr>
+                    <td><strong>Early Payoff</strong></td>
+                    <td>Payoff quote and processing</td>
+                    <td>Real-time quote; 10-day payoff letter</td>
+                </tr>
+                <tr>
+                    <td><strong>Hardship Requests</strong></td>
+                    <td>Deferment/modification requests</td>
+                    <td>Intake form; auto-route to collections</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>11.3 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Portal Adoption Rate</td>
+                    <td>>80%</td>
+                    <td>Active users / Total borrowers</td>
+                </tr>
+                <tr>
+                    <td>Self-Service Payment Rate</td>
+                    <td>>70%</td>
+                    <td>Portal payments / Total payments</td>
+                </tr>
+                <tr>
+                    <td>Call Center Volume Reduction</td>
+                    <td>>30%</td>
+                    <td>Pre vs. post portal</td>
+                </tr>
+                <tr>
+                    <td>Customer Satisfaction (CSAT)</td>
+                    <td>>85%</td>
+                    <td>Post-interaction survey</td>
+                </tr>
+                <tr>
+                    <td>Payment Processing Time</td>
+                    <td>&lt;2 seconds</td>
+                    <td>P95 API response</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module-card">
+        <h3>12. Module 5: Collections & Recovery</h3>
+        
+        <h4>12.1 Overview</h4>
+        <p>Collections and recovery system providing delinquency tracking, prioritized work queues, payment arrangements, multi-channel communication, skip tracing, and charge-off processing. Ensures FDCPA/TCPA compliance and optimizes collector productivity.</p>
+        
+        <h4>12.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Delinquency Tracking</strong></td>
+                    <td>DPD (days past due) calculation</td>
+                    <td>Real-time aging buckets: 1-30, 31-60, 61-90, 90+</td>
+                </tr>
+                <tr>
+                    <td><strong>Work Queue Management</strong></td>
+                    <td>Prioritized collector queues</td>
+                    <td>Strategy-based assignment; capacity balancing</td>
+                </tr>
+                <tr>
+                    <td><strong>Payment Arrangements</strong></td>
+                    <td>Promise-to-pay, payment plans</td>
+                    <td>Configurable terms; automated monitoring</td>
+                </tr>
+                <tr>
+                    <td><strong>Communication Automation</strong></td>
+                    <td>Multi-channel outreach</td>
+                    <td>Email, SMS, letter; TCPA/FDCPA compliant timing</td>
+                </tr>
+                <tr>
+                    <td><strong>Skip Tracing</strong></td>
+                    <td>Locate borrower contact info</td>
+                    <td>Integration with data providers</td>
+                </tr>
+                <tr>
+                    <td><strong>Charge-Off Processing</strong></td>
+                    <td>Write-off workflow</td>
+                    <td>Configurable DPD threshold; accounting entries</td>
+                </tr>
+                <tr>
+                    <td><strong>Recovery Tracking</strong></td>
+                    <td>Post-charge-off collections</td>
+                    <td>Agency placement; recovery rate tracking</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>12.3 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Delinquency Cure Rate</td>
+                    <td>>60%</td>
+                    <td>Cured / Total delinquent</td>
+                </tr>
+                <tr>
+                    <td>Collection Efficiency</td>
+                    <td>&lt;5 min per account</td>
+                    <td>Average handling time</td>
+                </tr>
+                <tr>
+                    <td>Recovery Rate</td>
+                    <td>>40%</td>
+                    <td>Recovered / Charged-off</td>
+                </tr>
+                <tr>
+                    <td>FDCPA Compliance</td>
+                    <td>100%</td>
+                    <td>Zero violations</td>
+                </tr>
+                <tr>
+                    <td>Work Queue Utilization</td>
+                    <td>>85%</td>
+                    <td>Active time / Available time</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <div class="module-card">
+        <h3>13. Module 6: Product Configuration Platform</h3>
+        
+        <h4>13.1 Overview</h4>
+        <p>No-code product configuration platform allowing operations teams to define loan products, set pricing structures, configure fees, establish eligibility rules, and customize workflows. Supports product versioning and change management with audit trails.</p>
+        
+        <h4>13.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Product Definition</strong></td>
+                    <td>Loan type, amount range, term range</td>
+                    <td>Personal, auto, mortgage, business loan types</td>
+                </tr>
+                <tr>
+                    <td><strong>Interest Rate Configuration</strong></td>
+                    <td>Fixed, variable, promotional rates</td>
+                    <td>Rate tables; floor/ceiling; index-based</td>
+                </tr>
+                <tr>
+                    <td><strong>Fee Structure</strong></td>
+                    <td>Origination, late, prepayment fees</td>
+                    <td>Flat, percentage, tiered fee options</td>
+                </tr>
+                <tr>
+                    <td><strong>Eligibility Rules</strong></td>
+                    <td>Minimum criteria for product</td>
+                    <td>Credit score, income, employment requirements</td>
+                </tr>
+                <tr>
+                    <td><strong>Workflow Configuration</strong></td>
+                    <td>Approval chains, document requirements</td>
+                    <td>Per-product customization</td>
+                </tr>
+                <tr>
+                    <td><strong>Product Versioning</strong></td>
+                    <td>Change management with audit trail</td>
+                    <td>Effective dates; rollback capability</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>13.3 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Product Launch Time</td>
+                    <td>&lt;1 week</td>
+                    <td>From config to live</td>
+                </tr>
+                <tr>
+                    <td>Configuration Errors</td>
+                    <td>&lt;1%</td>
+                    <td>Validation failures</td>
+                </tr>
+                <tr>
+                    <td>Product Versioning</td>
+                    <td>100%</td>
+                    <td>All changes versioned</td>
+                </tr>
+                <tr>
+                    <td>No-Code Usage Rate</td>
+                    <td>>90%</td>
+                    <td>Configs without IT support</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module-card">
+        <h3>14. Module 7: Reporting & Analytics</h3>
+        
+        <h4>14.1 Overview</h4>
+        <p>Reporting and analytics platform providing operational dashboards, regulatory reports (HMDA, CRA), portfolio analytics, custom report builder, and data export capabilities. Supports both real-time operational metrics and scheduled regulatory submissions.</p>
+        
+        <h4>14.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Regulatory Reports</strong></td>
+                    <td>HMDA, CRA, Call Report data</td>
+                    <td>Automated generation; submission-ready format</td>
+                </tr>
+                <tr>
+                    <td><strong>Portfolio Analytics</strong></td>
+                    <td>Concentration, vintage, performance</td>
+                    <td>Interactive dashboards; drill-down capability</td>
+                </tr>
+                <tr>
+                    <td><strong>Operational Reports</strong></td>
+                    <td>Pipeline, productivity, SLA</td>
+                    <td>Real-time metrics; alerting thresholds</td>
+                </tr>
+                <tr>
+                    <td><strong>Bank Reconciliation</strong></td>
+                    <td>GL integration, daily balancing</td>
+                    <td>Automated reconciliation; exception reporting</td>
+                </tr>
+                <tr>
+                    <td><strong>Custom Report Builder</strong></td>
+                    <td>Self-service report creation</td>
+                    <td>Drag-drop interface; scheduled delivery</td>
+                </tr>
+                <tr>
+                    <td><strong>Data Export</strong></td>
+                    <td>Bulk data extraction</td>
+                    <td>API and file-based; encryption in transit</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>14.3 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Report Generation Time</td>
+                    <td>&lt;30 seconds</td>
+                    <td>P95 for standard reports</td>
+                </tr>
+                <tr>
+                    <td>Regulatory Report Accuracy</td>
+                    <td>100%</td>
+                    <td>Zero submission errors</td>
+                </tr>
+                <tr>
+                    <td>Dashboard Load Time</td>
+                    <td>&lt;3 seconds</td>
+                    <td>P95 page load</td>
+                </tr>
+                <tr>
+                    <td>Custom Report Usage</td>
+                    <td>>50%</td>
+                    <td>User-created reports</td>
+                </tr>
+                <tr>
+                    <td>Data Export Success Rate</td>
+                    <td>>99%</td>
+                    <td>Successful exports</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module-card">
+        <h3>15. Module 8: Communication Automation</h3>
+        
+        <h4>15.1 Overview</h4>
+        <p>Event-driven communication automation platform providing templated communications across email, SMS, and mail channels. Supports preference management, delivery tracking, and regulatory compliance with timing restrictions and consent tracking.</p>
+        
+        <h4>15.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Template Management</strong></td>
+                    <td>Email, SMS, letter templates</td>
+                    <td>Variable substitution; approval workflow</td>
+                </tr>
+                <tr>
+                    <td><strong>Event Triggers</strong></td>
+                    <td>Automated communication rules</td>
+                    <td>Application received, approved, payment due, etc.</td>
+                </tr>
+                <tr>
+                    <td><strong>Delivery Tracking</strong></td>
+                    <td>Open, click, bounce tracking</td>
+                    <td>Channel-specific metrics; retry logic</td>
+                </tr>
+                <tr>
+                    <td><strong>Preference Management</strong></td>
+                    <td>Borrower communication preferences</td>
+                    <td>Opt-in/opt-out; channel selection</td>
+                </tr>
+                <tr>
+                    <td><strong>Regulatory Compliance</strong></td>
+                    <td>TCPA, CAN-SPAM adherence</td>
+                    <td>Time-of-day restrictions; consent tracking</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>15.3 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Communication Delivery Rate</td>
+                    <td>>95%</td>
+                    <td>Successful deliveries</td>
+                </tr>
+                <tr>
+                    <td>Open/Click Rates</td>
+                    <td>>40% email, >90% SMS</td>
+                    <td>Engagement metrics</td>
+                </tr>
+                <tr>
+                    <td>Compliance Violations</td>
+                    <td>0</td>
+                    <td>Zero TCPA/CAN-SPAM violations</td>
+                </tr>
+                <tr>
+                    <td>Template Usage</td>
+                    <td>>80%</td>
+                    <td>Automated vs. manual</td>
+                </tr>
+                <tr>
+                    <td>Preference Opt-Out Rate</td>
+                    <td>&lt;5%</td>
+                    <td>Opt-outs / Total communications</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module-card">
+        <h3>16. Module 9: Compliance & Audit Trail</h3>
+        
+        <h4>16.1 Overview</h4>
+        <p>Compliance and audit trail system providing immutable audit logging, role-based access control (RBAC), data retention management, regulatory monitoring, examination support, and PII protection. Ensures all system actions are logged with complete traceability.</p>
+        
+        <h4>16.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Immutable Audit Log</strong></td>
+                    <td>All system actions logged</td>
+                    <td>Who, what, when, before/after values</td>
+                </tr>
+                <tr>
+                    <td><strong>Role-Based Access Control</strong></td>
+                    <td>Granular permissions</td>
+                    <td>Least-privilege model; segregation of duties</td>
+                </tr>
+                <tr>
+                    <td><strong>Data Retention</strong></td>
+                    <td>Configurable retention policies</td>
+                    <td>7-year minimum; legal hold support</td>
+                </tr>
+                <tr>
+                    <td><strong>Regulatory Monitoring</strong></td>
+                    <td>Compliance rule alerts</td>
+                    <td>Fair lending, UDAP monitoring</td>
+                </tr>
+                <tr>
+                    <td><strong>Examination Support</strong></td>
+                    <td>Regulatory exam data packages</td>
+                    <td>Pre-built exports; sampling support</td>
+                </tr>
+                <tr>
+                    <td><strong>PII Protection</strong></td>
+                    <td>Data masking, encryption</td>
+                    <td>At-rest and in-transit encryption; tokenization</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>16.3 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Audit Log Coverage</td>
+                    <td>100%</td>
+                    <td>All actions logged</td>
+                </tr>
+                <tr>
+                    <td>Regulatory Audit Pass Rate</td>
+                    <td>100%</td>
+                    <td>Annual examination</td>
+                </tr>
+                <tr>
+                    <td>Access Control Violations</td>
+                    <td>0</td>
+                    <td>Zero unauthorized access</td>
+                </tr>
+                <tr>
+                    <td>Data Retention Compliance</td>
+                    <td>100%</td>
+                    <td>Policy adherence</td>
+                </tr>
+                <tr>
+                    <td>Audit Query Response Time</td>
+                    <td>&lt;5 seconds</td>
+                    <td>P95 query time</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module-card">
+        <h3>17. Module 10: Guarantor Management</h3>
+        
+        <h4>17.1 Overview</h4>
+        <p>Comprehensive guarantor management system providing registration, KYC/AML verification, guarantee agreement management, financial monitoring, and guarantor portal access. Supports multiple guarantors per loan and tracks guarantee obligations throughout the loan lifecycle.</p>
+        
+        <h4>17.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Guarantor Registration</strong></td>
+                    <td>Capture guarantor information and relationship</td>
+                    <td>Support individual and corporate guarantors; relationship tracking</td>
+                </tr>
+                <tr>
+                    <td><strong>Guarantor KYC/AML</strong></td>
+                    <td>Identity verification and watchlist screening</td>
+                    <td>Same standards as borrower verification; relationship verification</td>
+                </tr>
+                <tr>
+                    <td><strong>Guarantee Agreement</strong></td>
+                    <td>Generate and execute guarantee contracts</td>
+                    <td>Digital signature support; guarantee amount and terms clearly stated</td>
+                </tr>
+                <tr>
+                    <td><strong>Financial Monitoring</strong></td>
+                    <td>Track guarantor credit health</td>
+                    <td>Monthly credit bureau pulls; alert on significant changes</td>
+                </tr>
+                <tr>
+                    <td><strong>Guarantor Portal</strong></td>
+                    <td>Self-service access for guarantors</td>
+                    <td>View guarantee status, obligations, borrower loan status</td>
+                </tr>
+                <tr>
+                    <td><strong>Guarantee Activation</strong></td>
+                    <td>Workflow to activate guarantee when borrower defaults</td>
+                    <td>Automated trigger on default; notification to guarantor; payment processing</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>17.3 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Guarantor Verification Time</td>
+                    <td>&lt;3 minutes</td>
+                    <td>P95 end-to-end</td>
+                </tr>
+                <tr>
+                    <td>Guarantee Agreement Execution Rate</td>
+                    <td>>90%</td>
+                    <td>Signed / Required</td>
+                </tr>
+                <tr>
+                    <td>Guarantor Portal Adoption</td>
+                    <td>>60%</td>
+                    <td>Active users / Total guarantors</td>
+                </tr>
+                <tr>
+                    <td>Guarantor Financial Monitoring</td>
+                    <td>Real-time</td>
+                    <td>Monthly credit checks</td>
+                </tr>
+                <tr>
+                    <td>Guarantee Activation Rate</td>
+                    <td>&lt;5%</td>
+                    <td>Activated / Total guarantees</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="module-card">
+        <h3>18. Module 11: Investor Management</h3>
+        
+        <h4>18.1 Overview</h4>
+        <p>Comprehensive investor management system providing investor registration, accreditation verification, investment portfolio management, loan funding allocation, return distribution, and investor portal access. Supports individual and institutional investors with automated compliance checks.</p>
+        
+        <h4>18.2 Core Capabilities</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Description</th>
+                    <th>Acceptance Criteria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Investor Registration</strong></td>
+                    <td>Capture investor information and investment preferences</td>
+                    <td>Support individual and institutional; investment limits</td>
+                </tr>
+                <tr>
+                    <td><strong>Accreditation Verification</strong></td>
+                    <td>Verify accredited investor status (SEC Rule 501)</td>
+                    <td>Income/net worth verification; documentation review</td>
+                </tr>
+                <tr>
+                    <td><strong>Investment Preferences</strong></td>
+                    <td>Configure investment criteria and risk tolerance</td>
+                    <td>Auto-allocation rules; manual selection option</td>
+                </tr>
+                <tr>
+                    <td><strong>Loan Funding</strong></td>
+                    <td>Allocate investor capital to approved loans</td>
+                    <td>Proportional allocation; minimum investment amounts</td>
+                </tr>
+                <tr>
+                    <td><strong>Return Distribution</strong></td>
+                    <td>Calculate and distribute principal/interest payments</td>
+                    <td>Automated calculation; ACH distribution; tax reporting</td>
+                </tr>
+                <tr>
+                    <td><strong>Investor Portal</strong></td>
+                    <td>Self-service access for investors</td>
+                    <td>Portfolio dashboard, returns, tax documents, funding</td>
+                </tr>
+                <tr>
+                    <td><strong>Portfolio Management</strong></td>
+                    <td>Track investments across loans</td>
+                    <td>Real-time portfolio value; risk metrics; diversification</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>18.3 Success Metrics</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Investor Onboarding Time</td>
+                    <td>&lt;10 minutes</td>
+                    <td>P95 end-to-end</td>
+                </tr>
+                <tr>
+                    <td>Accreditation Verification</td>
+                    <td>&lt;24 hours</td>
+                    <td>Manual review SLA</td>
+                </tr>
+                <tr>
+                    <td>Investment Allocation Efficiency</td>
+                    <td>>95%</td>
+                    <td>Funded loans / Available capital</td>
+                </tr>
+                <tr>
+                    <td>Investor Portal Adoption</td>
+                    <td>>80%</td>
+                    <td>Active users / Total investors</td>
+                </tr>
+                <tr>
+                    <td>Return Distribution Accuracy</td>
+                    <td>100%</td>
+                    <td>Correct payments / Total distributions</td>
+                </tr>
+                <tr>
+                    <td>Compliance Pass Rate</td>
+                    <td>100%</td>
+                    <td>Accredited investors / Total investors</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="confidential">
+        Page 35 of 120 | CONFIDENTIAL
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+

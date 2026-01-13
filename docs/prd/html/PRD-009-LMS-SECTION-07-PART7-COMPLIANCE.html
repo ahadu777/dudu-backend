@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PART 7: COMPLIANCE & SECURITY - LMS PRD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .part-header {
+            background: linear-gradient(135deg, #1a5490 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .part-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        h2 {
+            color: #1a5490;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #1a5490;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        table th {
+            background: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .confidential {
+            margin-top: 40px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #1a5490, transparent);
+            margin: 40px 0;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="part-header">
+        <h1>PART 7: COMPLIANCE & SECURITY</h1>
+        <div style="font-size: 14px; opacity: 0.9;">Page 81 of 120 | CONFIDENTIAL</div>
+    </div>
+    
+    <h2>30. Regulatory Requirements</h2>
+    
+    <h3>30.1 Banking Regulations</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Regulation</th>
+                <th>Requirement</th>
+                <th>Implementation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>FCRA</strong></td>
+                <td>Adverse action notices with reason codes</td>
+                <td>Automated notice generation with specific denial reasons</td>
+            </tr>
+            <tr>
+                <td><strong>FCRA</strong></td>
+                <td>Credit report dispute handling</td>
+                <td>Consumer dispute intake; 30-day investigation workflow</td>
+            </tr>
+            <tr>
+                <td><strong>FCRA</strong></td>
+                <td>Credit score disclosure</td>
+                <td>Include credit score in adverse action</td>
+            </tr>
+            <tr>
+                <td><strong>ECOA</strong></td>
+                <td>Fair lending; no discrimination</td>
+                <td>Model monitoring for disparate impact; fair lending reports</td>
+            </tr>
+            <tr>
+                <td><strong>ECOA</strong></td>
+                <td>Adverse action timing</td>
+                <td>30-day notice requirement; automated tracking</td>
+            </tr>
+            <tr>
+                <td><strong>TILA</strong></td>
+                <td>APR and finance charge disclosure</td>
+                <td>Reg Z-compliant Truth in Lending disclosures</td>
+            </tr>
+            <tr>
+                <td><strong>TILA</strong></td>
+                <td>Right of rescission (certain loans)</td>
+                <td>3-day rescission period; cancellation workflow</td>
+            </tr>
+            <tr>
+                <td><strong>RESPA</strong></td>
+                <td>Good Faith Estimate / Loan Estimate</td>
+                <td>Automated document generation; timing compliance</td>
+            </tr>
+            <tr>
+                <td><strong>HMDA</strong></td>
+                <td>Home Mortgage Disclosure Act</td>
+                <td>Automated HMDA report generation</td>
+            </tr>
+            <tr>
+                <td><strong>CRA</strong></td>
+                <td>Community Reinvestment Act</td>
+                <td>CRA report data</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>30.2 Collection Regulations</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Regulation</th>
+                <th>Requirement</th>
+                <th>Implementation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>FDCPA</strong></td>
+                <td>Collection practices compliance</td>
+                <td>Call time restrictions; cease communication handling</td>
+            </tr>
+            <tr>
+                <td><strong>TCPA</strong></td>
+                <td>Consent for automated communications</td>
+                <td>Opt-in tracking; time-of-day restrictions</td>
+            </tr>
+            <tr>
+                <td><strong>CAN-SPAM</strong></td>
+                <td>Email compliance</td>
+                <td>Unsubscribe links; sender identification</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>30.3 Data Protection Regulations</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Regulation</th>
+                <th>Requirement</th>
+                <th>Implementation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>GDPR</strong></td>
+                <td>Right to access, rectification, erasure</td>
+                <td>DPO appointment; 72h breach notification</td>
+            </tr>
+            <tr>
+                <td><strong>CCPA</strong></td>
+                <td>Consumer access requests</td>
+                <td>Opt-out of sale; non-discrimination</td>
+            </tr>
+            <tr>
+                <td><strong>SOC2 Type II</strong></td>
+                <td>Annual audit</td>
+                <td>Controls for security, availability, confidentiality</td>
+            </tr>
+            <tr>
+                <td><strong>ISO27001</strong></td>
+                <td>ISMS implementation</td>
+                <td>Annual certification</td>
+            </tr>
+            <tr>
+                <td><strong>PCI-DSS</strong></td>
+                <td>Level 1 compliance</td>
+                <td>Payment processing security</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>30.4 Securities Regulations (Investor Management)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Regulation</th>
+                <th>Requirement</th>
+                <th>Implementation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>SEC Rule 501</strong></td>
+                <td>Accredited investor definition</td>
+                <td>Income ($200K/$300K) or net worth ($1M) verification</td>
+            </tr>
+            <tr>
+                <td><strong>SEC Regulation D</strong></td>
+                <td>Private placement exemption</td>
+                <td>Proper investor qualification</td>
+            </tr>
+            <tr>
+                <td><strong>FINRA</strong></td>
+                <td>Broker-dealer compliance</td>
+                <td>If applicable, proper licensing</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="section-divider"></div>
+    
+    <h2>31. Security Requirements</h2>
+    
+    <h3>31.1 Authentication & Authorization</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Requirement</th>
+                <th>Specification</th>
+                <th>Validation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Authentication</strong></td>
+                <td>MFA required for all users</td>
+                <td>TOTP, SMS, hardware token support</td>
+            </tr>
+            <tr>
+                <td><strong>Authorization</strong></td>
+                <td>RBAC with attribute-based policies</td>
+                <td>Role inheritance; dynamic permissions</td>
+            </tr>
+            <tr>
+                <td><strong>Session Management</strong></td>
+                <td>15-minute idle timeout</td>
+                <td>Secure token rotation</td>
+            </tr>
+            <tr>
+                <td><strong>API Security</strong></td>
+                <td>OAuth 2.0 + JWT</td>
+                <td>Rate limiting; IP allowlisting</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>31.2 Encryption</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Requirement</th>
+                <th>Specification</th>
+                <th>Implementation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Encryption at Rest</strong></td>
+                <td>AES-256 for all PII</td>
+                <td>Key management via HSM</td>
+            </tr>
+            <tr>
+                <td><strong>Encryption in Transit</strong></td>
+                <td>TLS 1.3 minimum</td>
+                <td>Certificate pinning for mobile</td>
+            </tr>
+            <tr>
+                <td><strong>Key Management</strong></td>
+                <td>HSM/Vault</td>
+                <td>Key rotation; access controls</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>31.3 Security Monitoring</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Requirement</th>
+                <th>Specification</th>
+                <th>Implementation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Penetration Testing</strong></td>
+                <td>Annual third-party assessment</td>
+                <td>Remediation SLA: Critical 24h, High 7d</td>
+            </tr>
+            <tr>
+                <td><strong>Vulnerability Management</strong></td>
+                <td>Continuous scanning</td>
+                <td>CVE monitoring; patch SLA</td>
+            </tr>
+            <tr>
+                <td><strong>Security Logging</strong></td>
+                <td>All security events logged</td>
+                <td>SIEM integration</td>
+            </tr>
+            <tr>
+                <td><strong>Incident Response</strong></td>
+                <td>Defined response procedures</td>
+                <td>P1: 15 min response, 4h resolution</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="section-divider"></div>
+    
+    <h2>32. Data Privacy & Protection</h2>
+    
+    <h3>32.1 PII Protection</h3>
+    
+    <div class="highlight-box">
+        <h4>Data Classification:</h4>
+        <ul>
+            <li><strong>Confidential:</strong> SSN, bank account numbers, credit reports</li>
+            <li><strong>Internal:</strong> Loan amounts, payment history</li>
+            <li><strong>Public:</strong> Product information, general terms</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Protection Measures:</h4>
+        <ul>
+            <li>Encryption at rest and in transit</li>
+            <li>Access controls and audit logging</li>
+            <li>Data masking in non-production</li>
+            <li>Tokenization for sensitive fields</li>
+        </ul>
+    </div>
+    
+    <h3>32.2 Data Minimization</h3>
+    <ul>
+        <li>Collect only required fields</li>
+        <li>Purge unnecessary data after retention period</li>
+        <li>Anonymize data for analytics</li>
+        <li>Limit data sharing with third parties</li>
+    </ul>
+    
+    <h3>32.3 Consent Management</h3>
+    <ul>
+        <li>Track consent for data processing</li>
+        <li>Allow withdrawal of consent</li>
+        <li>Document consent history</li>
+        <li>Respect opt-out preferences</li>
+    </ul>
+    
+    <div class="section-divider"></div>
+    
+    <h2>33. Risk Management</h2>
+    
+    <h3>33.1 Risk Categories</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Risk Category</th>
+                <th>Controls</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Credit Risk</strong></td>
+                <td>Underwriting criteria; concentration limits; portfolio monitoring</td>
+            </tr>
+            <tr>
+                <td><strong>Fraud Risk</strong></td>
+                <td>Identity verification; device fingerprinting; velocity checks</td>
+            </tr>
+            <tr>
+                <td><strong>Operational Risk</strong></td>
+                <td>Segregation of duties; approval workflows; error monitoring</td>
+            </tr>
+            <tr>
+                <td><strong>Compliance Risk</strong></td>
+                <td>Regulatory change monitoring; control testing; audit readiness</td>
+            </tr>
+            <tr>
+                <td><strong>Technology Risk</strong></td>
+                <td>Disaster recovery; penetration testing; vulnerability management</td>
+            </tr>
+            <tr>
+                <td><strong>Third-Party Risk</strong></td>
+                <td>Vendor due diligence; SLA monitoring; contingency planning</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>33.2 Risk Mitigation Strategies</h3>
+    
+    <div class="highlight-box">
+        <h4>Credit Risk:</h4>
+        <ul>
+            <li>Automated underwriting rules</li>
+            <li>Manual review for edge cases</li>
+            <li>Portfolio concentration limits</li>
+            <li>Early warning indicators</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Fraud Risk:</h4>
+        <ul>
+            <li>Multi-factor identity verification</li>
+            <li>Device fingerprinting</li>
+            <li>Velocity checks</li>
+            <li>Watchlist screening</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Operational Risk:</h4>
+        <ul>
+            <li>Segregation of duties</li>
+            <li>Approval workflows</li>
+            <li>Automated controls</li>
+            <li>Error monitoring and alerting</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Compliance Risk:</h4>
+        <ul>
+            <li>Automated compliance checks</li>
+            <li>Regulatory change monitoring</li>
+            <li>Regular control testing</li>
+            <li>Audit trail maintenance</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>34. Audit & Compliance Monitoring</h2>
+    
+    <h3>34.1 Audit Trail Requirements</h3>
+    
+    <div class="highlight-box">
+        <h4>All Actions Logged:</h4>
+        <ul>
+            <li><strong>Who:</strong> User ID, role, IP address</li>
+            <li><strong>What:</strong> Action type, entity type, entity ID</li>
+            <li><strong>When:</strong> Timestamp (UTC)</li>
+            <li><strong>Changes:</strong> Before/after values (JSON)</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Immutable Logs:</h4>
+        <ul>
+            <li>No DELETE or UPDATE operations</li>
+            <li>Cryptographic integrity</li>
+            <li>Separate storage from operational database</li>
+            <li>7-year retention minimum</li>
+        </ul>
+    </div>
+    
+    <h3>34.2 Compliance Monitoring</h3>
+    
+    <div class="highlight-box">
+        <h4>Automated Checks:</h4>
+        <ul>
+            <li>Fair lending monitoring (disparate impact)</li>
+            <li>Adverse action timing compliance</li>
+            <li>Disclosure delivery tracking</li>
+            <li>Consent management validation</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Reporting:</h4>
+        <ul>
+            <li>Regulatory reports (HMDA, CRA)</li>
+            <li>Compliance dashboards</li>
+            <li>Exception reports</li>
+            <li>Audit packages for examinations</li>
+        </ul>
+    </div>
+    
+    <div class="confidential">
+        Page 90 of 120 | CONFIDENTIAL
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default'
+        });
+    </script>
+</body>
+</html>
+
+
+
+

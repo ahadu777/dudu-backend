@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PART 9: DEPLOYMENT & OPERATIONS - LMS PRD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .part-header {
+            background: linear-gradient(135deg, #1a5490 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .part-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        h2 {
+            color: #1a5490;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #1a5490;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        table th {
+            background: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .code-block {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .confidential {
+            margin-top: 40px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #1a5490, transparent);
+            margin: 40px 0;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="part-header">
+        <h1>PART 9: DEPLOYMENT & OPERATIONS</h1>
+        <div style="font-size: 14px; opacity: 0.9;">Page 96 of 120 | CONFIDENTIAL</div>
+    </div>
+    
+    <h2>40. Deployment Architecture</h2>
+    
+    <h3>40.1 Environment Strategy</h3>
+    
+    <div class="highlight-box">
+        <h4>Environments:</h4>
+        <ul>
+            <li><strong>Development:</strong> Local development, feature branches</li>
+            <li><strong>Staging:</strong> Pre-production testing, UAT</li>
+            <li><strong>Production:</strong> Live system, customer-facing</li>
+        </ul>
+    </div>
+    
+    <h4>Deployment Flow:</h4>
+    <div class="code-block">
+Development → Staging → Production
+     ↓           ↓          ↓
+  Auto-deploy  Manual   Manual + Approval
+    </div>
+    
+    <h3>40.2 Infrastructure</h3>
+    
+    <div class="highlight-box">
+        <h4>Cloud Provider:</h4>
+        <p>AWS / Azure / GCP</p>
+        <ul>
+            <li>Multi-region deployment</li>
+            <li>Auto-scaling groups</li>
+            <li>Load balancers</li>
+            <li>CDN for static assets</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Containerization:</h4>
+        <ul>
+            <li>Docker for container images</li>
+            <li>Kubernetes for orchestration (or ECS/Fargate)</li>
+            <li>Container registry (ECR/ACR/GCR)</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>CI/CD:</h4>
+        <ul>
+            <li>GitHub Actions / GitLab CI / Jenkins</li>
+            <li>Automated testing</li>
+            <li>Staged deployments (dev → staging → prod)</li>
+            <li>Blue-green deployments</li>
+        </ul>
+    </div>
+    
+    <h3>40.3 Deployment Checklist</h3>
+    
+    <div class="highlight-box">
+        <h4>Pre-Deployment:</h4>
+        <ul>
+            <li>☐ All tests passing</li>
+            <li>☐ Code review approved</li>
+            <li>☐ Database migrations tested</li>
+            <li>☐ Configuration updated</li>
+            <li>☐ Documentation updated</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Deployment:</h4>
+        <ul>
+            <li>☐ Backup database</li>
+            <li>☐ Deploy application</li>
+            <li>☐ Run database migrations</li>
+            <li>☐ Verify health checks</li>
+            <li>☐ Smoke tests passing</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Post-Deployment:</h4>
+        <ul>
+            <li>☐ Monitor error rates</li>
+            <li>☐ Verify key functionality</li>
+            <li>☐ Check performance metrics</li>
+            <li>☐ Notify stakeholders</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>41. Monitoring & Alerting</h2>
+    
+    <h3>41.1 Monitoring Stack</h3>
+    
+    <div class="highlight-box">
+        <h4>Metrics:</h4>
+        <ul>
+            <li>Prometheus for metrics collection</li>
+            <li>Grafana for visualization</li>
+            <li>Custom dashboards per module</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Logging:</h4>
+        <ul>
+            <li>ELK Stack (Elasticsearch, Logstash, Kibana)</li>
+            <li>Centralized log aggregation</li>
+            <li>Log search and analysis</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>APM:</h4>
+        <ul>
+            <li>Application Performance Monitoring</li>
+            <li>Transaction tracing</li>
+            <li>Error tracking</li>
+        </ul>
+    </div>
+    
+    <h3>41.2 Key Metrics</h3>
+    
+    <div class="highlight-box">
+        <h4>Application Metrics:</h4>
+        <ul>
+            <li>Request rate, latency, error rate</li>
+            <li>Database query performance</li>
+            <li>Cache hit rates</li>
+            <li>Queue depths</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Business Metrics:</h4>
+        <ul>
+            <li>Application submission rate</li>
+            <li>Decision processing time</li>
+            <li>Payment success rate</li>
+            <li>Portal usage statistics</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Infrastructure Metrics:</h4>
+        <ul>
+            <li>CPU, memory, disk usage</li>
+            <li>Network throughput</li>
+            <li>Database connections</li>
+            <li>Container health</li>
+        </ul>
+    </div>
+    
+    <h3>41.3 Alerting Rules</h3>
+    
+    <div class="highlight-box">
+        <h4>Critical Alerts (PagerDuty):</h4>
+        <ul>
+            <li>System downtime</li>
+            <li>High error rate (>5%)</li>
+            <li>Database connection failures</li>
+            <li>Payment processing failures</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Warning Alerts (Email/Slack):</h4>
+        <ul>
+            <li>Elevated error rate (>1%)</li>
+            <li>Performance degradation</li>
+            <li>Disk space warnings</li>
+            <li>Queue depth thresholds</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>42. Backup & Disaster Recovery</h2>
+    
+    <h3>42.1 Backup Strategy</h3>
+    
+    <div class="highlight-box">
+        <h4>Database Backups:</h4>
+        <ul>
+            <li>Daily full backups</li>
+            <li>Hourly incremental backups</li>
+            <li>Point-in-time recovery (PITR)</li>
+            <li>Retention: 30 days daily, 1 year monthly</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Document Backups:</h4>
+        <ul>
+            <li>Real-time replication to secondary region</li>
+            <li>Versioning enabled</li>
+            <li>Retention: 7 years</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Configuration Backups:</h4>
+        <ul>
+            <li>Version controlled in Git</li>
+            <li>Encrypted secrets in Vault</li>
+            <li>Regular exports for disaster recovery</li>
+        </ul>
+    </div>
+    
+    <h3>42.2 Disaster Recovery</h3>
+    
+    <p><strong>RTO (Recovery Time Objective):</strong> &lt;4 hours</p>
+    <p><strong>RPO (Recovery Point Objective):</strong> &lt;1 hour</p>
+    
+    <div class="highlight-box">
+        <h4>DR Plan:</h4>
+        <ol>
+            <li>Failover to secondary region</li>
+            <li>Restore database from backup</li>
+            <li>Restore application services</li>
+            <li>Verify functionality</li>
+            <li>Failback to primary (when ready)</li>
+        </ol>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>DR Testing:</h4>
+        <ul>
+            <li>Quarterly DR drills</li>
+            <li>Document lessons learned</li>
+            <li>Update procedures</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>43. Operational Procedures</h2>
+    
+    <h3>43.1 Incident Response</h3>
+    
+    <div class="highlight-box">
+        <h4>Severity Levels:</h4>
+        <ul>
+            <li><strong>P1 - Critical:</strong> System down, data loss, security breach</li>
+            <li><strong>P2 - High:</strong> Major functionality broken, performance degradation</li>
+            <li><strong>P3 - Medium:</strong> Minor issues, workarounds available</li>
+            <li><strong>P4 - Low:</strong> Cosmetic issues, documentation</li>
+        </ul>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Severity</th>
+                <th>Response Time</th>
+                <th>Resolution Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>P1</td>
+                <td>15 minutes</td>
+                <td>4 hours</td>
+            </tr>
+            <tr>
+                <td>P2</td>
+                <td>1 hour</td>
+                <td>8 hours</td>
+            </tr>
+            <tr>
+                <td>P3</td>
+                <td>4 hours</td>
+                <td>24 hours</td>
+            </tr>
+            <tr>
+                <td>P4</td>
+                <td>Next business day</td>
+                <td>Next business day</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="highlight-box">
+        <h4>Incident Process:</h4>
+        <ol>
+            <li>Detect and acknowledge</li>
+            <li>Assess severity</li>
+            <li>Escalate if needed</li>
+            <li>Investigate and resolve</li>
+            <li>Post-mortem and documentation</li>
+        </ol>
+    </div>
+    
+    <h3>43.2 Change Management</h3>
+    
+    <div class="highlight-box">
+        <h4>Change Types:</h4>
+        <ul>
+            <li><strong>Standard:</strong> Pre-approved, low risk</li>
+            <li><strong>Normal:</strong> Requires approval, moderate risk</li>
+            <li><strong>Emergency:</strong> Urgent, requires post-approval</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Change Process:</h4>
+        <ol>
+            <li>Create change request</li>
+            <li>Risk assessment</li>
+            <li>Approval workflow</li>
+            <li>Schedule deployment</li>
+            <li>Execute and verify</li>
+            <li>Document results</li>
+        </ol>
+    </div>
+    
+    <h3>43.3 Maintenance Windows</h3>
+    
+    <div class="highlight-box">
+        <h4>Planned Maintenance:</h4>
+        <ul>
+            <li><strong>Schedule:</strong> Off-peak hours (2 AM - 4 AM local time)</li>
+            <li><strong>Frequency:</strong> Monthly maximum</li>
+            <li><strong>Duration:</strong> &lt;4 hours</li>
+            <li><strong>Notification:</strong> 7 days advance notice</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Emergency Maintenance:</h4>
+        <ul>
+            <li>As needed for critical issues</li>
+            <li>Minimal notification</li>
+            <li>Rollback plan required</li>
+        </ul>
+    </div>
+    
+    <div class="confidential">
+        Page 100 of 120 | CONFIDENTIAL
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default'
+        });
+    </script>
+</body>
+</html>
+
+
+
+

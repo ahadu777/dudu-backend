@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PART 4: USER STORIES & USER FLOWS - LMS PRD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .part-header {
+            background: linear-gradient(135deg, #1a5490 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .part-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        h2 {
+            color: #1a5490;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #1a5490;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        table th {
+            background: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        .story-card {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        
+        .story-card h3 {
+            color: #1a5490;
+            margin-top: 0;
+            border-bottom: 2px solid #1a5490;
+            padding-bottom: 10px;
+        }
+        
+        .story-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .story-meta strong {
+            color: #2c5aa0;
+        }
+        
+        .scenario-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .scenario-box strong {
+            color: #1976d2;
+        }
+        
+        .mermaid-container {
+            background: white;
+            padding: 20px;
+            margin: 30px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .confidential {
+            margin-top: 40px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #1a5490, transparent);
+            margin: 40px 0;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="part-header">
+        <h1>PART 4: USER STORIES & USER FLOWS</h1>
+        <div style="font-size: 14px; opacity: 0.9;">Page 36 of 120 | CONFIDENTIAL</div>
+    </div>
+    
+    <h2>19. Borrower User Stories</h2>
+    
+    <div class="story-card">
+        <h3>19.1 US-LMS-001: Borrower Registration with KYC/AML Verification</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Enable a prospective borrower to register and complete identity verification (KYC) and anti-money laundering (AML) screening before applying for a loan.</div>
+            <div><strong>Actors:</strong> Borrower, KYC Provider, AML Screener, Compliance Officer</div>
+            <div><strong>Priority:</strong> High</div>
+            <div><strong>Phase:</strong> Phase 1</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Borrower registration with PII capture</li>
+            <li>Automated KYC identity verification</li>
+            <li>Automated AML/watchlist screening</li>
+            <li>Status tracking (PENDING_KYC → VERIFIED | KYC_FAILED | PENDING_REVIEW)</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — Registration:</strong> Given a new user visits the registration portal, When they submit valid personal information, Then the system creates a borrower record with status PENDING_KYC and triggers automatic KYC verification
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — KYC Verification Success:</strong> Given KYC provider returns confidence score ≥ 85%, When the verification completes, Then borrower status updates to VERIFIED (pending AML) and AML screening is triggered automatically
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — KYC Verification Failure:</strong> Given KYC provider returns confidence score &lt; 70%, When the verification completes, Then borrower status updates to KYC_FAILED and borrower is notified with next steps
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario D — AML Screening Clear:</strong> Given borrower passes KYC and AML returns no matches, When screening completes, Then borrower status is VERIFIED and borrower is eligible to apply for loans
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario E — AML Watchlist Match:</strong> Given AML screening finds a potential match (PEP, OFAC, sanctions), When the match is identified, Then borrower status updates to PENDING_REVIEW and case is routed to Compliance Officer queue
+        </div>
+        
+        <h4>Mock Behavior Rules:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>SSN Pattern</th>
+                    <th>KYC Result</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>xxx-xx-0000</td>
+                    <td>FAILED</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>xxx-xx-1111</td>
+                    <td>MANUAL_REVIEW</td>
+                    <td>65</td>
+                </tr>
+                <tr>
+                    <td>All others</td>
+                    <td>VERIFIED</td>
+                    <td>85-100</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Name Pattern</th>
+                    <th>AML Result</th>
+                    <th>Risk Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Contains "BLOCKED"</td>
+                    <td>BLOCKED</td>
+                    <td>100</td>
+                </tr>
+                <tr>
+                    <td>Contains "PEP"</td>
+                    <td>POTENTIAL_MATCH</td>
+                    <td>85</td>
+                </tr>
+                <tr>
+                    <td>All others</td>
+                    <td>CLEAR</td>
+                    <td>0-20</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>Non-Functional Constraints:</h4>
+        <ul>
+            <li>Idempotency on email (unique constraint)</li>
+            <li>SSN encrypted at rest (AES-256)</li>
+            <li>Audit log for all verification attempts</li>
+            <li>P99 response time &lt; 2s for combined onboarding</li>
+        </ul>
+    </div>
+    
+    <div class="story-card">
+        <h3>19.2 US-LMS-002: Loan Application Submission</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Enable a verified borrower to submit a loan application with employment and income information, triggering a credit bureau pull for decisioning.</div>
+            <div><strong>Actors:</strong> Borrower, Credit Bureau, System</div>
+            <div><strong>Priority:</strong> High</div>
+            <div><strong>Phase:</strong> Phase 1</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Loan application submission with income/employment data</li>
+            <li>Credit bureau pull (mock)</li>
+            <li>Application status tracking</li>
+            <li>Eligibility validation (only VERIFIED borrowers)</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — Submit Application:</strong> Given borrower is VERIFIED, When borrower submits loan application with valid data, Then system creates application with status SUBMITTED and returns unique application_id
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Credit Pull Success:</strong> Given application is SUBMITTED, When system initiates credit pull, Then credit report data is retrieved and application status updates to CREDIT_PULLED
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Unverified Borrower Rejected:</strong> Given borrower status is not VERIFIED, When borrower attempts to submit application, Then system returns 403 "Borrower not eligible for application"
+        </div>
+        
+        <h4>Mock Credit Score Rules:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>SSN Last 4</th>
+                    <th>Credit Score</th>
+                    <th>Derogatories</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0001-0100</td>
+                    <td>300-549 (Poor)</td>
+                    <td>3+</td>
+                </tr>
+                <tr>
+                    <td>0101-0300</td>
+                    <td>550-649 (Fair)</td>
+                    <td>1-2</td>
+                </tr>
+                <tr>
+                    <td>0301-0600</td>
+                    <td>650-719 (Good)</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>0601-0900</td>
+                    <td>720-779 (Very Good)</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>0901-9999</td>
+                    <td>780-850 (Excellent)</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>0000</td>
+                    <td>ERROR</td>
+                    <td>-</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="story-card">
+        <h3>19.3 US-LMS-003: Automated Credit Decision Engine</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Automatically evaluate loan applications based on credit data and rules, producing APPROVE, DECLINE, or REFER decisions with appropriate next steps.</div>
+            <div><strong>Actors:</strong> Decision Engine, Credit Officer, Compliance System</div>
+            <div><strong>Priority:</strong> High</div>
+            <div><strong>Phase:</strong> Phase 1</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Automated credit decisioning based on rules</li>
+            <li>Auto-approve, auto-decline, or refer to manual review</li>
+            <li>Adverse action notice generation (FCRA-compliant)</li>
+            <li>Reason code generation</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — Auto Approve:</strong> Given credit score ≥ 700, DTI ≤ 36%, no derogatories, When decision engine evaluates application, Then outcome is APPROVED with decision_type AUTO and loan offers are generated automatically
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Auto Decline:</strong> Given credit score &lt; 550 OR active bankruptcy OR DTI > 50%, When decision engine evaluates application, Then outcome is DECLINED with decision_type AUTO and adverse action notice is triggered with reason codes
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Refer to Manual Review:</strong> Given credit score 550-699 OR DTI 36-50% OR thin credit file, When decision engine evaluates application, Then outcome is REFERRED with decision_type AUTO and application is placed in credit officer queue
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario D — Adverse Action Notice:</strong> Given application is DECLINED, When adverse action is generated, Then notice includes top 4 reason codes, credit score used and score range, credit bureau contact information, and rights disclosure (FCRA)
+        </div>
+        
+        <h4>Decision Rules:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Credit Score</th>
+                    <th>DTI</th>
+                    <th>Derogatories</th>
+                    <th>Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>≥ 700</td>
+                    <td>≤ 36%</td>
+                    <td>0</td>
+                    <td><strong>AUTO_APPROVE</strong></td>
+                </tr>
+                <tr>
+                    <td>&lt; 550</td>
+                    <td>any</td>
+                    <td>any</td>
+                    <td><strong>AUTO_DECLINE</strong></td>
+                </tr>
+                <tr>
+                    <td>any</td>
+                    <td>> 50%</td>
+                    <td>any</td>
+                    <td><strong>AUTO_DECLINE</strong></td>
+                </tr>
+                <tr>
+                    <td>any</td>
+                    <td>any</td>
+                    <td>≥ 3</td>
+                    <td><strong>AUTO_DECLINE</strong></td>
+                </tr>
+                <tr>
+                    <td>550-699</td>
+                    <td>≤ 50%</td>
+                    <td>&lt; 3</td>
+                    <td><strong>REFER_TO_REVIEW</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="story-card">
+        <h3>19.4 US-LMS-004: Loan Offers, Signing, and Disbursement</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Present approved borrowers with loan offer options, collect digital signatures on contracts, and disburse funds to their bank account.</div>
+            <div><strong>Actors:</strong> Borrower, E-Signature Provider, Disbursement System</div>
+            <div><strong>Priority:</strong> High</div>
+            <div><strong>Phase:</strong> Phase 2</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Loan offer generation (multiple term options)</li>
+            <li>Offer selection and lock-in</li>
+            <li>Digital signature collection</li>
+            <li>Fund disbursement via ACH</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — Generate Offers:</strong> Given application is APPROVED, When system generates offers, Then 3 term options are provided (36/48/60 months) and each offer shows APR, monthly payment, total interest, and offers expire in 14 days
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Select Offer:</strong> Given borrower reviews available offers, When borrower selects preferred offer, Then offer is locked in and other offers invalidated, contract generation is triggered, and status updates to OFFER_SELECTED
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Sign Documents:</strong> Given offer is selected and contracts generated, When borrower provides signature and consents, Then all documents are marked as signed, copies are sent to borrower email, and status updates to DOCUMENTS_SIGNED
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario D — Disbursement Success:</strong> Given documents are signed and bank account validated, When disbursement is initiated, Then ACH transfer is queued, loan status updates to DISBURSED → ACTIVE, and borrower is notified with expected arrival date
+        </div>
+        
+        <h4>Mock Disbursement Rules:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Routing Number</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>000000000</td>
+                    <td>FAILED (invalid)</td>
+                </tr>
+                <tr>
+                    <td>999999999</td>
+                    <td>DELAYED (3 days)</td>
+                </tr>
+                <tr>
+                    <td>All others</td>
+                    <td>SUCCESS (1 day)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="story-card">
+        <h3>19.5 US-LMS-005: Loan Servicing & Borrower Portal</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Provide borrowers with self-service access to view loan details, make payments, and request payoff quotes through an online portal.</div>
+            <div><strong>Actors:</strong> Borrower, Payment Processor, System</div>
+            <div><strong>Priority:</strong> High</div>
+            <div><strong>Phase:</strong> Phase 3</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Loan dashboard (balance, payments, schedule)</li>
+            <li>One-time payment processing</li>
+            <li>Payoff quote generation</li>
+            <li>Payment history tracking</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — View Loan Dashboard:</strong> Given borrower has an active loan, When borrower accesses loan details, Then system displays current balance, payoff amount, next payment due, recent payment history (last 3), and loan terms
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Make Payment:</strong> Given borrower wants to make a payment, When borrower submits payment with amount and bank details, Then system records payment with status PENDING, calculates principal/interest split, and returns confirmation number
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Payoff Quote:</strong> Given borrower wants to pay off loan early, When borrower requests payoff quote with future date, Then system calculates principal + accrued interest, provides per diem interest rate, and quote is valid until specified date
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario D — Loan Paid Off:</strong> Given payoff payment is received, When balance reaches zero, Then loan status changes to PAID_OFF and borrower receives satisfaction letter
+        </div>
+    </div>
+    
+    <div class="story-card">
+        <h3>19.6 US-LMS-006: Compliance & Audit Trail</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Maintain immutable audit trails for all system actions and enforce role-based access control to meet regulatory examination requirements.</div>
+            <div><strong>Actors:</strong> Compliance Officer, Security Administrator, System, Regulator</div>
+            <div><strong>Priority:</strong> High</div>
+            <div><strong>Phase:</strong> All Phases</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Immutable audit logging for all actions</li>
+            <li>Audit log query by entity</li>
+            <li>Role-based access control</li>
+            <li>Audit log immutability enforcement</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — Audit Log Creation:</strong> Given any action is taken in the system, When the action is executed, Then an audit log entry is created with timestamp, actor, action, entity, before/after values, IP address and session ID
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Audit Log Query:</strong> Given compliance officer needs to investigate an application, When officer queries audit logs by entity_type and entity_id, Then system returns chronological list of all actions on that entity with who, what, when, and changes
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Audit Log Immutability:</strong> Given an audit log entry exists, When any attempt is made to DELETE or UPDATE the entry, Then system returns 405 Method Not Allowed and the attempted modification is itself logged
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario D — Role-Based Access:</strong> Given user has role "credit_officer", When user attempts to access borrower credit reports, Then access is granted, but When user attempts to access system configuration, Then access is denied with 403 Forbidden
+        </div>
+        
+        <h4>Non-Functional Constraints:</h4>
+        <ul>
+            <li>Audit logs retained for 7 years minimum</li>
+            <li>Logs written synchronously (before response)</li>
+            <li>No DELETE or UPDATE operations on audit_logs table</li>
+            <li>Log storage separate from operational database</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>20. Guarantor User Stories</h2>
+    
+    <div class="story-card">
+        <h3>20.1 US-LMS-007: Guarantor Registration & Verification</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Enable guarantors to register, complete identity verification (KYC/AML), and be assessed for guarantee capacity when a borrower's loan application requires a guarantor.</div>
+            <div><strong>Actors:</strong> Guarantor, Borrower, Credit Officer, KYC Provider, AML Screener, Credit Bureau</div>
+            <div><strong>Priority:</strong> Medium</div>
+            <div><strong>Phase:</strong> Phase 2</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Guarantor registration with relationship to borrower</li>
+            <li>Automated KYC identity verification</li>
+            <li>Automated AML/watchlist screening</li>
+            <li>Credit report pull for financial assessment</li>
+            <li>Guarantee capacity calculation</li>
+            <li>Status tracking (PENDING_KYC → VERIFIED | KYC_FAILED | PENDING_REVIEW)</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — Guarantor Registration:</strong> Given a loan application requires a guarantor, When guarantor submits registration with valid information, Then the system creates a guarantor record linked to borrower and loan, status is set to PENDING_KYC, and automatic KYC verification is triggered
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Financial Assessment:</strong> Given guarantor passes KYC/AML and credit report is available, When financial assessment completes, Then guarantee capacity is calculated, guarantor status is VERIFIED, and guarantor is eligible to execute guarantee agreement
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Credit Report Issues:</strong> Given credit report shows significant negative factors (score &lt; 600, high debt), When financial assessment completes, Then guarantor status updates to PENDING_REVIEW and case is routed to Credit Officer queue
+        </div>
+        
+        <h4>Guarantee Capacity Rules:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Credit Score Range</th>
+                    <th>Guarantee Capacity</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>750+</td>
+                    <td>Full requested amount</td>
+                    <td>VERIFIED</td>
+                </tr>
+                <tr>
+                    <td>700-749</td>
+                    <td>Up to 80% of requested</td>
+                    <td>VERIFIED</td>
+                </tr>
+                <tr>
+                    <td>650-699</td>
+                    <td>Up to 50% of requested</td>
+                    <td>PENDING_REVIEW</td>
+                </tr>
+                <tr>
+                    <td>&lt;650</td>
+                    <td>Requires manual review</td>
+                    <td>PENDING_REVIEW</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="story-card">
+        <h3>20.2 US-LMS-008: Guarantor Portal & Guarantee Activation</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Provide guarantors with self-service access to view their guarantee obligations and enable automated guarantee activation workflow when borrower defaults.</div>
+            <div><strong>Actors:</strong> Guarantor, Borrower, Collections Agent, Payment Processor</div>
+            <div><strong>Priority:</strong> Medium</div>
+            <div><strong>Phase:</strong> Phase 3</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Guarantor portal dashboard (guarantee status, borrower loan status)</li>
+            <li>Guarantee activation workflow (automated trigger on default)</li>
+            <li>Guarantor payment processing (full/partial payment)</li>
+            <li>Guarantee status tracking</li>
+            <li>Notification system (email/SMS)</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — View Guarantor Dashboard:</strong> Given guarantor has an active guarantee, When guarantor accesses portal, Then system displays guarantee details, borrower loan status, guarantee status, and guarantee activation history
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Guarantee Activation Trigger:</strong> Given borrower loan is 90+ days past due (DPD ≥ 90), When system detects default condition, Then guarantee status updates to ACTIVATION_PENDING, guarantor is notified via email and SMS, and collections agent is assigned to case
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Guarantor Full Payment:</strong> Given guarantee is activated and guarantor is notified, When guarantor makes full payment of guarantee amount, Then payment is processed via ACH, loan balance is satisfied, guarantee status updates to ACTIVATED_CLOSED, and collections case is closed
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario D — Guarantee Not Activated (Borrower Cures):</strong> Given borrower loan becomes delinquent but cures before 90 DPD, When borrower makes payment to bring loan current, Then guarantee remains ACTIVE (not activated) and guarantor is notified that borrower has cured
+        </div>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>21. Investor User Stories</h2>
+    
+    <div class="story-card">
+        <h3>21.1 US-LMS-009: Investor Registration & Accreditation</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Enable investors to register, verify accredited investor status (SEC Rule 501), and complete onboarding to participate in marketplace lending.</div>
+            <div><strong>Actors:</strong> Investor, Compliance Officer, KYC Provider, AML Screener</div>
+            <div><strong>Priority:</strong> Medium</div>
+            <div><strong>Phase:</strong> Phase 2</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Investor registration (individual and institutional)</li>
+            <li>Accreditation documentation upload</li>
+            <li>Automated accreditation verification (income/net worth)</li>
+            <li>KYC/AML verification</li>
+            <li>Investment preference configuration</li>
+            <li>Bank account verification for funding</li>
+            <li>Status tracking (PENDING_ACCREDITATION → ACCREDITED | REJECTED)</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — Individual Investor Registration:</strong> Given a new investor visits the platform, When they submit registration with personal information, Then the system creates an investor record with status PENDING_ACCREDITATION and investor is prompted to provide accreditation documentation
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Automated Accreditation Check:</strong> Given investor has uploaded documentation, When system analyzes income/net worth data and income ≥ $200K (single) or $300K (joint) OR net worth ≥ $1M, Then accreditation status updates to ACCREDITED and investor can proceed to complete profile
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Manual Accreditation Review:</strong> Given investor documentation requires manual review, When Compliance Officer reviews documentation, Then officer can approve or reject accreditation, investor is notified of decision, and status updates to ACCREDITED or REJECTED
+        </div>
+        
+        <h4>Accreditation Rules:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Income/Net Worth</th>
+                    <th>Accreditation Status</th>
+                    <th>Auto-Approve</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Income ≥ $200K (single)</td>
+                    <td>ACCREDITED</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>Income ≥ $300K (joint)</td>
+                    <td>ACCREDITED</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>Net worth ≥ $1M</td>
+                    <td>ACCREDITED</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>Income $150K-$199K</td>
+                    <td>PENDING_REVIEW</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Net worth $500K-$999K</td>
+                    <td>PENDING_REVIEW</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Below thresholds</td>
+                    <td>REJECTED</td>
+                    <td>No</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="story-card">
+        <h3>21.2 US-LMS-010: Investor Portfolio & Loan Funding</h3>
+        
+        <div class="story-meta">
+            <div><strong>Business Goal:</strong> Enable investors to view their portfolio, fund approved loans (auto or manual), track investments, and receive returns as borrowers make payments.</div>
+            <div><strong>Actors:</strong> Investor, Borrower, System, Payment Processor</div>
+            <div><strong>Priority:</strong> Medium</div>
+            <div><strong>Phase:</strong> Phase 2</div>
+        </div>
+        
+        <h4>Scope (In):</h4>
+        <ul>
+            <li>Investor portal dashboard (portfolio view, active investments, returns)</li>
+            <li>Loan funding allocation (auto-allocation based on preferences)</li>
+            <li>Manual loan selection and funding</li>
+            <li>Return distribution (principal and interest)</li>
+            <li>Portfolio tracking (total invested, current value, returns)</li>
+            <li>Investment history and statements</li>
+        </ul>
+        
+        <h4>Acceptance Scenarios:</h4>
+        
+        <div class="scenario-box">
+            <strong>Scenario A — View Investor Portfolio:</strong> Given investor has funded loans, When investor accesses portal dashboard, Then system displays total invested amount, current portfolio value, total returns, all active investments with loan details, and investment performance metrics
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario B — Auto-Allocation to Loan:</strong> Given a loan is approved and ready for funding and investor has auto-allocation enabled with matching preferences, When system allocates investments, Then investor capital is allocated proportionally, investment record is created, funds are debited from investor account, and investor is notified of new investment
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario C — Return Distribution:</strong> Given borrower makes a payment on an active loan, When payment is processed, Then principal and interest portions are distributed to investors proportionally, ACH credit is initiated to investor returns account, investment balance is reduced, portfolio value is updated, and investor is notified of return
+        </div>
+        
+        <div class="scenario-box">
+            <strong>Scenario D — Loan Default Impact:</strong> Given a loan in investor's portfolio becomes delinquent/defaulted, When default is processed, Then investment status updates to DEFAULTED, portfolio value reflects loss, and investor is notified of default
+        </div>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>22. End-to-End User Flows</h2>
+    
+    <h3>22.1 Complete Loan Application Flow</h3>
+    <div class="mermaid-container">
+        <div class="mermaid">
+flowchart TD
+    START([Borrower Registration<br/>US-LMS-001])
+    KYC_AML[KYC/AML Verification]
+    KYC_CHECK{KYC/AML<br/>Result}
+    PASS[Pass]
+    FAIL[Fail]
+    MANUAL_REV[Manual Review]
+    RESOLVE[Resolve or Reject]
+    APP_SUBMIT[Loan Application<br/>Submission<br/>US-LMS-002]
+    CREDIT_PULL[Credit Bureau Pull]
+    AUTO_DECISION[Automated Credit<br/>Decision<br/>US-LMS-003]
+    DECISION_CHECK{Decision<br/>Result}
+    AUTO_APPROVE[Auto-Approve]
+    AUTO_DECLINE[Auto-Decline]
+    REFER[Refer]
+    MANUAL_REVIEW2[Manual Review]
+    APPROVE[Approve]
+    REQUEST_DOCS[Request Docs]
+    DECLINE2[Decline]
+    ADVERSE[Adverse Action<br/>Notice]
+    END1([END])
+    OFFERS[Loan Offers<br/>& Signing<br/>US-LMS-004]
+    DISBURSE[Disbursement]
+    SERVICING[Loan Active<br/>→ Servicing<br/>US-LMS-005]
+    
+    START --> KYC_AML
+    KYC_AML --> KYC_CHECK
+    KYC_CHECK -->|Pass| PASS
+    KYC_CHECK -->|Fail| FAIL
+    FAIL --> MANUAL_REV
+    MANUAL_REV --> RESOLVE
+    RESOLVE --> END1
+    PASS --> APP_SUBMIT
+    APP_SUBMIT --> CREDIT_PULL
+    CREDIT_PULL --> AUTO_DECISION
+    AUTO_DECISION --> DECISION_CHECK
+    DECISION_CHECK -->|Auto-Approve| AUTO_APPROVE
+    DECISION_CHECK -->|Auto-Decline| AUTO_DECLINE
+    DECISION_CHECK -->|Refer| REFER
+    AUTO_DECLINE --> ADVERSE
+    ADVERSE --> END1
+    REFER --> MANUAL_REVIEW2
+    MANUAL_REVIEW2 --> APPROVE
+    MANUAL_REVIEW2 --> REQUEST_DOCS
+    MANUAL_REVIEW2 --> DECLINE2
+    REQUEST_DOCS --> END1
+    DECLINE2 --> ADVERSE
+    AUTO_APPROVE --> OFFERS
+    APPROVE --> OFFERS
+    OFFERS --> DISBURSE
+    DISBURSE --> SERVICING
+    
+    style START fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
+    style END1 fill:#ffebee,stroke:#f44336,stroke-width:3px
+    style SERVICING fill:#e3f2fd,stroke:#2196f3,stroke-width:3px
+    style KYC_CHECK fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style DECISION_CHECK fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+        </div>
+    </div>
+    
+    <h3>22.2 Guarantor Flow</h3>
+    <div class="mermaid-container">
+        <div class="mermaid">
+flowchart TD
+    LOAN_REQ[Loan Application<br/>Requires Guarantor]
+    GUAR_REG[Guarantor Registration<br/>US-LMS-007]
+    GUAR_KYC[Guarantor KYC/AML<br/>& Financial Assessment]
+    GUAR_AGREE[Guarantee Agreement<br/>Execution]
+    LOAN_PROCEED[Loan Proceeds<br/>if borrower approved]
+    GUAR_PORTAL[Guarantor Portal<br/>Access<br/>US-LMS-008]
+    MONITOR[Monitor Loan Status]
+    LOAN_STATUS{Loan<br/>Status}
+    PERFORMING[Loan Performing]
+    NO_ACTION[No Action]
+    DEFAULT[Loan Defaults<br/>DPD ≥ 90]
+    GUAR_ACTIVATE[Guarantee Activation]
+    GUAR_PAY[Guarantor Payment]
+    LOAN_SATISFIED[Loan Satisfied]
+    
+    LOAN_REQ --> GUAR_REG
+    GUAR_REG --> GUAR_KYC
+    GUAR_KYC --> GUAR_AGREE
+    GUAR_AGREE --> LOAN_PROCEED
+    LOAN_PROCEED --> GUAR_PORTAL
+    GUAR_PORTAL --> MONITOR
+    MONITOR --> LOAN_STATUS
+    LOAN_STATUS -->|Performing| PERFORMING
+    LOAN_STATUS -->|Default| DEFAULT
+    PERFORMING --> NO_ACTION
+    DEFAULT --> GUAR_ACTIVATE
+    GUAR_ACTIVATE --> GUAR_PAY
+    GUAR_PAY --> LOAN_SATISFIED
+    
+    style LOAN_REQ fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style LOAN_SATISFIED fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
+    style DEFAULT fill:#ffebee,stroke:#f44336,stroke-width:2px
+        </div>
+    </div>
+    
+    <h3>22.3 Investor Flow</h3>
+    <div class="mermaid-container">
+        <div class="mermaid">
+flowchart TD
+    INV_REG[Investor Registration<br/>US-LMS-009]
+    ACCREDIT[Accreditation<br/>Verification]
+    PREF_CONFIG[Investment Preference<br/>Configuration]
+    LOAN_FUND[Loan Funding<br/>US-LMS-010]
+    ALLOC_TYPE{Allocation<br/>Type}
+    AUTO_ALLOC[Auto-Allocation<br/>if enabled]
+    MANUAL_SEL[Manual Selection]
+    LOAN_ACTIVE[Loan Active<br/>→ Monitor Portfolio]
+    BORROWER_PAY[Borrower Makes<br/>Payments]
+    RETURNS[Returns<br/>Distributed]
+    LOAN_PAID[Loan Paid Off]
+    FINAL_RETURNS[Final Returns]
+    INVEST_CLOSED[Investment Closed]
+    
+    INV_REG --> ACCREDIT
+    ACCREDIT --> PREF_CONFIG
+    PREF_CONFIG --> LOAN_FUND
+    LOAN_FUND --> ALLOC_TYPE
+    ALLOC_TYPE -->|Auto| AUTO_ALLOC
+    ALLOC_TYPE -->|Manual| MANUAL_SEL
+    AUTO_ALLOC --> LOAN_ACTIVE
+    MANUAL_SEL --> LOAN_ACTIVE
+    LOAN_ACTIVE --> BORROWER_PAY
+    BORROWER_PAY --> RETURNS
+    RETURNS --> LOAN_PAID
+    LOAN_PAID --> FINAL_RETURNS
+    FINAL_RETURNS --> INVEST_CLOSED
+    
+    style INV_REG fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style INVEST_CLOSED fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
+    style ALLOC_TYPE fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+        </div>
+    </div>
+    
+    <div class="confidential">
+        Page 55 of 120 | CONFIDENTIAL
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+

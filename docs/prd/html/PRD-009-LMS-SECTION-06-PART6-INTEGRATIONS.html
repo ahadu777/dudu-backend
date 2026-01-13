@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PART 6: INTEGRATION REQUIREMENTS - LMS PRD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .part-header {
+            background: linear-gradient(135deg, #1a5490 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .part-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        h2 {
+            color: #1a5490;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #1a5490;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        table th {
+            background: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .code-block {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .confidential {
+            margin-top: 40px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #1a5490, transparent);
+            margin: 40px 0;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="part-header">
+        <h1>PART 6: INTEGRATION REQUIREMENTS</h1>
+        <div style="font-size: 14px; opacity: 0.9;">Page 71 of 120 | CONFIDENTIAL</div>
+    </div>
+    
+    <h2>27. External Integrations</h2>
+    
+    <h3>27.1 Critical Integrations</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Integration</th>
+                <th>Provider(s)</th>
+                <th>Purpose</th>
+                <th>Priority</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Credit Bureaus</strong></td>
+                <td>Experian, Equifax, TransUnion</td>
+                <td>Credit reports, scores</td>
+                <td>Critical</td>
+                <td>☐ Pending</td>
+            </tr>
+            <tr>
+                <td><strong>Identity Verification</strong></td>
+                <td>Jumio, Onfido, Socure</td>
+                <td>KYC, document verification</td>
+                <td>Critical</td>
+                <td>☐ Pending</td>
+            </tr>
+            <tr>
+                <td><strong>Watchlist Screening</strong></td>
+                <td>LexisNexis, World-Check</td>
+                <td>OFAC, PEP, sanctions</td>
+                <td>Critical</td>
+                <td>☐ Pending</td>
+            </tr>
+            <tr>
+                <td><strong>Payment Processing</strong></td>
+                <td>Plaid, Dwolla, Stripe</td>
+                <td>ACH, card payments</td>
+                <td>Critical</td>
+                <td>☐ Pending</td>
+            </tr>
+            <tr>
+                <td><strong>E-Signature</strong></td>
+                <td>DocuSign, HelloSign</td>
+                <td>Contract execution</td>
+                <td>High</td>
+                <td>☐ Pending</td>
+            </tr>
+            <tr>
+                <td><strong>Document Storage</strong></td>
+                <td>AWS S3, Azure Blob</td>
+                <td>Secure document storage</td>
+                <td>High</td>
+                <td>☐ Pending</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>27.2 High Priority Integrations</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Integration</th>
+                <th>Provider(s)</th>
+                <th>Purpose</th>
+                <th>Priority</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Core Banking</strong></td>
+                <td>FIS, Jack Henry, Temenos</td>
+                <td>GL posting, account sync</td>
+                <td>High</td>
+                <td>☐ Pending</td>
+            </tr>
+            <tr>
+                <td><strong>Communication</strong></td>
+                <td>Twilio, SendGrid, Lob</td>
+                <td>SMS, email, mail</td>
+                <td>High</td>
+                <td>☐ Pending</td>
+            </tr>
+            <tr>
+                <td><strong>Skip Tracing</strong></td>
+                <td>LexisNexis, TLO</td>
+                <td>Locate borrower contact</td>
+                <td>Medium</td>
+                <td>☐ Pending</td>
+            </tr>
+            <tr>
+                <td><strong>Analytics</strong></td>
+                <td>Snowflake, Looker</td>
+                <td>Reporting, BI</td>
+                <td>Medium</td>
+                <td>☐ Pending</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>27.3 Integration Specifications</h3>
+    
+    <div class="highlight-box">
+        <h4>Credit Bureau Integration:</h4>
+        <ul>
+            <li><strong>API Type:</strong> REST</li>
+            <li><strong>Authentication:</strong> API Key + OAuth 2.0</li>
+            <li><strong>Rate Limits:</strong> Per bureau SLA</li>
+            <li><strong>Data Format:</strong> JSON</li>
+            <li><strong>Error Handling:</strong> Retry with exponential backoff</li>
+            <li><strong>Fallback:</strong> Support multiple bureaus, failover logic</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Identity Verification Integration:</h4>
+        <ul>
+            <li><strong>API Type:</strong> REST</li>
+            <li><strong>Authentication:</strong> API Key</li>
+            <li><strong>Supported Documents:</strong> Driver's license, passport, state ID</li>
+            <li><strong>Response Time:</strong> &lt;5 seconds</li>
+            <li><strong>Fallback:</strong> Manual review queue</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Payment Processing Integration:</h4>
+        <ul>
+            <li><strong>API Type:</strong> REST</li>
+            <li><strong>Authentication:</strong> OAuth 2.0</li>
+            <li><strong>Supported Methods:</strong> ACH, wire transfers</li>
+            <li><strong>Settlement Time:</strong> Same-day ACH, next-day wire</li>
+            <li><strong>Error Handling:</strong> Comprehensive error codes and retry logic</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>E-Signature Integration:</h4>
+        <ul>
+            <li><strong>API Type:</strong> REST</li>
+            <li><strong>Authentication:</strong> OAuth 2.0</li>
+            <li><strong>Supported Formats:</strong> PDF</li>
+            <li><strong>Workflow:</strong> Template → Send → Sign → Retrieve</li>
+            <li><strong>Compliance:</strong> ESIGN Act compliant</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>28. Internal Dependencies</h2>
+    
+    <h3>28.1 Service Dependencies</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Dependency</th>
+                <th>Description</th>
+                <th>Impact</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Authentication Service</strong></td>
+                <td>SSO, MFA</td>
+                <td>All user access</td>
+            </tr>
+            <tr>
+                <td><strong>Notification Service</strong></td>
+                <td>Event-driven messaging</td>
+                <td>Communication automation</td>
+            </tr>
+            <tr>
+                <td><strong>Document Service</strong></td>
+                <td>Generation, storage, retrieval</td>
+                <td>Contract management</td>
+            </tr>
+            <tr>
+                <td><strong>Reporting Service</strong></td>
+                <td>Data aggregation, export</td>
+                <td>Regulatory reporting</td>
+            </tr>
+            <tr>
+                <td><strong>Audit Service</strong></td>
+                <td>Immutable logging</td>
+                <td>Compliance and audit trail</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>28.2 Module Dependencies</h3>
+    
+    <div class="code-block">
+PRD-009-1 (Origination) 
+  ↓
+PRD-009-2 (Decision)
+  ↓
+PRD-009-3 (Fulfillment)
+  ↓
+PRD-009-4 (Servicing)
+  ↓
+PRD-009-5 (Collections)
+
+PRD-009-9 (Compliance) ← All modules depend on this
+PRD-009-8 (Communication) ← Depends on all modules
+PRD-009-7 (Reporting) ← Depends on all modules
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>29. API Specifications</h2>
+    
+    <h3>29.1 API Design Principles</h3>
+    <ul>
+        <li><strong>RESTful Design:</strong> Follow REST conventions</li>
+        <li><strong>Versioning:</strong> URL-based versioning (v1, v2)</li>
+        <li><strong>Authentication:</strong> OAuth 2.0 with JWT</li>
+        <li><strong>Rate Limiting:</strong> Per API key, per endpoint</li>
+        <li><strong>Error Handling:</strong> Consistent error format</li>
+        <li><strong>Documentation:</strong> OpenAPI/Swagger specification</li>
+    </ul>
+    
+    <h3>29.2 Core API Endpoints</h3>
+    
+    <h4>Borrower APIs:</h4>
+    <ul>
+        <li><code>POST /api/v1/borrowers</code> - Register borrower</li>
+        <li><code>GET /api/v1/borrowers/{id}</code> - Get borrower details</li>
+        <li><code>POST /api/v1/borrowers/{id}/applications</code> - Submit application</li>
+        <li><code>GET /api/v1/applications/{id}</code> - Get application status</li>
+        <li><code>GET /api/v1/loans/{id}</code> - Get loan details</li>
+        <li><code>POST /api/v1/loans/{id}/payments</code> - Make payment</li>
+        <li><code>GET /api/v1/loans/{id}/payoff-quote</code> - Get payoff quote</li>
+    </ul>
+    
+    <h4>Credit Officer APIs:</h4>
+    <ul>
+        <li><code>GET /api/v1/review-queue</code> - Get review queue</li>
+        <li><code>POST /api/v1/applications/{id}/decision</code> - Make decision</li>
+        <li><code>GET /api/v1/applications/{id}/credit-report</code> - View credit report</li>
+    </ul>
+    
+    <h4>Admin APIs:</h4>
+    <ul>
+        <li><code>GET /api/v1/audit-logs</code> - Query audit logs</li>
+        <li><code>POST /api/v1/products</code> - Create product</li>
+        <li><code>GET /api/v1/reports/{type}</code> - Generate report</li>
+    </ul>
+    
+    <h3>29.3 API Response Format</h3>
+    
+    <h4>Success Response:</h4>
+    <div class="code-block">
+{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "timestamp": "2025-01-15T10:00:00Z",
+    "request_id": "req_123456"
+  }
+}
+    </div>
+    
+    <h4>Error Response:</h4>
+    <div class="code-block">
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input data",
+    "details": [ ... ]
+  },
+  "meta": {
+    "timestamp": "2025-01-15T10:00:00Z",
+    "request_id": "req_123456"
+  }
+}
+    </div>
+    
+    <h3>29.4 Rate Limiting</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Endpoint Type</th>
+                <th>Rate Limit</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Authentication</td>
+                <td>5 requests/minute</td>
+            </tr>
+            <tr>
+                <td>Application Submission</td>
+                <td>10 requests/hour</td>
+            </tr>
+            <tr>
+                <td>Payment Processing</td>
+                <td>20 requests/hour</td>
+            </tr>
+            <tr>
+                <td>Data Retrieval</td>
+                <td>100 requests/minute</td>
+            </tr>
+            <tr>
+                <td>Report Generation</td>
+                <td>10 requests/hour</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="confidential">
+        Page 80 of 120 | CONFIDENTIAL
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default'
+        });
+    </script>
+</body>
+</html>
+
+
+
+
