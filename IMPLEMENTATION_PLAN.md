@@ -23,6 +23,7 @@
 > **Note**: `/validators/sessions` deprecated. Use operator JWT auth instead.
 ```
 
+
 ### **Team B - Tickets (Parallel)**
 ```
 4. qr-token ⚡ (15 min)
