@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PART 2: TECHNICAL SPECIFICATION - LMS PRD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .part-header {
+            background: linear-gradient(135deg, #1a5490 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .part-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        h2 {
+            color: #1a5490;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #1a5490;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        table th {
+            background: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .mermaid-container {
+            background: white;
+            padding: 20px;
+            margin: 30px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .confidential {
+            margin-top: 40px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #1a5490, transparent);
+            margin: 40px 0;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="part-header">
+        <h1>PART 2: TECHNICAL SPECIFICATION</h1>
+        <div style="font-size: 14px; opacity: 0.9;">Page 8 of 120 | CONFIDENTIAL</div>
+    </div>
+    
+    <h2>5. Technical Architecture</h2>
+    
+    <h3>5.1 System Architecture (Logical View)</h3>
+    
+    <div class="mermaid-container">
+        <div class="mermaid">
+graph TB
+    subgraph PL["PRESENTATION LAYER"]
+        BP["Borrower Portal<br/>(Web/Mobile)"]
+        OP["Operator Portal<br/>(Web/Mobile)"]
+        AC["Admin Console<br/>(Web)"]
+        AG["API Gateway<br/>(REST/GraphQL)"]
+    end
+    
+    subgraph APIG["API GATEWAY LAYER"]
+        RL["Rate Limiting"]
+        OA["OAuth 2.0"]
+        AR["API Routing"]
+        RQ["Request Logging"]
+    end
+    
+    subgraph SL["SERVICE LAYER"]
+        OS["Origination Service"]
+        DE["Decision Engine"]
+        CM["Credit Management"]
+        CS["Collections Service"]
+        KS["KYC/AML Service"]
+        SS["Servicing Service"]
+        COS["Communication Service"]
+        RS["Reporting Service"]
+    end
+    
+    subgraph IL["INTEGRATION LAYER"]
+        CB["Credit Bureaus<br/>(Experian, Equifax, TU)"]
+        IV["Identity Verification<br/>(Jumio, etc.)"]
+        PP["Payment Processors<br/>(ACH, Wire)"]
+        CORE["Core Banking<br/>(FIS, etc.)"]
+        DS["Document Storage<br/>(S3, etc.)"]
+    end
+    
+    subgraph DL["DATA LAYER"]
+        PDB["Primary DB<br/>(PostgreSQL)"]
+        ALDB["Audit Log DB<br/>(Immutable Log)"]
+        DOCS["Document Store<br/>(S3/Blob)"]
+        DW["Analytics DW<br/>(Snowflake)"]
+        CACHE["Cache Layer<br/>(Redis)"]
+        MQ["Message Queue<br/>(Kafka/SQS)"]
+        SI["Search Index<br/>(Elasticsearch)"]
+        SM["Secrets Mgmt<br/>(Vault)"]
+    end
+    
+    BP --> APIG
+    OP --> APIG
+    AC --> APIG
+    AG --> APIG
+    
+    APIG --> RL
+    APIG --> OA
+    APIG --> AR
+    APIG --> RQ
+    
+    RL --> SL
+    OA --> SL
+    AR --> SL
+    RQ --> SL
+    
+    OS --> IL
+    DE --> IL
+    CM --> IL
+    CS --> IL
+    KS --> IL
+    SS --> IL
+    COS --> IL
+    RS --> IL
+    
+    IL --> CB
+    IL --> IV
+    IL --> PP
+    IL --> CORE
+    IL --> DS
+    
+    CB --> DL
+    IV --> DL
+    PP --> DL
+    CORE --> DL
+    DS --> DL
+    
+    DL --> PDB
+    DL --> ALDB
+    DL --> DOCS
+    DL --> DW
+    DL --> CACHE
+    DL --> MQ
+    DL --> SI
+    DL --> SM
+    
+    style PL fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style APIG fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style SL fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style IL fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style DL fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+        </div>
+    </div>
+    
+    <h3>5.2 Technology Stack</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Layer</th>
+                <th>Technology</th>
+                <th>Version</th>
+                <th>Purpose</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Runtime</strong></td>
+                <td>Node.js</td>
+                <td>18.x LTS</td>
+                <td>Application runtime</td>
+            </tr>
+            <tr>
+                <td><strong>Framework</strong></td>
+                <td>Express.js</td>
+                <td>4.x</td>
+                <td>Web framework</td>
+            </tr>
+            <tr>
+                <td><strong>Language</strong></td>
+                <td>TypeScript</td>
+                <td>5.x</td>
+                <td>Type-safe development</td>
+            </tr>
+            <tr>
+                <td><strong>Database</strong></td>
+                <td>PostgreSQL</td>
+                <td>14+</td>
+                <td>Primary data store</td>
+            </tr>
+            <tr>
+                <td><strong>Cache</strong></td>
+                <td>Redis</td>
+                <td>7.x</td>
+                <td>Caching and sessions</td>
+            </tr>
+            <tr>
+                <td><strong>Message Queue</strong></td>
+                <td>Kafka / AWS SQS</td>
+                <td>Latest</td>
+                <td>Event-driven architecture</td>
+            </tr>
+            <tr>
+                <td><strong>Search</strong></td>
+                <td>Elasticsearch</td>
+                <td>8.x</td>
+                <td>Full-text search</td>
+            </tr>
+            <tr>
+                <td><strong>Object Storage</strong></td>
+                <td>AWS S3 / Azure Blob</td>
+                <td>Latest</td>
+                <td>Document storage</td>
+            </tr>
+            <tr>
+                <td><strong>API Gateway</strong></td>
+                <td>AWS API Gateway / Kong</td>
+                <td>Latest</td>
+                <td>API management</td>
+            </tr>
+            <tr>
+                <td><strong>Authentication</strong></td>
+                <td>OAuth 2.0 / JWT</td>
+                <td>Latest</td>
+                <td>Authentication & authorization</td>
+            </tr>
+            <tr>
+                <td><strong>Monitoring</strong></td>
+                <td>Prometheus + Grafana</td>
+                <td>Latest</td>
+                <td>Metrics and monitoring</td>
+            </tr>
+            <tr>
+                <td><strong>Logging</strong></td>
+                <td>ELK Stack / CloudWatch</td>
+                <td>Latest</td>
+                <td>Centralized logging</td>
+            </tr>
+            <tr>
+                <td><strong>Container</strong></td>
+                <td>Docker</td>
+                <td>Latest</td>
+                <td>Containerization</td>
+            </tr>
+            <tr>
+                <td><strong>Orchestration</strong></td>
+                <td>Kubernetes / ECS</td>
+                <td>Latest</td>
+                <td>Container orchestration</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>5.3 Database Architecture</h3>
+    
+    <div class="highlight-box">
+        <h4>Primary Database (PostgreSQL):</h4>
+        <ul>
+            <li>Transactional data: Borrowers, Applications, Loans, Payments</li>
+            <li>Reference data: Products, Rules, Configurations</li>
+            <li>Audit logs: Immutable audit trail (separate schema)</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Cache Layer (Redis):</h4>
+        <ul>
+            <li>Session management</li>
+            <li>Rate limiting</li>
+            <li>Frequently accessed data (credit scores, product configs)</li>
+            <li>Queue management</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Document Store (S3/Blob):</h4>
+        <ul>
+            <li>Uploaded documents (KYC, contracts, statements)</li>
+            <li>Generated documents (contracts, disclosures, reports)</li>
+            <li>Encrypted at rest with versioning</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Analytics Data Warehouse (Snowflake/BigQuery):</h4>
+        <ul>
+            <li>Aggregated reporting data</li>
+            <li>Historical trends</li>
+            <li>Regulatory reporting</li>
+            <li>Business intelligence</li>
+        </ul>
+    </div>
+    
+    <h3>5.4 API Architecture</h3>
+    
+    <div class="highlight-box">
+        <h4>RESTful APIs:</h4>
+        <ul>
+            <li>REST endpoints for all CRUD operations</li>
+            <li>OpenAPI/Swagger documentation</li>
+            <li>Versioned APIs (v1, v2)</li>
+            <li>Rate limiting and throttling</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>GraphQL (Optional):</h4>
+        <ul>
+            <li>Flexible queries for complex data fetching</li>
+            <li>Real-time subscriptions for status updates</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Event-Driven Architecture:</h4>
+        <ul>
+            <li>Kafka/SQS for asynchronous processing</li>
+            <li>Event sourcing for audit trail</li>
+            <li>Pub/sub for notifications</li>
+        </ul>
+    </div>
+    
+    <h3>5.5 Security Architecture</h3>
+    
+    <div class="highlight-box">
+        <h4>Authentication:</h4>
+        <ul>
+            <li>OAuth 2.0 with PKCE</li>
+            <li>JWT tokens with short expiration</li>
+            <li>Multi-factor authentication (MFA) required</li>
+            <li>Session management with Redis</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Authorization:</h4>
+        <ul>
+            <li>Role-Based Access Control (RBAC)</li>
+            <li>Attribute-Based Access Control (ABAC)</li>
+            <li>Fine-grained permissions</li>
+            <li>Segregation of duties enforcement</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Encryption:</h4>
+        <ul>
+            <li>TLS 1.3 for data in transit</li>
+            <li>AES-256 for data at rest</li>
+            <li>Key management via HSM/Vault</li>
+            <li>PII tokenization</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Network Security:</h4>
+        <ul>
+            <li>VPC isolation</li>
+            <li>Private subnets for databases</li>
+            <li>WAF for API protection</li>
+            <li>DDoS protection</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>6. Technology Stack Details</h2>
+    
+    <h3>6.1 Core Application Stack</h3>
+    
+    <div class="highlight-box">
+        <h4>Backend Framework:</h4>
+        <ul>
+            <li>Express.js with TypeScript</li>
+            <li>Modular service architecture</li>
+            <li>Dependency injection</li>
+            <li>Middleware-based request processing</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Database:</h4>
+        <ul>
+            <li>PostgreSQL 14+ for transactional data</li>
+            <li>Connection pooling (PgBouncer)</li>
+            <li>Read replicas for scaling</li>
+            <li>Automated backups and point-in-time recovery</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Caching:</h4>
+        <ul>
+            <li>Redis for session storage</li>
+            <li>Redis for rate limiting</li>
+            <li>Redis for frequently accessed data</li>
+            <li>Cache invalidation strategies</li>
+        </ul>
+    </div>
+    
+    <h3>6.2 Integration Stack</h3>
+    
+    <div class="highlight-box">
+        <h4>Credit Bureaus:</h4>
+        <ul>
+            <li>Experian API integration</li>
+            <li>Equifax API integration</li>
+            <li>TransUnion API integration</li>
+            <li>Fallback and retry logic</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Identity Verification:</h4>
+        <ul>
+            <li>Jumio for KYC verification</li>
+            <li>Onfido for document verification</li>
+            <li>Socure for identity scoring</li>
+            <li>Fallback to manual review</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Payment Processing:</h4>
+        <ul>
+            <li>Plaid for ACH initiation</li>
+            <li>Dwolla for payment processing</li>
+            <li>Stripe for card payments (optional)</li>
+            <li>Bank account verification</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>E-Signature:</h4>
+        <ul>
+            <li>DocuSign API integration</li>
+            <li>HelloSign as alternative</li>
+            <li>Contract generation and tracking</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Communication:</h4>
+        <ul>
+            <li>Twilio for SMS</li>
+            <li>SendGrid for email</li>
+            <li>Lob for physical mail</li>
+            <li>Template management</li>
+        </ul>
+    </div>
+    
+    <h3>6.3 Infrastructure Stack</h3>
+    
+    <div class="highlight-box">
+        <h4>Cloud Provider: AWS / Azure / GCP</h4>
+        <ul>
+            <li>Multi-region deployment</li>
+            <li>Auto-scaling groups</li>
+            <li>Load balancers</li>
+            <li>CDN for static assets</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Containerization:</h4>
+        <ul>
+            <li>Docker for container images</li>
+            <li>Kubernetes for orchestration (or ECS/Fargate)</li>
+            <li>Container registry (ECR/ACR/GCR)</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>CI/CD:</h4>
+        <ul>
+            <li>GitHub Actions / GitLab CI / Jenkins</li>
+            <li>Automated testing</li>
+            <li>Staged deployments (dev → staging → prod)</li>
+            <li>Blue-green deployments</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Monitoring:</h4>
+        <ul>
+            <li>Prometheus for metrics</li>
+            <li>Grafana for dashboards</li>
+            <li>ELK Stack for logs</li>
+            <li>PagerDuty for alerts</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>7. System Architecture Patterns</h2>
+    
+    <h3>7.1 Microservices Architecture</h3>
+    
+    <div class="mermaid-container">
+        <div class="mermaid">
+graph LR
+    subgraph Services["Microservices"]
+        OS["Origination<br/>Service"]
+        DS["Decision<br/>Service"]
+        FS["Fulfillment<br/>Service"]
+        SS["Servicing<br/>Service"]
+        CS["Collections<br/>Service"]
+        RS["Reporting<br/>Service"]
+        COMS["Communication<br/>Service"]
+        COMP["Compliance<br/>Service"]
+    end
+    
+    subgraph Comm["Communication"]
+        REST["REST APIs<br/>(Synchronous)"]
+        MQ["Message Queues<br/>(Asynchronous)"]
+        EVT["Event-Driven<br/>(Pub/Sub)"]
+    end
+    
+    subgraph GW["API Gateway"]
+        EXT["External Access"]
+    end
+    
+    Services --> Comm
+    Comm --> GW
+    GW --> EXT
+    
+    style Services fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Comm fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style GW fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+        </div>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Service Boundaries:</h4>
+        <ul>
+            <li>Origination Service (applications, KYC)</li>
+            <li>Decision Service (credit decisioning)</li>
+            <li>Fulfillment Service (offers, contracts, disbursement)</li>
+            <li>Servicing Service (payments, borrower portal)</li>
+            <li>Collections Service (delinquency, recovery)</li>
+            <li>Reporting Service (analytics, regulatory reports)</li>
+            <li>Communication Service (notifications, templates)</li>
+            <li>Compliance Service (audit, RBAC)</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Service Communication:</h4>
+        <ul>
+            <li>REST APIs for synchronous calls</li>
+            <li>Message queues for asynchronous processing</li>
+            <li>Event-driven architecture for decoupling</li>
+            <li>API Gateway for external access</li>
+        </ul>
+    </div>
+    
+    <h3>7.2 Data Consistency Patterns</h3>
+    
+    <div class="highlight-box">
+        <h4>ACID Transactions:</h4>
+        <ul>
+            <li>Financial transactions (payments, disbursements)</li>
+            <li>Loan state changes</li>
+            <li>Critical data updates</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Eventual Consistency:</h4>
+        <ul>
+            <li>Reporting data aggregation</li>
+            <li>Analytics data warehouse</li>
+            <li>Search index updates</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Saga Pattern:</h4>
+        <ul>
+            <li>Multi-step workflows (application → decision → fulfillment)</li>
+            <li>Compensation logic for rollbacks</li>
+            <li>Idempotency for retries</li>
+        </ul>
+    </div>
+    
+    <h3>7.3 Scalability Patterns</h3>
+    
+    <div class="highlight-box">
+        <h4>Horizontal Scaling:</h4>
+        <ul>
+            <li>Stateless application services</li>
+            <li>Auto-scaling based on load</li>
+            <li>Load balancing across instances</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Database Scaling:</h4>
+        <ul>
+            <li>Read replicas for read-heavy workloads</li>
+            <li>Sharding for very large datasets</li>
+            <li>Connection pooling</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>Caching Strategy:</h4>
+        <ul>
+            <li>Multi-level caching (application, CDN)</li>
+            <li>Cache warming for critical data</li>
+            <li>Cache invalidation on updates</li>
+        </ul>
+    </div>
+    
+    <div class="confidential">
+        Page 15 of 120 | CONFIDENTIAL
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
+

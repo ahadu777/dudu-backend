@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PART 1: PROJECT FOUNDATION - LMS PRD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .part-header {
+            background: linear-gradient(135deg, #1a5490 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .part-header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .page-number {
+            position: fixed;
+            bottom: 20px;
+            right: 40px;
+            font-size: 12px;
+            color: #888;
+            background: white;
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+        }
+        
+        h2 {
+            color: #1a5490;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #1a5490;
+        }
+        
+        h3 {
+            color: #2c5aa0;
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+        }
+        
+        table th {
+            background: #1a5490;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        
+        table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .persona-card {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .persona-card h4 {
+            color: #1a5490;
+            margin-top: 0;
+        }
+        
+        .persona-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .persona-details strong {
+            color: #2c5aa0;
+        }
+        
+        .confidential {
+            margin-top: 40px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #1a5490, transparent);
+            margin: 40px 0;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="part-header">
+        <h1>PART 1: PROJECT FOUNDATION</h1>
+        <div style="font-size: 14px; opacity: 0.9;">Page 3 of 120 | CONFIDENTIAL</div>
+    </div>
+    
+    <h2>1. Executive Summary</h2>
+    
+    <h3>1.1 Document Purpose</h3>
+    <p>This Product Requirements Document (PRD) provides the complete specification for building a production-ready Enterprise Loan Management System (LMS). This document is intended to be the single source of truth for all stakeholders including developers, designers, QA engineers, project managers, compliance officers, and business owners.</p>
+    <p>Version 1.0 consolidates all LMS-related PRDs (PRD-009-1 through PRD-009-11) and user stories (US-LMS-001 through US-LMS-010) into a unified, comprehensive specification.</p>
+    
+    <h3>1.2 Project Vision</h3>
+    <p>The Loan Management System (LMS) is an enterprise-grade, modular platform designed to manage <strong>Mortgage</strong>, <strong>Personal</strong>, and <strong>Business</strong> loan products across their full lifecycle. The system unifies a <strong>customer-facing digital portal</strong> with a <strong>secure administrative backend</strong>, enabling lenders to operate efficiently while maintaining transparency, compliance, and scalability.</p>
+    
+    <div class="highlight-box">
+        <strong>At its core, the LMS is built to:</strong>
+        <ul style="margin-top: 10px;">
+            <li>Digitize the lending journey end-to-end</li>
+            <li>Support multi-party financial relationships (Borrowers, Guarantors, Investors)</li>
+            <li>Automate repayment reconciliation using <strong>Virtual Accounts (VA)</strong></li>
+            <li>Provide real-time operational and financial visibility</li>
+        </ul>
+    </div>
+    
+    <h3>1.3 Problem Statement</h3>
+    <p>Regulated financial institutions require a comprehensive, auditable, and scalable loan management platform that handles the complete loan lifecycle—from application intake through servicing and collections—while maintaining strict compliance with banking regulations (FCRA, ECOA, TILA, RESPA) and data protection standards (GDPR, SOC2, ISO27001).</p>
+    
+    <h3>1.4 Solution Overview</h3>
+    <p>Enterprise-grade, multi-tenant Loan Management System (LMS) providing end-to-end loan lifecycle management including:</p>
+    <ul>
+        <li>Digital origination with KYC/AML verification</li>
+        <li>Automated credit decisioning with manual review workflows</li>
+        <li>Loan fulfillment with e-signature and disbursement</li>
+        <li>Self-service borrower portal for payments and account management</li>
+        <li>Collections and recovery workflows</li>
+        <li>Guarantor and investor management</li>
+        <li>Comprehensive reporting and analytics</li>
+        <li>Full compliance and audit trail capabilities</li>
+    </ul>
+    
+    <h3>1.5 Business Objectives</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Objective</th>
+                <th>Success Metric</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>OBJ-1</td>
+                <td>Launch core origination and decisioning</td>
+                <td>Application-to-decision time &lt;5 minutes (automated)</td>
+            </tr>
+            <tr>
+                <td>OBJ-2</td>
+                <td>Achieve high automation rate</td>
+                <td>Straight-through processing rate &gt;70%</td>
+            </tr>
+            <tr>
+                <td>OBJ-3</td>
+                <td>Ensure fast funding</td>
+                <td>Loan disbursement SLA &lt;24 hours post-approval</td>
+            </tr>
+            <tr>
+                <td>OBJ-4</td>
+                <td>Maintain system reliability</td>
+                <td>System availability 99.95% monthly</td>
+            </tr>
+            <tr>
+                <td>OBJ-5</td>
+                <td>Ensure regulatory compliance</td>
+                <td>Regulatory audit pass rate 100%</td>
+            </tr>
+            <tr>
+                <td>OBJ-6</td>
+                <td>Improve customer satisfaction</td>
+                <td>Customer satisfaction (CSAT) &gt;85%</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>1.6 Key Performance Indicators</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Target</th>
+                <th>Threshold</th>
+                <th>Priority</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Application-to-Decision Time</td>
+                <td>&lt;5 minutes (automated)</td>
+                <td>&lt;10 minutes</td>
+                <td>Critical</td>
+            </tr>
+            <tr>
+                <td>Straight-Through Processing Rate</td>
+                <td>&gt;70%</td>
+                <td>&gt;60%</td>
+                <td>Critical</td>
+            </tr>
+            <tr>
+                <td>Loan Disbursement SLA</td>
+                <td>&lt;24 hours post-approval</td>
+                <td>&lt;48 hours</td>
+                <td>Critical</td>
+            </tr>
+            <tr>
+                <td>System Availability</td>
+                <td>99.95% monthly</td>
+                <td>99.5%</td>
+                <td>Critical</td>
+            </tr>
+            <tr>
+                <td>Regulatory Audit Pass Rate</td>
+                <td>100%</td>
+                <td>100%</td>
+                <td>Critical</td>
+            </tr>
+            <tr>
+                <td>Customer Satisfaction (CSAT)</td>
+                <td>&gt;85%</td>
+                <td>&gt;80%</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>KYC Processing Time</td>
+                <td>&lt;2 minutes</td>
+                <td>&lt;5 minutes</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>Decision Engine Latency</td>
+                <td>&lt;2 seconds</td>
+                <td>&lt;5 seconds</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>Portal Load Time</td>
+                <td>&lt;3 seconds</td>
+                <td>&lt;5 seconds</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td>Payment Processing Time</td>
+                <td>&lt;2 seconds</td>
+                <td>&lt;5 seconds</td>
+                <td>High</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>1.7 Current Project Status</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Milestone</th>
+                <th>Status</th>
+                <th>Evidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>PRD Documentation</td>
+                <td><span class="success-box" style="display: inline-block; padding: 5px 10px; margin: 0;">✅ Complete</span></td>
+                <td>All 11 PRDs + 10 User Stories documented</td>
+            </tr>
+            <tr>
+                <td>Technical Architecture</td>
+                <td><span class="success-box" style="display: inline-block; padding: 5px 10px; margin: 0;">✅ Complete</span></td>
+                <td>System architecture defined</td>
+            </tr>
+            <tr>
+                <td>Data Model Design</td>
+                <td><span class="success-box" style="display: inline-block; padding: 5px 10px; margin: 0;">✅ Complete</span></td>
+                <td>Core entities and relationships defined</td>
+            </tr>
+            <tr>
+                <td>Integration Planning</td>
+                <td><span class="success-box" style="display: inline-block; padding: 5px 10px; margin: 0;">✅ Complete</span></td>
+                <td>External integrations identified</td>
+            </tr>
+            <tr>
+                <td>Development Phase 1</td>
+                <td><span class="warning-box" style="display: inline-block; padding: 5px 10px; margin: 0;">☐ Pending</span></td>
+                <td>Origination & Decisioning</td>
+            </tr>
+            <tr>
+                <td>Development Phase 2</td>
+                <td><span class="warning-box" style="display: inline-block; padding: 5px 10px; margin: 0;">☐ Pending</span></td>
+                <td>Fulfillment & Disbursement</td>
+            </tr>
+            <tr>
+                <td>Development Phase 3</td>
+                <td><span class="warning-box" style="display: inline-block; padding: 5px 10px; margin: 0;">☐ Pending</span></td>
+                <td>Servicing & Collections</td>
+            </tr>
+            <tr>
+                <td>Development Phase 4</td>
+                <td><span class="warning-box" style="display: inline-block; padding: 5px 10px; margin: 0;">☐ Pending</span></td>
+                <td>Advanced Features & AI</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>1.8 Stakeholders</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Role</th>
+                <th>Name</th>
+                <th>Responsibilities</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Product Owner</td>
+                <td>Principal Product Manager</td>
+                <td>Requirements, prioritization, sign-off</td>
+            </tr>
+            <tr>
+                <td>Technical Lead</td>
+                <td>Engineering Lead</td>
+                <td>Architecture, technical decisions</td>
+            </tr>
+            <tr>
+                <td>Compliance Officer</td>
+                <td>Compliance Team</td>
+                <td>Regulatory requirements, audit</td>
+            </tr>
+            <tr>
+                <td>Security Officer</td>
+                <td>Security Team</td>
+                <td>Security architecture, penetration testing</td>
+            </tr>
+            <tr>
+                <td>Risk Manager</td>
+                <td>Risk Team</td>
+                <td>Credit risk, portfolio oversight</td>
+            </tr>
+            <tr>
+                <td>Operations Manager</td>
+                <td>Operations Team</td>
+                <td>System operations, monitoring</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="section-divider"></div>
+    
+    <h2>2. Project Overview</h2>
+    
+    <h3>2.1 Business Context</h3>
+    <p>The global loan management software market is valued at <strong>$15B+</strong> with <strong>12% CAGR</strong>. Financial institutions require modern, compliant platforms to:</p>
+    <ul>
+        <li>Reduce origination costs by 40%</li>
+        <li>Accelerate time-to-decision by 80%</li>
+        <li>Eliminate manual compliance errors</li>
+        <li>Scale loan volumes without proportional operational cost increases</li>
+    </ul>
+    
+    <h3>2.2 Target Market</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Attribute</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Primary Segments</td>
+                <td>Regional banks, credit unions, consumer finance companies</td>
+            </tr>
+            <tr>
+                <td>Secondary Segments</td>
+                <td>Fintech lenders, BNPL providers</td>
+            </tr>
+            <tr>
+                <td>Tertiary Segments</td>
+                <td>Mortgage servicers, auto finance companies</td>
+            </tr>
+            <tr>
+                <td>Geographic Focus</td>
+                <td>Multi-region support (US, EU, APAC)</td>
+            </tr>
+            <tr>
+                <td>Loan Types</td>
+                <td>Mortgage, Personal, Business loans</td>
+            </tr>
+            <tr>
+                <td>Market Size</td>
+                <td>$15B+ global market, 12% CAGR</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>2.3 Competitive Landscape</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Competitor</th>
+                <th>Platform Type</th>
+                <th>Strengths</th>
+                <th>Weaknesses</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>LendFusion</td>
+                <td>Cloud-native</td>
+                <td>Modern UI, fast deployment</td>
+                <td>Limited customization</td>
+            </tr>
+            <tr>
+                <td>nCino</td>
+                <td>Salesforce-based</td>
+                <td>Strong CRM integration</td>
+                <td>High cost, complex</td>
+            </tr>
+            <tr>
+                <td>Temenos</td>
+                <td>Enterprise suite</td>
+                <td>Comprehensive features</td>
+                <td>Heavy, slow implementation</td>
+            </tr>
+            <tr>
+                <td>FIS</td>
+                <td>Legacy platform</td>
+                <td>Market leader, stable</td>
+                <td>Outdated technology</td>
+            </tr>
+            <tr>
+                <td>Jack Henry</td>
+                <td>Core banking</td>
+                <td>Strong core integration</td>
+                <td>Limited modern features</td>
+            </tr>
+        </tbody>
+    </table>
+    <p><strong>Design Reference</strong>: Modern fintech platforms with enterprise-grade compliance capabilities.</p>
+    
+    <h3>2.4 Product Scope</h3>
+    
+    <div class="highlight-box">
+        <h4>In-Scope for Phase 1 (Q1):</h4>
+        <ul>
+            <li>Customer origination with KYC/AML</li>
+            <li>Automated credit decisioning</li>
+            <li>Manual review workflows</li>
+            <li>Adverse action notices</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>In-Scope for Phase 2 (Q2):</h4>
+        <ul>
+            <li>Loan fulfillment and disbursement</li>
+            <li>Guarantor management</li>
+            <li>Investor management</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>In-Scope for Phase 3 (Q3):</h4>
+        <ul>
+            <li>Borrower portal and servicing</li>
+            <li>Collections and recovery</li>
+            <li>Communication automation</li>
+        </ul>
+    </div>
+    
+    <div class="highlight-box">
+        <h4>In-Scope for Phase 4 (Q4):</h4>
+        <ul>
+            <li>Product configuration platform</li>
+            <li>Advanced reporting and analytics</li>
+            <li>AI/ML integration readiness</li>
+        </ul>
+    </div>
+    
+    <div class="warning-box">
+        <h4>Explicit Exclusions:</h4>
+        <ul>
+            <li>Secondary market trading</li>
+            <li>Loan securitization</li>
+            <li>Real-time credit bureau integration (batch supported)</li>
+            <li>Mobile native apps (responsive web only)</li>
+        </ul>
+    </div>
+    
+    <div class="section-divider"></div>
+    
+    <h2>3. User Personas & User Stories</h2>
+    
+    <h3>3.1 Primary Personas</h3>
+    
+    <div class="persona-card">
+        <h4>Persona 1: Sarah the Borrower</h4>
+        <div class="persona-details">
+            <div><strong>Age:</strong> 32</div>
+            <div><strong>Occupation:</strong> Marketing Manager</div>
+            <div><strong>Location:</strong> Urban</div>
+            <div><strong>Loan Need:</strong> Personal loan for home renovation</div>
+            <div><strong>Loan Amount:</strong> $25,000</div>
+            <div><strong>Tech Comfort:</strong> High</div>
+        </div>
+        <p style="margin-top: 15px;"><strong>Pain Points:</strong> Complex application process, unclear status updates, long wait times</p>
+        <p><strong>Success Criteria:</strong> &lt;10 min application, real-time status, self-service portal</p>
+    </div>
+    
+    <div class="persona-card">
+        <h4>Persona 2: Michael the Credit Officer</h4>
+        <div class="persona-details">
+            <div><strong>Age:</strong> 38</div>
+            <div><strong>Occupation:</strong> Underwriter</div>
+            <div><strong>Location:</strong> Office-based</div>
+            <div><strong>Role:</strong> Reviews applications, makes credit decisions</div>
+            <div><strong>Tech Comfort:</strong> Medium</div>
+        </div>
+        <p style="margin-top: 15px;"><strong>Pain Points:</strong> Inefficient review queues, lack of decision support tools, manual data entry</p>
+        <p><strong>Success Criteria:</strong> &lt;15 min manual review, consistent decisions, clear audit trail</p>
+    </div>
+    
+    <div class="persona-card">
+        <h4>Persona 3: Dr. Chen the Compliance Officer</h4>
+        <div class="persona-details">
+            <div><strong>Age:</strong> 45</div>
+            <div><strong>Occupation:</strong> Compliance Manager</div>
+            <div><strong>Location:</strong> Office-based</div>
+            <div><strong>Role:</strong> Ensures regulatory compliance, manages audits</div>
+            <div><strong>Tech Comfort:</strong> Medium</div>
+        </div>
+        <p style="margin-top: 15px;"><strong>Pain Points:</strong> Incomplete audit trails, manual compliance checks, regulatory changes</p>
+        <p><strong>Success Criteria:</strong> Zero regulatory findings, complete audit trails, automated compliance</p>
+    </div>
+    
+    <div class="persona-card">
+        <h4>Persona 4: James the Guarantor</h4>
+        <div class="persona-details">
+            <div><strong>Age:</strong> 50</div>
+            <div><strong>Occupation:</strong> Business Owner</div>
+            <div><strong>Location:</strong> Suburban</div>
+            <div><strong>Role:</strong> Provides guarantee for family member's loan</div>
+            <div><strong>Tech Comfort:</strong> Low-Medium</div>
+        </div>
+        <p style="margin-top: 15px;"><strong>Pain Points:</strong> Unclear obligations, difficult portal access, lack of status updates</p>
+        <p><strong>Success Criteria:</strong> &lt;5 min to understand guarantee terms, easy portal access</p>
+    </div>
+    
+    <div class="persona-card">
+        <h4>Persona 5: Lisa the Investor</h4>
+        <div class="persona-details">
+            <div><strong>Age:</strong> 42</div>
+            <div><strong>Occupation:</strong> Accredited Investor</div>
+            <div><strong>Location:</strong> Urban</div>
+            <div><strong>Role:</strong> Funds loans through marketplace platform</div>
+            <div><strong>Tech Comfort:</strong> High</div>
+        </div>
+        <p style="margin-top: 15px;"><strong>Pain Points:</strong> Limited portfolio visibility, manual investment selection, unclear returns</p>
+        <p><strong>Success Criteria:</strong> Real-time portfolio view, automated allocation, clear returns tracking</p>
+    </div>
+    
+    <h3>3.2 User Story Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Actor</th>
+                <th>Priority</th>
+                <th>Phase</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>US-LMS-001</td>
+                <td>Borrower Registration with KYC/AML</td>
+                <td>Borrower</td>
+                <td>High</td>
+                <td>Phase 1</td>
+            </tr>
+            <tr>
+                <td>US-LMS-002</td>
+                <td>Loan Application Submission</td>
+                <td>Borrower</td>
+                <td>High</td>
+                <td>Phase 1</td>
+            </tr>
+            <tr>
+                <td>US-LMS-003</td>
+                <td>Automated Credit Decision Engine</td>
+                <td>Credit Officer</td>
+                <td>High</td>
+                <td>Phase 1</td>
+            </tr>
+            <tr>
+                <td>US-LMS-004</td>
+                <td>Loan Offers, Signing, and Disbursement</td>
+                <td>Borrower</td>
+                <td>High</td>
+                <td>Phase 2</td>
+            </tr>
+            <tr>
+                <td>US-LMS-005</td>
+                <td>Loan Servicing & Borrower Portal</td>
+                <td>Borrower</td>
+                <td>High</td>
+                <td>Phase 3</td>
+            </tr>
+            <tr>
+                <td>US-LMS-006</td>
+                <td>Compliance & Audit Trail</td>
+                <td>Compliance Officer</td>
+                <td>High</td>
+                <td>All Phases</td>
+            </tr>
+            <tr>
+                <td>US-LMS-007</td>
+                <td>Guarantor Registration & Verification</td>
+                <td>Guarantor</td>
+                <td>Medium</td>
+                <td>Phase 2</td>
+            </tr>
+            <tr>
+                <td>US-LMS-008</td>
+                <td>Guarantor Portal & Guarantee Activation</td>
+                <td>Guarantor</td>
+                <td>Medium</td>
+                <td>Phase 3</td>
+            </tr>
+            <tr>
+                <td>US-LMS-009</td>
+                <td>Investor Registration & Accreditation</td>
+                <td>Investor</td>
+                <td>Medium</td>
+                <td>Phase 2</td>
+            </tr>
+            <tr>
+                <td>US-LMS-010</td>
+                <td>Investor Portfolio & Loan Funding</td>
+                <td>Investor</td>
+                <td>Medium</td>
+                <td>Phase 2</td>
+            </tr>
+        </tbody>
+    </table>
+    <p><em>(Detailed user stories provided in Part 4)</em></p>
+    
+    <div class="section-divider"></div>
+    
+    <h2>4. Competitive Analysis</h2>
+    
+    <h3>4.1 Feature Comparison Matrix</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Feature</th>
+                <th>LMS Platform</th>
+                <th>LendFusion</th>
+                <th>nCino</th>
+                <th>Temenos</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Digital Origination</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr>
+                <td>Automated Decisioning</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr>
+                <td>Virtual Account Reconciliation</td>
+                <td>✅</td>
+                <td>❌</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr>
+                <td>Multi-Party Support</td>
+                <td>✅</td>
+                <td>Limited</td>
+                <td>Limited</td>
+                <td>✅</td>
+            </tr>
+            <tr>
+                <td>Self-Service Portal</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr>
+                <td>Collections Workflow</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr>
+                <td>Guarantor Management</td>
+                <td>✅</td>
+                <td>❌</td>
+                <td>❌</td>
+                <td>Limited</td>
+            </tr>
+            <tr>
+                <td>Investor Management</td>
+                <td>✅</td>
+                <td>❌</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr>
+                <td>No-Code Product Config</td>
+                <td>✅</td>
+                <td>Limited</td>
+                <td>Limited</td>
+                <td>✅</td>
+            </tr>
+            <tr>
+                <td>Compliance Automation</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>4.2 Competitive Advantages</h3>
+    <div class="highlight-box">
+        <h4>Differentiators:</h4>
+        <ol>
+            <li><strong>Virtual Account Architecture:</strong> Automated reconciliation eliminates manual bank statement matching</li>
+            <li><strong>Multi-Party Support:</strong> Native support for Borrowers, Guarantors, and Investors in single platform</li>
+            <li><strong>No-Code Configuration:</strong> Operations teams can configure products without IT dependency</li>
+            <li><strong>Modern Tech Stack:</strong> Cloud-native, API-first architecture for scalability</li>
+            <li><strong>Comprehensive Compliance:</strong> Built-in FCRA, ECOA, TILA, RESPA compliance</li>
+        </ol>
+    </div>
+    
+    <div class="confidential">
+        Page 7 of 120 | CONFIDENTIAL
+    </div>
+    
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
+
+
+
+
