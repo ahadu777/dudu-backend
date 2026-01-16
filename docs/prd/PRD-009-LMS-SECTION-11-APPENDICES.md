@@ -13,17 +13,39 @@
 - **US-LMS-003**: Automated Credit Decision Engine
 - **US-LMS-004**: Loan Offers, Signing, and Disbursement
 - **US-LMS-005**: Loan Servicing & Borrower Portal
+- **US-LMS-017**: Borrower Communication Preferences & Notifications
+- **US-LMS-018**: Loan Modification & Hardship Programs
+
+### A.2 Compliance User Stories
+
 - **US-LMS-006**: Compliance & Audit Trail
 
-### A.2 Guarantor User Stories
+### A.3 Guarantor User Stories
 
 - **US-LMS-007**: Guarantor Registration & Verification
 - **US-LMS-008**: Guarantor Portal & Guarantee Activation
+- **US-LMS-021**: Guarantor Release & Substitution
 
-### A.3 Investor User Stories
+### A.4 Investor User Stories
 
 - **US-LMS-009**: Investor Registration & Accreditation
 - **US-LMS-010**: Investor Portfolio & Loan Funding
+- **US-LMS-019**: Investor Risk Analytics & Portfolio Monitoring
+- **US-LMS-020**: Secondary Market & Loan Trading
+
+### A.5 Finance Team User Stories
+
+- **US-LMS-011**: Daily Reconciliation & Cash Management
+- **US-LMS-012**: Financial Reporting & GL Integration
+- **US-LMS-013**: Investor Accounting & Distributions
+
+### A.6 Operations Team User Stories
+
+- **US-LMS-014**: Operational Dashboard & Queue Management
+- **US-LMS-015**: Document Management & Verification
+- **US-LMS-016**: Customer Service & Case Management
+
+**Total: 21 User Stories**
 
 *(Full user story details provided in Part 4)*
 
@@ -283,7 +305,16 @@
 
 ### G.2 Related User Stories
 
-All user stories (US-LMS-001 through US-LMS-010) are documented in Part 4 of this PRD.
+All user stories (US-LMS-001 through US-LMS-021) are documented in Part 4 of this PRD.
+
+| Category | Stories | Description |
+|----------|---------|-------------|
+| Borrower | US-LMS-001 to 005, 017, 018 | Registration, application, servicing, notifications, hardship |
+| Compliance | US-LMS-006 | Audit trail and compliance |
+| Guarantor | US-LMS-007, 008, 021 | Registration, portal, release/substitution |
+| Investor | US-LMS-009, 010, 019, 020 | Registration, funding, analytics, secondary market |
+| Finance Team | US-LMS-011, 012, 013 | Reconciliation, GL integration, investor accounting |
+| Operations Team | US-LMS-014, 015, 016 | Queue management, documents, customer service |
 
 ### G.3 External References
 

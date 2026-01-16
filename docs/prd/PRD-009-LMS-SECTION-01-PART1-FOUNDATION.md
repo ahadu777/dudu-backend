@@ -193,20 +193,53 @@ The global loan management software market is valued at $15B+ with 12% CAGR. Fin
 - **Tech Comfort**: High - expects real-time data, self-service capabilities
 - **Success Criteria**: Real-time portfolio view, automated allocation, clear returns tracking
 
+**Persona 6: David the Finance Manager**
+- **Age**: 40 | **Occupation**: Finance Manager | **Location**: Office-based
+- **Role**: Manages financial operations, reconciliation, and reporting
+- **Pain Points**: Manual reconciliation processes, delayed financial visibility, complex month-end close
+- **Tech Comfort**: High - needs robust reporting, real-time dashboards, export capabilities
+- **Success Criteria**: <2 hour daily reconciliation, real-time portfolio metrics, automated GL entries
+
+**Persona 7: Rachel the Operations Manager**
+- **Age**: 35 | **Occupation**: Operations Manager | **Location**: Office-based
+- **Role**: Oversees day-to-day loan operations, SLA monitoring, team management
+- **Pain Points**: Lack of operational visibility, manual queue management, SLA breaches
+- **Tech Comfort**: Medium-High - needs operational dashboards, workflow tools, team metrics
+- **Success Criteria**: <5% SLA breach rate, real-time queue visibility, automated escalations
+
 ### 3.2 User Story Summary
 
 | ID | Title | Actor | Priority | Phase |
 |----|-------|-------|----------|-------|
+| **Borrower Stories** |
 | US-LMS-001 | Borrower Registration with KYC/AML | Borrower | High | Phase 1 |
 | US-LMS-002 | Loan Application Submission | Borrower | High | Phase 1 |
 | US-LMS-003 | Automated Credit Decision Engine | Credit Officer | High | Phase 1 |
 | US-LMS-004 | Loan Offers, Signing, and Disbursement | Borrower | High | Phase 2 |
 | US-LMS-005 | Loan Servicing & Borrower Portal | Borrower | High | Phase 3 |
+| US-LMS-017 | Communication Preferences & Notifications | Borrower | Medium | Phase 3 |
+| US-LMS-018 | Loan Modification & Hardship Programs | Borrower | Medium | Phase 3 |
+| **Compliance Stories** |
 | US-LMS-006 | Compliance & Audit Trail | Compliance Officer | High | All Phases |
+| **Guarantor Stories** |
 | US-LMS-007 | Guarantor Registration & Verification | Guarantor | Medium | Phase 2 |
 | US-LMS-008 | Guarantor Portal & Guarantee Activation | Guarantor | Medium | Phase 3 |
+| US-LMS-021 | Guarantor Release & Substitution | Guarantor | Low | Phase 4 |
+| **Investor Stories** |
 | US-LMS-009 | Investor Registration & Accreditation | Investor | Medium | Phase 2 |
 | US-LMS-010 | Investor Portfolio & Loan Funding | Investor | Medium | Phase 2 |
+| US-LMS-019 | Investor Risk Analytics & Portfolio Monitoring | Investor | Medium | Phase 4 |
+| US-LMS-020 | Secondary Market & Loan Trading | Investor | Low | Phase 4 |
+| **Finance Team Stories** |
+| US-LMS-011 | Daily Reconciliation & Cash Management | Finance Manager | High | Phase 2 |
+| US-LMS-012 | Financial Reporting & GL Integration | Finance Manager | High | Phase 3 |
+| US-LMS-013 | Investor Accounting & Distributions | Finance Manager | Medium | Phase 3 |
+| **Operations Team Stories** |
+| US-LMS-014 | Operational Dashboard & Queue Management | Operations Manager | High | Phase 2 |
+| US-LMS-015 | Document Management & Verification | Operations Manager | High | Phase 2 |
+| US-LMS-016 | Customer Service & Case Management | Operations Manager | High | Phase 3 |
+
+**Total User Stories: 21**
 
 *(Detailed user stories provided in Part 4)*
 

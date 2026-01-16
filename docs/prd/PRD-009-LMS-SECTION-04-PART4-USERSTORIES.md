@@ -271,9 +271,327 @@
 
 ---
 
-## 22. End-to-End User Flows
+## 22. Finance Team User Stories
 
-### 22.1 Complete Loan Application Flow
+### 22.1 US-LMS-011: Daily Reconciliation & Cash Management
+
+**Business Goal**: Enable finance team to perform daily reconciliation of loan payments, disbursements, and investor returns, ensuring accurate cash position and identifying discrepancies.
+
+**Actors**: Finance Manager, Finance Analyst, System (Reconciliation Engine), Payment Processor
+
+**Scope (In)**:
+- Daily payment reconciliation dashboard
+- Cash position monitoring
+- Discrepancy identification and resolution workflow
+- Bank statement import and matching
+- Virtual Account reconciliation
+- Exception handling and manual adjustment
+
+**Acceptance Scenarios**:
+- **Scenario A — Daily Reconciliation Dashboard**: Given finance manager logs in at start of day, When accessing reconciliation dashboard, Then system displays yesterday's transactions summary, unmatched items, pending reconciliations, and cash position by account
+- **Scenario B — Automated Payment Matching**: Given payments received via Virtual Accounts, When system processes bank file, Then payments are auto-matched to loans with 95%+ accuracy and unmatched items are flagged for manual review
+- **Scenario C — Discrepancy Resolution**: Given a payment discrepancy is identified (amount mismatch, duplicate, or orphan), When finance analyst investigates, Then system provides transaction audit trail, allows adjustment entry, and requires supervisor approval for adjustments >$1,000
+- **Scenario D — Cash Position Report**: Given end of business day, When finance manager requests cash position, Then system shows real-time balances across all accounts (operating, escrow, investor, collections) with intraday movement summary
+
+**Non-Functional Constraints**:
+- Reconciliation must complete within 2 hours of bank file receipt
+- All adjustments require dual approval
+- Audit trail for all reconciliation actions
+- Support for multiple bank formats (BAI2, MT940, CSV)
+
+---
+
+### 22.2 US-LMS-012: Financial Reporting & GL Integration
+
+**Business Goal**: Automate generation of financial reports and General Ledger entries to support accurate financial statements and regulatory reporting.
+
+**Actors**: Finance Manager, Controller, System (Reporting Engine), External GL System
+
+**Scope (In)**:
+- Automated GL journal entry generation
+- Interest accrual calculations
+- Loan loss provisioning reports
+- Regulatory financial reports (Call Report data)
+- Month-end close support
+- Portfolio aging and delinquency reports
+
+**Acceptance Scenarios**:
+- **Scenario A — Daily GL Entries**: Given end of day processing completes, When GL batch runs, Then system generates journal entries for: new disbursements, payments received, interest accrual, fee income, charge-offs, and entries are posted to GL with unique batch ID
+- **Scenario B — Interest Accrual**: Given active loan portfolio, When daily accrual job runs, Then system calculates accrued interest for each loan using actual/360 or 30/360 method (per product config), updates accrued interest balance, and generates accrual GL entries
+- **Scenario C — Loan Loss Provisioning**: Given portfolio aging data, When provisioning report is requested, Then system calculates CECL/ALLL reserves based on aging buckets, historical loss rates, and economic factors, with drill-down to loan level detail
+- **Scenario D — Month-End Close**: Given last business day of month, When month-end close is initiated, Then system runs all accruals, generates trial balance, produces portfolio summary, and locks period for further transactions
+
+**Non-Functional Constraints**:
+- GL entries must balance (debits = credits)
+- Support for multiple chart of accounts configurations
+- Reports exportable to Excel and PDF
+- Historical data retention for 7 years
+
+---
+
+### 22.3 US-LMS-013: Investor Accounting & Distributions
+
+**Business Goal**: Manage investor capital accounts, calculate returns, and automate distribution of principal and interest to investors in marketplace lending model.
+
+**Actors**: Finance Manager, Investor Accounting Specialist, Investor, System (Distribution Engine)
+
+**Scope (In)**:
+- Investor capital account management
+- Pro-rata distribution calculations
+- Return distribution processing (principal + interest)
+- Investor statements and 1099 generation
+- Loss allocation for defaulted loans
+- Investor fee calculations
+
+**Acceptance Scenarios**:
+- **Scenario A — Payment Distribution**: Given borrower payment is received on a loan with multiple investors, When distribution job runs, Then system calculates pro-rata share for each investor, splits principal and interest correctly, and queues ACH credits to investor accounts
+- **Scenario B — Monthly Investor Statement**: Given end of month, When statement generation runs, Then each investor receives statement showing: beginning balance, investments made, returns received, losses allocated, fees charged, ending balance, and YTD totals
+- **Scenario C — Default Loss Allocation**: Given a loan is charged off, When loss allocation runs, Then system calculates each investor's pro-rata share of loss, adjusts investor capital accounts, and generates loss allocation notice
+- **Scenario D — Annual 1099 Generation**: Given tax year end, When 1099 process runs, Then system generates 1099-INT for each investor with interest income >$10, supports electronic filing, and provides investor portal access to tax documents
+
+**Non-Functional Constraints**:
+- Distribution accuracy to 2 decimal places
+- Investor capital accounts must reconcile to total portfolio
+- Tax document generation by January 31
+- Support for both individual and institutional investors
+
+---
+
+## 23. Operations Team User Stories
+
+### 23.1 US-LMS-014: Operational Dashboard & Queue Management
+
+**Business Goal**: Provide operations team with real-time visibility into work queues, SLA status, and team performance to ensure efficient loan processing.
+
+**Actors**: Operations Manager, Loan Processor, Team Lead, System (Queue Manager)
+
+**Scope (In)**:
+- Real-time operational dashboard
+- Work queue management and assignment
+- SLA monitoring and alerting
+- Team performance metrics
+- Workload balancing
+- Escalation management
+
+**Acceptance Scenarios**:
+- **Scenario A — Operations Dashboard**: Given operations manager accesses dashboard, When dashboard loads, Then system displays: total items in queue by type, SLA status (green/yellow/red), aging distribution, team utilization, and items requiring escalation
+- **Scenario B — Queue Assignment**: Given new applications enter the system, When auto-assignment runs, Then system assigns items to processors based on: skill match, current workload, round-robin within skill group, and priority (VIP customers first)
+- **Scenario C — SLA Breach Alert**: Given an item approaches SLA threshold (80% of time elapsed), When SLA monitor runs, Then system sends alert to assigned processor and team lead, escalates to supervisor if 100% elapsed, and logs SLA event for reporting
+- **Scenario D — Workload Rebalancing**: Given one processor is overloaded (>30 items) while another is underutilized (<10 items), When operations manager initiates rebalance, Then system suggests items to transfer based on aging and complexity, and allows bulk reassignment
+
+**Non-Functional Constraints**:
+- Dashboard refresh every 30 seconds
+- SLA checks every 5 minutes
+- Support for 100+ concurrent processors
+- Historical metrics retention for 2 years
+
+---
+
+### 23.2 US-LMS-015: Document Management & Verification
+
+**Business Goal**: Enable operations team to manage loan documentation, verify submitted documents, and track document exceptions throughout the loan lifecycle.
+
+**Actors**: Document Specialist, Loan Processor, Operations Manager, Borrower, System (Document Manager)
+
+**Scope (In)**:
+- Document checklist management by product/loan type
+- Document upload and classification
+- Automated document verification (OCR/AI)
+- Exception tracking and follow-up
+- Document request generation
+- Secure document storage and retrieval
+
+**Acceptance Scenarios**:
+- **Scenario A — Document Checklist**: Given a loan application is submitted, When document review begins, Then system displays required documents for loan type (e.g., Income: W2, Pay Stubs; Identity: Driver's License, SSN Card; Assets: Bank Statements), with status for each
+- **Scenario B — Automated Document Classification**: Given borrower uploads a document, When upload completes, Then system uses OCR/AI to classify document type with 90%+ accuracy, extracts key fields (name, date, amounts), and flags for manual review if confidence <85%
+- **Scenario C — Document Exception**: Given a required document is missing or invalid, When document specialist creates exception, Then system generates borrower notification with specific requirements, tracks exception aging, and escalates if not resolved within 5 days
+- **Scenario D — Stips Tracking**: Given underwriter requests additional stipulations, When stips are created, Then system tracks each stip with status (pending, received, approved, waived), due date, and responsible party, with automated borrower reminders
+
+**Non-Functional Constraints**:
+- Document storage encrypted at rest (AES-256)
+- Support for PDF, JPG, PNG formats up to 10MB
+- Document retention per regulatory requirements (7 years)
+- HIPAA compliance for medical documents
+
+---
+
+### 23.3 US-LMS-016: Customer Service & Case Management
+
+**Business Goal**: Enable operations team to handle customer inquiries, complaints, and service requests efficiently with full context and resolution tracking.
+
+**Actors**: Customer Service Representative (CSR), Operations Manager, Borrower, Guarantor, Investor, System (Case Manager)
+
+**Scope (In)**:
+- Omnichannel case creation (phone, email, portal, chat)
+- 360-degree customer view
+- Case routing and assignment
+- SLA-based escalation
+- Resolution tracking and follow-up
+- Customer satisfaction survey
+
+**Acceptance Scenarios**:
+- **Scenario A — Case Creation from Call**: Given borrower calls customer service, When CSR searches for borrower, Then system displays 360-view including: active loans, recent payments, open cases, communication history, and allows one-click case creation
+- **Scenario B — Case Routing**: Given a new case is created, When case type is identified (payment issue, dispute, information request, complaint), Then system routes to appropriate queue based on case type, customer segment, and complexity
+- **Scenario C — Complaint Handling**: Given a formal complaint is received, When complaint case is created, Then system triggers regulatory compliance workflow, assigns to senior handler, tracks 15-day resolution requirement, and escalates to compliance if unresolved
+- **Scenario D — Case Resolution**: Given CSR resolves a case, When case is closed, Then system records resolution category, time to resolve, sends confirmation to customer, and triggers CSAT survey after 24 hours
+
+**Non-Functional Constraints**:
+- Case creation <30 seconds
+- Full customer context load <3 seconds
+- Complaint response within 15 business days (CFPB)
+- All calls recorded and linked to cases
+
+---
+
+## 24. Additional Borrower User Stories
+
+### 24.1 US-LMS-017: Borrower Communication Preferences & Notifications
+
+**Business Goal**: Enable borrowers to manage their communication preferences and receive timely, relevant notifications through their preferred channels.
+
+**Actors**: Borrower, System (Notification Engine), Communication Provider (SMS/Email)
+
+**Scope (In)**:
+- Communication preference management (email, SMS, push, mail)
+- Notification subscription by category
+- Payment reminders and due date alerts
+- Account status notifications
+- Promotional communication opt-in/out
+- Quiet hours configuration
+
+**Acceptance Scenarios**:
+- **Scenario A — Set Preferences**: Given borrower accesses account settings, When updating communication preferences, Then borrower can select preferred channels for: payment reminders (SMS/Email/Both), account alerts (Email), marketing (opt-out default), and set quiet hours for non-urgent messages
+- **Scenario B — Payment Reminder**: Given borrower's payment due date is 3 days away, When reminder job runs, Then system sends reminder via borrower's preferred channel with: amount due, due date, payment link, and payoff amount
+- **Scenario C — Payment Confirmation**: Given borrower makes a payment, When payment is processed, Then system immediately sends confirmation via preferred channel with: confirmation number, amount, new balance, and next due date
+- **Scenario D — Delinquency Alert**: Given borrower's payment is 1 day past due, When delinquency check runs, Then system sends urgent notification via all available channels with: amount past due, late fee warning, and payment options
+
+**Non-Functional Constraints**:
+- SMS delivery within 60 seconds
+- Email delivery within 5 minutes
+- TCPA compliance for SMS (consent required)
+- Unsubscribe processing within 10 business days
+
+---
+
+### 24.2 US-LMS-018: Loan Modification & Hardship Programs
+
+**Business Goal**: Enable borrowers experiencing financial hardship to request loan modifications and access hardship programs through self-service portal.
+
+**Actors**: Borrower, Loan Modification Specialist, Collections Agent, System (Workout Engine)
+
+**Scope (In)**:
+- Hardship application submission
+- Financial situation assessment
+- Modification options calculation
+- Forbearance and deferment programs
+- Payment plan enrollment
+- Modification agreement execution
+
+**Acceptance Scenarios**:
+- **Scenario A — Hardship Application**: Given borrower is experiencing financial hardship, When borrower accesses modification portal, Then system presents hardship application with: reason selection (job loss, medical, disaster), income/expense form, and document upload for verification
+- **Scenario B — Modification Options**: Given hardship application is approved, When workout engine evaluates, Then system calculates available options: rate reduction, term extension, forbearance, or payment plan, with projected monthly payment and total cost for each
+- **Scenario C — Forbearance Enrollment**: Given borrower selects forbearance option, When terms are accepted, Then system enrolls borrower in forbearance (up to 6 months), pauses collection activity, and schedules end-of-forbearance notification
+- **Scenario D — Payment Plan Setup**: Given borrower cannot make full payment but can pay partial, When payment plan is configured, Then system creates repayment schedule to cure delinquency over 3-12 months, auto-schedules payments, and updates loan status
+
+**Non-Functional Constraints**:
+- Hardship decision within 30 days
+- Modified loans tracked separately for reporting
+- Modification history retained indefinitely
+- Compliance with CARES Act provisions
+
+---
+
+## 25. Additional Investor User Stories
+
+### 25.1 US-LMS-019: Investor Risk Analytics & Portfolio Monitoring
+
+**Business Goal**: Provide investors with advanced analytics and risk monitoring tools to make informed investment decisions and track portfolio health.
+
+**Actors**: Investor, System (Analytics Engine), Risk Manager
+
+**Scope (In)**:
+- Portfolio risk metrics dashboard
+- Loan-level performance tracking
+- Delinquency and default prediction
+- Diversification analysis
+- Benchmark comparison
+- Custom alert configuration
+
+**Acceptance Scenarios**:
+- **Scenario A — Risk Dashboard**: Given investor accesses analytics portal, When dashboard loads, Then system displays: portfolio weighted average credit score, geographic concentration, vintage analysis, current delinquency rate, projected loss rate, and comparison to platform average
+- **Scenario B — Early Warning Alerts**: Given investor configures risk alerts, When a loan in portfolio shows early warning signs (payment pattern change, credit score drop), Then system sends alert with loan details and recommended action
+- **Scenario C — Vintage Analysis**: Given investor wants to analyze performance by origination period, When vintage report is requested, Then system shows cumulative default curves by vintage with 12/24/36 month loss rates and comparison to benchmark
+- **Scenario D — Diversification Score**: Given investor's portfolio is concentrated in certain risk buckets, When diversification analysis runs, Then system calculates diversification score (0-100), identifies concentration risks, and suggests rebalancing opportunities
+
+**Non-Functional Constraints**:
+- Analytics refresh daily (overnight batch)
+- Historical data available for 5 years
+- Export to CSV/Excel for further analysis
+- Mobile-responsive analytics dashboard
+
+---
+
+### 25.2 US-LMS-020: Secondary Market & Loan Trading
+
+**Business Goal**: Enable investors to sell loan participations on secondary market and facilitate price discovery and settlement for loan trades.
+
+**Actors**: Investor (Seller), Investor (Buyer), System (Trading Engine), Settlement System
+
+**Scope (In)**:
+- Loan listing for sale
+- Bid/Ask pricing mechanism
+- Trade matching and execution
+- Settlement processing
+- Transfer of ownership records
+- Trading history and P&L tracking
+
+**Acceptance Scenarios**:
+- **Scenario A — List Loan for Sale**: Given investor wants to liquidate a loan position, When creating sell order, Then system displays current market price (if available), allows setting ask price (premium/discount to par), and lists position on marketplace
+- **Scenario B — Purchase Loan**: Given buyer searches available loans, When buyer places bid on listed loan, Then system validates buyer has sufficient funds, records bid, and notifies seller of offer
+- **Scenario C — Trade Execution**: Given bid meets ask price, When trade is matched, Then system locks positions, initiates settlement (T+1), transfers ownership in loan records, and moves funds between investor accounts
+- **Scenario D — P&L Tracking**: Given investor has completed trades, When accessing trading history, Then system shows: purchase price, sale price, realized gain/loss, holding period, and tax lot tracking for each position
+
+**Non-Functional Constraints**:
+- Trade execution <5 seconds
+- Settlement T+1 (next business day)
+- Price updates every 15 minutes during market hours
+- Minimum trade size $1,000
+
+---
+
+## 26. Additional Guarantor User Stories
+
+### 26.1 US-LMS-021: Guarantor Release & Substitution
+
+**Business Goal**: Enable guarantors to request release from guarantee obligation when conditions are met, or facilitate substitution with a new guarantor.
+
+**Actors**: Guarantor (Original), Guarantor (Substitute), Borrower, Credit Officer, System (Guarantee Manager)
+
+**Scope (In)**:
+- Guarantor release eligibility check
+- Release request submission
+- Substitute guarantor nomination
+- Credit evaluation of substitute
+- Release agreement execution
+- Guarantee transfer processing
+
+**Acceptance Scenarios**:
+- **Scenario A — Release Eligibility Check**: Given guarantor wants to be released, When accessing guarantee portal, Then system evaluates eligibility based on: loan payment history (12+ on-time payments), current LTV ratio (<80%), borrower credit score improvement (>50 points), and displays eligibility status
+- **Scenario B — Release Request**: Given guarantor meets release criteria, When release request is submitted, Then system creates release case, routes to credit officer for review, and notifies borrower of pending change
+- **Scenario C — Substitute Guarantor**: Given original guarantor nominates substitute, When substitute completes registration and verification, Then system evaluates substitute's guarantee capacity, compares to original, and presents recommendation to credit officer
+- **Scenario D — Guarantee Transfer**: Given credit officer approves substitution, When transfer is initiated, Then system generates release agreement for original guarantor, guarantee agreement for substitute, collects e-signatures from all parties, and updates loan guarantee records
+
+**Non-Functional Constraints**:
+- Release decision within 15 business days
+- Substitute must meet original guarantee capacity requirements
+- All guarantee changes logged in audit trail
+- Notifications to all parties at each step
+
+---
+
+## 27. End-to-End User Flows
+
+### 27.1 Complete Loan Application Flow
 
 ```
 1. Borrower Registration (US-LMS-001)
@@ -301,7 +619,7 @@
 8. Loan Active → Servicing (US-LMS-005)
 ```
 
-### 22.2 Guarantor Flow
+### 27.2 Guarantor Flow
 
 ```
 1. Loan Application Requires Guarantor
@@ -318,12 +636,15 @@
    ↓
 7. Monitor Loan Status
    ├── Loan Performing → No Action
-   └── Loan Defaults (DPD ≥ 90) → Guarantee Activation
-       ↓
-       Guarantor Payment → Loan Satisfied
+   ├── Loan Defaults (DPD ≥ 90) → Guarantee Activation
+   │   ↓
+   │   Guarantor Payment → Loan Satisfied
+   └── Guarantor Release Request (US-LMS-021)
+       ├── Eligible → Release Processed
+       └── Substitute → New Guarantor Onboarded
 ```
 
-### 22.3 Investor Flow
+### 27.3 Investor Flow
 
 ```
 1. Investor Registration (US-LMS-009)
@@ -336,12 +657,121 @@
    ├── Auto-Allocation (if enabled)
    └── Manual Selection
    ↓
-5. Loan Active → Monitor Portfolio
+5. Loan Active → Monitor Portfolio (US-LMS-019)
+   ├── Risk Analytics Dashboard
+   └── Early Warning Alerts
    ↓
 6. Borrower Makes Payments → Returns Distributed
    ↓
-7. Loan Paid Off → Final Returns → Investment Closed
+7. Options:
+   ├── Hold to Maturity → Loan Paid Off → Final Returns
+   └── Secondary Market (US-LMS-020) → Sell Position
 ```
 
-**Page 55 of [TOTAL] | CONFIDENTIAL**
+### 27.4 Finance Team Flow
+
+```
+1. Daily Operations Start
+   ↓
+2. Bank File Import
+   ↓
+3. Automated Payment Matching (US-LMS-011)
+   ├── Matched → Post to Loans
+   └── Unmatched → Exception Queue → Manual Resolution
+   ↓
+4. Daily GL Entries (US-LMS-012)
+   ├── Disbursements
+   ├── Payments
+   ├── Interest Accrual
+   └── Fee Income
+   ↓
+5. Cash Position Report
+   ↓
+6. Investor Distributions (US-LMS-013)
+   ├── Calculate Pro-Rata Shares
+   ├── Queue ACH Credits
+   └── Update Investor Accounts
+   ↓
+7. Month-End Close (if applicable)
+   ├── Run Accruals
+   ├── Generate Trial Balance
+   └── Lock Period
+```
+
+### 27.5 Operations Team Flow
+
+```
+1. Work Queue Population (US-LMS-014)
+   ├── New Applications
+   ├── Document Exceptions
+   ├── Customer Cases
+   └── Escalations
+   ↓
+2. Auto-Assignment by Skill/Workload
+   ↓
+3. Document Processing (US-LMS-015)
+   ├── Upload/Classification
+   ├── OCR Verification
+   ├── Stips Tracking
+   └── Exception Resolution
+   ↓
+4. Customer Service (US-LMS-016)
+   ├── Case Creation
+   ├── 360° Customer View
+   ├── Resolution
+   └── CSAT Survey
+   ↓
+5. SLA Monitoring
+   ├── Green → Continue Processing
+   ├── Yellow → Alert Processor
+   └── Red → Escalate to Supervisor
+   ↓
+6. End of Day Metrics
+   ├── Items Processed
+   ├── SLA Compliance
+   └── Team Performance
+```
+
+### 27.6 Borrower Hardship Flow
+
+```
+1. Borrower Experiences Financial Hardship
+   ↓
+2. Access Hardship Portal (US-LMS-018)
+   ↓
+3. Submit Hardship Application
+   ├── Reason Selection
+   ├── Financial Documentation
+   └── Income/Expense Form
+   ↓
+4. Workout Engine Evaluation
+   ↓
+5. Modification Options Presented
+   ├── Rate Reduction
+   ├── Term Extension
+   ├── Forbearance
+   └── Payment Plan
+   ↓
+6. Borrower Selects Option
+   ↓
+7. Agreement Execution
+   ↓
+8. Loan Modified → Resume Servicing
+```
+
+---
+
+## 28. User Stories Summary by Role
+
+| Role | User Stories | Count |
+|------|-------------|-------|
+| **Borrower** | US-LMS-001, 002, 003, 004, 005, 017, 018 | 7 |
+| **Guarantor** | US-LMS-007, 008, 021 | 3 |
+| **Investor** | US-LMS-009, 010, 019, 020 | 4 |
+| **Finance Team** | US-LMS-011, 012, 013 | 3 |
+| **Operations Team** | US-LMS-014, 015, 016 | 3 |
+| **Compliance** | US-LMS-006 | 1 |
+| **Total** | | **21** |
+
+**Page 75 of [TOTAL] | CONFIDENTIAL**
 
